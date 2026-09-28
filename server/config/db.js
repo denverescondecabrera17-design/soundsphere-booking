@@ -550,13 +550,16 @@ const connectDB = async () => {
         return pool;
     } catch (error) {
         console.error(' Database connection error:', error.message);
+        if (process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.RENDER_SERVICE_ID) {
+            console.error(' ⚠️ RENDER PRODUCTION NOTICE: Make sure DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME, and DB_ENCRYPT=true are configured under Environment Variables in your Render Dashboard.');
+        }
         return null;
     }
 };
 
 const getPool = () => {
     if (!pool) {
-        throw new Error('Database pool not initialized.');
+        throw new Error(`Database connection is not initialized. Please verify DB_SERVER (${dbConfig.server}), DB_USER, DB_PASSWORD, DB_NAME, and DB_ENCRYPT=true are set in environment variables.`);
     }
     return pool;
 };

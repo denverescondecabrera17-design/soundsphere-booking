@@ -383,7 +383,8 @@ const login = async (req, res) => {
         console.error(' Login Error:', error);
         return res.status(500).json({
             success: false,
-            message: 'An internal server error occurred during login.'
+            message: 'An internal server error occurred during login. ' + (error.message || 'Database or server connection failure.'),
+            error: error.message
         });
     }
 };
@@ -697,6 +698,28 @@ const socialAuth = async (req, res) => {
 
 /**
  * Initiate Official Google OAuth 2.0 Flow
+const resolveGoogleCallbackUrl = (req) => {
+    const host = req.get('host') || '';
+    const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1');
+
+    if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim() !== '') {
+        const envUrl = process.env.GOOGLE_CALLBACK_URL.trim();
+        if (!isLocalHost && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+            return envUrl;
+        }
+        if (isLocalHost && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+            return envUrl;
+        }
+    }
+
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
+    const finalProtocol = (!isLocalHost || protocol === 'https') ? 'https' : 'http';
+    return `${finalProtocol}://${host}/api/auth/google/callback`;
+};
+
+/**
+ * Initiate Official Google OAuth 2.0 Flow
  * GET /api/auth/google
  */
 const initiateGoogleAuth = (req, res) => {
@@ -710,7 +733,7 @@ const initiateGoogleAuth = (req, res) => {
     }
 
     const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    const redirectUri = resolveGoogleCallbackUrl(req);
 
     const options = {
         redirect_uri: redirectUri,
@@ -738,7 +761,7 @@ const handleGoogleCallback = async (req, res) => {
     try {
         const clientId = process.env.GOOGLE_CLIENT_ID;
         const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-        const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+        const redirectUri = resolveGoogleCallbackUrl(req);
 
         if (!clientId || !clientSecret || clientId.includes('your-google-client-id') || clientId.includes('your_real')) {
             return res.redirect('/login.html?auth_error=' + encodeURIComponent('Google sign-in is currently unavailable. Please try again later.'));

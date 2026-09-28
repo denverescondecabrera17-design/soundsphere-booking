@@ -60,7 +60,7 @@ const connectDB = async () => {
  */
 const getPool = () => {
     if (!pool) {
-        throw new Error('Database pool not initialized. Call connectDB first.');
+        throw new Error(`Database connection is not initialized. Please verify DB_SERVER (${dbConfig.server}), DB_USER, DB_PASSWORD, DB_NAME, and DB_ENCRYPT=true are set in environment variables.`);
     }
     return pool;
 };

@@ -25,6 +25,9 @@ const { getMapsConfig } = require('./server/config/mapsConfig');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxies (Render, Heroku, Nginx) for HTTPS protocol detection & OAuth callbacks
+app.set('trust proxy', 1);
+
 // Enable Cross-Origin Resource Sharing & Body Parsing
 app.use(cors());
 app.use(express.json());
