@@ -433,3 +433,80 @@ body.provider-detail-body {
     width: 100%;
     box-sizing: border-box;
 }
+
+/* Comprehensive Responsive Media Queries */
+@media (max-width: 1024px) {
+    .provider-header-inner,
+    .detail-main-layout {
+        padding: 0 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .provider-profile-header-clean {
+        padding: 20px 0;
+    }
+    .provider-header-inner {
+        padding: 0 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+    }
+    .provider-header-left {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 16px;
+    }
+    .provider-header-avatar {
+        width: 90px;
+        height: 90px;
+        font-size: 2.2rem;
+    }
+    .provider-business-title {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    .provider-name-badge-row {
+        justify-content: center;
+    }
+    .provider-contact-details-row {
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+    .provider-description-text {
+        text-align: center;
+        font-size: 0.92rem;
+    }
+    .provider-header-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .btn-message-provider-action,
+    .btn-report-provider-action {
+        width: 100%;
+        justify-content: center;
+        height: 46px;
+        font-size: 0.95rem;
+    }
+    .detail-main-layout {
+        padding: 0 16px;
+        margin: 20px 0 32px 0;
+    }
+    .section-heading-block h2 {
+        font-size: 1.5rem;
+    }
+    .section-heading-block p {
+        font-size: 0.95rem;
+    }
+    .package-card {
+        padding: 18px 16px;
+    }
+    .pkg-card-title {
+        font-size: 1.2rem;
+    }
+    .pkg-card-price {
+        font-size: 1.5rem;
+    }
+}

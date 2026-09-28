@@ -880,24 +880,6 @@ html {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-@media (max-width: 768px) {
-    .filter-bar-grid {
-        grid-template-columns: 1fr;
-    }
-    .providers-grid {
-        grid-template-columns: 1fr;
-    }
-    .marketplace-navbar .nav-container {
-        flex-wrap: wrap;
-    }
-    .nav-search-bar {
-        order: 3;
-        max-width: 100%;
-        width: 100%;
-    }
-}
-
-
 .shopee-offer-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -920,4 +902,121 @@ html {
 #modal-report-provider.hidden,
 .modal-overlay.hidden {
     display: none !important;
+}
+
+/* Comprehensive Responsive Breakpoints for Marketplace */
+@media (max-width: 1024px) {
+    .hero-filter-container,
+    .marketplace-main {
+        padding: 0 24px;
+    }
+    .filter-bar-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .providers-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .marketplace-navbar {
+        height: auto;
+        padding: 12px 0;
+    }
+    .marketplace-navbar .nav-container {
+        padding: 0 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .nav-brand {
+        font-size: 1.3rem;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .nav-brand i {
+        font-size: 1.6rem;
+    }
+    .nav-brand .brand-sub {
+        font-size: 0.78rem;
+    }
+    .nav-search-bar {
+        max-width: 100%;
+        width: 100%;
+    }
+    .nav-search-bar input {
+        height: 44px;
+        font-size: 0.95rem;
+        padding: 0 40px 0 42px;
+    }
+    .nav-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .nav-action-btn {
+        height: 44px;
+        padding: 0 16px;
+        font-size: 0.95rem;
+    }
+    .hero-filter-section {
+        padding: 18px 0;
+    }
+    .hero-filter-container,
+    .marketplace-main {
+        padding: 0 16px;
+    }
+    .filter-bar-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .filter-input-wrapper input,
+    .filter-input-wrapper select {
+        height: 46px;
+        font-size: 0.95rem;
+    }
+    .section-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .section-title-row h2 {
+        font-size: 1.25rem;
+    }
+    .providers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .provider-card {
+        border-radius: 12px;
+    }
+    .card-banner-wrapper {
+        height: 160px;
+    }
+    .card-content {
+        padding: 16px;
+    }
+    .provider-name {
+        font-size: 1.05rem;
+    }
+    .user-dropdown {
+        width: calc(100vw - 32px);
+        right: 0;
+        left: 0;
+        margin: 0 auto;
+        top: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-filter-container,
+    .marketplace-main {
+        padding: 0 12px;
+    }
+    .category-pills-row {
+        gap: 6px;
+    }
+    .category-pill {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
 }

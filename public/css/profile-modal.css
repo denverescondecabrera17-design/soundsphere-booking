@@ -446,3 +446,19 @@
     color: #0f172a !important;
 }
 
+/* Comprehensive Responsive Rules for Profile Modal */
+@media (max-width: 768px) {
+    .profile-modal-card {
+        max-height: 96vh;
+        border-radius: 12px;
+    }
+    .profile-modal-header,
+    .profile-modal-body,
+    .profile-modal-footer {
+        padding: 16px;
+    }
+    .profile-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

@@ -1,0 +1,174 @@
+/* ============================================================================
+   SoundSphere - OTP Verification View Styling
+   Theme: Crisp White & Navy Blue (#0a192f / #1e3e62)
+   Windows Scaling Proof: line-height: normal with display: inline-block for 100% visible digits
+   ============================================================================ */
+
+.otp-body-bg {
+    background: #f4f7fb;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.otp-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.otp-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 14px 35px rgba(10, 25, 47, 0.1);
+    max-width: 520px;
+    width: 100%;
+    padding: 40px 32px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.otp-icon-header {
+    width: 64px;
+    height: 64px;
+    background: #ebf2fa;
+    color: #0a192f;
+    border: 2px solid #93c5fd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 4px 12px rgba(10, 25, 47, 0.08);
+}
+
+.otp-card h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0a192f;
+    margin-bottom: 8px;
+}
+
+.otp-card p.otp-sub {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.masked-email {
+    font-weight: 700;
+    color: #0a192f;
+}
+
+/* 6-Digit OTP Inputs Grid (Compatible with Windows Display Scaling) */
+.otp-inputs-grid {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 22px auto 26px auto !important;
+    max-width: 380px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.otp-digit-input {
+    width: 48px !important;
+    height: 52px !important;
+    line-height: normal !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    border: 2px solid #0a192f !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    color: #0a192f !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none !important;
+}
+
+.otp-digit-input:focus {
+    border-color: #2563eb !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    color: #0a192f !important;
+}
+
+.otp-digit-input.filled {
+    border-color: #0a192f !important;
+    background: #ffffff !important;
+    color: #0a192f !important;
+}
+
+/* Timer & Resend Controls */
+.otp-timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 24px;
+}
+
+.timer-badge {
+    font-weight: 800;
+    color: #d97706;
+    background: #fffbeb;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid #fde68a;
+}
+
+.btn-resend-link {
+    background: none;
+    border: none;
+    color: #0a192f;
+    font-weight: 800;
+    font-size: 0.88rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.btn-resend-link:disabled {
+    color: #94a3b8;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.otp-footer-actions {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #cbd5e1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.84rem;
+}
+
+@media (max-width: 540px) {
+    .otp-card {
+        padding: 30px 16px;
+    }
+    .otp-inputs-grid {
+        gap: 6px;
+        max-width: 300px;
+    }
+    .otp-digit-input {
+        width: 40px !important;
+        height: 46px !important;
+        font-size: 1.3rem !important;
+    }
+}

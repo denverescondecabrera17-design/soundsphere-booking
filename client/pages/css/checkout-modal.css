@@ -38,7 +38,7 @@
 .checkout-modal-card {
     background: #ffffff;
     border-radius: var(--radius-lg);
-    max-width: 680px;
+    max-width: 780px;
     width: 100%;
     max-height: 92vh;
     display: flex;
@@ -466,4 +466,32 @@
     background: #cbd5e1;
     cursor: not-allowed;
     box-shadow: none;
+}
+
+/* Responsive Media Queries for Checkout Modal */
+@media (max-width: 768px) {
+    .checkout-modal-card {
+        max-height: 96vh;
+        border-radius: 12px;
+    }
+    .stepper-bar {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+    }
+    .step-indicator {
+        font-size: 0.72rem;
+        padding: 4px 8px;
+    }
+    .summary-inc-list {
+        grid-template-columns: 1fr;
+    }
+    .form-grid-2col,
+    .payment-type-radio-group {
+        grid-template-columns: 1fr;
+    }
+    .checkout-modal-body,
+    .checkout-modal-footer,
+    .checkout-modal-header {
+        padding: 16px;
+    }
 }
