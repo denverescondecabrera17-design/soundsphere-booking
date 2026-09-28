@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere - Sign in to book lights & sounds services with ease.">
+    <title>SoundSphere | Account Login</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=8.0">
+    <link rel="stylesheet" href="css/login.css?v=8.0">
+</head>
+<body class="login-body-bg">
+
+    <!-- ==================== 1. SHOPEE-STYLE HEADER ==================== -->
+    <header class="shopee-header">
+        <!-- Top Mini Utility Bar -->
+        <div class="top-utility-bar">
+            <div class="container">
+                <ul class="utility-links">
+                    <li><a href="/index.html"><i class="fa-solid fa-store"></i> Seller Centre</a></li>
+                    <li><a href="/provider/register.html"><i class="fa-solid fa-briefcase"></i> Become a Service Provider</a></li>
+                    <li><a href="#"><i class="fa-solid fa-mobile-screen"></i> Download App</a></li>
+                </ul>
+                <ul class="utility-links">
+                    <li><a href="#"><i class="fa-regular fa-bell"></i> Notifications</a></li>
+                    <li><a href="#"><i class="fa-regular fa-circle-question"></i> Help & Support</a></li>
+                    <li><a href="#"><i class="fa-solid fa-globe"></i> English</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Search & Auth Header Bar -->
+        <div class="main-header">
+            <div class="container">
+                <!-- Brand Logo -->
+                <a href="/index.html" class="brand-logo">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <div>
+                        SoundSphere
+                        <span class="tagline-sub">Book Lights & Sounds with Ease</span>
+                    </div>
+                </a>
+
+                <!-- Central Search Bar -->
+                <div class="shopee-search-container">
+                    <input type="text" class="search-input" placeholder="Search sound systems, stage lights, DJ gear, event packages..." onclick="window.location.href='/index.html';">
+                    <button type="button" class="btn-search" aria-label="Search" onclick="window.location.href='/index.html';">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+
+                <!-- User Auth Actions -->
+                <div class="header-actions">
+                    <a href="/login.html" class="btn-auth-outline">Login</a>
+                    <a href="/register.html" class="btn-auth-solid">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== 2. MAIN STANDALONE AUTH CARD CONTAINER ==================== -->
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <!-- Left Branding Side -->
+            <div class="auth-branding">
+                <div class="brand-badge">SOUNDSPHERE MARKETPLACE</div>
+                <h1>Book Professional Lights & Sounds Services with Ease</h1>
+                <p>Connect with verified audio-visual service providers, concert line arrays, and stage lighting packages for your events.</p>
+                
+                <ul class="feature-list">
+                    <li><i class="fa-solid fa-circle-check"></i> Verified Service Providers</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Email OTP Verification</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Instant Event Booking</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Secure Role-Based Access</li>
+                </ul>
+            </div>
+
+            <!-- Right Dedicated Form Side: LOGIN ONLY -->
+            <div class="auth-form-container">
+                <!-- Alert Banner -->
+                <div id="alert-banner" class="alert-banner hidden" role="alert">
+                    <i id="alert-icon" class="fa-solid fa-circle-info"></i>
+                    <span id="alert-message">Alert text</span>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <form id="login-form" class="auth-form" autocomplete="off">
+                    <div class="form-header">
+                        <h2>Login</h2>
+                        <p>Enter your credentials to access your account.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-email">Email Address <span class="required">*</span></label>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-envelope input-icon"></i>
+                            <input type="email" id="login-email" name="login_email" placeholder="name@example.com" autocomplete="off" value="" required>
+                        </div>
+                        <span class="error-msg" id="error-login-email"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="login-password">Password <span class="required">*</span></label>
+                            <a href="/forgot-password.html" class="forgot-link">Forgot Password?</a>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-lock input-icon"></i>
+                            <input type="password" id="login-password" name="login_password" placeholder="Enter your password" autocomplete="new-password" value="" required>
+                            <button type="button" class="btn-toggle-pw" id="toggle-login-password" aria-label="Show password" title="Show password">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="error-msg" id="error-login-password"></span>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="remember-label">
+                            <input type="checkbox" id="remember-me" checked> Stay signed in
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="btn-login-submit">
+                        <span class="btn-text">Login</span>
+                        <i class="fa-solid fa-arrow-right btn-icon"></i>
+                        <div class="spinner hidden" id="login-spinner"></div>
+                    </button>
+
+                    <!-- OR Divider -->
+                    <div class="auth-divider">
+                        <span>OR CONTINUE WITH</span>
+                    </div>
+
+                    <!-- Social Login Options -->
+                    <div class="social-login-group">
+                        <button type="button" class="btn-social btn-google" id="btn-google-login" onclick="window.location.href='/api/auth/google';">
+                            <i class="fa-brands fa-google"></i>
+                            <span>Continue with Google / Gmail</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 14px; text-align: center; font-size: 0.95rem; color: #475569;">
+                        Don't have an account? <a href="/register.html" style="color: #2563eb; font-weight: 700; text-decoration: none;">Sign Up</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== 3. SHOPEE-STYLE 4-COLUMN FOOTER ==================== -->
+    <footer class="shopee-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>Customer Care</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Help Centre</a></li>
+                        <li><a href="#">How to Book a Service</a></li>
+                        <li><a href="#">Payment Methods</a></li>
+                        <li><a href="#">SoundSphere Guarantee</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>About SoundSphere</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="/provider/register.html">Service Provider Registration</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Payment Partners</h4>
+                    <div class="payment-badges" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">GCash</span>
+                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Maya</span>
+                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Bank Transfer</span>
+                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Visa / MC</span>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Coverage Areas</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Metro Manila</a></li>
+                        <li><a href="#">Rizal & Cavite</a></li>
+                        <li><a href="#">Laguna & Batangas</a></li>
+                        <li><a href="#">Bulacan & Pampanga</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="pages/js/api.js?v=8.0"></script>
+    <script src="pages/js/login.js?v=8.0"></script>
+</body>
+</html>

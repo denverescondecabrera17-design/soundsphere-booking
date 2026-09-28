@@ -1,0 +1,421 @@
+/* ============================================================================
+   SoundSphere - Client Booking Management Dashboard Styling
+   Theme: Sleek Navy Dark (#0a192f / #1e3e62) & Crisp White (#ffffff)
+   ============================================================================ */
+
+:root {
+    --navy-dark: #0a192f;
+    --navy-blue: #1e3e62;
+    --blue-accent: #2563eb;
+    --blue-light: #93c5fd;
+    --bg-body: #f4f7fb;
+    --card-bg: #ffffff;
+    --text-main: #0a192f;
+    --text-muted: #64748b;
+    --border-color: #cbd5e1;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+    --shadow-sm: 0 2px 8px rgba(10, 25, 47, 0.05);
+    --shadow-card: 0 10px 25px rgba(10, 25, 47, 0.08);
+}
+
+body.client-bookings-body {
+    background-color: var(--bg-body);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookings-main-container {
+    max-width: 1240px;
+    margin: 32px auto;
+    padding: 0 20px;
+    flex: 1;
+}
+
+.dashboard-header-title {
+    margin-bottom: 24px;
+}
+
+.dashboard-header-title h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--navy-dark);
+    margin: 0 0 6px 0;
+}
+
+.dashboard-header-title p {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* 1. Status Filter Tabs Bar */
+.status-tabs-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 24px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tab-btn {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-btn:hover {
+    color: var(--navy-dark);
+}
+
+.tab-btn.active {
+    color: var(--navy-dark);
+    border-bottom-color: var(--navy-dark);
+}
+
+.tab-count-badge {
+    background: #e2e8f0;
+    color: var(--navy-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+.tab-btn.active .tab-count-badge {
+    background: var(--navy-dark);
+    color: #ffffff;
+}
+
+/* 2. Bookings List Container */
+.bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Booking Card Item */
+.booking-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.booking-card:hover {
+    box-shadow: var(--shadow-card);
+    border-color: var(--blue-accent);
+}
+
+.booking-card-header {
+    background: #f8fafc;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.booking-id-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.booking-id-tag {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--navy-dark);
+}
+
+.created-date {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+/* Dynamic Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.status-badge.status-pending {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.status-badge.status-confirmed {
+    background: #ebf2fa;
+    color: var(--navy-dark);
+    border: 1px solid var(--border-active);
+}
+
+.status-badge.status-completed {
+    background: #d1fae5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.status-badge.status-cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.payment-status-badge {
+    font-size: 0.74rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+
+.payment-status-badge.paid-down {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.payment-status-badge.paid-full {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.payment-status-badge.unpaid {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* Booking Card Content Body */
+.booking-card-body {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 20px;
+}
+
+.provider-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.provider-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    background: var(--navy-dark);
+    object-fit: cover;
+}
+
+.provider-details h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--navy-dark);
+    margin: 0 0 4px 0;
+}
+
+.package-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--blue-accent);
+}
+
+.event-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 0.84rem;
+}
+
+.event-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--navy-dark);
+    font-weight: 600;
+}
+
+.event-detail-item i {
+    color: var(--text-muted);
+}
+
+/* Pricing Side Panel */
+.pricing-side-box {
+    border-left: 1px solid var(--border-color);
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.total-price-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.total-price-amount {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--navy-dark);
+    margin-bottom: 6px;
+}
+
+/* 3. Action Buttons per Booking */
+.booking-card-actions {
+    background: #f8fafc;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-action-sm {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--navy-dark);
+}
+
+.btn-action-sm:hover {
+    background: #f1f5f9;
+    border-color: var(--navy-dark);
+}
+
+.btn-action-sm.btn-chat {
+    background: #ebf2fa;
+    color: var(--navy-dark);
+    border-color: var(--border-active);
+}
+
+.btn-action-sm.btn-chat:hover {
+    background: var(--navy-dark);
+    color: #ffffff;
+}
+
+.btn-action-sm.btn-feedback {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.btn-action-sm.btn-feedback:hover {
+    background: #d97706;
+    color: #ffffff;
+}
+
+.btn-action-sm.btn-report {
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+.btn-action-sm.btn-report:hover {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.btn-action-sm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f1f5f9 !important;
+    color: #cbd5e1 !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Modals Styling */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 25, 47, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 20px;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    max-width: 540px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background: var(--navy-dark);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .booking-card-body {
+        grid-template-columns: 1fr;
+    }
+    .pricing-side-box {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        padding-left: 0;
+        padding-top: 14px;
+    }
+}

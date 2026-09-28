@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed - SoundSphere</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/marketplace.css">
+    <link rel="stylesheet" href="css/app-platform.css">
+    <link rel="stylesheet" href="css/booking.css">
+    <style>
+        .confirmation-card {
+            max-width: 780px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .success-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: #dcfce7;
+            color: #15803d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 28px 0;
+            text-align: left;
+        }
+
+        .receipt-table td {
+            padding: 14px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 1rem;
+        }
+
+        .receipt-label {
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .receipt-val {
+            color: #0f172a;
+            font-weight: 700;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Platform Header Navigation Bar -->
+    <header class="platform-navbar" style="height: 64px; background: #0a192f;">
+        <div class="platform-nav-container" style="width: 100%; max-width: 100%; margin: 0; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 100%;">
+            <div class="brand-logo">
+                <a href="marketplace.html" style="display:flex; align-items:center; gap:12px; text-decoration:none; color:#ffffff;">
+                    <i class="fa-solid fa-compact-disc brand-icon" style="font-size: 2.5rem; color: #60a5fa;"></i>
+                    <div class="brand-text">
+                        <span class="brand-title" style="font-size: 1.85rem; font-weight: 800;">SoundSphere</span>
+                        <span class="brand-tagline" style="font-size: 1.0rem;">Lights & Sounds Marketplace</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <a href="client-bookings.html" class="nav-action-btn primary" style="height: 54px; padding: 0 22px; font-size: 1.2rem; font-weight: 700;">
+                    <i class="fa-solid fa-calendar-check"></i> My Event Bookings
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="booking-page-container">
+        <div class="confirmation-card">
+            <div class="success-icon-wrapper">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: #0a192f; margin: 0 0 6px 0;">BOOKING CONFIRMED</h1>
+            <p style="font-size: 1.1rem; color: #64748b; margin: 0;">Your event package reservation has been successfully saved to the database.</p>
+
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px 20px; margin-top: 24px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.95rem; font-weight: 700; color: #1e40af;">Booking Reference Number:</span>
+                <span id="confirm-ref-code" style="font-size: 1.35rem; font-weight: 900; color: #2563eb;">SS-2026-00001</span>
+            </div>
+
+            <table class="receipt-table">
+                <tr>
+                    <td class="receipt-label">Service Provider</td>
+                    <td class="receipt-val" id="confirm-provider-name">CHiCHa Lights and Sounds</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Package Name</td>
+                    <td class="receipt-val" id="confirm-pkg-name">Standard Party Audio & Light Rig</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Event Date</td>
+                    <td class="receipt-val" id="confirm-event-date">August 30, 2026</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Schedule Time</td>
+                    <td class="receipt-val" id="confirm-event-time">5:00 PM – 11:00 PM (6 Hours)</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Location / Municipality</td>
+                    <td class="receipt-val" id="confirm-event-place">Nasugbu, Batangas</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Venue & Address</td>
+                    <td class="receipt-val" id="confirm-event-venue">ABC Events Hall, Brgy. Bucana</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Package Base Price</td>
+                    <td class="receipt-val" id="confirm-pkg-price">₱0.00</td>
+                </tr>
+                <tr id="confirm-row-adddays" style="display:none;">
+                    <td class="receipt-label">Additional Day Charges</td>
+                    <td class="receipt-val" id="confirm-adddays-price" style="color:#2563eb; font-weight:700;">₱0.00</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Transportation / Service Fee</td>
+                    <td class="receipt-val" id="confirm-transport-fee">₱0.00</td>
+                </tr>
+                <tr style="border-top:2px dashed #e2e8f0;">
+                    <td class="receipt-label" style="font-weight:800; color:#0f172a;">Total Booking Price</td>
+                    <td class="receipt-val" id="confirm-total-price" style="font-weight:900; color:#0f172a; font-size:1.15rem;">₱0.00</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Payment Plan Selected</td>
+                    <td class="receipt-val" id="confirm-payment-type">50% Down Payment</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Amount Paid Now</td>
+                    <td class="receipt-val" id="confirm-amount-paid" style="color: #10b981; font-size: 1.15rem; font-weight:900;">₱0.00</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Remaining Balance</td>
+                    <td class="receipt-val" id="confirm-remaining-balance" style="color: #ef4444; font-weight:800;">₱0.00 (Due 1 day before event)</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label">Booking Status</td>
+                    <td class="receipt-val"><span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 800;">CONFIRMED</span></td>
+                </tr>
+            </table>
+
+            <div style="display: flex; gap: 16px; justify-content: center; margin-top: 32px;">
+                <a href="marketplace.html" class="nav-action-btn secondary" style="height: 54px; padding: 0 28px; font-size: 1.1rem; font-weight: 700; text-decoration: none;">
+                    <i class="fa-solid fa-store"></i> Return to Marketplace
+                </a>
+                <a href="client-bookings.html" class="nav-action-btn primary" style="height: 54px; padding: 0 28px; font-size: 1.1rem; font-weight: 700; text-decoration: none;">
+                    <i class="fa-solid fa-calendar-days"></i> View My Bookings
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref') || '';
+            const bookingId = urlParams.get('id');
+
+            const confirmRefCode = document.getElementById('confirm-ref-code');
+            const confirmProviderName = document.getElementById('confirm-provider-name');
+            const confirmPkgName = document.getElementById('confirm-pkg-name');
+            const confirmEventDate = document.getElementById('confirm-event-date');
+            const confirmEventTime = document.getElementById('confirm-event-time');
+            const confirmEventPlace = document.getElementById('confirm-event-place');
+            const confirmEventVenue = document.getElementById('confirm-event-venue');
+            const confirmPaymentType = document.getElementById('confirm-payment-type');
+            const confirmAmountPaid = document.getElementById('confirm-amount-paid');
+            const confirmRemainingBalance = document.getElementById('confirm-remaining-balance');
+            const confirmPkgPrice = document.getElementById('confirm-pkg-price');
+            const confirmRowAddDays = document.getElementById('confirm-row-adddays');
+            const confirmAddDaysPrice = document.getElementById('confirm-adddays-price');
+            const confirmTransportFee = document.getElementById('confirm-transport-fee');
+            const confirmTotalPrice = document.getElementById('confirm-total-price');
+
+            if (confirmRefCode && refCode) confirmRefCode.textContent = refCode;
+
+            const formatMoney = (num) => '₱' + (parseFloat(num) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const formatTime12h = (timeStr) => {
+                if (!timeStr) return '';
+                if (timeStr.includes('AM') || timeStr.includes('PM') || timeStr.includes('am') || timeStr.includes('pm')) return timeStr;
+                const parts = timeStr.split(':');
+                if (parts.length < 2) return timeStr;
+                let h = parseInt(parts[0], 10);
+                const m = parts[1];
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${h}:${m} ${ampm}`;
+            };
+
+            const renderBooking = (b) => {
+                if (!b) return;
+                if (confirmRefCode) confirmRefCode.textContent = b.BookingReference || refCode || 'SS-2026-00001';
+                if (confirmProviderName) confirmProviderName.textContent = b.ProviderName || b.BusinessName || 'CHiCHa Lights and Sounds';
+                if (confirmPkgName) confirmPkgName.textContent = b.PackageName || 'Event Service Package';
+
+                const startDateStr = b.ServiceStartDate || b.EventDate || '';
+                const endDateStr = b.ServiceEndDate || b.EventDate || startDateStr;
+                const hireDays = parseInt(b.ServiceHireDays || b.NumberOfDays || 1, 10);
+                const dateDisplay = (!startDateStr) ? 'Reserved Date' : (startDateStr === endDateStr ? startDateStr : `${startDateStr} to ${endDateStr}`);
+
+                if (confirmEventDate) confirmEventDate.textContent = `${dateDisplay} (📅 ${hireDays} Day${hireDays > 1 ? 's' : ''})`;
+
+                const formattedStart = formatTime12h(b.StartTime) || '06:00 PM';
+                const formattedEnd = formatTime12h(b.EndTime) || '10:00 PM';
+                if (confirmEventTime) confirmEventTime.textContent = `⏰ ${formattedStart} – ${formattedEnd}`;
+
+                if (confirmEventPlace) confirmEventPlace.textContent = b.EventPlace || b.Location || 'Batangas';
+                if (confirmEventVenue) confirmEventVenue.textContent = `${b.VenueName || 'Event Venue'}${b.EventAddress ? ` (${b.EventAddress})` : ''}`;
+
+                const pkgBasePrice = parseFloat(b.PackagePrice || b.packagePrice || 0);
+                const addDaysPrice = parseFloat(b.AdditionalDayCharges || b.additionalDayCharges || 0);
+                const transportFee = parseFloat(b.TransportationFee || b.transportationFee || 0);
+                const distKm = parseFloat(b.DistanceKm || b.distanceKm || 0);
+                const totalPrice = parseFloat(b.TotalAmount || b.totalAmount || (pkgBasePrice + addDaysPrice + transportFee));
+
+                if (confirmPkgPrice) confirmPkgPrice.textContent = formatMoney(pkgBasePrice);
+
+                if (hireDays > 1 && addDaysPrice > 0) {
+                    if (confirmRowAddDays) confirmRowAddDays.style.display = 'table-row';
+                    if (confirmAddDaysPrice) confirmAddDaysPrice.textContent = `+${formatMoney(addDaysPrice)}`;
+                } else {
+                    if (confirmRowAddDays) confirmRowAddDays.style.display = 'none';
+                }
+
+                if (confirmTransportFee) {
+                    confirmTransportFee.textContent = distKm > 0 ? `${formatMoney(transportFee)} (${distKm} km)` : formatMoney(transportFee);
+                }
+                if (confirmTotalPrice) confirmTotalPrice.textContent = formatMoney(totalPrice);
+
+                const isDownpayment = (b.PaymentType === 'downpayment' || b.paymentType === 'downpayment' || !b.PaymentType);
+                if (confirmPaymentType) confirmPaymentType.textContent = isDownpayment ? '50% Down Payment' : '100% Full Payment';
+
+                const paidVal = parseFloat(b.AmountPaid !== undefined ? b.AmountPaid : (isDownpayment ? totalPrice * 0.5 : totalPrice));
+                if (confirmAmountPaid) confirmAmountPaid.textContent = formatMoney(paidVal);
+
+                if (confirmRemainingBalance) {
+                    const remVal = parseFloat(b.RemainingBalance !== undefined ? b.RemainingBalance : (totalPrice - paidVal));
+                    confirmRemainingBalance.textContent = remVal > 0 ? `${formatMoney(remVal)} (Due 1 day before event)` : '₱0.00 (Fully Paid)';
+                }
+            };
+
+            let bookingLoaded = false;
+
+            // 1. Fetch exact booking by Reference Code or ID from API
+            if (refCode || bookingId) {
+                try {
+                    const target = refCode || bookingId;
+                    const res = await fetch(`/api/bookings/${encodeURIComponent(target)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.booking) {
+                            renderBooking(data.booking);
+                            bookingLoaded = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Direct booking query notice:', e);
+                }
+            }
+
+            // 2. Fallback: Query current client's latest booking from API
+            if (!bookingLoaded) {
+                try {
+                    const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : localStorage.getItem('soundsphere_jwt_token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const myRes = await fetch('/api/bookings/my-bookings', { headers });
+                    if (myRes.ok) {
+                        const myData = await myRes.json();
+                        const bookingsList = myData.bookings || myData.data || [];
+                        if (Array.isArray(bookingsList) && bookingsList.length > 0) {
+                            renderBooking(bookingsList[0]);
+                            bookingLoaded = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Latest bookings fallback notice:', e);
+                }
+            }
+
+            // 3. Fallback: Load cached booking payload from sessionStorage
+            if (!bookingLoaded) {
+                try {
+                    const cached = sessionStorage.getItem('soundsphere_last_booking');
+                    if (cached) {
+                        const b = JSON.parse(cached);
+                        renderBooking(b);
+                        bookingLoaded = true;
+                    }
+                } catch (e) {}
+            }
+        });
+    </script>
+    <script src="js/profile-modal.js?v=1.0"></script>
+</body>
+</html>

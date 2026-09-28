@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere - Sign in to book lights & sounds services with ease.">
+    <title>SoundSphere | Account Login</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=7.0">
+    <link rel="stylesheet" href="css/login.css?v=7.0">
+</head>
+<body class="login-body-bg">
+
+    <!-- Header Navigation -->
+    <header class="shopee-header">
+        <div class="main-header">
+            <div class="container" style="justify-content: space-between;">
+                <a href="/index.html" class="brand-logo">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <div>
+                        SoundSphere
+                        <span class="tagline-sub">Book Lights & Sounds with Ease</span>
+                    </div>
+                </a>
+                <a href="/index.html" class="btn-auth-outline"><i class="fa-solid fa-arrow-left"></i> Back to Marketplace</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Auth Card Container -->
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <!-- Left Branding Side -->
+            <div class="auth-branding">
+                <div class="brand-badge">SOUNDSPHERE MARKETPLACE</div>
+                <h1>Book Professional Lights & Sounds Services with Ease</h1>
+                <p>Connect with verified audio-visual service providers, concert line arrays, and stage lighting packages for your events.</p>
+                
+                <ul class="feature-list">
+                    <li><i class="fa-solid fa-circle-check"></i> Verified Service Providers</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Email OTP Verification</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Instant Event Booking</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Secure Role-Based Access</li>
+                </ul>
+            </div>
+
+            <!-- Right Dedicated Form Side: LOGIN ONLY -->
+            <div class="auth-form-container">
+                <!-- Alert Banner -->
+                <div id="alert-banner" class="alert-banner hidden" role="alert">
+                    <i id="alert-icon" class="fa-solid fa-circle-info"></i>
+                    <span id="alert-message">Alert text</span>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <form id="login-form" class="auth-form" autocomplete="off">
+                    <div class="form-header">
+                        <h2>Login</h2>
+                        <p>Enter your credentials to access your account.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-email">Email Address <span class="required">*</span></label>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-envelope input-icon"></i>
+                            <input type="email" id="login-email" name="login_email" placeholder="name@example.com" autocomplete="off" value="" required>
+                        </div>
+                        <span class="error-msg" id="error-login-email"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="login-password">Password <span class="required">*</span></label>
+                            <a href="/forgot-password.html" class="forgot-link">Forgot Password?</a>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-lock input-icon"></i>
+                            <input type="password" id="login-password" name="login_password" placeholder="Enter your password" autocomplete="new-password" value="" required>
+                            <button type="button" class="btn-toggle-pw" id="toggle-login-password" aria-label="Show password" title="Show password">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="error-msg" id="error-login-password"></span>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="remember-label">
+                            <input type="checkbox" id="remember-me" checked> Stay signed in
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="btn-login-submit">
+                        <span class="btn-text">Login</span>
+                        <i class="fa-solid fa-arrow-right btn-icon"></i>
+                        <div class="spinner hidden" id="login-spinner"></div>
+                    </button>
+
+                    <!-- OR Divider -->
+                    <div class="auth-divider">
+                        <span>OR CONTINUE WITH</span>
+                    </div>
+
+                    <!-- Social Login Options -->
+                    <div class="social-login-group">
+                        <button type="button" class="btn-social btn-google" id="btn-google-login" onclick="window.location.href='/api/auth/google';">
+                            <i class="fa-brands fa-google"></i>
+                            <span>Continue with Google / Gmail</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="shopee-footer">
+        <div class="container" style="text-align: center;">
+            <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="pages/js/api.js?v=7.0"></script>
+    <script src="pages/js/login.js?v=7.0"></script>
+</body>
+</html>

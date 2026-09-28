@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere - Modern Client Service Provider & Event Booking Platform. Discover trusted audio-visual providers, compare packages, and book services.">
+    <title>SoundSphere | Service Provider & Event Booking Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets with Cache-Busting Parameters -->
+    <link rel="stylesheet" href="/css/styles.css?v=6.0">
+    <link rel="stylesheet" href="/css/marketplace.css?v=3.0">
+    <link rel="stylesheet" href="/css/app-platform.css?v=3.0">
+    <link rel="stylesheet" href="/css/profile-modal.css?v=3.0">
+    <link rel="stylesheet" href="/css/client-messages.css?v=10.0">
+</head>
+<body class="platform-body">
+
+    <!-- ==================== FIXED MAIN NAVIGATION BAR ==================== -->
+    <header class="platform-navbar">
+        <div class="platform-nav-container">
+            <!-- Brand Logo -->
+            <a href="/marketplace.html" class="platform-brand">
+                <i class="fa-solid fa-compact-disc"></i>
+                <div>
+                    SoundSphere
+                    <span class="brand-sub">Lights & Sounds Booking System</span>
+                </div>
+            </a>
+
+            <!-- Main Navigation Links (Home, Messages, Me/Profile) -->
+            <nav class="platform-nav-links">
+                <button type="button" class="nav-tab-btn active" id="nav-home">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </button>
+                <button type="button" class="nav-tab-btn" id="nav-messages-tab">
+                    <i class="fa-solid fa-comments"></i>
+                    <span>Messages</span>
+                    <span class="nav-badge-count" id="unread-messages-badge" style="display:none;">0</span>
+                </button>
+                <button type="button" class="nav-tab-btn" id="nav-profile-tab">
+                    <i class="fa-solid fa-user"></i>
+                    <span>Me / Profile</span>
+                </button>
+            </nav>
+
+            <!-- Nav Actions Right -->
+            <div class="platform-nav-actions">
+                <!-- Unauthenticated Guest Auth Buttons -->
+                <div id="guest-auth-buttons" class="header-actions hidden" style="display:flex; align-items:center; gap:10px;">
+                    <a href="/login.html" class="btn-auth-outline" style="padding: 7px 16px; border: 1px solid #60a5fa; color: #60a5fa; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Login</a>
+                    <a href="/register.html" class="btn-auth-solid" style="padding: 7px 16px; background: #2563eb; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Sign Up</a>
+                </div>
+
+                <!-- Notification Bell Wrapper -->
+                <div id="auth-notification-wrapper" class="notification-wrapper" style="position:relative; margin-right:8px;">
+                    <button type="button" id="btn-notification-bell" title="Notifications" style="position:relative; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.25); color:#ffffff; font-size:1.3rem; cursor:pointer; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease;">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notification-badge" class="notification-badge hidden" style="position:absolute; top:-3px; right:-3px; background:#ef4444; color:#ffffff; font-size:0.85rem; font-weight:900; padding:2px 8px; border-radius:10px; border:1.5px solid #0a192f; min-width:20px; text-align:center;">0</span>
+                    </button>
+
+                    <!-- Notification Dropdown Panel -->
+                    <div id="notification-panel" class="notification-panel hidden" style="position:absolute; right:0; top:58px; width:400px; max-width:90vw; background:#ffffff; border:1px solid #cbd5e1; border-radius:16px; box-shadow:0 12px 32px rgba(10,25,47,0.25); z-index:99999; overflow:hidden;">
+                        <div style="padding:14px 18px 10px 18px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-weight:800; color:#0a192f; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-bell" style="color:#2563eb;"></i> Notifications
+                            </div>
+                            <button type="button" id="btn-mark-all-read" style="background:none; border:none; color:#2563eb; font-weight:800; font-size:0.85rem; cursor:pointer;">
+                                Mark all as read
+                            </button>
+                        </div>
+                        <div style="padding:8px 18px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; gap:8px;">
+                            <button type="button" id="dropdown-tab-all" style="padding:4px 12px; border:none; border-radius:12px; font-weight:800; font-size:0.85rem; background:#2563eb; color:#ffffff; cursor:pointer;">All</button>
+                            <button type="button" id="dropdown-tab-unread" style="padding:4px 12px; border:none; border-radius:12px; font-weight:800; font-size:0.85rem; background:#e2e8f0; color:#475569; cursor:pointer;">Unread</button>
+                        </div>
+                        <div id="notification-list" style="max-height:360px; overflow-y:auto;">
+                            <!-- Rendered dynamically -->
+                        </div>
+                        <div style="padding:12px 18px; background:#f8fafc; border-top:1px solid #e2e8f0; text-align:center;">
+                            <button type="button" id="btn-view-all-notifications" style="background:none; border:none; color:#0a192f; font-weight:800; font-size:0.88rem; cursor:pointer;">
+                                View All Notifications →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Avatar Menu (Contains Logout Item) -->
+                <div id="auth-user-menu" class="user-avatar-menu">
+                    <div class="avatar-btn" id="avatar-btn">
+                        <div class="avatar-img" id="user-avatar-initials">UA</div>
+                        <span class="avatar-name" id="user-display-name">User Account</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.85rem;"></i>
+                    </div>
+
+                    <!-- Dropdown Menu -->
+                    <div class="user-dropdown" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-title" id="dropdown-user-title">SoundSphere Account</div>
+                            <div class="user-role" id="dropdown-user-role">Verified User</div>
+                        </div>
+                        <a href="/provider/dashboard.html" class="dropdown-item hidden" id="dropdown-provider-dashboard-link" style="color:#2563eb; font-weight:700; background:#eff6ff; border-radius:8px;">
+                            <i class="fa-solid fa-gauge-high"></i> Provider Dashboard
+                        </a>
+                        <a href="#" id="logout-btn" class="dropdown-item logout-item" style="color:#ef4444; font-weight:700;">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN CONTENT VIEWS CONTAINER ==================== -->
+    <main class="platform-main-content">
+
+        <!-- ==================== VIEW 1: HOME ==================== -->
+        <section class="platform-view-panel" id="view-home">
+            <!-- Hero Banner Section with Single Main Search Bar -->
+            <div class="hero-banner-section">
+                <div class="hero-banner-container">
+                    <h1>Find Professional Lights & Sounds Services</h1>
+                    <p>Discover trusted service providers, compare packages, and book the services you need.</p>
+                    
+                    <div class="large-search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass search-icon-left"></i>
+                        <input type="text" class="large-search-input" id="hero-search-input" name="hero_search_input" aria-label="Search service providers, packages, or events" placeholder="Search service providers, packages, or events..." autocomplete="off">
+                        <button type="button" class="btn-hero-search" id="hero-search-btn">Search</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browse Categories & Place Section (Enlarged Single-Row Dropdowns) -->
+            <div class="section-wrapper" style="padding-top: 24px; padding-bottom: 24px;">
+                <div class="minimal-category-row" style="display: flex; align-items: center; gap: 36px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; padding: 22px 32px; box-shadow: 0 4px 16px rgba(10,25,47,0.06);">
+                    
+                    <!-- Place Dropdown -->
+                    <div class="filter-dropdown-group" style="display: flex; align-items: center; gap: 16px; width: 100%; max-width: 600px;">
+                        <label for="home-place-select" style="font-size: 1.25rem; font-weight: 800; color: #0a192f; white-space: nowrap;">Place</label>
+                        <div style="position: relative; flex: 1;">
+                            <select id="home-place-select" name="home_place_select" style="width: 100%; height: 52px; background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 10px; padding: 0 44px 0 18px; font-size: 1.1rem; font-weight: 700; color: #0a192f; font-family: inherit; cursor: pointer; outline: none; appearance: none; transition: all 0.2s ease;">
+                                <option value="all">All Places</option>
+                                <option value="Lian">Lian</option>
+                                <option value="Balayan">Balayan</option>
+                                <option value="Nasugbu">Nasugbu</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #2563eb; font-size: 1.1rem; pointer-events: none;"></i>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Featured Lights & Sounds Service Offers Section -->
+            <div class="section-wrapper" style="padding-top: 0;">
+                <div class="section-header-title">
+                    <div>
+                        <h2><i class="fa-solid fa-layer-group" style="color:#2563eb;"></i> Featured Service Offers & Packages</h2>
+                        <p>Browse individual sound system setups, stage lighting, and event package offers created by verified service providers.</p>
+                    </div>
+                    <button type="button" class="btn-card-secondary" id="btn-view-all-providers" style="padding: 12px 26px; font-size: 1.15rem; font-weight: 800; border-radius: 10px; border: 2px solid #cbd5e1; background: #ffffff; color: #0a192f; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(10,25,47,0.06); display: inline-flex; align-items: center; justify-content: center;">View All Offers</button>
+                </div>
+
+                <div class="providers-responsive-grid" id="home-featured-providers-grid">
+                    <div class="empty-state-box" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 48px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; margin: 12px 0;">
+                        <i class="fa-solid fa-box-open" style="font-size: 2.8rem; color: #94a3b8; margin-bottom: 14px; display: block;"></i>
+                        <h3 style="margin: 0 0 8px 0; color: #0a192f; font-size: 1.2rem; font-weight: 800;">No Service Offers Available</h3>
+                        <p style="margin: 0; font-size: 0.9rem; color: #64748b; max-width: 500px; margin: 0 auto;">There are currently no active service package offers listed in the marketplace.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SEARCH VIEW (HIDDEN DYNAMIC SEARCH RESULTS) ==================== -->
+        <section class="platform-view-panel hidden" id="view-search">
+            <div class="section-wrapper">
+                <div class="section-header-title">
+                    <div>
+                        <h2><i class="fa-solid fa-magnifying-glass" style="color:#2563eb;"></i> Search Results</h2>
+                        <p id="search-results-count">Showing 3 Results</p>
+                    </div>
+                </div>
+
+                <div class="search-filter-layout">
+                    <!-- Filters Sidebar -->
+                    <aside class="filter-sidebar-card">
+                        <div style="font-size: 1.45rem; font-weight: 800; color: #0a192f; display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0;">
+                            <span><i class="fa-solid fa-sliders" style="color: #2563eb; margin-right: 8px;"></i> Equipment Filters</span>
+                            <a href="#" style="font-size: 0.95rem; color: #2563eb; font-weight: 700; text-decoration: none; padding: 6px 14px; background: #eff6ff; border-radius: 8px; border: 1px solid #bfdbfe;" onclick="location.reload();">Reset</a>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="main-search-input">Keyword Search</label>
+                            <input type="text" id="main-search-input" name="main_search_input" class="filter-input" placeholder="e.g. Line array, wedding lights, Balayan..." autocomplete="off">
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="search-location-select">Place</label>
+                            <select id="search-location-select" name="search_location_select" class="filter-select">
+                                <option value="all">All Places</option>
+                                <option value="Lian">Lian</option>
+                                <option value="Balayan">Balayan</option>
+                                <option value="Nasugbu">Nasugbu</option>
+                            </select>
+                        </div>
+                    </aside>
+
+                    <!-- Search Results Grid -->
+                    <main>
+                        <div class="providers-responsive-grid" id="search-results-grid">
+                            <!-- Rendered dynamically via app-platform.js -->
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 2: MESSAGES (MESSENGER UI) ==================== -->
+        <section class="platform-view-panel hidden" id="view-messages">
+            <div class="section-wrapper" style="padding-top: 16px; padding-bottom: 0;">
+                <div class="messages-layout-container">
+                    <!-- Left Panel Threads (Messenger Conversations List) -->
+                    <aside class="threads-left-panel">
+                        <div class="threads-header">
+                            <div class="threads-header-top">
+                                <h2>Chats</h2>
+                            </div>
+                            <div class="threads-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" placeholder="Search Messenger..." id="threads-search">
+                            </div>
+                        </div>
+
+                        <div class="threads-list" id="threads-list">
+                            <div class="messenger-empty-state" style="padding: 40px 16px;">
+                                <div class="messenger-empty-icon" style="width: 60px; height: 60px; font-size: 1.5rem; margin-bottom: 12px;"><i class="fa-solid fa-comments"></i></div>
+                                <h4 style="margin: 0 0 4px 0; color: #050505; font-size: 0.98rem; font-weight: 800;">No conversations yet</h4>
+                                <p style="margin: 0; font-size: 0.8rem; color: #65676b;">Your chats with service providers will appear here once you make a booking.</p>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Right Active Chat Window (Messenger Style) -->
+                    <section class="chat-right-panel">
+                        <div class="chat-header-bar">
+                            <div class="active-provider-meta">
+                                <div class="active-chat-avatar-wrap">
+                                    <div class="active-chat-avatar" id="active-chat-avatar" style="width:42px; height:42px; border-radius:50%; background:#0084ff; color:#ffffff; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:1.1rem;"><i class="fa-solid fa-comments"></i></div>
+                                    <span class="online-status-badge"></span>
+                                </div>
+                                <div>
+                                    <h3 class="active-provider-name" id="active-provider-name">Select a Service Provider</h3>
+                                    <div class="active-status-subtitle" id="active-status-subtitle">
+                                        <span class="green-dot-indicator"></span> Direct Provider &amp; Client Messaging
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="messages-history-stream" id="messages-stream">
+                            <div class="messenger-empty-state">
+                                <div class="messenger-empty-icon"><i class="fa-solid fa-paper-plane"></i></div>
+                                <h3>Your Messages</h3>
+                                <p>Select a provider booking conversation on the left to start messaging in real-time.</p>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-footer">
+                            <input type="file" id="image-file-input" accept="image/*" style="display: none;">
+                            <button type="button" class="input-action-btn" id="btn-attach-img" title="Attach Image / Layout">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                            <input type="text" class="chat-text-input" id="chat-text-input" placeholder="Aa" autocomplete="off">
+                            <button type="button" class="btn-send-message" id="btn-send-message" title="Send Message">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 3: ME / PROFILE ==================== -->
+        <section class="platform-view-panel hidden" id="view-profile">
+            <!-- Profile Header Banner -->
+            <div class="profile-header-banner">
+                <div class="profile-header-container">
+                    <div class="profile-user-meta">
+                        <div class="profile-avatar-big" id="profile-page-avatar">
+                            <span id="profile-avatar-initials">--</span>
+                        </div>
+                        <div class="profile-info-text">
+                            <h1 id="profile-user-fullname">User Account</h1>
+                            <div class="profile-info-details">
+                                <span><i class="fa-solid fa-envelope" style="color:#2563eb;"></i> <span id="profile-user-email">--</span></span>
+                                <span><i class="fa-solid fa-phone" style="color:#10b981;"></i> <span id="profile-user-phone">--</span></span>
+                                <span><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> <span id="profile-user-address">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-save-profile my-account-trigger" style="box-shadow:none;">
+                        <i class="fa-solid fa-user-pen"></i> Edit Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Profile Navigation Subtabs (EXACTLY 4 REFINED TABS - NO PAYMENTS, NO FAVORITES) -->
+            <div class="profile-subtabs-row">
+                <div class="profile-subtabs-container">
+                    <button type="button" class="subtab-btn active" id="subtab-btn-bookings" data-subtab="bookings">
+                        <i class="fa-solid fa-calendar-check"></i> My Bookings
+                    </button>
+                    <button type="button" class="subtab-btn" id="subtab-btn-history" data-subtab="history">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Booking History
+                    </button>
+                    <button type="button" class="subtab-btn" id="subtab-btn-settings" data-subtab="settings">
+                        <i class="fa-solid fa-gear"></i> Account Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Profile Sections Content Container -->
+            <div class="section-wrapper">
+
+                <!-- 1. MY BOOKINGS (CURRENT & ONGOING BOOKINGS: PENDING | CONFIRMED | COMPLETED | CANCELLED - NO ALL TAB) -->
+                <div id="profile-sec-bookings">
+                    <div style="display:flex; gap:16px; margin-bottom:28px; overflow-x:auto;">
+                        <button type="button" class="booking-status-filter-btn tab-btn active" data-status="pending" style="padding:14px 28px; font-size:1.15rem; font-weight:800; background:#2563eb; color:#fff; border:none; border-radius:12px; height:54px;">Pending (0)</button>
+                        <button type="button" class="booking-status-filter-btn tab-btn" data-status="confirmed" style="padding:14px 28px; font-size:1.15rem; font-weight:800; background:#fff; border:1.5px solid #cbd5e1; color:#475569; border-radius:12px; height:54px;">Confirmed (0)</button>
+                        <button type="button" class="booking-status-filter-btn tab-btn" data-status="completed" style="padding:14px 28px; font-size:1.15rem; font-weight:800; background:#fff; border:1.5px solid #cbd5e1; color:#475569; border-radius:12px; height:54px;">Completed (0)</button>
+                        <button type="button" class="booking-status-filter-btn tab-btn" data-status="cancelled" style="padding:14px 28px; font-size:1.15rem; font-weight:800; background:#fff; border:1.5px solid #cbd5e1; color:#475569; border-radius:12px; height:54px;">Cancelled (0)</button>
+                    </div>
+
+                    <!-- Bookings Container Grid -->
+                    <div id="my-bookings-cards-container">
+                        <!-- Empty Status Container -->
+                        <div id="booking-status-empty-msg" style="text-align: center; padding: 75px 36px; background: #ffffff; border-radius: 18px; border: 1.5px solid #cbd5e1; box-shadow:0 6px 20px rgba(10,25,47,0.06);">
+                            <i class="fa-solid fa-calendar-xmark" style="font-size: 4rem; color: #94a3b8; margin-bottom: 18px; display:block;"></i>
+                            <h3 style="color: #0a192f; margin: 0 0 10px 0; font-size:1.65rem; font-weight:900;">No bookings yet.</h3>
+                            <p style="color: #64748b; font-size: 1.25rem; font-weight:600; margin: 0;">Event reservations will appear here once you create a booking.</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- 3. BOOKING HISTORY (PAST BOOKING RECORDS ONLY - NO FILTER TABS) -->
+                <div id="profile-sec-history" class="hidden">
+                    <h3 style="margin:0 0 20px 0; color:#0a192f; font-size:1.45rem; font-weight:900;"><i class="fa-solid fa-clock-rotate-left" style="color:#2563eb;"></i> Booking History Records</h3>
+                    <div style="display:flex; flex-direction:column; gap:20px;" id="booking-history-cards-container">
+                        <div style="text-align: center; padding: 75px 36px; background: #ffffff; border-radius: 18px; border: 1.5px solid #cbd5e1; box-shadow: 0 6px 20px rgba(10,25,47,0.06); width:100%; box-sizing:border-box;">
+                            <i class="fa-solid fa-clock-rotate-left" style="font-size: 4rem; color: #94a3b8; margin-bottom: 18px; display:block;"></i>
+                            <h3 style="color: #0a192f; margin: 0 0 10px 0; font-size:1.65rem; font-weight:900;">No booking history yet.</h3>
+                            <p style="color: #64748b; font-size: 1.25rem; font-weight:600; margin: 0;">Past event bookings will appear here once completed or cancelled.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ACCOUNT SETTINGS (USER INFO + SECURITY + SERVICE PROVIDER APPLICATION) -->
+                <div id="profile-sec-settings" class="hidden">
+                    <div class="account-settings-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:28px; align-items:stretch; width:100%; margin-bottom:32px;">
+                        
+                        <!-- Personal Information Card -->
+                        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:36px 40px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 6px 20px rgba(10,25,47,0.06);">
+                            <div>
+                                <h3 style="margin:0 0 26px 0; color:#0a192f; font-size:1.65rem; font-weight:900; display:flex; align-items:center; gap:14px;">
+                                    <i class="fa-solid fa-id-card" style="color:#2563eb; font-size:1.85rem;"></i> Personal Information
+                                </h3>
+                                <div style="display:flex; flex-direction:column; gap:22px;">
+                                    <div style="border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Full Name</div>
+                                        <strong id="settings-user-fullname" style="color:#0a192f; font-size:1.45rem; font-weight:800; display:block; margin-top:8px;">--</strong>
+                                    </div>
+                                    <div style="border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Email Address</div>
+                                        <strong id="settings-user-email" style="color:#0a192f; font-size:1.4rem; font-weight:700; display:block; margin-top:8px; word-break:break-word;">--</strong>
+                                    </div>
+                                    <div style="border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Phone Number</div>
+                                        <strong id="settings-user-phone" style="color:#0a192f; font-size:1.4rem; font-weight:700; display:block; margin-top:8px;">--</strong>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Location / Address</div>
+                                        <strong id="settings-user-address" style="color:#0a192f; font-size:1.4rem; font-weight:700; display:block; margin-top:8px;">--</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top:32px; border-top:1px solid #e2e8f0; padding-top:24px;">
+                                <button type="button" class="btn-card-secondary my-account-trigger" style="width:100%; height:58px; justify-content:center; padding:0 24px; font-weight:800; font-size:1.25rem; border-radius:12px;">
+                                    <i class="fa-solid fa-user-pen"></i> Edit Profile
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Account Information Card -->
+                        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:36px 40px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 6px 20px rgba(10,25,47,0.06);">
+                            <div>
+                                <h3 style="margin:0 0 26px 0; color:#0a192f; font-size:1.65rem; font-weight:900; display:flex; align-items:center; gap:14px;">
+                                    <i class="fa-solid fa-user-shield" style="color:#10b981; font-size:1.85rem;"></i> Account Information
+                                </h3>
+                                <div style="display:flex; flex-direction:column; gap:22px;">
+                                    <div style="border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Username (Account Email)</div>
+                                        <strong id="settings-user-username" style="color:#0a192f; font-size:1.4rem; font-weight:700; display:block; margin-top:8px; word-break:break-word;">denverescondecabrera17@gmail.com</strong>
+                                    </div>
+                                    <div style="border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Account Status</div>
+                                        <span class="status-badge status-confirmed" style="display:inline-flex; align-items:center; gap:10px; margin-top:10px; padding:10px 22px; font-size:1.15rem; font-weight:800; border-radius:24px;">
+                                            <i class="fa-solid fa-circle-check" style="font-size:1.1rem;"></i> Active Verified Client
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:1.05rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Member Since</div>
+                                        <strong style="color:#0a192f; font-size:1.4rem; font-weight:700; display:block; margin-top:8px;">August 2026</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security & Preferences Card -->
+                        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:36px 40px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 6px 20px rgba(10,25,47,0.06);">
+                            <div>
+                                <h3 style="margin:0 0 26px 0; color:#0a192f; font-size:1.65rem; font-weight:900; display:flex; align-items:center; gap:14px;">
+                                    <i class="fa-solid fa-shield-halved" style="color:#f59e0b; font-size:1.85rem;"></i> Security & Preferences
+                                </h3>
+                                <div style="display:flex; flex-direction:column; gap:18px;">
+                                    <button type="button" class="btn-card-secondary" id="btn-open-sec-change-password" style="text-align:left; justify-content:flex-start; height:60px; padding:0 24px; width:100%; font-weight:800; font-size:1.25rem; border-radius:12px;" onclick="document.getElementById('modal-sec-change-password')?.classList.remove('hidden');">
+                                        <i class="fa-solid fa-key" style="color:#f59e0b; width:30px; font-size:1.35rem;"></i> Change Password
+                                    </button>
+                                    <button type="button" class="btn-card-secondary" id="btn-open-sec-notifications" style="text-align:left; justify-content:flex-start; height:60px; padding:0 24px; width:100%; font-weight:800; font-size:1.25rem; border-radius:12px;" onclick="document.getElementById('modal-sec-notifications')?.classList.remove('hidden');">
+                                        <i class="fa-solid fa-bell" style="color:#2563eb; width:30px; font-size:1.35rem;"></i> Notification Settings
+                                    </button>
+                                    <button type="button" class="btn-card-secondary" id="btn-open-sec-privacy" style="text-align:left; justify-content:flex-start; height:60px; padding:0 24px; width:100%; font-weight:800; font-size:1.25rem; border-radius:12px;" onclick="document.getElementById('modal-sec-privacy')?.classList.remove('hidden');">
+                                        <i class="fa-solid fa-lock" style="color:#10b981; width:30px; font-size:1.35rem;"></i> Privacy Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Service Provider Application Card (Full Width) -->
+                        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:36px 40px; border-top:5px solid #2563eb; grid-column: 1 / -1; box-shadow: 0 6px 20px rgba(10,25,47,0.06); margin-top:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:24px;">
+                                <div style="flex:1; min-width:320px;">
+                                    <div style="display:flex; align-items:center; gap:16px;">
+                                        <h3 style="margin:0; color:#0a192f; font-size:1.8rem; font-weight:900; display:flex; align-items:center; gap:14px;">
+                                            <i class="fa-solid fa-store" style="color:#2563eb; font-size:2rem;"></i> Service Provider Application
+                                        </h3>
+                                        <span class="status-badge status-pending" id="provider-app-status-badge" style="font-size:1.15rem; font-weight:800; padding:8px 24px; border-radius:24px;">Not Applied</span>
+                                    </div>
+                                    <p id="provider-app-desc-text" style="margin:12px 0 0 0; font-size:1.35rem; color:#475569; font-weight:600; line-height:1.5;">Want to offer your lights and sounds equipment on SoundSphere? Apply to become a verified service provider.</p>
+                                </div>
+                                <div id="provider-app-btn-container" style="flex-shrink:0;">
+                                    <button type="button" class="btn-card-primary" id="btn-open-provider-app-modal" style="height:62px; padding:0 36px; font-size:1.25rem; font-weight:900; border-radius:12px; box-shadow: 0 4px 16px rgba(37,99,235,0.3);">
+                                        <i class="fa-solid fa-paper-plane"></i> Apply as Service Provider
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODERN MULTI-STEP SERVICE PROVIDER APPLICATION INTERFACE ==================== -->
+    <div class="modal-overlay hidden" id="modal-provider-application" role="dialog" aria-modal="true" style="overflow-y: auto; padding: 24px 16px; display: flex; align-items: center; justify-content: center;">
+        <div class="modal-card" style="max-width: 1380px; width: 96%; max-height: 93vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 60px -15px rgba(10, 25, 47, 0.4); background: #ffffff;">
+            
+            <!-- Application Header Bar -->
+            <div class="modal-header" style="padding: 30px 48px; background: #ffffff; border-bottom: 1.5px solid #e2e8f0; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h2 style="margin:0; font-size:2.2rem; font-weight:900; color:#0a192f; display:flex; align-items:center; gap:16px;">
+                        <i class="fa-solid fa-store" style="color:#2563eb; font-size:2.4rem;"></i> Become a SoundSphere Service Provider
+                    </h2>
+                    <p style="margin:8px 0 0 0; font-size:1.25rem; color:#64748b; line-height:1.4;">Offer your services, reach more clients, and manage your bookings through SoundSphere.</p>
+                </div>
+                <button type="button" class="btn-close-modal" id="close-provider-app-modal-btn" style="font-size:2.8rem; color:#64748b; background:none; border:none; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#0a192f'" onmouseout="this.style.color='#64748b'">&times;</button>
+            </div>
+
+            <!-- Application Stepper Progress Indicator Bar -->
+            <div id="provider-wizard-stepper-bar" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-bottom:1.5px solid #e2e8f0; padding:20px 48px; flex-wrap:wrap; gap:16px; flex-shrink: 0;">
+                <div class="wizard-step-item active" data-step="1" style="display:flex; align-items:center; gap:12px; font-weight:800; font-size:1.25rem; color:#2563eb;">
+                    <span class="step-num-bubble" style="width:42px; height:42px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:900; box-shadow:0 4px 10px rgba(37,99,235,0.3);">1</span>
+                    <span>1. Business Information</span>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:#cbd5e1; font-size:1.2rem;"></i>
+                <div class="wizard-step-item" data-step="2" style="display:flex; align-items:center; gap:12px; font-weight:700; font-size:1.25rem; color:#64748b;">
+                    <span class="step-num-bubble" style="width:42px; height:42px; border-radius:50%; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:800;">2</span>
+                    <span>2. Services</span>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:#cbd5e1; font-size:1.2rem;"></i>
+                <div class="wizard-step-item" data-step="3" style="display:flex; align-items:center; gap:12px; font-weight:700; font-size:1.25rem; color:#64748b;">
+                    <span class="step-num-bubble" style="width:42px; height:42px; border-radius:50%; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:800;">3</span>
+                    <span>3. Location</span>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:#cbd5e1; font-size:1.2rem;"></i>
+                <div class="wizard-step-item" data-step="4" style="display:flex; align-items:center; gap:12px; font-weight:700; font-size:1.25rem; color:#64748b;">
+                    <span class="step-num-bubble" style="width:42px; height:42px; border-radius:50%; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:800;">4</span>
+                    <span>4. Review & Submit</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Form Body Content -->
+            <form id="form-provider-application" style="padding: 38px 48px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                
+                <!-- STEP 1: BUSINESS INFORMATION -->
+                <div class="wizard-step-panel" id="app-step-1">
+                    <h3 style="margin:0 0 8px 0; color:#0a192f; font-size:2.0rem; font-weight:900;">Business Information</h3>
+                    <p style="margin:0 0 28px 0; font-size:1.25rem; color:#64748b; line-height:1.5;">Provide your official business name and contact details so clients can easily discover you.</p>
+
+                    <div style="display:flex; flex-direction:column; gap:26px;">
+                        <div>
+                            <label style="font-size:1.25rem; font-weight:800; color:#0a192f; display:block; margin-bottom:10px;">Business / Service Provider Name <span style="color:#ef4444;">*</span></label>
+                            <input type="text" id="app-biz-name" placeholder="Enter your business or provider name (e.g. Cabrera Lights & Sound System)" style="width:100%; height:66px; border:2px solid #cbd5e1; border-radius:12px; padding:0 22px; font-family:inherit; box-sizing:border-box; font-size:1.35rem; transition:border-color 0.2s;">
+                            <small style="font-size:1.05rem; color:#64748b; margin-top:8px; display:block;">This name will be displayed on your provider page and search results.</small>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                            <div>
+                                <label style="font-size:1.25rem; font-weight:800; color:#0a192f; display:block; margin-bottom:10px;">Business Phone Number <span style="color:#ef4444;">*</span></label>
+                                <input type="tel" id="app-biz-phone" placeholder="Enter your business contact number" style="width:100%; height:66px; border:2px solid #cbd5e1; border-radius:12px; padding:0 22px; font-family:inherit; box-sizing:border-box; font-size:1.35rem; transition:border-color 0.2s;">
+                                <small style="font-size:1.05rem; color:#64748b; margin-top:8px; display:block;">Client inquiry line.</small>
+                            </div>
+                            <div>
+                                <label style="font-size:1.25rem; font-weight:800; color:#0a192f; display:block; margin-bottom:10px;">Business Email <span style="color:#ef4444;">*</span></label>
+                                <input type="email" id="app-biz-email" placeholder="Enter your business email" style="width:100%; height:66px; border:2px solid #cbd5e1; border-radius:12px; padding:0 22px; font-family:inherit; box-sizing:border-box; font-size:1.35rem; transition:border-color 0.2s;">
+                                <small style="font-size:1.05rem; color:#64748b; margin-top:8px; display:block;">Official reservation notices.</small>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:1.25rem; font-weight:800; color:#0a192f; display:block; margin-bottom:10px;">About Your Business</label>
+                            <textarea id="app-biz-desc" style="width:100%; height:140px; border:2px solid #cbd5e1; border-radius:12px; padding:18px 22px; font-family:inherit; box-sizing:border-box; font-size:1.35rem; line-height:1.6; transition:border-color 0.2s;" placeholder="Tell clients about your business and experience..."></textarea>
+                            <small style="font-size:1.05rem; color:#64748b; margin-top:8px; display:block;">Describe your experience with weddings, concerts, and corporate functions.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: SERVICES YOU OFFER -->
+                <div class="wizard-step-panel hidden" id="app-step-2">
+                    <h3 style="margin:0 0 8px 0; color:#0a192f; font-size:2.0rem; font-weight:900;">Services You Offer</h3>
+                    <p style="margin:0 0 28px 0; font-size:1.25rem; color:#64748b; line-height:1.5;">Select all service categories you provide for event reservations.</p>
+
+                    <div class="services-selection-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:28px;">
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="Sound Systems" checked style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-volume-high" style="color:#2563eb;"></i> Sound Systems</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Line Arrays & Digital Mixers</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="Lighting" checked style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-lightbulb" style="color:#f59e0b;"></i> Lighting</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Moving Head Spots & Pars</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="LED Walls" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-tv" style="color:#10b981;"></i> LED Walls</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">P3 High-Res Stage Displays</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="Stage Equipment" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-layer-group" style="color:#8b5cf6;"></i> Stage Equipment</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Aluminum Trusses & Platforms</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="DJ Services" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-record-vinyl" style="color:#ec4899;"></i> DJ Services</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Professional Event DJs</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="Karaoke" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-microphone" style="color:#06b6d4;"></i> Karaoke</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Videoke Systems & Microphones</span>
+                            </div>
+                        </label>
+
+                        <label class="category-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px 24px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-service-chk" value="Others" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.35rem; color:#0a192f; display:block;"><i class="fa-solid fa-cubes" style="color:#64748b;"></i> Others</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Other event-related services</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:20px;">
+                        <div>
+                            <label style="font-size:1.25rem; font-weight:800; color:#0a192f; display:block; margin-bottom:10px;">Service Description</label>
+                            <textarea id="app-service-desc" style="width:100%; height:130px; border:2px solid #cbd5e1; border-radius:12px; padding:18px 22px; font-family:inherit; box-sizing:border-box; font-size:1.35rem; line-height:1.6;" placeholder="Describe the services and equipment you provide..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SERVICE AREA -->
+                <div class="wizard-step-panel hidden" id="app-step-3">
+                    <h3 style="margin:0 0 8px 0; color:#0a192f; font-size:2.0rem; font-weight:900;">Service Area</h3>
+                    <p style="margin:0 0 28px 0; font-size:1.25rem; color:#64748b; line-height:1.5;">Select the municipalities where your sound and lights team operates.</p>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:22px; margin-bottom:32px;">
+                        <label class="location-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:24px 28px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-location-chk" value="Lian" checked style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.45rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Lian</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Lian Beach Resorts & Venues</span>
+                            </div>
+                        </label>
+
+                        <label class="location-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:24px 28px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-location-chk" value="Balayan" checked style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.45rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Balayan</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Balayan Town & Civic Centers</span>
+                            </div>
+                        </label>
+
+                        <label class="location-selection-card" style="display:flex; align-items:center; gap:18px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:24px 28px; cursor:pointer; transition:all 0.2s ease;">
+                            <input type="checkbox" class="app-location-chk" value="Nasugbu" style="width:26px; height:26px; accent-color:#2563eb;">
+                            <div>
+                                <strong style="font-size:1.45rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Nasugbu</strong>
+                                <span style="font-size:1.05rem; color:#64748b;">Nasugbu Beaches & Plazas</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style="background:#eff6ff; border:2px solid #bfdbfe; border-radius:14px; padding:24px 28px;">
+                        <h4 style="margin:0 0 8px 0; color:#1e40af; font-size:1.35rem; font-weight:800;"><i class="fa-solid fa-circle-info"></i> Service Radius / Coverage</h4>
+                        <p style="margin:0; font-size:1.25rem; color:#1e3a8a; line-height:1.6;">SoundSphere currently supports provider coverage strictly in <strong>Lian, Balayan, and Nasugbu</strong>.</p>
+                    </div>
+                </div>
+
+                <!-- STEP 4: REVIEW & SUBMIT -->
+                <div class="wizard-step-panel hidden" id="app-step-4">
+                    <h3 style="margin:0 0 8px 0; color:#0a192f; font-size:2.0rem; font-weight:900;">Review Your Application</h3>
+                    <p style="margin:0 0 28px 0; font-size:1.25rem; color:#64748b; line-height:1.5;">Review your business application summary below before final submission.</p>
+
+                    <div style="display:flex; flex-direction:column; gap:20px; margin-bottom:28px;">
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:24px 28px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:1.05rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Business Name</div>
+                                <strong id="summary-biz-name" style="font-size:1.5rem; color:#0a192f; display:block; margin-top:4px;">Cabrera Lights & Sound System</strong>
+                            </div>
+                            <button type="button" class="btn-card-secondary btn-wizard-jump" data-targetstep="1" style="padding:10px 22px; font-size:1.2rem; font-weight:800; border-radius:12px;"><i class="fa-solid fa-pen"></i> Edit</button>
+                        </div>
+
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:24px 28px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:1.05rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Contact Information</div>
+                                <div style="font-size:1.35rem; color:#0a192f; margin-top:4px;">
+                                    Phone: <strong id="summary-biz-phone">--</strong> | Email: <strong id="summary-biz-email">--</strong>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-card-secondary btn-wizard-jump" data-targetstep="1" style="padding:10px 22px; font-size:1.2rem; font-weight:800; border-radius:12px;"><i class="fa-solid fa-pen"></i> Edit</button>
+                        </div>
+
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:24px 28px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:1.05rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Services</div>
+                                <div id="summary-services" style="font-size:1.4rem; font-weight:800; color:#2563eb; margin-top:4px;">Sound Systems, Lighting</div>
+                            </div>
+                            <button type="button" class="btn-card-secondary btn-wizard-jump" data-targetstep="2" style="padding:10px 22px; font-size:1.2rem; font-weight:800; border-radius:12px;"><i class="fa-solid fa-pen"></i> Edit</button>
+                        </div>
+
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:24px 28px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:1.05rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Service Areas</div>
+                                <div id="summary-locations" style="font-size:1.4rem; font-weight:800; color:#0a192f; margin-top:4px;">Lian, Balayan</div>
+                            </div>
+                            <button type="button" class="btn-card-secondary btn-wizard-jump" data-targetstep="3" style="padding:10px 22px; font-size:1.2rem; font-weight:800; border-radius:12px;"><i class="fa-solid fa-pen"></i> Edit</button>
+                        </div>
+
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:24px 28px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:1.05rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Description</div>
+                                <div id="summary-description" style="font-size:1.35rem; color:#475569; margin-top:4px;">Professional lights & sound rental.</div>
+                            </div>
+                            <button type="button" class="btn-card-secondary btn-wizard-jump" data-targetstep="1" style="padding:10px 22px; font-size:1.2rem; font-weight:800; border-radius:12px;"><i class="fa-solid fa-pen"></i> Edit</button>
+                        </div>
+                    </div>
+
+                    <div style="font-size:1.2rem; color:#475569; background:#f1f5f9; border-radius:12px; padding:20px 26px; line-height:1.6;">
+                        By submitting this application, you agree that SoundSphere may review your information before approving your service provider account.
+                    </div>
+                </div>
+
+                <!-- SUBMITTED CONFIRMATION SCREEN -->
+                <div class="wizard-step-panel hidden" id="app-step-submitted" style="text-align:center; padding:48px 24px;">
+                    <div style="width:100px; height:100px; border-radius:50%; background:#dcfce7; color:#10b981; font-size:3.2rem; display:flex; align-items:center; justify-content:center; margin:0 auto 24px auto;">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h2 style="margin:0 0 10px 0; color:#0a192f; font-size:2.3rem; font-weight:900;">Application Submitted!</h2>
+                    <p style="margin:0 0 28px 0; font-size:1.35rem; color:#64748b; line-height:1.5;">Your Service Provider application has been successfully submitted and is now under review.</p>
+
+                    <div style="display:inline-flex; flex-direction:column; gap:12px; background:#f8fafc; border:2px solid #e2e8f0; border-radius:16px; padding:26px 52px; margin-bottom:32px; text-align:center;">
+                        <div style="font-size:1.1rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Application Status</div>
+                        <div>
+                            <span class="status-badge status-pending" style="font-size:1.35rem; font-weight:800; padding:10px 30px; border-radius:28px;">Pending Review</span>
+                        </div>
+                        <div style="font-size:1.25rem; font-weight:800; color:#0a192f; margin-top:6px;">Application ID: #SP-8942</div>
+                    </div>
+
+                    <div>
+                        <button type="button" class="btn-card-primary" id="btn-back-to-settings" style="height:64px; padding:0 44px; font-size:1.35rem; font-weight:800; border-radius:14px;">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Account Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bottom Navigation Buttons Bar -->
+                <div id="provider-wizard-nav-footer" style="display:flex; justify-content:space-between; align-items:center; border-top:1.5px solid #e2e8f0; margin-top:34px; padding-top:28px;">
+                    <button type="button" class="btn-card-secondary" id="btn-wizard-back" style="height:64px; padding:0 40px; font-size:1.35rem; font-weight:800; border-radius:14px; visibility:hidden;">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    
+                    <button type="button" class="btn-card-primary" id="btn-wizard-next" style="height:64px; padding:0 44px; font-size:1.4rem; font-weight:800; border-radius:14px;">
+                        Continue <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <button type="button" class="btn-card-primary hidden" id="btn-wizard-submit" onclick="window.processProviderAppSubmission(event)" style="height:64px; padding:0 48px; font-size:1.4rem; background:#10b981; cursor:pointer; font-weight:900; border:none; color:#ffffff; border-radius:14px; position:relative; z-index:10; pointer-events:auto;">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Application
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== VIEW BOOKING DETAILS MODAL ==================== -->
+    <div class="modal-overlay hidden" id="modal-booking-details" role="dialog" aria-modal="true">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice" style="color:#2563eb;"></i> Booking Reservation Details</h3>
+                <button type="button" class="btn-close-modal" id="close-booking-details-btn">&times;</button>
+            </div>
+            <div id="booking-details-modal-body" style="display:flex; flex-direction:column; gap:16px;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <strong id="detail-booking-id" style="font-size:1.1rem; color:#0a192f;">#BK-8902</strong>
+                        <span id="detail-booking-status" class="status-badge status-confirmed">Confirmed</span>
+                    </div>
+                    <div id="detail-provider-name" style="font-weight:800; color:#2563eb; font-size:1.05rem;">Acoustix Line Array & Stage Lighting</div>
+                    <div id="detail-package-name" style="font-size:0.9rem; color:#475569; margin-top:2px;">Concert Line Array & Stage Rig Package</div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                        <div style="font-size:0.75rem; color:#64748b;">Event Date & Time</div>
+                        <div id="detail-event-date" style="font-size:0.88rem; font-weight:700; color:#0a192f; margin-top:4px;">Aug 15, 2026 (02:00 PM - 10:00 PM)</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                        <div style="font-size:0.75rem; color:#64748b;">Event Venue Address</div>
+                        <div id="detail-event-venue" style="font-size:0.88rem; font-weight:700; color:#0a192f; margin-top:4px;">Grand Ballroom, Tagaytay Ridge Hotel</div>
+                    </div>
+                </div>
+
+                <!-- Financial Breakdown Section Inside Booking Details -->
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px;">
+                    <h4 style="margin:0 0 10px 0; color:#1e40af; font-size:0.95rem;"><i class="fa-solid fa-calculator"></i> Payment Summary</h4>
+                    <div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:6px; color:#1e3a8a;">
+                        <span>Total Booking Amount:</span>
+                        <strong id="detail-total-amount">₱29,500.00</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:6px; color:#15803d;">
+                        <span>Amount Paid (50% Downpayment):</span>
+                        <strong id="detail-amount-paid">₱14,750.00</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.88rem; color:#b91c1c; border-top:1px dashed #93c5fd; padding-top:6px; margin-top:4px;">
+                        <span>Remaining Balance:</span>
+                        <strong id="detail-remaining-balance">₱14,750.00</strong>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <button type="button" class="btn-card-secondary" style="flex:1;" onclick="document.getElementById('nav-messages-tab').click(); document.getElementById('close-booking-details-btn').click();">
+                        <i class="fa-solid fa-comments"></i> Message Provider
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== BOOKING CHECKOUT MODAL ==================== -->
+    <div class="modal-overlay hidden" id="modal-booking-checkout" role="dialog" aria-modal="true">
+        <div class="modal-card" style="max-width: 620px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-calendar-check" style="color:#2563eb;"></i> Book Lights & Sounds Package</h3>
+                <button type="button" class="btn-close-modal" id="close-booking-modal-btn">&times;</button>
+            </div>
+            <form id="modal-booking-form" style="display:flex; flex-direction:column; gap:14px;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px;">
+                    <div style="font-size:0.78rem; color:#64748b;">Target Service Provider:</div>
+                    <strong id="booking-target-provider-name" style="font-size:1.05rem; color:#0a192f;">Acoustix Line Array & Stage Lighting</strong>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label for="modal-booking-scale" style="font-size:0.8rem; font-weight:800; color:#0a192f;">Event Scale Type <span style="color:#ef4444;">*</span></label>
+                        <select required id="modal-booking-scale" name="modal_booking_scale" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px; font-family:inherit;">
+                            <option value="wedding">Wedding / Birthday Gala</option>
+                            <option value="concert">Live Concert / Festival</option>
+                            <option value="corporate">Corporate Conference</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="modal-booking-date" style="font-size:0.8rem; font-weight:800; color:#0a192f;">Event Target Date <span style="color:#ef4444;">*</span></label>
+                        <input type="date" required id="modal-booking-date" name="modal_booking_date" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px; font-family:inherit;">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="modal-booking-venue" style="font-size:0.8rem; font-weight:800; color:#0a192f;">Venue / Street Address <span style="color:#ef4444;">*</span></label>
+                    <input type="text" required id="modal-booking-venue" name="modal_booking_venue" placeholder="e.g. Grand Ballroom, Tagaytay Ridge Hotel" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:6px; padding:0 12px; font-family:inherit; box-sizing:border-box;">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label for="modal-booking-guests" style="font-size:0.8rem; font-weight:800; color:#0a192f;">Estimated Guests</label>
+                        <input type="number" id="modal-booking-guests" name="modal_booking_guests" placeholder="e.g. 250 Guests" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px; font-family:inherit; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label for="modal-booking-timeslot" style="font-size:0.8rem; font-weight:800; color:#0a192f;">Event Time Slot</label>
+                        <input type="text" id="modal-booking-timeslot" name="modal_booking_timeslot" placeholder="e.g. 02:00 PM - 10:00 PM" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:6px; padding:0 10px; font-family:inherit; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-card-primary" style="height:44px; margin-top:8px;">Confirm Booking & Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== SHOPEE-STYLE MY PROFILE & ACCOUNT SETTINGS MODAL ==================== -->
+    <div class="profile-modal-overlay hidden" id="profile-settings-modal" role="dialog" aria-modal="true">
+        <div class="profile-modal-card">
+            <div class="profile-modal-header">
+                <div class="profile-modal-title-block">
+                    <h2><i class="fa-solid fa-user-gear" style="color:#2563eb;"></i> My Profile</h2>
+                    <p>Manage and protect your account details and profile picture.</p>
+                </div>
+                <button type="button" class="profile-close-btn" id="profile-close-btn">&times;</button>
+            </div>
+
+            <form id="profile-settings-form">
+                <div class="profile-modal-body">
+                    <!-- Left Column: Profile Picture Upload Section -->
+                    <div class="profile-avatar-column">
+                        <div class="avatar-preview-wrapper">
+                            <div class="avatar-crop-circle">
+                                <img id="profile-avatar-preview-img" class="avatar-preview-img" src="" alt="Profile Preview" style="display:none;">
+                                <div id="profile-avatar-initials-fallback" class="avatar-initials-fallback">DC</div>
+                            </div>
+                            <div class="avatar-camera-badge" id="btn-change-avatar" title="Change Profile Picture">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                        </div>
+
+                        <input type="file" id="profile-picture-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        
+                        <button type="button" class="btn-select-image" id="btn-select-image">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Select Image
+                        </button>
+
+                        <div class="avatar-help-text">
+                            File size: max 1 MB<br>File extension: .JPEG, .PNG, .WEBP
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Account Details Form -->
+                    <div class="profile-fields-column">
+                        <div class="profile-form-grid">
+                            <div class="profile-form-group">
+                                <label for="profile-firstname">First Name <span style="color:#ef4444;">*</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-firstname" name="profile_firstname" required placeholder="First Name">
+                                </div>
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label for="profile-middlename">Middle Name <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Optional)</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-middlename" name="profile_middlename" placeholder="Middle Name (Optional)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-lastname">Last Name <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="profile-lastname" name="profile_lastname" required placeholder="Last Name">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <div class="profile-label-row">
+                                <label for="profile-email">Email Address <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Account Email)</span></label>
+                                <span class="email-verified-label-tag" id="profile-email-verified-tag"><i class="fa-solid fa-check"></i> Verified</span>
+                            </div>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input type="email" id="profile-email" name="profile_email" required placeholder="Email Address">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-phone">Contact Phone Number <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="profile-phone" name="profile_phone" required placeholder="Contact Phone Number">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-address">Address / City Location</label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <input type="text" id="profile-address" name="profile_address" placeholder="Address / City Location">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-modal-footer">
+                    <button type="submit" class="btn-save-profile" id="btn-save-profile">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== NOTIFICATION HISTORY MODAL ==================== -->
+    <div id="modal-notification-history" class="profile-modal-overlay hidden" style="z-index:999999;">
+        <div class="profile-modal-card" style="max-width:620px; width:92vw; border-radius:18px; padding:0; overflow:hidden;">
+            <div class="profile-modal-header" style="padding:20px 24px; background:#0a192f; color:#ffffff; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-bell" style="color:#60a5fa;"></i> Notification History
+                </h3>
+                <button type="button" id="btn-close-notification-history" style="background:none; border:none; color:#cbd5e1; font-size:1.2rem; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Filter Tabs (ONLY ALL & UNREAD) -->
+            <div style="display:flex; gap:10px; padding:14px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <button type="button" class="notification-filter-btn active" id="tab-filter-all" data-filter="all" style="flex:1; padding:10px 16px; border-radius:10px; border:none; font-size:0.88rem; font-weight:700; background:#2563eb; color:#ffffff; cursor:pointer; text-align:center;">All (0)</button>
+                <button type="button" class="notification-filter-btn" id="tab-filter-unread" data-filter="unread" style="flex:1; padding:10px 16px; border-radius:10px; border:none; font-size:0.88rem; font-weight:700; background:#f1f5f9; color:#475569; cursor:pointer; text-align:center;">Unread (0)</button>
+            </div>
+
+            <!-- History Notification List Container -->
+            <div id="history-notification-list" style="max-height:450px; overflow-y:auto;">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CHANGE PASSWORD MODAL ==================== -->
+    <div id="modal-sec-change-password" class="profile-modal-overlay hidden" style="z-index:999999;">
+        <div class="profile-modal-card" style="max-width:440px; width:92vw; border-radius:20px; padding:0; overflow:hidden; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);">
+            <div class="profile-modal-header" style="padding:20px 24px; background: linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#ffffff; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:10px; color:#ffffff;">
+                    <div style="width:34px; height:34px; border-radius:10px; background:rgba(245, 158, 11, 0.15); display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-key" style="color:#f59e0b; font-size:0.95rem;"></i>
+                    </div>
+                    Change Password
+                </h3>
+                <button type="button" id="btn-close-sec-change-password" class="profile-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:#cbd5e1; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s ease;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <form id="form-sec-change-password" style="padding:28px 24px 24px 24px;">
+                <div class="form-group" style="margin-bottom:18px;">
+                    <label for="sec-current-password" style="display:block; font-weight:700; color:#1e293b; margin-bottom:8px; font-size:0.85rem;">Current Password <span style="color:#ef4444;">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="sec-current-password" name="sec_current_password" required placeholder="Enter current password" autocomplete="current-password">
+                        <button type="button" class="btn-toggle-pw" id="toggle-sec-current-password" aria-label="Show password" title="Show password">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:18px;">
+                    <label for="sec-new-password" style="display:block; font-weight:700; color:#1e293b; margin-bottom:8px; font-size:0.85rem;">New Password <span style="color:#ef4444;">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="sec-new-password" name="sec_new_password" required placeholder="8+ characters with numbers" autocomplete="new-password">
+                        <button type="button" class="btn-toggle-pw" id="toggle-sec-new-password" aria-label="Show password" title="Show password">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:24px;">
+                    <label for="sec-confirm-password" style="display:block; font-weight:700; color:#1e293b; margin-bottom:8px; font-size:0.85rem;">Confirm New Password <span style="color:#ef4444;">*</span></label>
+                    <div class="input-icon-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="sec-confirm-password" name="sec_confirm_password" required placeholder="Repeat new password" autocomplete="new-password">
+                        <button type="button" class="btn-toggle-pw" id="toggle-sec-confirm-password" aria-label="Show password" title="Show password">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" style="width:100%; height:46px; background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#ffffff; border:none; border-radius:10px; font-weight:700; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(10,25,47,0.25); transition:all 0.2s ease;">
+                    <i class="fa-solid fa-shield-halved" style="font-size:0.9rem;"></i> Update Password
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== NOTIFICATION SETTINGS MODAL ==================== -->
+    <div id="modal-sec-notifications" class="profile-modal-overlay hidden" style="z-index:999999;">
+        <div class="profile-modal-card" style="max-width:500px; width:92vw; border-radius:18px; padding:0; overflow:hidden;">
+            <div class="profile-modal-header" style="padding:20px 24px; background:#0a192f; color:#ffffff; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-bell" style="color:#2563eb;"></i> Notification Settings
+                </h3>
+                <button type="button" id="btn-close-sec-notifications" style="background:none; border:none; color:#cbd5e1; font-size:1.2rem; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <form id="form-sec-notifications" style="padding:24px;">
+                <div style="display:flex; flex-direction:column; gap:18px; margin-bottom:24px;">
+                    <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;">
+                        <div>
+                            <div style="font-weight:700; color:#0a192f; font-size:0.92rem;"><i class="fa-solid fa-envelope" style="color:#2563eb; margin-right:6px;"></i> Email Notifications</div>
+                            <div style="font-size:0.78rem; color:#64748b;">Receive booking receipts and status updates via email</div>
+                        </div>
+                        <input type="checkbox" id="pref-email-notif" name="pref_email_notif" checked style="width:18px; height:18px; accent-color:#2563eb;">
+                    </label>
+
+                    <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;">
+                        <div>
+                            <div style="font-weight:700; color:#0a192f; font-size:0.92rem;"><i class="fa-solid fa-bell" style="color:#10b981; margin-right:6px;"></i> In-App Push Alerts</div>
+                            <div style="font-size:0.78rem; color:#64748b;">Get real-time updates for messages & bookings</div>
+                        </div>
+                        <input type="checkbox" id="pref-inapp-notif" name="pref_inapp_notif" checked style="width:18px; height:18px; accent-color:#2563eb;">
+                    </label>
+
+                    <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;">
+                        <div>
+                            <div style="font-weight:700; color:#0a192f; font-size:0.92rem;"><i class="fa-solid fa-bullhorn" style="color:#f59e0b; margin-right:6px;"></i> Promotional Offers</div>
+                            <div style="font-size:0.78rem; color:#64748b;">Receive updates on lights & sounds package discounts</div>
+                        </div>
+                        <input type="checkbox" id="pref-promo-notif" name="pref_promo_notif" style="width:18px; height:18px; accent-color:#2563eb;">
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-submit" style="width:100%; padding:12px; background:#0a192f; color:#ffffff; border:none; border-radius:8px; font-weight:700; font-size:0.95rem; cursor:pointer;">
+                    Save Notification Preferences
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== PRIVACY SETTINGS MODAL ==================== -->
+    <div id="modal-sec-privacy" class="profile-modal-overlay hidden" style="z-index:999999;">
+        <div class="profile-modal-card" style="max-width:500px; width:92vw; border-radius:18px; padding:0; overflow:hidden;">
+            <div class="profile-modal-header" style="padding:20px 24px; background:#0a192f; color:#ffffff; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-lock" style="color:#10b981;"></i> Privacy Settings
+                </h3>
+                <button type="button" id="btn-close-sec-privacy" style="background:none; border:none; color:#cbd5e1; font-size:1.2rem; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <form id="form-sec-privacy" style="padding:24px;">
+                <div style="display:flex; flex-direction:column; gap:18px; margin-bottom:24px;">
+                    <div>
+                        <label for="pref-privacy-profile" style="display:block; font-weight:700; color:#0a192f; margin-bottom:6px; font-size:0.88rem;">Account Profile Visibility</label>
+                        <select id="pref-privacy-profile" name="pref_privacy_profile" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; background:#ffffff;">
+                            <option value="public" selected>Public (Visible to Service Providers)</option>
+                            <option value="private">Private (Only visible on active bookings)</option>
+                        </select>
+                    </div>
+
+                    <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;">
+                        <div>
+                            <div style="font-weight:700; color:#0a192f; font-size:0.92rem;"><i class="fa-solid fa-phone" style="color:#2563eb; margin-right:6px;"></i> Show Phone Number on Bookings</div>
+                            <div style="font-size:0.78rem; color:#64748b;">Allow confirmed providers to view phone for coordination</div>
+                        </div>
+                        <input type="checkbox" id="pref-show-phone" name="pref_show_phone" checked style="width:18px; height:18px; accent-color:#2563eb;">
+                    </label>
+
+                    <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;">
+                        <div>
+                            <div style="font-weight:700; color:#0a192f; font-size:0.92rem;"><i class="fa-solid fa-cookie-bite" style="color:#f59e0b; margin-right:6px;"></i> Cookie & Analytics Data</div>
+                            <div style="font-size:0.78rem; color:#64748b;">Enable functional session & analytics storage</div>
+                        </div>
+                        <input type="checkbox" id="pref-analytics-cookies" checked style="width:18px; height:18px; accent-color:#2563eb;">
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-submit" style="width:100%; padding:12px; background:#0a192f; color:#ffffff; border:none; border-radius:8px; font-weight:700; font-size:0.95rem; cursor:pointer;">
+                    Save Privacy Settings
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MARKETPLACE OFFER DETAILS MODAL -->
+    <div id="modal-marketplace-offer-details" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,25,47,0.85); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+        <div style="background:#ffffff; border-radius:24px; width:100%; max-width:960px; max-height:94vh; overflow-y:auto; box-shadow:0 25px 60px rgba(0,0,0,0.4); position:relative; animation:modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <button type="button" onclick="document.getElementById('modal-marketplace-offer-details').style.display='none'" style="position:absolute; top:20px; right:20px; width:44px; height:44px; border-radius:50%; background:#f1f5f9; border:none; color:#475569; font-size:1.3rem; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10; transition:all 0.2s ease;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="offer-details-modal-body" style="padding:32px;">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="shopee-footer">
+        <div class="container" style="text-align: center;">
+            <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts with Cache-Busting Parameters -->
+    <script src="/js/api.js?v=6.0"></script>
+    <script src="/js/app-platform.js?v=5.0"></script>
+    <script src="/js/profile-modal.js?v=3.0"></script>
+    <script src="/js/notifications.js?v=1.0"></script>
+    <script src="/js/marketplace.js?v=7.0"></script>
+</body>
+</html>

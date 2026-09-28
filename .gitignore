@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment Variables
+.env
+
+# System & IDE files
+.DS_Store
+.vscode/
+.idea/
+*.log

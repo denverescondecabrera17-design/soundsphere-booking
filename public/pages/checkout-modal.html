@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundSphere | Multi-Step Checkout & PayMongo Payment</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=5.0">
+    <link rel="stylesheet" href="css/checkout-modal.css?v=1.0">
+</head>
+<body>
+
+    <!-- ==================== MULTI-STEP CHECKOUT & PAYMENT MODAL ==================== -->
+    <div class="checkout-modal-overlay" id="checkout-modal" role="dialog" aria-modal="true">
+        <div class="checkout-modal-card">
+            <!-- Modal Header -->
+            <div class="checkout-modal-header">
+                <h3><i class="fa-solid fa-credit-card"></i> Event Reservation Checkout</h3>
+                <button type="button" class="checkout-close-btn" id="checkout-close-btn">&times;</button>
+            </div>
+
+            <!-- Multi-Step Indicator Bar -->
+            <div class="stepper-bar">
+                <div class="step-indicator active" id="step-ind-1">
+                    <span class="step-number">1</span>
+                    <span>1. Booking Summary</span>
+                </div>
+                <div class="step-indicator" id="step-ind-2">
+                    <span class="step-number">2</span>
+                    <span>2. Terms & Options</span>
+                </div>
+                <div class="step-indicator" id="step-ind-3">
+                    <span class="step-number">3</span>
+                    <span>3. PayMongo Payment</span>
+                </div>
+            </div>
+
+            <!-- Step Content Body -->
+            <div class="checkout-modal-body">
+
+                <!-- STEP 1: BOOKING REVIEW SUMMARY & LOCATION INPUTS -->
+                <div class="checkout-step-panel" id="step-panel-1">
+                    <div class="summary-card-box">
+                        <div class="summary-title">Selected Audio-Visual Package Rigs</div>
+                        <ul class="summary-inc-list">
+                            <li><i class="fa-solid fa-check"></i> 8x Heavy Line Array Towers</li>
+                            <li><i class="fa-solid fa-check"></i> 4x Subwoofer Basestations</li>
+                            <li><i class="fa-solid fa-check"></i> 24x Beam Moving Spot Lights</li>
+                            <li><i class="fa-solid fa-check"></i> Heavy-Duty Aluminum Trussing</li>
+                            <li><i class="fa-solid fa-check"></i> Digital Sound Mixer & Crew</li>
+                        </ul>
+
+                        <div class="price-breakdown-box">
+                            <div class="price-breakdown-row">
+                                <span>Base Package Price:</span>
+                                <span>₱28,000</span>
+                            </div>
+                            <div class="price-breakdown-row">
+                                <span>Transport & Setup Fee (35km Radius):</span>
+                                <span>₱1,500</span>
+                            </div>
+                            <div class="price-breakdown-row total-row">
+                                <span>Total Booking Cost:</span>
+                                <span id="total-amount-to-pay">₱29,500</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Location Address Inputs -->
+                    <div class="checkout-field">
+                        <label for="checkout-venue-address">Venue Name & Street Address <span style="color:#ef4444;">*</span></label>
+                        <input type="text" id="checkout-venue-address" placeholder="e.g. Grand Ballroom, Tagaytay Ridge Hotel, Km 58" required>
+                    </div>
+
+                    <div class="form-grid-2col">
+                        <div class="checkout-field">
+                            <label for="checkout-city-location">City / Province <span style="color:#ef4444;">*</span></label>
+                            <input type="text" id="checkout-city-location" placeholder="e.g. Tagaytay City, Cavite" required>
+                        </div>
+                        <div class="checkout-field">
+                            <label for="checkout-setup-notes">Special Setup Notes <span style="font-weight:normal; color:#64748b;">(Optional)</span></label>
+                            <input type="text" id="checkout-setup-notes" placeholder="e.g. Indoor stage setup, 2nd floor">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: TERMS & PAYMENT OPTION -->
+                <div class="checkout-step-panel hidden" id="step-panel-2">
+                    <h4 style="font-size: 0.95rem; font-weight: 800; color: #0a192f; margin: 0;">Select Reservation Payment Type:</h4>
+                    
+                    <div class="payment-type-radio-group">
+                        <!-- Option A: Pay Down Payment (50%) -->
+                        <label class="payment-type-option selected" for="pay-downpayment-radio">
+                            <input type="radio" id="pay-downpayment-radio" name="payment_type_choice" value="downpayment" checked>
+                            <div>
+                                <div class="pay-option-title">Pay 50% Down Payment</div>
+                                <div class="pay-option-amount" id="downpayment-amount">₱14,750</div>
+                                <div class="pay-option-desc">Reserve your date now. Pay remaining 50% balance before event.</div>
+                            </div>
+                        </label>
+
+                        <!-- Option B: Pay Full Amount (100%) -->
+                        <label class="payment-type-option" for="pay-full-radio">
+                            <input type="radio" id="pay-full-radio" name="payment_type_choice" value="full">
+                            <div>
+                                <div class="pay-option-title">Pay Full Amount (100%)</div>
+                                <div class="pay-option-amount" id="full-amount">₱29,500</div>
+                                <div class="pay-option-desc">Complete payment upfront for instant booking confirmation.</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Terms & Conditions Agreement Box -->
+                    <div class="terms-agreement-box">
+                        <div class="terms-header">
+                            <i class="fa-solid fa-file-contract"></i> Booking Terms & Conditions Agreement
+                        </div>
+                        <div class="terms-content-text">
+                            <ul>
+                                <li><strong>Remaining Balance Policy:</strong> Remaining balance must be paid at least 1 day before the scheduled event date.</li>
+                                <li><strong>Cancellation & Refunds:</strong> Refunds apply only within allowable cancellation period (at least 7 days prior to event).</li>
+                                <li><strong>Equipment Damage:</strong> Client is responsible for ensuring venue power stability.</li>
+                            </ul>
+                        </div>
+                        <label class="terms-checkbox-label" for="terms-agree-checkbox">
+                            <input type="checkbox" id="terms-agree-checkbox" required>
+                            <span>I explicitly agree to the SoundSphere Booking Terms & Conditions.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- STEP 3: PAYMONGO PAYMENT METHOD UI -->
+                <div class="checkout-step-panel hidden" id="step-panel-3">
+                    <div class="paymongo-header-banner">
+                        <div class="paymongo-logo-text">
+                            <i class="fa-solid fa-shield-halved" style="color:#0284c7;"></i>
+                            <span>PayMongo Secure Gateway</span>
+                        </div>
+                        <span class="paymongo-badge">OFFICIAL PAYMENT PARTNER</span>
+                    </div>
+
+                    <div style="font-size:0.86rem; color:#0a192f; font-weight:700; margin-top:6px;">
+                        Select Payment Method to Pay <span id="paynow-display-amount" style="color:#2563eb; font-weight:800; font-size:1.05rem;">₱14,750</span>:
+                    </div>
+
+                    <!-- PayMongo Payment Method Cards Grid -->
+                    <div class="payment-methods-grid">
+                        <div class="payment-method-card selected" data-method="GCash">
+                            <i class="fa-solid fa-mobile-screen-button method-icon" style="color:#0284c7;"></i>
+                            <span class="method-name">GCash</span>
+                        </div>
+                        <div class="payment-method-card" data-method="Maya">
+                            <i class="fa-solid fa-wallet method-icon" style="color:#10b981;"></i>
+                            <span class="method-name">Maya</span>
+                        </div>
+                        <div class="payment-method-card" data-method="Credit / Debit Card">
+                            <i class="fa-regular fa-credit-card method-icon" style="color:#2563eb;"></i>
+                            <span class="method-name">Credit / Card</span>
+                        </div>
+                        <div class="payment-method-card" data-method="Online Banking">
+                            <i class="fa-solid fa-building-columns method-icon" style="color:#d97706;"></i>
+                            <span class="method-name">Online Banking</span>
+                        </div>
+                    </div>
+
+                    <div class="ssl-badge-footer">
+                        <i class="fa-solid fa-lock" style="color:#10b981;"></i>
+                        <span>Protected by 256-Bit SSL Encryption & PayMongo Tokenization</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer Controls -->
+            <div class="checkout-modal-footer">
+                <button type="button" class="btn-step-prev" id="btn-prev-step" style="visibility: hidden;">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <button type="button" class="btn-step-next" id="btn-next-step">
+                    <span>Continue to Terms & Payment</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js?v=5.0"></script>
+    <script src="js/checkout-modal.js?v=1.0"></script>
+</body>
+</html>

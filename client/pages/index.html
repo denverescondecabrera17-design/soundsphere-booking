@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere - Book Professional Lights & Sounds Services with Ease. Browse top rated audio-visual service providers, concert sound systems, and wedding lighting packages.">
+    <title>SoundSphere | Book Professional Lights & Sounds Services with Ease</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- ==================== 1. SHOPEE-STYLE HEADER ==================== -->
+    <header class="shopee-header">
+        <!-- Top Mini Utility Bar -->
+        <div class="top-utility-bar">
+            <div class="container">
+                <ul class="utility-links">
+                    <li><a href="#"><i class="fa-solid fa-store"></i> Seller Centre</a></li>
+                    <li><a href="#"><i class="fa-solid fa-briefcase"></i> Become a Service Provider</a></li>
+                    <li><a href="#"><i class="fa-solid fa-mobile-screen"></i> Download App</a></li>
+                </ul>
+                <ul class="utility-links">
+                    <li><a href="#"><i class="fa-regular fa-bell"></i> Notifications</a></li>
+                    <li><a href="#"><i class="fa-regular fa-circle-question"></i> Help & Support</a></li>
+                    <li><a href="#"><i class="fa-solid fa-globe"></i> English</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Search & Auth Header Bar -->
+        <div class="main-header">
+            <div class="container">
+                <!-- Brand Logo -->
+                <a href="index.html" class="brand-logo">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <div>
+                        SoundSphere
+                        <span class="tagline-sub">Book Lights & Sounds with Ease</span>
+                    </div>
+                </a>
+
+                <!-- Big Central Search Bar -->
+                <div class="shopee-search-container">
+                    <input type="text" class="search-input" placeholder="Search sound systems, stage lights, DJ gear, event packages...">
+                    <button type="button" class="btn-search" aria-label="Search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+
+                <!-- User Auth Actions -->
+                <div class="header-actions">
+                    <a href="/login.html" class="btn-auth-outline">Login</a>
+                    <a href="/register.html" class="btn-auth-solid">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== 2. SHOPEE HERO BANNER SECTION ==================== -->
+    <section class="shopee-hero-section">
+        <div class="container">
+            <div class="hero-grid">
+                <!-- Main Promo Banner -->
+                <div class="hero-main-banner">
+                    <img src="assets/images/banner.png" alt="SoundSphere Stage Lights and Sounds Setup" onerror="this.src='../assets/images/banner.png'">
+                    <div class="banner-overlay">
+                        <span class="banner-badge">SoundSphere Choice</span>
+                        <h2 class="banner-title">Premier Concert Lights & Sounds Systems</h2>
+                        <p class="banner-sub">Compare verified audio-visual service providers for weddings, concerts & corporate events.</p>
+                    </div>
+                </div>
+
+                <!-- Stacked Side Banners -->
+                <div class="hero-side-banners">
+                    <div class="side-banner-card">
+                        <img src="assets/images/wedding.png" alt="Wedding Lights Package" onerror="this.src='../assets/images/wedding.png'">
+                        <div class="side-banner-overlay">
+                            <h4>Wedding Lighting Packages</h4>
+                            <p>Up to 20% OFF ambient & fairy lights</p>
+                        </div>
+                    </div>
+                    <div class="side-banner-card" style="background: linear-gradient(135deg, #1e40af, #2563eb);">
+                        <div class="side-banner-overlay" style="background: none;">
+                            <h4>Become a Provider</h4>
+                            <p>List your equipment & receive event bookings directly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 3. FLASH DEALS / HOT PACKAGES ==================== -->
+    <section class="container">
+        <div class="flash-deals-section">
+            <div class="flash-header">
+                <div class="flash-title">
+                    <i class="fa-solid fa-bolt-lightning" style="color: #f97316; font-size: 1.4rem;"></i>
+                    <h3>Flash Deals & Trending Packages</h3>
+                    <div class="countdown-timer">
+                        <span>Ends in</span>
+                        <span class="time-box">04</span> :
+                        <span class="time-box">22</span> :
+                        <span class="time-box">15</span>
+                    </div>
+                </div>
+                <a href="/login.html" style="font-size: 0.85rem; font-weight: 700; color: #2563eb;">View All Deals <i class="fa-solid fa-chevron-right"></i></a>
+            </div>
+
+            <!-- Dynamic Product Card Grid (Loaded directly from SQL Server Database) -->
+            <div class="product-cards-grid" id="public-packages-grid">
+                <!-- Rendered dynamically from SQL Server DB via GET /api/providers -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 5. SHOPEE-STYLE FOOTER ==================== -->
+    <footer class="shopee-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>Customer Care</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Help Centre</a></li>
+                        <li><a href="#">How to Book a Service</a></li>
+                        <li><a href="#">Payment Methods</a></li>
+                        <li><a href="#">SoundSphere Guarantee</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>About SoundSphere</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Service Provider Registration</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Payment Partners</h4>
+                    <div class="payment-badges">
+                        <span class="payment-badge">GCash</span>
+                        <span class="payment-badge">Maya</span>
+                        <span class="payment-badge">Bank Transfer</span>
+                        <span class="payment-badge">Visa / MC</span>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Coverage Areas</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Metro Manila</a></li>
+                        <li><a href="#">Rizal & Cavite</a></li>
+                        <li><a href="#">Laguna & Batangas</a></li>
+                        <li><a href="#">Bulacan & Pampanga</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/api.js?v=7.0"></script>
+    <script src="js/auth-modal.js?v=7.0"></script>
+    <script src="js/main.js?v=7.0"></script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+/* ============================================================================
+   SoundSphere - Shopee-Style My Profile & Account Settings Modal CSS
+   ============================================================================ */
+
+.profile-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 25, 47, 0.65);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 1;
+    visibility: visible;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.profile-modal-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.profile-modal-card {
+    width: 100%;
+    max-width: 820px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: profileModalSlide 0.3s ease-out;
+}
+
+@keyframes profileModalSlide {
+    from {
+        transform: translateY(20px) scale(0.97);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.profile-modal-header {
+    padding: 22px 30px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.profile-modal-title-block h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0a192f;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-modal-title-block p {
+    margin: 4px 0 0 0;
+    font-size: 0.86rem;
+    color: #64748b;
+}
+
+.profile-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.profile-close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Modal Body Split Grid Layout */
+.profile-modal-body {
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 36px;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .profile-modal-body {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+/* Left Column: Profile Picture Upload Section */
+.profile-avatar-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-right: 24px;
+    border-right: 1px solid #e2e8f0;
+}
+
+@media (max-width: 768px) {
+    .profile-avatar-column {
+        padding-right: 0;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 24px;
+    }
+}
+
+.avatar-preview-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 18px;
+}
+
+.avatar-crop-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+    border: 4px solid #ffffff;
+    outline: 2px solid #2563eb;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+
+.avatar-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-initials-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #2563eb;
+    background: #dbeafe;
+}
+
+.avatar-camera-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 38px;
+    height: 38px;
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(10, 25, 47, 0.25);
+    border: 3px solid #ffffff;
+    transition: all 0.2s ease;
+    z-index: 5;
+}
+
+.avatar-camera-badge:hover {
+    background: #1d4ed8;
+    transform: scale(1.08);
+}
+
+.btn-select-image {
+    background: #ffffff;
+    color: #0a192f;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.btn-select-image:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #2563eb;
+}
+
+.avatar-help-text {
+    font-size: 0.76rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* Right Column: Account Details Form */
+.profile-fields-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profile-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.profile-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.profile-form-group label {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0a192f;
+}
+
+.profile-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.profile-input-wrapper i {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.profile-input-wrapper input {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0 14px 0 38px;
+    font-size: 0.9rem;
+    color: #0f172a;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.profile-input-wrapper input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.profile-input-wrapper input[disabled] {
+    background: #f8fafc;
+    color: #475569;
+    cursor: not-allowed;
+    text-overflow: ellipsis;
+}
+
+.profile-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.email-verified-label-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #ecfdf5;
+    color: #10b981;
+    border: 1px solid #a7f3d0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+/* Services Selection Grid in Provider Application */
+.services-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+    .services-selection-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .services-selection-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Modal Footer */
+.profile-modal-footer {
+    padding: 18px 30px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-save-profile {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 26px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-save-profile:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.btn-save-profile:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}

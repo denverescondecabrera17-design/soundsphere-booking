@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere - Verify your email address to complete registration.">
+    <title>SoundSphere | Email OTP Verification</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/login.css?v=4.0">
+    <link rel="stylesheet" href="css/otp.css?v=4.0">
+    
+    <!-- Guaranteed Direct Inline Styles for OTP Inputs (Windows Scaling Proof) -->
+    <style>
+        .otp-inputs-grid {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 10px !important;
+            margin: 22px auto 26px auto !important;
+            max-width: 380px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .otp-digit-input {
+            width: 48px !important;
+            height: 52px !important;
+            line-height: normal !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            border: 2px solid #0a192f !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+            color: #0a192f !important;
+            outline: none !important;
+            transition: all 0.2s ease !important;
+            box-sizing: border-box !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+
+        .otp-digit-input:focus {
+            border-color: #2563eb !important;
+            background: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+            color: #0a192f !important;
+        }
+
+        .otp-digit-input.filled {
+            border-color: #0a192f !important;
+            background: #ffffff !important;
+            color: #0a192f !important;
+        }
+    </style>
+</head>
+<body class="otp-body-bg">
+
+    <!-- Header Navigation -->
+    <header class="shopee-header">
+        <div class="main-header">
+            <div class="container" style="justify-content: space-between;">
+                <a href="index.html" class="brand-logo">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <div>
+                        SoundSphere
+                        <span class="tagline-sub">Book Lights & Sounds with Ease</span>
+                    </div>
+                </a>
+                <a href="login.html" class="btn-auth-outline"><i class="fa-solid fa-arrow-left"></i> Back to Registration</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main OTP Verification Card -->
+    <main class="otp-wrapper">
+        <div class="otp-card">
+            <div class="otp-icon-header">
+                <i class="fa-solid fa-envelope-circle-check"></i>
+            </div>
+
+            <h2>Verify Your Email</h2>
+            <p class="otp-sub">We sent a 6-digit verification code to <span id="masked-email" class="masked-email">your email</span>.</p>
+
+            <!-- Alert Banner -->
+            <div id="alert-banner" class="alert-banner hidden" role="alert">
+                <i id="alert-icon" class="fa-solid fa-circle-info"></i>
+                <span id="alert-message">Alert text</span>
+            </div>
+
+            <!-- OTP Form -->
+            <form id="otp-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="otp-digit-0" style="margin-bottom: 12px; display: block; text-align: center;">Enter 6-digit verification code:</label>
+                    <div class="otp-inputs-grid" id="otp-inputs-container">
+                        <input type="tel" id="otp-digit-0" name="otp_digit_0" maxlength="1" class="otp-digit-input" data-index="0" autofocus autocomplete="one-time-code" inputmode="numeric">
+                        <input type="tel" id="otp-digit-1" name="otp_digit_1" maxlength="1" class="otp-digit-input" data-index="1" autocomplete="one-time-code" inputmode="numeric">
+                        <input type="tel" id="otp-digit-2" name="otp_digit_2" maxlength="1" class="otp-digit-input" data-index="2" autocomplete="one-time-code" inputmode="numeric">
+                        <input type="tel" id="otp-digit-3" name="otp_digit_3" maxlength="1" class="otp-digit-input" data-index="3" autocomplete="one-time-code" inputmode="numeric">
+                        <input type="tel" id="otp-digit-4" name="otp_digit_4" maxlength="1" class="otp-digit-input" data-index="4" autocomplete="one-time-code" inputmode="numeric">
+                        <input type="tel" id="otp-digit-5" name="otp_digit_5" maxlength="1" class="otp-digit-input" data-index="5" autocomplete="one-time-code" inputmode="numeric">
+                    </div>
+                    <span class="error-msg" id="error-otp" style="text-align: center; display: block;"></span>
+                </div>
+
+                <div class="otp-timer-row">
+                    <span>Code expires in:</span>
+                    <span id="timer-badge" class="timer-badge">05:00</span>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btn-verify-otp" style="width: 100%;">
+                    <span class="btn-text">Verify Email & Activate Account</span>
+                    <i class="fa-solid fa-circle-check btn-icon"></i>
+                    <div class="spinner hidden" id="otp-spinner"></div>
+                </button>
+            </form>
+
+            <div class="otp-footer-actions" style="justify-content: center; text-align: center;">
+                <div>
+                    Didn't receive code? 
+                    <button type="button" id="btn-resend-otp" class="btn-resend-link" disabled>Resend OTP</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/api.js?v=4.0"></script>
+    <script src="js/verify-otp.js?v=4.0"></script>
+</body>
+</html>

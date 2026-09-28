@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere Client Booking Management Dashboard - Manage your lights and sounds event reservations, reschedules, refunds, and provider chats.">
+    <title>SoundSphere | My Event Bookings</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=5.0">
+    <link rel="stylesheet" href="css/marketplace.css?v=1.0">
+    <link rel="stylesheet" href="css/client-bookings.css?v=1.0">
+    <link rel="stylesheet" href="css/profile-modal.css?v=1.0">
+</head>
+<body class="client-bookings-body">
+
+    <!-- Top Navigation Bar -->
+    <header class="marketplace-navbar">
+        <div class="nav-container">
+            <a href="marketplace.html" class="nav-brand">
+                <i class="fa-solid fa-compact-disc"></i>
+                <div>
+                    SoundSphere
+                    <span class="brand-sub">Lights & Sounds Booking System</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <a href="marketplace.html" class="nav-action-btn">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Marketplace</span>
+                </a>
+
+                <a href="client-bookings.html" class="nav-action-btn" style="background: rgba(255,255,255,0.25);">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>My Bookings</span>
+                </a>
+
+                <!-- User Avatar Menu with Logout Dropdown -->
+                <div class="user-avatar-menu">
+                    <div class="avatar-btn" id="avatar-btn">
+                        <div class="avatar-img" id="user-avatar-initials">CU</div>
+                        <span class="avatar-name" id="user-display-name">Client Account</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
+                    </div>
+
+                    <div class="user-dropdown" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-title">Event Client Account</div>
+                            <div class="user-role">Verified Client</div>
+                        </div>
+                        <a href="marketplace.html" class="dropdown-item">
+                            <i class="fa-solid fa-store"></i> Marketplace Rigs
+                        </a>
+                        <a href="#" id="logout-btn" class="dropdown-item logout-item">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
+                        </a>
+                    </div>
+                </div>
+
+                <!-- DIRECT VISIBLE LOGOUT BUTTON -->
+                <button type="button" class="nav-action-btn" id="direct-logout-btn" style="background:#dc2626; color:#ffffff; border:none; cursor:pointer; font-weight:800;" title="Logout of your account">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="bookings-main-container">
+        <!-- Title Block -->
+        <div class="dashboard-header-title">
+            <h1>My Event Bookings & Reservations</h1>
+            <p>View reservation status, reschedule dates, request refunds, chat with sound providers, or submit reviews.</p>
+        </div>
+
+        <!-- Status Filter Tabs Bar -->
+        <div class="status-tabs-row">
+            <button type="button" class="tab-btn active" data-status="All">
+                <span>All Bookings</span>
+                <span class="tab-count-badge">4</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-status="Pending">
+                <i class="fa-solid fa-hourglass-half" style="color:#d97706;"></i>
+                <span>Pending</span>
+                <span class="tab-count-badge">1</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-status="Confirmed">
+                <i class="fa-solid fa-circle-check" style="color:#2563eb;"></i>
+                <span>Confirmed</span>
+                <span class="tab-count-badge">1</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-status="Completed">
+                <i class="fa-solid fa-square-check" style="color:#10b981;"></i>
+                <span>Completed</span>
+                <span class="tab-count-badge">1</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-status="Cancelled">
+                <i class="fa-solid fa-ban" style="color:#ef4444;"></i>
+                <span>Cancelled</span>
+                <span class="tab-count-badge">1</span>
+            </button>
+        </div>
+
+        <!-- Bookings List Cards -->
+        <div class="bookings-list" id="bookings-list">
+            <!-- Rendered dynamically via client-bookings.js -->
+        </div>
+    </main>
+
+    <!-- ==================== SHOPEE-STYLE MY PROFILE & ACCOUNT SETTINGS MODAL ==================== -->
+    <div class="profile-modal-overlay hidden" id="profile-settings-modal" role="dialog" aria-modal="true">
+        <div class="profile-modal-card">
+            <div class="profile-modal-header">
+                <div class="profile-modal-title-block">
+                    <h2><i class="fa-solid fa-user-gear" style="color:#2563eb;"></i> My Profile</h2>
+                    <p>Manage and protect your account details and profile picture.</p>
+                </div>
+                <button type="button" class="profile-close-btn" id="profile-close-btn">&times;</button>
+            </div>
+
+            <form id="profile-settings-form">
+                <div class="profile-modal-body">
+                    <!-- Left Column: Profile Picture Upload Section -->
+                    <div class="profile-avatar-column">
+                        <div class="avatar-preview-wrapper">
+                            <img id="profile-avatar-preview-img" class="avatar-preview-img" src="" alt="Profile Preview" style="display:none;">
+                            <div id="profile-avatar-initials-fallback" class="avatar-initials-fallback">CU</div>
+                            <div class="avatar-camera-badge" id="btn-change-avatar" title="Change Profile Picture">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                        </div>
+
+                        <input type="file" id="profile-picture-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        
+                        <button type="button" class="btn-select-image" id="btn-select-image">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Select Image
+                        </button>
+
+                        <div class="avatar-help-text">
+                            File size: max 1 MB<br>File extension: .JPEG, .PNG, .WEBP
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Account Details Form -->
+                    <div class="profile-fields-column">
+                        <div class="profile-form-grid">
+                            <div class="profile-form-group">
+                                <label for="profile-firstname">First Name <span style="color:#ef4444;">*</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-firstname" required placeholder="Juan">
+                                </div>
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label for="profile-middlename">Middle Name <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Optional)</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-middlename" placeholder="Santos">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-lastname">Last Name <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="profile-lastname" required placeholder="Dela Cruz">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-email">Email Address <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Account Email)</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input type="email" id="profile-email" required placeholder="Email Address">
+                                <span class="email-verified-tag"><i class="fa-solid fa-check-double"></i> Verified</span>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-phone">Contact Phone Number <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="profile-phone" required placeholder="09171234567">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-address">Address / City Location</label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <input type="text" id="profile-address" placeholder="e.g. Quezon City, Metro Manila">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-modal-footer">
+                    <button type="submit" class="btn-save-profile" id="btn-save-profile">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="shopee-footer" style="margin-top: auto;">
+        <div class="container" style="text-align: center;">
+            <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/api.js?v=5.0"></script>
+    <script src="js/client-bookings.js?v=1.0"></script>
+    <script src="js/profile-modal.js?v=1.0"></script>
+</body>
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Package - SoundSphere Lights & Sounds</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/marketplace.css">
+    <link rel="stylesheet" href="css/app-platform.css">
+    <link rel="stylesheet" href="css/booking.css">
+    <!-- Leaflet.js (100% Free OpenStreetMap Interactive Map Library - No API Key Required) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Flatpickr (Extra-Large Custom Interactive Calendar Datepicker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+    <!-- Top Platform Header Navigation Bar -->
+    <header class="platform-navbar" style="height: 96px; background: #0a192f;">
+        <div class="platform-nav-container" style="width: 100%; max-width: 100%; margin: 0; padding: 0 48px; display: flex; align-items: center; justify-content: space-between; height: 100%;">
+            <div class="brand-logo">
+                <a href="marketplace.html" style="display:flex; align-items:center; gap:16px; text-decoration:none; color:#ffffff;">
+                    <i class="fa-solid fa-compact-disc brand-icon" style="font-size: 2.6rem; color: #3b82f6;"></i>
+                    <div class="brand-text">
+                        <span class="brand-title" style="font-size: 1.85rem; font-weight: 800; display:block; line-height:1.1; color:#ffffff;">SoundSphere</span>
+                        <span class="brand-tagline" style="font-size: 1.0rem; color:#94a3b8; font-weight:600; display:block; margin-top:3px;">Lights & Sounds Booking System</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="nav-actions" style="display:flex; align-items:center; gap:14px;">
+                <a href="marketplace.html" class="nav-action-btn secondary" style="height: 52px; padding: 0 22px; font-size: 1.15rem; font-weight: 700; border-radius: 26px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); color:#ffffff; text-decoration:none; display:inline-flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Marketplace
+                </a>
+                <a href="client-bookings.html" class="nav-action-btn primary" style="height: 52px; padding: 0 22px; font-size: 1.15rem; font-weight: 700; border-radius: 26px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.18); color:#ffffff; text-decoration:none; display:inline-flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-calendar-check"></i> My Bookings
+                </a>
+
+                <!-- User Profile Dropdown Pill -->
+                <div class="user-avatar-menu">
+                    <button type="button" class="avatar-btn" id="avatar-btn">
+                        <div class="avatar-img" id="user-avatar-initials">UA</div>
+                        <span class="avatar-name" id="user-display-name">User Account</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="user-dropdown hidden" id="user-dropdown" style="display: none;">
+                        <div class="dropdown-header">
+                            <div class="user-title" id="dropdown-user-title">SoundSphere Account</div>
+                            <div class="user-role" id="dropdown-user-role">Verified Client</div>
+                        </div>
+                        <button type="button" class="dropdown-item text-danger logout-item" id="logout-btn">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Booking Page Content -->
+    <main class="booking-page-container">
+        <div class="booking-page-header">
+            <h1 class="booking-page-title">
+                <i class="fa-solid fa-calendar-plus"></i> Complete Event Package Booking
+            </h1>
+            <p class="booking-page-subtitle">Fill in your event details, location, and payment option to reserve your service package.</p>
+        </div>
+
+        <form id="booking-main-form" autocomplete="off" style="width: 100%;">
+            <div class="booking-grid-layout" style="width: 100%; grid-template-columns: 1fr;">
+                
+                <!-- MAIN FORM GRID (2x2 Balanced Sub-Grid) -->
+                <div class="booking-left-column" style="width: 100%;">
+
+                    <div class="booking-form-sections-grid" style="width: 100%;">
+                        
+                        <!-- LEFT COLUMN: 1. Client Information & 2. Event Information -->
+                        <div class="form-column">
+                            
+                            <!-- SECTION 1: Client Information -->
+                            <div class="booking-card">
+                                <h2 class="booking-card-title">
+                                    <i class="fa-solid fa-user-check"></i> 1. Client Information
+                                </h2>
+
+                                <div class="form-row-client-name">
+                                    <div class="form-group">
+                                        <label for="booking-client-firstname">First Name <span style="color:#ef4444;">*</span></label>
+                                        <input type="text" id="booking-client-firstname" class="form-control" placeholder="e.g. Juan" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="booking-client-mi">Middle Initial <span style="font-size:0.85rem; color:#64748b; font-weight:500;">(Optional)</span></label>
+                                        <input type="text" id="booking-client-mi" class="form-control" placeholder="e.g. D." maxlength="5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="booking-client-lastname">Last Name <span style="color:#ef4444;">*</span></label>
+                                        <input type="text" id="booking-client-lastname" class="form-control" placeholder="e.g. Dela Cruz" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="booking-client-phone">Cellphone Number <span style="color:#ef4444;">*</span></label>
+                                        <input type="tel" id="booking-client-phone" class="form-control" placeholder="e.g. 09171234567" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="booking-client-alt-phone">Optional Contact Number</label>
+                                        <input type="tel" id="booking-client-alt-phone" class="form-control" placeholder="e.g. (043) 723 1234 (Optional)">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="booking-client-email">Email Address <span style="color:#ef4444;">*</span></label>
+                                    <input type="email" id="booking-client-email" class="form-control" placeholder="e.g. juan@example.com" required>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 2: Event Information -->
+                            <div class="booking-card">
+                                <h2 class="booking-card-title">
+                                    <i class="fa-solid fa-clipboard-list"></i> 2. Event Information
+                                </h2>
+
+                                <div class="form-group">
+                                    <label for="booking-event-name">Event Name / Title <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="booking-event-name" class="form-control" placeholder="e.g. Mark & Sarah's Wedding Reception" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="booking-event-type">Event Type <span style="color:#ef4444;">*</span></label>
+                                    <select id="booking-event-type" class="form-select" required>
+                                        <option value="Wedding">Wedding</option>
+                                        <option value="Birthday">Birthday</option>
+                                        <option value="Debut">Debut</option>
+                                        <option value="Corporate Event">Corporate Event</option>
+                                        <option value="Concert">Concert</option>
+                                        <option value="School Event">School Event</option>
+                                        <option value="Festival">Festival</option>
+                                        <option value="Party" selected>Party</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group hidden" id="custom-event-type-group">
+                                    <label for="booking-custom-event-type">Specify Event Type <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="booking-custom-event-type" class="form-control" placeholder="e.g. Anniversary Gala">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="booking-start-date">Service Start Date <span style="color:#ef4444;">*</span></label>
+                                        <input type="date" id="booking-start-date" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="booking-end-date">Service End Date <span style="color:#ef4444;">*</span></label>
+                                        <input type="date" id="booking-end-date" class="form-control" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="booking-start-time">Start Time <span style="color:#ef4444;">*</span></label>
+                                        <input type="time" id="booking-start-time" class="form-control" value="18:00" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="booking-end-time">End Time <span style="color:#ef4444;">*</span></label>
+                                        <input type="time" id="booking-end-time" class="form-control" value="22:00" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Service Hire Duration</label>
+                                    <div class="duration-badge-box">
+                                        <div class="duration-item">
+                                            <i class="fa-regular fa-calendar"></i> <span id="calc-days-display">1 Day</span>
+                                        </div>
+                                        <div class="duration-item">
+                                            <i class="fa-regular fa-clock"></i> <span id="calc-hours-display">06:00 PM – 10:00 PM</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- RIGHT COLUMN: 3. Event Location & Venue (The Map!) -->
+                        <div class="form-column">
+                            
+                            <!-- SECTION 3: Event Location & Venue -->
+                            <div class="booking-card">
+                                <h2 class="booking-card-title">
+                                    <i class="fa-solid fa-map-location-dot"></i> 3. Event Location & Venue
+                                </h2>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="booking-place-select">Municipality / Place <span style="color:#ef4444;">*</span></label>
+                                        <select id="booking-place-select" class="form-select" required>
+                                            <option value="Lian">Lian, Batangas</option>
+                                            <option value="Balayan">Balayan, Batangas</option>
+                                            <option value="Nasugbu" selected>Nasugbu, Batangas</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="booking-venue-name">Specific Venue Name <span style="color:#ef4444;">*</span></label>
+                                        <div style="position:relative; width:100%;">
+                <input type="text" id="booking-venue-name" class="form-control" placeholder="e.g. Covered Court / Club Balai / Barangay Hall" autocomplete="off" required>
+                <ul id="venue-suggestions-list" class="address-suggestions-dropdown hidden"></ul>
+            </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="position:relative;">
+                                    <label for="booking-complete-address">Complete Event Address <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="booking-complete-address" class="form-control" placeholder="e.g. Brgy. Bucana, Nasugbu, Batangas" autocomplete="off" required>
+                                    <ul id="address-suggestions-list" class="address-suggestions-dropdown hidden"></ul>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="booking-location-notes">Additional Location / Setup Instructions (Optional)</label>
+                                    <textarea id="booking-location-notes" class="form-control" rows="2" placeholder="e.g. Underground parking entrance behind main stage"></textarea>
+                                </div>
+
+                                <!-- Interactive Map Pinning -->
+                                <div class="form-group" style="margin-top: 10px; margin-bottom:0;">
+                                    <div id="booking-google-map" class="map-container-box" style="height: 580px;">
+                                        <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#64748b;">
+                                            <i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i> Loading Map...
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:10px;">
+                                        <div style="font-size:0.88rem; color:#475569; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i>
+                                            <span>Lat: <strong id="display-lat" style="color:#0f172a;">13.9782</strong> | Lng: <strong id="display-lng" style="color:#0f172a;">120.6272</strong></span>
+                                            <span id="pin-lock-status-badge" style="display:none; margin-left:8px; padding:3px 10px; border-radius:12px; background:#dcfce7; color:#15803d; font-size:0.78rem; font-weight:800; border:1px solid #bbf7d0;">
+                                                <i class="fa-solid fa-lock"></i> PIN LOCKED
+                                            </span>
+                                        </div>
+
+                                        <button type="button" id="btn-toggle-pin-lock" class="btn-pin-lock" title="Click to lock pinned location so accidental map clicks or movements will not change it">
+                                            <i class="fa-solid fa-lock-open" id="pin-lock-icon"></i>
+                                            <span id="pin-lock-label">Lock Pinned Location</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- SECTION 4: Payment Option & Terms (Full-Width Rectangle Below Both Columns) -->
+                    <div class="booking-card" style="width: 100%;">
+                        <h2 class="booking-card-title">
+                            <i class="fa-solid fa-credit-card" style="color:#2563eb;"></i> 4. Payment Option & Terms
+                        </h2>
+
+                        <label style="font-size:1.1rem; font-weight:700; color:#0f172a; display:block; margin-bottom:12px;">Select Payment Plan <span style="color:#ef4444;">*</span></label>
+                        <div class="payment-type-selector" style="margin-bottom:22px;">
+                            <div class="payment-type-card selected" id="plan-downpayment-card">
+                                <div class="payment-type-title">
+                                    <span><i class="fa-solid fa-circle-dot" style="color:#2563eb; margin-right:8px;"></i> 50% Down Payment</span>
+                                </div>
+                                <div class="payment-type-amount" id="plan-downpayment-val">₱0.00</div>
+                                <div class="payment-type-sub">Pay 50% now to reserve. Balance due 1 day before event.</div>
+                            </div>
+
+                            <div class="payment-type-card" id="plan-full-card">
+                                <div class="payment-type-title">
+                                    <span><i class="fa-regular fa-circle" style="color:#94a3b8; margin-right:8px;"></i> 100% Full Payment</span>
+                                </div>
+                                <div class="payment-type-amount" id="plan-full-val">₱0.00</div>
+                                <div class="payment-type-sub">Pay 100% full amount now with 0 remaining balance.</div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden summary values for JS calculation compatibility -->
+                        <div style="display:none;">
+                            <span id="summary-provider-name"></span>
+                            <img id="summary-provider-img" src="" alt="">
+                            <span id="summary-provider-area"></span>
+                            <span id="summary-pkg-name"></span>
+                            <ul id="summary-inclusions-list"></ul>
+                            <span id="summary-val-plan"></span>
+                        </div>
+
+                        <!-- Full Price Breakdown Table matching real calculation -->
+                        <table class="summary-breakdown-table" style="margin-bottom: 22px;">
+                            <tr>
+                                <td class="summary-label">Package Base Price</td>
+                                <td class="summary-val" id="summary-val-pkgprice">₱0.00</td>
+                            </tr>
+                            <tr id="summary-row-adddays" style="display:none;">
+                                <td class="summary-label">Additional Day Charges (<span id="summary-lbl-adddays">0 days</span>)</td>
+                                <td class="summary-val" id="summary-val-adddays" style="color:#2563eb; font-weight:800;">₱0.00</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Transportation / Service Fee (<span id="summary-lbl-distance">0.0 km</span>)</td>
+                                <td class="summary-val" id="summary-val-transport">₱0.00</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label" style="font-weight:800; color:#0f172a;">Total Booking Price</td>
+                                <td class="summary-val" id="summary-val-total" style="font-weight:900; color:#0f172a; font-size:1.25rem;">₱0.00</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label" style="font-weight:800; color:#0f172a; font-size:1.15rem;">Amount Due Now</td>
+                                <td class="summary-val-highlight" id="summary-val-duenow" style="font-size:1.45rem; color:#2563eb; font-weight:900;">₱0.00</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label" style="font-weight:700;">Remaining Balance</td>
+                                <td class="summary-val" id="summary-val-remaining" style="color:#ef4444; font-weight:800;">₱0.00</td>
+                            </tr>
+                        </table>
+
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px;">
+                            <input type="checkbox" id="booking-terms-agree" style="width:18px; height:18px; cursor:pointer;" required>
+                            <label for="booking-terms-agree" style="font-size:1.02rem; font-weight:600; color:#334155; cursor:pointer; line-height:1.4;">
+                                I agree to SoundSphere's <a href="#" style="color:#2563eb; text-decoration:underline;">Terms of Service</a> & <a href="#" style="color:#2563eb; text-decoration:underline;">Cancellation Policy</a>.
+                            </label>
+                        </div>
+
+                        <!-- Real-time Availability Conflict Message Banner -->
+                        <div id="schedule-conflict-banner" class="conflict-alert-box" style="display: none;">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.3rem;"></i>
+                            <div id="schedule-conflict-text" style="font-size:1rem;">This provider is not available for the selected date and time.</div>
+                        </div>
+
+                        <!-- Full Width Submit Button matching screenshot -->
+                        <button type="submit" id="btn-submit-booking" class="btn-confirm-booking">
+                            <span>Confirm Booking</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <!-- ==================== SHOPEE-STYLE MY PROFILE & ACCOUNT SETTINGS MODAL ==================== -->
+    <div class="profile-modal-overlay hidden" id="profile-settings-modal" role="dialog" aria-modal="true">
+        <div class="profile-modal-card">
+            <div class="profile-modal-header">
+                <div class="profile-modal-title-block">
+                    <h2><i class="fa-solid fa-user-gear" style="color:#2563eb;"></i> My Profile</h2>
+                    <p>Manage and protect your account details and profile picture.</p>
+                </div>
+                <button type="button" class="profile-close-btn" id="profile-close-btn">&times;</button>
+            </div>
+
+            <form id="profile-settings-form">
+                <div class="profile-modal-body">
+                    <!-- Left Column: Profile Picture Upload Section -->
+                    <div class="profile-avatar-column">
+                        <div class="avatar-preview-wrapper">
+                            <img id="profile-avatar-preview-img" class="avatar-preview-img" src="" alt="Profile Preview" style="display:none;">
+                            <div id="profile-avatar-initials-fallback" class="avatar-initials-fallback">UA</div>
+                            <div class="avatar-camera-badge" id="btn-change-avatar" title="Change Profile Picture">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                        </div>
+
+                        <input type="file" id="profile-picture-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        
+                        <button type="button" class="btn-select-image" id="btn-select-image">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Select Image
+                        </button>
+
+                        <div class="avatar-help-text">
+                            File size: max 1 MB<br>File extension: .JPEG, .PNG, .WEBP
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Account Details Form -->
+                    <div class="profile-fields-column">
+                        <div class="profile-form-grid">
+                            <div class="profile-form-group">
+                                <label for="profile-firstname">First Name <span style="color:#ef4444;">*</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-firstname" required placeholder="Juan">
+                                </div>
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label for="profile-middlename">Middle Name <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Optional)</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-middlename" placeholder="Santos">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-lastname">Last Name <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="profile-lastname" required placeholder="Dela Cruz">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-email">Email Address <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Account Email)</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input type="email" id="profile-email" required placeholder="Email Address">
+                                <span class="email-verified-tag"><i class="fa-solid fa-check-double"></i> Verified</span>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-phone">Contact Phone Number <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="profile-phone" required placeholder="09171234567">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-address">Address / City Location</label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <input type="text" id="profile-address" placeholder="e.g. Quezon City, Metro Manila">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-modal-footer">
+                    <button type="submit" class="btn-save-profile" id="btn-save-profile">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interactive PayMongo Payment Gateway Modal -->
+    <div id="paymongo-modal-overlay" class="paymongo-modal-overlay hidden">
+        <div class="paymongo-modal-content">
+            <div class="paymongo-modal-header">
+                <div class="paymongo-modal-title">
+                    <i class="fa-solid fa-shield-halved" style="color:#38bdf8; font-size:1.3rem;"></i>
+                    <span>PayMongo Payment Gateway</span>
+                </div>
+                <button type="button" class="paymongo-modal-close" id="paymongo-modal-close">&times;</button>
+            </div>
+
+            <div class="paymongo-modal-body">
+                <div class="paymongo-amount-card">
+                    <span class="paymongo-amount-label">Amount Due Now</span>
+                    <span class="paymongo-amount-val" id="paymongo-modal-amount">₱0.00</span>
+                    <span class="paymongo-amount-sub" id="paymongo-modal-method-name">Credit / Debit Card</span>
+                </div>
+
+                <!-- Card View -->
+                <div id="paymongo-view-card" class="paymongo-view-panel">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="font-size:0.88rem; font-weight:700; color:#334155;">Cardholder Name</label>
+                        <input type="text" id="pm-card-name" class="form-control" placeholder="Cardholder Name">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="font-size:0.88rem; font-weight:700; color:#334155;">Card Number</label>
+                        <div style="position:relative;">
+                            <input type="text" id="pm-card-number" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19">
+                            <i class="fa-brands fa-cc-visa" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:1.4rem; color:#1a1f71;"></i>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label style="font-size:0.88rem; font-weight:700; color:#334155;">Expiry Date</label>
+                            <input type="text" id="pm-card-expiry" class="form-control" placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:0.88rem; font-weight:700; color:#334155;">CVC / CVV</label>
+                            <input type="password" id="pm-card-cvc" class="form-control" placeholder="CVC" maxlength="4">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GCash View -->
+                <div id="paymongo-view-gcash" class="paymongo-view-panel hidden">
+                    <div style="text-align:center; padding:20px 0;">
+                        <i class="fa-solid fa-mobile-screen-button" style="font-size:4rem; color:#0284c7; margin-bottom:12px;"></i>
+                        <div style="font-size:1.35rem; font-weight:900; color:#0f172a; margin-bottom:4px;">GCash Direct Payment</div>
+                        <div style="font-size:1rem; color:#64748b; margin-bottom:18px; font-weight:600;">Enter registered GCash mobile number</div>
+                        <div class="form-group" style="max-width:340px; margin:0 auto 16px auto;">
+                            <input type="text" id="pm-gcash-phone" class="form-control" style="text-align:center; font-size:1.3rem; font-weight:800; height:54px; border-radius:14px;" placeholder="09XX XXX XXXX">
+                        </div>
+                        <div style="font-size:0.9rem; color:#10b981; font-weight:800;"><i class="fa-solid fa-circle-check"></i> SMS 6-digit OTP will be sent for verification</div>
+                    </div>
+                </div>
+
+                <!-- Maya View -->
+                <div id="paymongo-view-maya" class="paymongo-view-panel hidden">
+                    <div style="text-align:center; padding:20px 0;">
+                        <i class="fa-solid fa-wallet" style="font-size:4rem; color:#10b981; margin-bottom:12px;"></i>
+                        <div style="font-size:1.35rem; font-weight:900; color:#0f172a; margin-bottom:4px;">Maya Wallet / Online Bank</div>
+                        <div style="font-size:1rem; color:#64748b; margin-bottom:18px; font-weight:600;">Pay securely via Maya Wallet or Maya Bank</div>
+                        <div class="form-group" style="max-width:340px; margin:0 auto 16px auto;">
+                            <input type="text" id="pm-maya-phone" class="form-control" style="text-align:center; font-size:1.3rem; font-weight:800; height:54px; border-radius:14px;" placeholder="09XX XXX XXXX">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR PH View -->
+                <div id="paymongo-view-qrph" class="paymongo-view-panel hidden">
+                    <div style="text-align:center; padding:20px 0;">
+                        <i class="fa-solid fa-qrcode" style="font-size:4rem; color:#d97706; margin-bottom:12px;"></i>
+                        <div style="font-size:1.35rem; font-weight:900; color:#0f172a; margin-bottom:4px;">QR PH Instant Payment</div>
+                        <div style="font-size:1rem; color:#64748b; margin-bottom:16px; font-weight:600;">Scan using any Philippine banking or e-wallet app</div>
+                        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:20px; padding:24px 32px; display:inline-block; margin-bottom:12px; box-shadow:0 8px 20px rgba(0,0,0,0.06);">
+                            <i class="fa-solid fa-qrcode" style="font-size:8.5rem; color:#0f172a;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="paymongo-modal-footer">
+                <button type="button" class="btn-paymongo-cancel" id="btn-paymongo-cancel">Cancel</button>
+                <button type="button" class="btn-paymongo-confirm" id="btn-paymongo-confirm">
+                    <span>Authorize & Pay</span>
+                    <i class="fa-solid fa-lock"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global API Scripts -->
+    <script src="js/api.js?v=5.0"></script>
+    <script src="js/booking.js?v=1.0"></script>
+    <script src="js/profile-modal.js?v=1.0"></script>
+</body>
+</html>

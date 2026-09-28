@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Provider Portal - SoundSphere</title>
+    <meta name="description" content="SoundSphere Service Provider Control Panel & Management Hub.">
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Admin & Provider Design System CSS -->
+    <link rel="stylesheet" href="../admin/css/admin.css?v=5.0">
+    <link rel="stylesheet" href="/admin/css/admin.css?v=5.0">
+</head>
+<body class="admin-body">
+
+    <div class="dashboard-container">
+        <!-- Service Provider Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-sliders brand-icon" style="color:#2563eb;"></i>
+                    <span class="brand-name">SoundSphere</span>
+                </div>
+                <span class="badge badge-primary" style="font-size:0.7rem; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:4px; margin-top:4px; font-weight:800; text-transform:uppercase;">PROVIDER PORTAL</span>
+            </div>
+
+            <nav class="sidebar-menu">
+                <div class="menu-label">BUSINESS HUB</div>
+                <a href="#dashboard-overview" class="menu-item active" id="nav-item-overview">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </a>
+                <a href="#packages-section" class="menu-item" id="nav-item-packages">
+                    <i class="fa-solid fa-cubes"></i> Service Packages
+                </a>
+                <a href="#bookings-section" class="menu-item" id="nav-item-bookings">
+                    <i class="fa-solid fa-calendar-check"></i> Booking Management
+                </a>
+                <a href="#calendar-section" class="menu-item" id="nav-item-calendar">
+                    <i class="fa-solid fa-calendar-days"></i> Availability Calendar
+                </a>
+                <a href="#profile-section" class="menu-item" id="nav-item-profile">
+                    <i class="fa-solid fa-id-card"></i> Business Profile
+                </a>
+                <a href="#subscription-section" class="menu-item" id="nav-item-subscription">
+                    <i class="fa-solid fa-crown" style="color:#f59e0b;"></i> My Subscription
+                </a>
+
+                <a href="#reviews-section" class="menu-item" id="nav-item-reviews">
+                    <i class="fa-solid fa-star"></i> Client Reviews
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area Wrapper -->
+        <div class="main-wrapper">
+            <!-- Header Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="sidebar-toggle" id="btn-toggle-sidebar"><i class="fa-solid fa-bars"></i></button>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="provider-search-input" placeholder="Search services, packages, bookings..." autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="topbar-right" style="display:flex; align-items:center; gap:20px;">
+                    <!-- Messages Icon -->
+                    <a href="#messages-section" id="btn-header-messages" class="icon-btn" title="Messages" style="position:relative; color:#64748b; font-size:1.35rem; cursor:pointer; text-decoration:none; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-comments"></i>
+                        <span id="unread-messages-badge" class="hidden" style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:0.7rem; font-weight:800; padding:2px 6px; border-radius:10px; box-shadow:0 2px 6px rgba(239,68,68,0.4);">0</span>
+                    </a>
+
+                    <!-- Notifications Bell Container -->
+                    <div class="notification-container" style="position:relative;">
+                        <button class="icon-btn" id="btn-notification-bell" title="Notifications" style="color:#64748b; font-size:1.35rem; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center;">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="notification-badge hidden" id="notification-badge" style="position:absolute; top:-4px; right:-4px; background:#2563eb; color:#fff; font-size:0.7rem; font-weight:800; padding:2px 6px; border-radius:10px; box-shadow:0 2px 6px rgba(37,99,235,0.4);">0</span>
+                        </button>
+
+                        <!-- Notification Dropdown Panel -->
+                        <div class="notification-panel hidden" id="notification-panel" style="position:absolute; right:0; top:58px; width:360px; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; box-shadow:0 14px 36px rgba(10,25,47,0.22); z-index:999999; overflow:hidden;">
+                            <div style="padding:16px 18px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                                <strong style="font-size:1rem; color:#0a192f;">Notifications</strong>
+                                <button type="button" id="btn-mark-all-read" style="background:none; border:none; color:#2563eb; font-size:0.82rem; font-weight:700; cursor:pointer;">Mark all read</button>
+                            </div>
+                            <div style="max-height:360px; overflow-y:auto;" id="notification-list">
+                                <div style="padding:28px 16px; text-align:center; color:#64748b; font-size:0.88rem;">No notifications.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Profile Dropdown Wrapper -->
+                    <div class="user-profile-wrapper" style="position:relative;">
+                        <div class="user-profile" id="btn-provider-profile-dropdown" style="cursor:pointer; display:flex; align-items:center; gap:12px; padding:6px 16px; border-radius:30px; background:#f8fafc; border:1.5px solid #e2e8f0; transition:all 0.2s ease;">
+                            <div class="avatar-circle" style="width:42px; height:42px; border-radius:50%; background:#eff6ff; border:2px solid #2563eb; color:#2563eb; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;" id="header-provider-avatar-container">
+                                <img src="" id="header-provider-avatar-img" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                <i class="fa-solid fa-store" id="header-provider-avatar-icon" style="font-size:1.15rem;"></i>
+                            </div>
+                            <div class="profile-info">
+                                <span class="user-name" id="header-provider-name" style="font-weight:800; color:#0a192f; font-size:0.98rem;">Service Provider</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down" style="font-size:0.8rem; color:#64748b;"></i>
+                        </div>
+
+                        <!-- Dropdown Menu -->
+                        <div id="provider-profile-menu" class="hidden" style="position:absolute; right:0; top:60px; width:250px; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; box-shadow:0 14px 36px rgba(10,25,47,0.22); z-index:999999; overflow:hidden; padding:6px 0;">
+                            <div style="padding:12px 16px; border-bottom:1px solid #f1f5f9; background:#f8fafc; display:flex; align-items:center; gap:12px;">
+                                <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; border:1.5px solid #2563eb; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="dropdown-provider-avatar-container">
+                                    <img src="" id="dropdown-provider-avatar-img" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                    <i class="fa-solid fa-store" id="dropdown-provider-avatar-icon" style="color:#2563eb;"></i>
+                                </div>
+                                <div style="flex:1; overflow:hidden;">
+                                    <strong id="dropdown-provider-email" style="font-size:0.84rem; color:#0a192f; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">provider@soundsphere.com</strong>
+                                    <span id="dropdown-provider-status" style="font-size:0.72rem; color:#10b981; font-weight:700; display:block;">Approved Service Provider</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-dropdown-item" id="btn-provider-my-profile" style="width:100%; text-align:left; padding:10px 16px; background:none; border:none; font-size:0.86rem; color:#0a192f; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-id-card" style="color:#2563eb;"></i> My Profile
+                            </button>
+                            <button type="button" class="btn-dropdown-item" id="btn-provider-account-settings" style="width:100%; text-align:left; padding:10px 16px; background:none; border:none; font-size:0.86rem; color:#0a192f; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-sliders" style="color:#2563eb;"></i> Account Settings
+                            </button>
+                            <a href="/marketplace.html" class="btn-dropdown-item" style="width:100%; text-align:left; padding:10px 16px; background:none; border:none; font-size:0.86rem; color:#0a192f; cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
+                                <i class="fa-solid fa-store" style="color:#10b981;"></i> Client Services
+                            </a>
+                            <button type="button" class="btn-dropdown-item" id="btn-provider-menu-logout" style="width:100%; text-align:left; padding:10px 16px; background:none; border:none; font-size:0.86rem; color:#ef4444; cursor:pointer; display:flex; align-items:center; gap:10px; border-top:1px solid #f1f5f9;">
+                                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="content-area">
+                
+                <!-- VIEW 1: PROVIDER DASHBOARD OVERVIEW -->
+                <div class="provider-view-panel" id="view-provider-dashboard">
+                    <!-- Welcome Banner -->
+                    <section class="welcome-banner" style="background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); padding:28px 32px; border-radius:16px; color:#fff; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+                        <div class="welcome-text">
+                            <h2 style="font-size:1.6rem; margin:0 0 6px 0; font-weight:800;" id="welcome-heading">Welcome back, Service Provider! 🎵</h2>
+                            <p style="color:#94a3b8; margin:0; font-size:0.92rem;">Manage your services, packages, event reservations, and client communications.</p>
+                        </div>
+                        <div class="welcome-date" style="background:rgba(255,255,255,0.08); padding:10px 16px; border-radius:10px; font-size:0.88rem; font-weight:600;">
+                            <i class="fa-solid fa-calendar" style="color:#38bdf8; margin-right:6px;"></i>
+                            <span id="current-date-display">Today</span>
+                        </div>
+                    </section>
+
+                    <!-- Summary Cards Grid -->
+                    <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px;">
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
+                            <div class="stat-icon icon-blue" style="width:48px; height:48px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                <i class="fa-solid fa-list-check"></i>
+                            </div>
+                            <div>
+                                <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">TOTAL SERVICES</span>
+                                <h3 class="stat-value" id="stat-total-services" style="font-size:1.5rem; color:#0a192f; margin:2px 0 0 0;">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
+                            <div class="stat-icon icon-indigo" style="width:48px; height:48px; border-radius:12px; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                <i class="fa-solid fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">UPCOMING BOOKINGS</span>
+                                <h3 class="stat-value" id="stat-upcoming-bookings" style="font-size:1.5rem; color:#0a192f; margin:2px 0 0 0;">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
+                            <div class="stat-icon icon-amber" style="width:48px; height:48px; border-radius:12px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">TODAY'S SCHEDULE</span>
+                                <h3 class="stat-value" id="stat-todays-events" style="font-size:1.5rem; color:#0a192f; margin:2px 0 0 0;">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
+                            <div class="stat-icon icon-emerald" style="width:48px; height:48px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                <i class="fa-solid fa-sack-dollar"></i>
+                            </div>
+                            <div>
+                                <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">AVAILABLE BALANCE</span>
+                                <h3 class="stat-value" id="stat-monthly-earnings" style="font-size:1.5rem; color:#10b981; margin:2px 0 0 0;">₱0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Reservations & Recent Reviews Grid -->
+                    <div class="dashboard-grid" style="display:grid; grid-template-columns: 2fr 1fr; gap:24px;">
+                        <div class="col-main">
+                            <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:20px;">
+                                <div class="panel-header" style="margin-bottom:16px;">
+                                    <h3 style="font-size:1.1rem; color:#0a192f; margin:0;"><i class="fa-solid fa-calendar-day" style="color:#2563eb;"></i> Upcoming Event Reservations</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div class="table-responsive">
+                                        <table class="data-table" style="width:100%; border-collapse:collapse;">
+                                            <thead>
+                                                <tr style="background:#f8fafc; text-align:left; font-size:0.82rem; color:#475569;">
+                                                    <th style="padding:10px 14px;">Client</th>
+                                                    <th style="padding:10px 14px;">Package & Event</th>
+                                                    <th style="padding:10px 14px;">Date & Location</th>
+                                                    <th style="padding:10px 14px;">Amount</th>
+                                                    <th style="padding:10px 14px;">Status</th>
+                                                    <th style="padding:10px 14px;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="table-upcoming-reservations">
+                                                <tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No events yet.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-side">
+                            <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:20px;">
+                                <div class="panel-header" style="margin-bottom:16px;">
+                                    <h3 style="font-size:1.1rem; color:#0a192f; margin:0;"><i class="fa-solid fa-star" style="color:#f59e0b;"></i> Recent Client Reviews</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div id="dash-recent-reviews-list">
+                                        <div style="padding:20px; text-align:center; color:#64748b; font-size:0.88rem;">No reviews yet.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: SERVICE PACKAGES (SINGLE UNIFIED MODULE) -->
+                <div class="provider-view-panel hidden" id="view-provider-packages">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h2 style="font-size:1.65rem; color:#0a192f; margin:0 0 6px 0; font-weight:700;"><i class="fa-solid fa-cubes" style="color:#2563eb;"></i> Service Packages</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.95rem;">Create and manage the services and packages you offer to clients.</p>
+                        </div>
+                        <button type="button" id="btn-create-package-modal" style="background:#2563eb; color:#fff; height:44px; padding:0 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.92rem; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                            <i class="fa-solid fa-plus"></i> Create New Offer
+                        </button>
+                    </div>
+
+                    <div id="provider-packages-cards-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 420px)); gap:24px;">
+                        <div style="grid-column:1/-1; text-align:center; padding:48px 24px; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;">
+                            <i class="fa-solid fa-box-open" style="font-size:2.5rem; color:#94a3b8; margin-bottom:12px; display:block;"></i>
+                            <h3 style="margin:0 0 6px 0; color:#0a192f; font-size:1.1rem; font-weight:800;">No Service Packages Added Yet</h3>
+                            <p style="margin:0 0 16px 0; font-size:0.88rem; color:#64748b;">Click <strong>Create New Offer</strong> to add your first service package for clients.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 4: BOOKING MANAGEMENT -->
+                <div class="provider-view-panel hidden" id="view-provider-bookings">
+                    <div class="view-header" style="margin-bottom:24px;">
+                        <h2 style="font-size:1.75rem; font-weight:800; color:#0a192f; margin:0 0 6px 0; display:flex; align-items:center; gap:12px;">
+                            <i class="fa-solid fa-calendar-check" style="color:#2563eb; font-size:1.9rem;"></i> Booking Management
+                        </h2>
+                        <p style="color:#475569; margin:0; font-size:1.02rem; font-weight:500;">Monitor and manage client reservations placed for your services.</p>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; padding:28px 32px; box-shadow:0 6px 24px rgba(10,25,47,0.06);">
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">BOOKING ID</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">CLIENT</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">PACKAGE / EVENT</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">EVENT DATE</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">LOCATION</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">AMOUNT</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">BOOKING STATUS</th>
+                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-provider-bookings-list">
+                                    <tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:1.02rem;">No bookings yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 5: AVAILABILITY CALENDAR -->
+                <div class="provider-view-panel hidden" id="view-provider-calendar">
+                    <div class="view-header" style="margin-bottom:20px;">
+                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Availability Calendar</h2>
+                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Confirmed bookings automatically lock dates in your availability schedule.</p>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;">
+                        <div style="padding:30px; text-align:center; color:#475569;" id="calendar-container">
+                            <i class="fa-solid fa-calendar-check" style="font-size:3rem; color:#2563eb; margin-bottom:12px; display:block;"></i>
+                            <h4 style="margin:0 0 6px 0; color:#0a192f; font-size:1.1rem;">Calendar Schedule Active</h4>
+                            <p style="margin:0; font-size:0.88rem; color:#64748b;">All confirmed bookings automatically sync to your availability schedule.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 6: BUSINESS PROFILE -->
+                <div class="provider-view-panel hidden" id="view-provider-profile">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Business Profile & Credentials</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.9rem;">View and update your verified business details, profile photo, and contact information.</p>
+                        </div>
+                        <button type="button" id="btn-edit-business-profile" style="background:#2563eb; color:#fff; padding:10px 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit Profile & Photo
+                        </button>
+                    </div>
+
+                    <!-- Business Profile Header & Photo Card -->
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px; margin-bottom:20px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+                        <div style="position:relative; width:96px; height:96px; border-radius:50%; background:#eff6ff; border:3px solid #2563eb; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="prof-avatar-container">
+                            <img src="" id="prof-avatar-img" style="width:100%; height:100%; object-fit:cover; display:none;">
+                            <div id="prof-avatar-initials" style="font-size:2.2rem; font-weight:800; color:#2563eb;">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;" id="card-prof-biz-name">CHiCHa Lights and Sounds</h3>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.88rem; color:#64748b;">
+                                <span><i class="fa-solid fa-user-gear" style="color:#2563eb;"></i> <strong id="card-prof-owner-name">Owner</strong></span>
+                                <span>•</span>
+                                <span><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> <strong id="card-prof-coverage">Batangas</strong></span>
+                                <span>•</span>
+                                <span class="status-badge status-confirmed" style="padding:2px 8px; font-size:0.75rem;">Approved Provider</span>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-trigger-upload-photo" style="background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1; padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-camera" style="color:#2563eb;"></i> Change Profile Photo
+                        </button>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;" id="business-profile-card">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">BUSINESS NAME</label>
+                                <div style="font-size:1.1rem; font-weight:700; color:#0a192f;" id="prof-biz-name">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">OWNER NAME</label>
+                                <div style="font-size:1.05rem; font-weight:600; color:#0a192f;" id="prof-owner-name">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">EMAIL ADDRESS</label>
+                                <div style="font-size:0.95rem; color:#2563eb; font-weight:600;" id="prof-email">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">CONTACT NUMBER</label>
+                                <div style="font-size:0.95rem; color:#0a192f; font-weight:600;" id="prof-contact">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">COVERAGE AREA</label>
+                                <div style="font-size:0.95rem; color:#0a192f; font-weight:600;" id="prof-coverage">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.78rem; font-weight:700; color:#64748b;">VERIFICATION STATUS</label>
+                                <div><span class="status-badge status-confirmed" id="prof-status">Approved</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EDIT BUSINESS PROFILE & PHOTO MODAL -->
+                <div class="admin-modal-overlay hidden" id="modal-edit-provider-profile" role="dialog">
+                    <div class="admin-modal-card" style="max-width:550px; padding:28px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+                            <h3 style="margin:0; font-size:1.25rem; color:#0a192f;"><i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Edit Business Profile & Photo</h3>
+                            <button type="button" id="btn-close-edit-provider-profile" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">&times;</button>
+                        </div>
+                        <form id="form-edit-provider-profile" style="display:flex; flex-direction:column; gap:16px;">
+                            
+                            <!-- Profile Photo Selection -->
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
+                                <div style="position:relative; width:80px; height:80px; border-radius:50%; background:#eff6ff; border:2px solid #2563eb; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                                    <img src="" id="edit-provider-avatar-preview" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                    <i class="fa-solid fa-store" id="edit-provider-avatar-icon" style="font-size:1.8rem; color:#2563eb;"></i>
+                                </div>
+                                <input type="file" id="edit-provider-photo-file" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                                <button type="button" id="btn-choose-provider-photo" style="background:#2563eb; color:#fff; border:none; padding:6px 16px; border-radius:6px; font-weight:700; font-size:0.82rem; cursor:pointer;">
+                                    <i class="fa-solid fa-camera"></i> Choose Profile Photo
+                                </button>
+                                <small style="font-size:0.75rem; color:#64748b;">Allowed formats: .JPG, .PNG, .WEBP (Max 2MB)</small>
+                            </div>
+
+                            <div>
+                                <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Business Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="edit-provider-biz-name" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                <div>
+                                    <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Owner First Name</label>
+                                    <input type="text" id="edit-provider-first-name" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Owner Last Name</label>
+                                    <input type="text" id="edit-provider-last-name" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Contact Number <span style="color:#ef4444;">*</span></label>
+                                <input type="tel" id="edit-provider-phone" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                            </div>
+
+                            <div>
+                                <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Coverage Area <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="edit-provider-coverage" required placeholder="e.g. Batangas, Lipa, Balayan" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                            </div>
+
+                            <div>
+                                <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:4px;">Business Address</label>
+                                <input type="text" id="edit-provider-address" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                            </div>
+
+                            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:12px;">
+                                <button type="button" id="btn-cancel-edit-provider-profile" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:10px 20px; border-radius:8px; font-weight:700; font-size:0.88rem; cursor:pointer; color:#475569;">Cancel</button>
+                                <button type="submit" id="btn-save-provider-profile-submit" style="background:#2563eb; color:#fff; border:none; padding:10px 24px; border-radius:8px; font-weight:700; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- VIEW 7: EARNINGS & PAYOUT REQUESTS -->
+                <div class="provider-view-panel hidden" id="view-provider-withdrawals">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-sack-dollar" style="color:#10b981;"></i> Earnings & Payout Requests</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.9rem;">View your earned revenue balance and submit manual payout requests to the Administrator.</p>
+                        </div>
+                        <button type="button" id="btn-request-withdrawal-modal" style="background:#10b981; color:#fff; padding:10px 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-paper-plane"></i> Request Payout from Admin
+                        </button>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px;">
+                        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0;">
+                            <span style="font-size:0.78rem; font-weight:700; color:#64748b;">AVAILABLE NET BALANCE</span>
+                            <strong style="font-size:1.5rem; color:#10b981; display:block; margin-top:4px;" id="val-available-balance">₱0.00</strong>
+                        </div>
+                        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0;">
+                            <span style="font-size:0.78rem; font-weight:700; color:#64748b;">TOTAL LIFETIME EARNINGS</span>
+                            <strong style="font-size:1.5rem; color:#2563eb; display:block; margin-top:4px;" id="val-total-earnings">₱0.00</strong>
+                        </div>
+                        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0;">
+                            <span style="font-size:0.78rem; font-weight:700; color:#64748b;">TOTAL PAID OUT BY ADMIN</span>
+                            <strong style="font-size:1.5rem; color:#64748b; display:block; margin-top:4px;" id="val-total-withdrawn">₱0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:20px;">
+                        <h4 style="margin:0 0 14px 0; color:#0a192f; font-size:1.05rem;">Payout Request History</h4>
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Amount</th>
+                                        <th>Payout Channel</th>
+                                        <th>Receiver Account Reference</th>
+                                        <th>Date Requested</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-provider-withdrawals-list">
+                                    <tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No payout requests submitted yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 8: CLIENT REVIEWS -->
+                <div class="provider-view-panel hidden" id="view-provider-reviews">
+                    <div class="view-header" style="margin-bottom:20px;">
+                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-star" style="color:#f59e0b;"></i> Client Reviews & Feedback</h2>
+                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Real client reviews calculated from completed event bookings.</p>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;">
+                        <div id="full-provider-reviews-list">
+                            <div style="padding:30px; text-align:center; color:#64748b;">No reviews yet.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 9: MESSAGES -->
+                <div class="provider-view-panel hidden" id="view-provider-messages">
+                    <div class="view-header" style="margin-bottom:20px;">
+                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-comments" style="color:#2563eb;"></i> Client Messages & Chat</h2>
+                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Direct real-time communication with clients regarding event bookings.</p>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px; min-height:400px;">
+                        <a href="/client-messages.html" style="background:#2563eb; color:#fff; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:700; display:inline-block;">
+                            <i class="fa-solid fa-paper-plane"></i> Open Messaging Inbox
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VIEW 10: NOTIFICATIONS -->
+                <div class="provider-view-panel hidden" id="view-provider-notifications">
+                    <div class="view-header" style="margin-bottom:20px;">
+                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-bell" style="color:#2563eb;"></i> Provider Notifications</h2>
+                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Updates regarding bookings, payments, and system events.</p>
+                    </div>
+
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;">
+                        <div id="full-notifications-history-list">
+                            <div style="padding:30px; text-align:center; color:#64748b;">No notifications yet.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: MY SUBSCRIPTION (Free 1st Month, Monthly ₱199, Yearly ₱1,990) -->
+                <div class="provider-view-panel hidden" id="view-provider-subscription">
+                    <div class="view-header" style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h2 style="font-size:1.75rem; font-weight:800; color:#0a192f; margin:0 0 6px 0; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-crown" style="color:#f59e0b;"></i> Provider Membership &amp; Subscription
+                            </h2>
+                            <p style="color:#475569; margin:0; font-size:1rem; font-weight:500;">
+                                Select your provider subscription plan. 1st month is 100% Free! Upgrade anytime with secure PayMongo checkout.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Active Subscription Status Banner -->
+                    <div id="sub-active-banner" class="panel" style="background:linear-gradient(135deg, #0a192f 0%, #1e3a8a 100%); border-radius:16px; padding:28px 32px; color:#ffffff; margin-bottom:32px; box-shadow:0 10px 25px rgba(10,25,47,0.15); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+                        <div style="display:flex; align-items:center; gap:20px;">
+                            <div style="width:64px; height:64px; border-radius:16px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:2rem; color:#f59e0b; flex-shrink:0;">
+                                <i class="fa-solid fa-award"></i>
+                            </div>
+                            <div>
+                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                                    <span style="font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; font-weight:700; color:#93c5fd;">Current Membership</span>
+                                    <span id="sub-badge-status" class="badge" style="background:#10b981; color:#ffffff; font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px;">ACTIVE</span>
+                                </div>
+                                <h3 id="sub-plan-title" style="margin:0 0 6px 0; font-size:1.5rem; font-weight:800; color:#ffffff;">Free Trial (1st Month)</h3>
+                                <div style="display:flex; align-items:center; gap:16px; font-size:0.92rem; color:#cbd5e1; flex-wrap:wrap;">
+                                    <span><i class="fa-regular fa-calendar-check" style="color:#60a5fa; margin-right:6px;"></i> Valid until: <strong id="sub-expiry-date" style="color:#ffffff;">Loading...</strong></span>
+                                    <span><i class="fa-regular fa-clock" style="color:#60a5fa; margin-right:6px;"></i> Remaining: <strong id="sub-days-remaining" style="color:#ffffff;">30 Days</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="sub-action-btn-container" style="display:flex; gap:10px;">
+                            <a href="#plans-selection-grid" id="btn-change-renew-plan" style="background:#f59e0b; color:#0a192f; padding:12px 24px; border-radius:10px; font-weight:800; font-size:0.92rem; text-decoration:none; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(245,158,11,0.35); cursor:pointer;">
+                                <i class="fa-solid fa-bolt"></i> Change / Renew Plan
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Plans Selection Grid -->
+                    <h3 id="plans-selection-grid" style="font-size:1.3rem; font-weight:800; color:#0a192f; margin:0 0 6px 0; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-layer-group" style="color:#2563eb;"></i> Choose Your Subscription Tier
+                    </h3>
+                    <p style="margin:0 0 20px 0; font-size:0.88rem; color:#64748b; font-weight:500;">
+                        <i class="fa-solid fa-circle-info" style="color:#2563eb; margin-right:4px;"></i> All subscription plans provide complete access to all SoundSphere provider features. Tiers differ only by duration and billing discount.
+                    </p>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px; margin-bottom:36px;">
+                        
+                        <!-- PLAN 1: FREE TRIAL (1ST MONTH) -->
+                        <div class="subscription-card" style="background:#ffffff; border:2px solid #e2e8f0; border-radius:18px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 20px rgba(15,23,42,0.04); position:relative; transition:all 0.3s ease;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:20px; text-transform:uppercase;">Starter Tier</span>
+                                    <i class="fa-solid fa-gift" style="color:#10b981; font-size:1.4rem;"></i>
+                                </div>
+                                <h4 style="margin:0 0 6px 0; font-size:1.35rem; font-weight:800; color:#0a192f;">1st Month Free</h4>
+                                <p style="margin:0 0 18px 0; font-size:0.86rem; color:#64748b;">Enjoy complimentary 30-day access for your first month on SoundSphere.</p>
+                                
+                                <div style="display:flex; align-items:baseline; gap:4px; margin-bottom:24px; padding-bottom:18px; border-bottom:1px solid #f1f5f9;">
+                                    <span style="font-size:2.4rem; font-weight:900; color:#0a192f;">₱0</span>
+                                    <span style="font-size:0.95rem; color:#64748b; font-weight:600;">/ first 30 days</span>
+                                </div>
+                            </div>
+
+                            <button type="button" id="btn-claim-free-trial" style="width:100%; height:48px; background:#10b981; color:#ffffff; border:none; border-radius:12px; font-weight:800; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(16,185,129,0.25);">
+                                <i class="fa-solid fa-circle-play"></i> Claim 1st Month Free
+                            </button>
+                        </div>
+
+                        <!-- PLAN 2: MONTHLY SUBSCRIPTION -->
+                        <div class="subscription-card" style="background:#ffffff; border:2px solid #3b82f6; border-radius:18px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 8px 26px rgba(37,99,235,0.08); position:relative; transition:all 0.3s ease;">
+                            <div style="position:absolute; top:-12px; right:20px; background:#2563eb; color:#ffffff; font-size:0.72rem; font-weight:800; padding:4px 12px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">
+                                Most Flexible
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <span style="background:#eff6ff; color:#2563eb; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:20px; text-transform:uppercase;">Standard Pro</span>
+                                    <i class="fa-solid fa-calendar-alt" style="color:#2563eb; font-size:1.4rem;"></i>
+                                </div>
+                                <h4 style="margin:0 0 6px 0; font-size:1.35rem; font-weight:800; color:#0a192f;">Monthly Plan</h4>
+                                <p style="margin:0 0 18px 0; font-size:0.86rem; color:#64748b;">Keep your services listed and visible to clients month-by-month.</p>
+                                
+                                <div style="display:flex; align-items:baseline; gap:4px; margin-bottom:24px; padding-bottom:18px; border-bottom:1px solid #f1f5f9;">
+                                    <span style="font-size:2.4rem; font-weight:900; color:#2563eb;">₱199</span>
+                                    <span style="font-size:0.95rem; color:#64748b; font-weight:600;">/ 30 days</span>
+                                </div>
+                            </div>
+
+                            <button type="button" id="btn-checkout-monthly" style="width:100%; height:48px; background:#2563eb; color:#ffffff; border:none; border-radius:12px; font-weight:800; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(37,99,235,0.28);">
+                                <i class="fa-solid fa-credit-card"></i> Subscribe Monthly (₱199)
+                            </button>
+                        </div>
+
+                        <!-- PLAN 3: YEARLY SUBSCRIPTION -->
+                        <div class="subscription-card" style="background:#ffffff; border:2px solid #f59e0b; border-radius:18px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 8px 28px rgba(245,158,11,0.12); position:relative; transition:all 0.3s ease;">
+                            <div style="position:absolute; top:-12px; right:20px; background:#f59e0b; color:#0a192f; font-size:0.72rem; font-weight:900; padding:4px 12px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">
+                                Best Value • Save 17%
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <span style="background:#fef3c7; color:#b45309; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:20px; text-transform:uppercase;">VIP Annual Pro</span>
+                                    <i class="fa-solid fa-crown" style="color:#f59e0b; font-size:1.4rem;"></i>
+                                </div>
+                                <h4 style="margin:0 0 6px 0; font-size:1.35rem; font-weight:800; color:#0a192f;">Yearly Plan</h4>
+                                <p style="margin:0 0 18px 0; font-size:0.86rem; color:#64748b;">Save ₱398! Get 12 months for the price of 10 with annual billing.</p>
+                                
+                                <div style="display:flex; align-items:baseline; gap:4px; margin-bottom:24px; padding-bottom:18px; border-bottom:1px solid #f1f5f9;">
+                                    <span style="font-size:2.4rem; font-weight:900; color:#b45309;">₱1,990</span>
+                                    <span style="font-size:0.95rem; color:#64748b; font-weight:600;">/ 365 days</span>
+                                </div>
+                            </div>
+
+                            <button type="button" id="btn-checkout-yearly" style="width:100%; height:48px; background:#f59e0b; color:#0a192f; border:none; border-radius:12px; font-weight:900; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(245,158,11,0.3);">
+                                <i class="fa-solid fa-crown"></i> Subscribe Yearly (₱1,990)
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- Payment & Subscription History Table -->
+                    <div class="panel" style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:28px; box-shadow:0 4px 18px rgba(10,25,47,0.04);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid #f1f5f9; padding-bottom:14px;">
+                            <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-receipt" style="color:#2563eb;"></i> Billing &amp; Payment History
+                            </h4>
+                            <span style="font-size:0.85rem; color:#64748b; font-weight:600;">Monitored directly by Platform Admin</span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:#f8fafc; text-align:left; font-size:0.82rem; color:#475569;">
+                                        <th style="padding:12px 16px;">Invoice / Plan</th>
+                                        <th style="padding:12px 16px;">Amount</th>
+                                        <th style="padding:12px 16px;">Payment Method</th>
+                                        <th style="padding:12px 16px;">Payment Date</th>
+                                        <th style="padding:12px 16px;">Status</th>
+                                        <th style="padding:12px 16px;">Reference / ID</th>
+                                        <th style="padding:12px 16px; text-align:center;">Receipt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-provider-subscription-payments">
+                                    <tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">Loading payment history...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL 1: ADD SERVICE -->
+    <div class="admin-modal-overlay hidden" id="modal-provider-add-service" role="dialog">
+        <div class="admin-modal-card">
+            <h3>Add New Service</h3>
+            <div style="display:flex; flex-direction:column; gap:18px;">
+                <div>
+                    <label>SERVICE NAME</label>
+                    <input type="text" id="input-svc-name" placeholder="e.g. JBL Line Array Sound Rig">
+                </div>
+                <div>
+                    <label>CATEGORY</label>
+                    <select id="input-svc-category">
+                        <option value="Sound Systems">Sound Systems</option>
+                        <option value="Lighting">Lighting</option>
+                        <option value="LED Walls">LED Walls</option>
+                        <option value="Stage Equipment">Stage Equipment</option>
+                        <option value="DJ Services">DJ Services</option>
+                        <option value="Karaoke">Karaoke</option>
+                        <option value="Live Band / Music">Live Band / Music</option>
+                        <option value="Event Sound Engineering">Event Sound Engineering</option>
+                        <option value="Photo Booth">Photo Booth</option>
+                        <option value="Special Effects">Special Effects</option>
+                        <option value="Event Setup & Production">Event Setup & Production</option>
+                        <option value="Generator / Power Supply">Generator / Power Supply</option>
+                    </select>
+                </div>
+                <div>
+                    <label>BASE PRICE (₱)</label>
+                    <input type="number" id="input-svc-price" placeholder="15000">
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:14px; margin-top:28px;">
+                <button type="button" onclick="document.getElementById('modal-provider-add-service').classList.add('hidden')" style="height:50px; padding:12px 24px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-weight:700; font-size:1rem; cursor:pointer;">Cancel</button>
+                <button type="button" id="btn-save-new-service" style="height:50px; padding:12px 28px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:1rem; cursor:pointer;">Save Service</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT SERVICE PACKAGE OFFER -->
+    <div class="admin-modal-overlay hidden" id="modal-provider-add-package" role="dialog">
+        <div class="admin-modal-card">
+            <input type="hidden" id="input-pkg-id" value="">
+            <h3 id="modal-pkg-title">Create Service Package Offer</h3>
+            <div style="display:flex; flex-direction:column; gap:18px;">
+                <div>
+                    <label>SERVICE / PACKAGE NAME *</label>
+                    <input type="text" id="input-pkg-name" placeholder="e.g. Wedding Concert Sound & Stage Light Setup">
+                </div>
+                <div>
+                    <label>CATEGORY *</label>
+                    <select id="input-pkg-category">
+                        <option value="Concert Audio & Stage Lights">Concert Audio & Stage Lights</option>
+                        <option value="Sound Systems">Sound Systems</option>
+                        <option value="Lighting Rigs">Lighting Rigs</option>
+                        <option value="LED Wall & Visuals">LED Wall & Visuals</option>
+                        <option value="DJ & Audio Engineering">DJ & Audio Engineering</option>
+                        <option value="Wedding & Debut Packages">Wedding & Debut Packages</option>
+                        <option value="Full Event Production">Full Event Production</option>
+                        <option value="Special Effects & Pyros">Special Effects & Pyros</option>
+                    </select>
+                </div>
+                <div>
+                    <label>PACKAGE PRICE (₱) *</label>
+                    <input type="number" id="input-pkg-price" placeholder="25000">
+                </div>
+                <div>
+                    <label>ADDITIONAL DAY RATE (%) *</label>
+                    <input type="number" id="input-pkg-additional-day-percentage" placeholder="20" value="20" min="0" max="100" step="0.5">
+                    <span style="font-size:0.86rem; color:#64748b; margin-top:4px; display:block;">Extra charge percentage per added event day (e.g. 20 for +20% per additional day).</span>
+                </div>
+                <div>
+                    <label>DESCRIPTION & OVERVIEW</label>
+                    <textarea id="input-pkg-description" rows="3" placeholder="Full professional audio-visual stage rig for events..."></textarea>
+                </div>
+                <div>
+                    <label>INCLUDED SERVICES & EQUIPMENT (Comma-separated)</label>
+                    <textarea id="input-pkg-inclusions" rows="3" placeholder="4x Line Array Speakers, 2x Subwoofers, 12x Stage Par Cans, 2x Wireless Microphones, DJ Services..."></textarea>
+                </div>
+                
+                <div style="border-top:1.5px solid #e2e8f0; padding-top:18px; margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div>
+                            <label style="margin-bottom:2px !important;">
+                                <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:6px;"></i> SETUP / INCLUSION PHOTOS
+                            </label>
+                            <span style="font-size:0.88rem; color:#475569; font-weight:500;">Upload photos of actual event setup, equipment, speakers, lights, or inclusions for this offer.</span>
+                        </div>
+                        <button type="button" id="btn-trigger-pkg-photo-upload" style="padding:10px 20px; background:#eff6ff; border:1.5px dashed #2563eb; color:#2563eb; font-weight:800; font-size:0.92rem; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-plus"></i> Add Photo
+                        </button>
+                    </div>
+                    <input type="file" id="input-pkg-photos" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
+                    
+                    <div id="pkg-photos-preview-grid" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; max-height:220px; overflow-y:auto; padding:6px;">
+                        <span style="font-size:0.9rem; color:#94a3b8; font-style:italic;">No setup photos selected yet.</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:14px; margin-top:28px;">
+                <button type="button" onclick="document.getElementById('modal-provider-add-package').classList.add('hidden')" style="height:50px; padding:12px 24px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-weight:700; font-size:1rem; cursor:pointer;">Cancel</button>
+                <button type="button" id="btn-save-new-package" style="height:50px; padding:12px 30px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:1rem; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Save Offer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST PAYOUT FROM ADMIN -->
+    <div class="admin-modal-overlay hidden" id="modal-request-withdrawal" role="dialog">
+        <div class="admin-modal-card" style="max-width:540px; padding:28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+                <h3 style="margin:0; font-size:1.25rem; color:#0a192f;"><i class="fa-solid fa-paper-plane" style="color:#10b981;"></i> Request Payout from Admin</h3>
+                <button type="button" id="btn-close-request-withdrawal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#64748b;">&times;</button>
+            </div>
+            
+            <form id="form-request-withdrawal" style="display:flex; flex-direction:column; gap:16px;">
+                <input type="hidden" id="input-withdrawal-booking-id" value="">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:14px; border-radius:12px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:#166534;">CURRENT AVAILABLE NET BALANCE</div>
+                    <strong style="font-size:1.6rem; color:#15803d;" id="modal-withdrawal-avail-balance">₱0.00</strong>
+                    <p style="margin:4px 0 0 0; font-size:0.78rem; color:#15803d; line-height:1.3;">The platform Administrator will manually transfer payment to your designated account below.</p>
+                </div>
+
+                <div id="modal-withdrawal-breakdown-box" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px; display:none;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.86rem; color:#1e3a8a; margin-bottom:4px;">
+                        <span>Target Booking:</span>
+                        <strong id="wb-booking-id">#BK-0</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.86rem; color:#475569; margin-bottom:4px;">
+                        <span>Service Total Amount:</span>
+                        <strong id="wb-service-amount">₱0.00</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.86rem; color:#ef4444; margin-bottom:6px;">
+                        <span>Platform Fee (5%):</span>
+                        <strong id="wb-fee-amount">-₱0.00</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.95rem; color:#10b981; font-weight:800; border-top:1px dashed #93c5fd; padding-top:6px;">
+                        <span>Fixed Net Payout (95%):</span>
+                        <strong id="wb-net-amount">₱0.00</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">NET PAYOUT AMOUNT TO REQUEST (FIXED 95%) <span style="color:#ef4444;">*</span></label>
+                    <input type="number" id="input-withdrawal-amount" required min="1" step="0.01" placeholder="Enter amount (e.g. 5000)" style="width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:1.05rem; font-weight:700; box-sizing:border-box;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:#0a192f; display:block; margin-bottom:10px;">WHERE TO SEND PAYMENT (CHOOSE PAYOUT CHANNEL) <span style="color:#ef4444;">*</span></label>
+                    <input type="hidden" id="input-withdrawal-method" value="GCash / Maya E-Wallet">
+                    
+                    <div style="display:flex; flex-direction:column; gap:10px;" id="payout-method-cards-container">
+                        <!-- CARD 1: GCash / Maya E-Wallet -->
+                        <div class="payout-card active-payout-card" data-method="GCash / Maya E-Wallet" style="border:2.5px solid #2563eb; background:#f0f7ff; border-radius:12px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s ease;">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="fa-solid fa-mobile-screen-button" style="font-size:1.4rem; color:#2563eb;"></i>
+                                </div>
+                                <div>
+                                    <strong style="font-size:0.95rem; color:#0a192f; display:block;">E-Wallet Payment (GCash / Maya)</strong>
+                                    <span style="font-size:0.78rem; color:#475569; font-weight:600;">Admin sends money to your GCash or Maya mobile no.</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <span style="background:#005ce6; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">GCash</span>
+                                <span style="background:#10b981; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">Maya</span>
+                            </div>
+                        </div>
+
+                        <!-- CARD 2: Direct Bank Transfer -->
+                        <div class="payout-card" data-method="Direct Bank Transfer (BDO/BPI/UnionBank)" style="border:1.5px solid #cbd5e1; background:#ffffff; border-radius:12px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s ease;">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:#f3e8ff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="fa-solid fa-building-columns" style="font-size:1.4rem; color:#8b5cf6;"></i>
+                                </div>
+                                <div>
+                                    <strong style="font-size:0.95rem; color:#0a192f; display:block;">Bank Account Transfer</strong>
+                                    <span style="font-size:0.78rem; color:#475569; font-weight:600;">BDO • BPI • UnionBank • Metrobank</span>
+                                </div>
+                            </div>
+                            <span style="background:#8b5cf6; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">InstaPay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">ACCOUNT HOLDER FULL NAME <span style="color:#ef4444;">*</span></label>
+                    <input type="text" id="input-withdrawal-account-name" required placeholder="Full Name (e.g. Juan Dela Cruz)" style="width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.95rem; box-sizing:border-box;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">RECEIVER ACCOUNT / MOBILE NUMBER <span style="color:#ef4444;">*</span></label>
+                    <input type="text" id="input-withdrawal-account-ref" required placeholder="e.g. 09171234567 (GCash/Maya) or Bank Account No." style="width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.95rem; box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
+                    <button type="button" id="btn-cancel-request-withdrawal" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:12px 20px; border-radius:10px; font-weight:700; font-size:0.9rem; cursor:pointer; color:#475569;">Cancel</button>
+                    <button type="submit" style="background:#10b981; color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:800; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Request to Admin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SUBSCRIPTION PAYMENT RECEIPT -->
+    <div class="admin-modal-overlay hidden" id="modal-subscription-receipt" role="dialog">
+        <div class="admin-modal-card" style="max-width:620px; padding:32px; border-radius:20px; background:#ffffff; box-shadow:0 20px 40px rgba(10,25,47,0.2);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #f1f5f9; padding-bottom:18px; margin-bottom:20px;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <i class="fa-solid fa-sliders" style="color:#2563eb; font-size:1.4rem;"></i>
+                        <span style="font-size:1.25rem; font-weight:900; color:#0a192f; letter-spacing:-0.5px;">SoundSphere</span>
+                    </div>
+                    <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; font-weight:800; color:#64748b;">Official Subscription Tax Invoice &amp; Receipt</span>
+                </div>
+                <button type="button" id="btn-close-sub-receipt" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+            </div>
+
+            <!-- Receipt Status Banner -->
+            <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-circle-check" style="color:#059669; font-size:1.3rem;"></i>
+                    <div>
+                        <strong style="font-size:0.92rem; color:#065f46; display:block;">Payment Status: PAID &amp; VERIFIED</strong>
+                        <span style="font-size:0.78rem; color:#047857;">Monitored directly via SoundSphere Billing System</span>
+                    </div>
+                </div>
+                <span id="sub-rec-inv-no" style="font-family:monospace; font-weight:800; font-size:0.88rem; color:#065f46; background:#dcfce7; padding:4px 10px; border-radius:8px;">INV-SUB-00000</span>
+            </div>
+
+            <!-- Billed To Details -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; background:#f8fafc; padding:18px; border-radius:12px; border:1px solid #e2e8f0;">
+                <div>
+                    <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:#64748b; display:block; margin-bottom:4px;">Billed To (Provider)</span>
+                    <strong id="sub-rec-biz-name" style="font-size:0.95rem; color:#0a192f; display:block;">Provider Business Name</strong>
+                    <span id="sub-rec-owner-name" style="font-size:0.84rem; color:#475569; display:block;">Owner Name</span>
+                    <span id="sub-rec-email" style="font-size:0.82rem; color:#2563eb;">email@example.com</span>
+                </div>
+                <div>
+                    <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:#64748b; display:block; margin-bottom:4px;">Payment Info</span>
+                    <span style="font-size:0.84rem; color:#475569; display:block;">Date: <strong id="sub-rec-date" style="color:#0a192f;">Sep 18, 2026</strong></span>
+                    <span style="font-size:0.84rem; color:#475569; display:block;">Method: <strong id="sub-rec-method" style="color:#0a192f;">PayMongo</strong></span>
+                    <span style="font-size:0.84rem; color:#475569; display:block;">Ref ID: <strong id="sub-rec-ref" style="font-family:monospace; color:#2563eb;">N/A</strong></span>
+                </div>
+            </div>
+
+            <!-- Itemized Table -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+                <thead>
+                    <tr style="border-bottom:2px solid #e2e8f0; text-align:left; font-size:0.78rem; text-transform:uppercase; color:#64748b;">
+                        <th style="padding:8px 0;">Description / Plan</th>
+                        <th style="padding:8px 0; text-align:center;">Duration</th>
+                        <th style="padding:8px 0; text-align:right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:14px 0;">
+                            <strong id="sub-rec-plan-name" style="font-size:0.95rem; color:#0a192f; display:block;">Monthly Plan (₱199)</strong>
+                            <span style="font-size:0.8rem; color:#64748b;">Full Access to Provider Portal &amp; Marketplace Services</span>
+                        </td>
+                        <td id="sub-rec-duration" style="padding:14px 0; text-align:center; font-size:0.88rem; font-weight:700; color:#475569;">30 Days</td>
+                        <td id="sub-rec-price" style="padding:14px 0; text-align:right; font-size:1.05rem; font-weight:800; color:#0a192f;">₱199.00</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Total Calculation -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#0a192f; color:#ffffff; padding:18px 24px; border-radius:14px; margin-bottom:24px;">
+                <span style="font-size:0.95rem; font-weight:700;">TOTAL AMOUNT PAID</span>
+                <span id="sub-rec-total-amount" style="font-size:1.6rem; font-weight:900; color:#60a5fa;">₱199.00</span>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button type="button" id="btn-close-sub-receipt-btn" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:12px 20px; border-radius:10px; font-weight:700; font-size:0.9rem; cursor:pointer;">Close</button>
+                <button type="button" id="btn-print-sub-receipt" style="background:#2563eb; color:#ffffff; border:none; padding:12px 24px; border-radius:10px; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                    <i class="fa-solid fa-print"></i> Print / Save PDF Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core SoundSphere API Helper -->
+    <script src="../js/api.js?v=5.0"></script>
+    <!-- Service Provider Controller JS -->
+    <script src="./js/provider-dashboard.js?v=5.0"></script>
+</body>
+</html>

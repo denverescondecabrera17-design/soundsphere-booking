@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundSphere Client In-App Communication & Direct Messaging - Real-time provider chat threads, system event cards, and notification alerts.">
+    <title>SoundSphere | Client Messages & Notifications</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=5.0">
+    <link rel="stylesheet" href="css/marketplace.css?v=1.0">
+    <link rel="stylesheet" href="css/client-messages.css?v=10.0">
+    <link rel="stylesheet" href="css/profile-modal.css?v=1.0">
+</head>
+<body class="client-messages-body">
+
+    <!-- Top Navigation Bar -->
+    <header class="marketplace-navbar">
+        <div class="nav-container">
+            <a href="marketplace.html" class="nav-brand">
+                <i class="fa-solid fa-compact-disc"></i>
+                <div>
+                    SoundSphere
+                    <span class="brand-sub">Lights & Sounds Booking System</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <a href="marketplace.html" class="nav-action-btn">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Marketplace</span>
+                </a>
+
+                <a href="client-bookings.html" class="nav-action-btn">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>My Bookings</span>
+                </a>
+
+                <!-- Notification Bell with Dropdown Panel -->
+                <div class="icon-badge-btn" id="notif-btn" title="Notifications" style="position:relative;">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge-count" id="notif-badge-count">3</span>
+                </div>
+
+                <!-- Messages Active Icon -->
+                <div class="icon-badge-btn" title="Messages" style="background: rgba(255,255,255,0.25);">
+                    <i class="fa-regular fa-comments"></i>
+                </div>
+
+                <!-- User Avatar Menu with Logout Dropdown -->
+                <div class="user-avatar-menu">
+                    <div class="avatar-btn" id="avatar-btn">
+                        <div class="avatar-img" id="user-avatar-initials">UA</div>
+                        <span class="avatar-name" id="user-display-name">User Account</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.85rem;"></i>
+                    </div>
+
+                    <div class="user-dropdown" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-title">Event Client Account</div>
+                            <div class="user-role">Verified Client</div>
+                        </div>
+                        <a href="marketplace.html" class="dropdown-item">
+                            <i class="fa-solid fa-store"></i> Marketplace Rigs
+                        </a>
+                        <a href="#" id="logout-btn" class="dropdown-item logout-item">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 1. NOTIFICATION DROPDOWN PANEL -->
+    <div class="notification-dropdown" id="notification-dropdown">
+        <div class="notif-header">
+            <h4><i class="fa-regular fa-bell"></i> Notifications & Alerts</h4>
+            <button type="button" class="btn-mark-read" id="btn-mark-read">Mark all as read</button>
+        </div>
+        <div class="notif-list">
+            <!-- Alert Item 1 -->
+            <a href="client-messages.html" class="notif-item unread">
+                <div class="notif-icon"><i class="fa-solid fa-calendar-check" style="color:#2563eb;"></i></div>
+                <div>
+                    <div class="notif-title">Reschedule Request Approved</div>
+                    <div class="notif-text">Acoustix Line Array approved your new event date for August 15, 2026 (#BK-8902).</div>
+                    <div class="notif-time">5 mins ago</div>
+                </div>
+            </a>
+            <!-- Alert Item 2 -->
+            <a href="client-messages.html" class="notif-item unread">
+                <div class="notif-icon" style="background:#dcfce7; color:#15803d;"><i class="fa-solid fa-credit-card"></i></div>
+                <div>
+                    <div class="notif-title">PayMongo Payment Confirmed</div>
+                    <div class="notif-text">50% Downpayment deposit of ₱14,750 received via GCash for booking #BK-8902.</div>
+                    <div class="notif-time">1 hour ago</div>
+                </div>
+            </a>
+            <!-- Alert Item 3 -->
+            <a href="client-messages.html" class="notif-item unread">
+                <div class="notif-icon" style="background:#fef3c7; color:#b45309;"><i class="fa-solid fa-comments"></i></div>
+                <div>
+                    <div class="notif-title">New Provider Message</div>
+                    <div class="notif-text">VibeCraft Acoustic sent you a message regarding stage lighting setup.</div>
+                    <div class="notif-time">Yesterday</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. MAIN MESSAGING INTERFACE -->
+    <main class="messages-layout-container">
+        <!-- Left Panel Threads (Messenger Conversations List) -->
+        <aside class="threads-left-panel">
+            <div class="threads-header">
+                <div class="threads-header-top">
+                    <h2>Chats</h2>
+                </div>
+                <div class="threads-search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search Messenger..." id="threads-search">
+                </div>
+            </div>
+
+            <!-- Dynamic Threads List -->
+            <div class="threads-list" id="threads-list">
+                <!-- Rendered via client-messages.js -->
+            </div>
+        </aside>
+
+        <!-- Right Panel: Active Chat Window (Messenger Style) -->
+        <section class="chat-right-panel">
+            <!-- Active Header -->
+            <div class="chat-header-bar">
+                <div class="active-provider-meta">
+                    <div class="active-chat-avatar-wrap">
+                        <div class="active-chat-avatar" id="active-chat-avatar" style="width:42px; height:42px; border-radius:50%; background:#0084ff; color:#ffffff; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:1.1rem;"><i class="fa-solid fa-comments"></i></div>
+                        <span class="online-status-badge"></span>
+                    </div>
+                    <div>
+                        <h3 class="active-provider-name" id="active-provider-name">Select a Service Provider</h3>
+                        <div class="active-status-subtitle" id="active-status-subtitle">
+                            <span class="green-dot-indicator"></span> Direct Provider &amp; Client Messaging
+                        </div>
+                    </div>
+                </div>
+                <!-- Call & info action buttons removed -->
+            </div>
+
+            <!-- Message History Stream -->
+            <div class="messages-history-stream" id="messages-stream">
+                <!-- Rendered via client-messages.js -->
+            </div>
+
+            <!-- Input Box Footer with Attachment, Emoji & Send Buttons -->
+            <div class="chat-input-footer">
+                <input type="file" id="image-file-input" accept="image/*" style="display: none;">
+                
+                <button type="button" class="input-action-btn" id="btn-attach-img" title="Attach Image / Layout">
+                    <i class="fa-solid fa-image"></i>
+                </button>
+
+
+                <input type="text" class="chat-text-input" id="chat-text-input" placeholder="Aa" autocomplete="off">
+
+                <button type="button" class="btn-send-message" id="btn-send-message" title="Send Message">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== SHOPEE-STYLE MY PROFILE & ACCOUNT SETTINGS MODAL ==================== -->
+    <div class="profile-modal-overlay hidden" id="profile-settings-modal" role="dialog" aria-modal="true">
+        <div class="profile-modal-card">
+            <div class="profile-modal-header">
+                <div class="profile-modal-title-block">
+                    <h2><i class="fa-solid fa-user-gear" style="color:#2563eb;"></i> My Profile</h2>
+                    <p>Manage and protect your account details and profile picture.</p>
+                </div>
+                <button type="button" class="profile-close-btn" id="profile-close-btn">&times;</button>
+            </div>
+
+            <form id="profile-settings-form">
+                <div class="profile-modal-body">
+                    <!-- Left Column: Profile Picture Upload Section -->
+                    <div class="profile-avatar-column">
+                        <div class="avatar-preview-wrapper">
+                            <img id="profile-avatar-preview-img" class="avatar-preview-img" src="" alt="Profile Preview" style="display:none;">
+                            <div id="profile-avatar-initials-fallback" class="avatar-initials-fallback">CU</div>
+                            <div class="avatar-camera-badge" id="btn-change-avatar" title="Change Profile Picture">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                        </div>
+
+                        <input type="file" id="profile-picture-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        
+                        <button type="button" class="btn-select-image" id="btn-select-image">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Select Image
+                        </button>
+
+                        <div class="avatar-help-text">
+                            File size: max 1 MB<br>File extension: .JPEG, .PNG, .WEBP
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Account Details Form -->
+                    <div class="profile-fields-column">
+                        <div class="profile-form-grid">
+                            <div class="profile-form-group">
+                                <label for="profile-firstname">First Name <span style="color:#ef4444;">*</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-firstname" required placeholder="Juan">
+                                </div>
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label for="profile-middlename">Middle Name <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Optional)</span></label>
+                                <div class="profile-input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="profile-middlename" placeholder="Santos">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-lastname">Last Name <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="profile-lastname" required placeholder="Dela Cruz">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-email">Email Address <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Account Email)</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input type="email" id="profile-email" required placeholder="Email Address">
+                                <span class="email-verified-tag"><i class="fa-solid fa-check-double"></i> Verified</span>
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-phone">Contact Phone Number <span style="color:#ef4444;">*</span></label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="profile-phone" required placeholder="09171234567">
+                            </div>
+                        </div>
+
+                        <div class="profile-form-group">
+                            <label for="profile-address">Address / City Location</label>
+                            <div class="profile-input-wrapper">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <input type="text" id="profile-address" placeholder="e.g. Quezon City, Metro Manila">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-modal-footer">
+                    <button type="submit" class="btn-save-profile" id="btn-save-profile">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    <!-- ==================== PHOTO LIGHTBOX / ENLARGED IMAGE VIEW MODAL ==================== -->
+    <div id="photo-lightbox-modal" role="dialog" aria-modal="true" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10, 20, 35, 0.94); backdrop-filter:blur(10px); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:999999; opacity:0; transition:opacity 0.25s ease; box-sizing:border-box; padding:20px;">
+        <!-- Top Toolbar -->
+        <div style="position:absolute; top:20px; right:28px; display:flex; align-items:center; gap:12px; z-index:1000000;">
+            <a id="lightbox-download-btn" href="" download="photo-attachment.jpg" style="background:rgba(255,255,255,0.18); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; text-decoration:none; display:flex; align-items:center; justify-content:center; font-size:1.2rem; transition:background 0.2s ease;" title="Download Photo">
+                <i class="fa-solid fa-download"></i>
+            </a>
+            <button type="button" id="lightbox-close-btn" style="background:rgba(255,255,255,0.18); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Close Viewer">&times;</button>
+        </div>
+
+        <div style="max-width:92vw; max-height:86vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+            <img id="lightbox-full-img" src="" alt="Enlarged Photo Attachment" style="max-width:90vw; max-height:84vh; border-radius:14px; object-fit:contain; box-shadow:0 25px 60px rgba(0,0,0,0.6); transform:scale(0.92); transition:transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js?v=5.0"></script>
+    <script src="js/client-messages.js?v=1.0"></script>
+    <script src="js/profile-modal.js?v=1.0"></script>
+</body>
+</html>
