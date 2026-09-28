@@ -7,15 +7,25 @@ const sql = require('mssql');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
+const isAzure = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('.database.windows.net'));
+const isProduction = process.env.NODE_ENV === 'production';
+const shouldEncrypt = process.env.DB_ENCRYPT !== undefined 
+    ? process.env.DB_ENCRYPT === 'true' 
+    : (isAzure || isProduction);
+
+const trustCert = process.env.DB_TRUST_CERT !== undefined 
+    ? process.env.DB_TRUST_CERT === 'true' 
+    : (!isAzure);
+
 const dbConfig = {
     user: process.env.DB_USER || 'sa',
     password: process.env.DB_PASSWORD || '',
     server: process.env.DB_SERVER || '127.0.0.1',
-    database: process.env.DB_DATABASE || 'SoundSphereDB',
+    database: process.env.DB_NAME || process.env.DB_DATABASE || 'SoundSphereDB',
     port: parseInt(process.env.DB_PORT, 10) || 1433,
     options: {
-        encrypt: false,
-        trustServerCertificate: true,
+        encrypt: shouldEncrypt,
+        trustServerCertificate: trustCert,
         enableArithAbort: true
     },
     pool: {
@@ -525,11 +535,16 @@ const connectDB = async () => {
             try {
                 pool = await sql.connect(dbConfig);
             } catch (err) {
-                console.warn('Primary DB host failed, attempting 127.0.0.1 fallback...');
-                const fallbackConfig = { ...dbConfig, server: '127.0.0.1' };
-                pool = await sql.connect(fallbackConfig);
+                console.warn(`Primary DB host (${dbConfig.server}) failed:`, err.message);
+                if (!process.env.DB_SERVER || process.env.DB_SERVER === '127.0.0.1' || process.env.DB_SERVER === 'localhost') {
+                    console.warn('Attempting 127.0.0.1 fallback...');
+                    const fallbackConfig = { ...dbConfig, server: '127.0.0.1' };
+                    pool = await sql.connect(fallbackConfig);
+                } else {
+                    throw err;
+                }
             }
-            console.log(' Microsoft SQL Server connected successfully:', process.env.DB_DATABASE);
+            console.log(' Microsoft SQL Server connected successfully:', dbConfig.database);
             await autoSeedDatabase(pool);
         }
         return pool;

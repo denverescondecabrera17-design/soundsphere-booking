@@ -6,15 +6,25 @@
 const sql = require('mssql');
 require('dotenv').config();
 
+const isAzure = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('.database.windows.net'));
+const isProduction = process.env.NODE_ENV === 'production';
+const shouldEncrypt = process.env.DB_ENCRYPT !== undefined 
+    ? process.env.DB_ENCRYPT === 'true' 
+    : (isAzure || isProduction);
+
+const trustCert = process.env.DB_TRUST_CERT !== undefined 
+    ? process.env.DB_TRUST_CERT === 'true' 
+    : (!isAzure);
+
 const dbConfig = {
     user: process.env.DB_USER || 'sa',
     password: process.env.DB_PASSWORD || '',
     server: process.env.DB_SERVER || 'localhost',
-    database: process.env.DB_DATABASE || 'SoundSphereDB',
+    database: process.env.DB_NAME || process.env.DB_DATABASE || 'SoundSphereDB',
     port: parseInt(process.env.DB_PORT, 10) || 1433,
     options: {
-        encrypt: false, // Set to true if using Azure SQL
-        trustServerCertificate: true, // Self-signed cert compliance for local SSMS
+        encrypt: shouldEncrypt,
+        trustServerCertificate: trustCert,
         enableArithAbort: true
     },
     pool: {
