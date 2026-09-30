@@ -87,27 +87,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const userParam = urlParams.get('user');
     const authErrorParam = urlParams.get('auth_error');
 
-    if (tokenParam && userParam) {
+    if (tokenParam) {
         try {
-            const userObj = JSON.parse(decodeURIComponent(userParam));
-            if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.setAuthSession) {
-                SoundSphereAPI.setAuthSession(tokenParam, userObj, true);
-            } else {
-                localStorage.setItem('soundsphere_auth_token', tokenParam);
-                localStorage.setItem('soundsphere_user', JSON.stringify(userObj));
+            let userObj = null;
+            if (userParam) {
+                try {
+                    userObj = JSON.parse(decodeURIComponent(userParam));
+                } catch (err) {
+                    console.warn('Could not parse userParam, falling back to JWT payload decode');
+                }
             }
-            showAlert(`Welcome back, ${userObj.name || userObj.email}! Logging you in via Google...`, 'success');
-            setTimeout(() => {
+
+            if (!userObj) {
+                try {
+                    const base64Url = tokenParam.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                    const payload = JSON.parse(jsonPayload);
+                    userObj = {
+                        userId: payload.userId || payload.UserID || 1,
+                        email: payload.email || payload.Email || 'User',
+                        role: payload.roleName || payload.RoleName || payload.role || 'Client',
+                        name: payload.email || payload.Email || 'User'
+                    };
+                } catch (jwtErr) {
+                    console.error('JWT payload decoding failed:', jwtErr);
+                }
+            }
+
+            if (userObj) {
+                if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.setAuthSession) {
+                    SoundSphereAPI.setAuthSession(tokenParam, userObj, true);
+                } else {
+                    localStorage.setItem('soundsphere_auth_token', tokenParam);
+                    localStorage.setItem('soundsphere_user', JSON.stringify(userObj));
+                }
+
                 const roleStr = (userObj.role || userObj.RoleName || userObj.roleName || '').toLowerCase();
                 const redirectTarget = (roleStr === 'admin' || roleStr === 'administrator') ? '/admin/dashboard.html' :
                                        (roleStr === 'provider' || roleStr === 'serviceprovider') ? '/provider/dashboard.html' : '/marketplace.html';
-                window.location.href = redirectTarget;
-            }, 800);
-            return;
+
+                showAlert(`Authentication successful! Redirecting to your dashboard...`, 'success');
+                setTimeout(() => {
+                    window.location.href = redirectTarget;
+                }, 400);
+                return;
+            }
         } catch (e) {
-            console.error('Failed to parse Google OAuth user response:', e);
-            showAlert('Authentication successful, but session parsing failed. Please sign in.', 'error');
+            console.error('Failed to process authentication token:', e);
         }
+    }
+
     const triggerGoogleSocialAuth = async (userEmail, userName = 'Google User') => {
         try {
             showAlert('Authenticating with Google / Gmail...', 'success');
