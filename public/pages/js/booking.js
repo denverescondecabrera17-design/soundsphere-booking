@@ -1479,6 +1479,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (pmViews[activeKey]) pmViews[activeKey].classList.remove('hidden');
 
+                // Pre-fill real user details into payment fields if available
+                const cardNameInput = document.getElementById('pm-card-name');
+                if (cardNameInput && clientFullname) {
+                    cardNameInput.value = clientFullname.toUpperCase();
+                }
+                const gcashPhoneInput = document.getElementById('pm-gcash-phone');
+                if (gcashPhoneInput && clientPhone) {
+                    gcashPhoneInput.value = clientPhone;
+                }
+                const mayaPhoneInput = document.getElementById('pm-maya-phone');
+                if (mayaPhoneInput && clientPhone) {
+                    mayaPhoneInput.value = clientPhone;
+                }
+
                 if (pmOverlay) pmOverlay.classList.remove('hidden');
 
                 const closePmModal = () => {

@@ -25,8 +25,8 @@ window.updateAllProfileAvatars = (avatarUrl, name) => {
         }
     }
 
-    // 2. Top Navigation Bar User Avatar (#avatar-btn .avatar-img, #user-avatar-initials)
-    const navAvatarContainers = document.querySelectorAll('#user-avatar-initials, .avatar-img');
+    // 2. Top Navigation Bar User Avatar (#avatar-btn .avatar-img, .avatar-circle, #user-avatar-initials)
+    const navAvatarContainers = document.querySelectorAll('#user-avatar-initials, .avatar-img, .avatar-circle');
     navAvatarContainers.forEach(container => {
         if (fullAvatarUrl) {
             container.innerHTML = `<img src="${fullAvatarUrl}" alt="${displayName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -36,7 +36,7 @@ window.updateAllProfileAvatars = (avatarUrl, name) => {
     });
 
     // 3. Display Name Labels Across Header and Profile
-    const nameLabels = document.querySelectorAll('#user-display-name, #profile-user-fullname, .avatar-name');
+    const nameLabels = document.querySelectorAll('#user-display-name, #profile-user-fullname, .avatar-name, .user-name');
     nameLabels.forEach(label => {
         if (label) label.textContent = displayName;
     });
@@ -254,6 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.loadProfileData = loadProfileData;
+
+    // Automatically synchronize profile name and avatar across all pages on initial load
+    loadProfileData();
 
     // Open Profile Modal
     const openProfileModal = () => {
