@@ -42,6 +42,115 @@ let pool = null;
  */
 const autoSeedDatabase = async (activePool) => {
     try {
+        // 0. Ensure Core Database Schema Tables Exist
+        await activePool.request().query(`
+            IF OBJECT_ID('dbo.Roles', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Roles (
+                    RoleID INT IDENTITY(1,1) PRIMARY KEY,
+                    RoleName NVARCHAR(50) NOT NULL UNIQUE,
+                    Description NVARCHAR(255) NULL
+                );
+            END;
+
+            IF OBJECT_ID('dbo.Users', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Users (
+                    UserID INT IDENTITY(1,1) PRIMARY KEY,
+                    RoleID INT NOT NULL FOREIGN KEY REFERENCES dbo.Roles(RoleID),
+                    Email NVARCHAR(255) NOT NULL UNIQUE,
+                    PasswordHash NVARCHAR(255) NULL,
+                    Phone NVARCHAR(20) NULL,
+                    ContactNumber NVARCHAR(20) NULL,
+                    ProfilePicture NVARCHAR(500) NULL,
+                    EmailVerified BIT NOT NULL DEFAULT 0,
+                    IsActive BIT NOT NULL DEFAULT 1,
+                    AccountStatus NVARCHAR(20) NOT NULL DEFAULT 'Active',
+                    ResetToken NVARCHAR(255) NULL,
+                    ResetTokenExpiry DATETIME2 NULL,
+                    GoogleID NVARCHAR(255) NULL,
+                    FacebookID NVARCHAR(255) NULL,
+                    AuthProvider NVARCHAR(50) NULL DEFAULT 'local',
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+
+            IF OBJECT_ID('dbo.Clients', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Clients (
+                    ClientID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.Users(UserID) ON DELETE CASCADE,
+                    FirstName NVARCHAR(100) NULL,
+                    MiddleName NVARCHAR(100) NULL,
+                    LastName NVARCHAR(100) NULL,
+                    FullName NVARCHAR(200) NULL,
+                    Address NVARCHAR(255) NULL,
+                    ProfilePicture NVARCHAR(500) NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+
+            IF OBJECT_ID('dbo.ServiceProviders', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ServiceProviders (
+                    ProviderID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.Users(UserID) ON DELETE CASCADE,
+                    BusinessName NVARCHAR(255) NOT NULL,
+                    OwnerName NVARCHAR(150) NULL,
+                    OwnerFirstName NVARCHAR(100) NULL,
+                    OwnerLastName NVARCHAR(100) NULL,
+                    ContactNumber NVARCHAR(50) NULL,
+                    BusinessAddress NVARCHAR(255) NULL,
+                    CoverageArea NVARCHAR(255) NULL,
+                    Description NVARCHAR(MAX) NULL,
+                    StartingPrice DECIMAL(18,2) NULL DEFAULT 0.00,
+                    ProfilePicture NVARCHAR(500) NULL,
+                    BannerImage NVARCHAR(500) NULL,
+                    VerificationStatus NVARCHAR(50) NOT NULL DEFAULT 'Approved',
+                    Rating DECIMAL(3,2) NOT NULL DEFAULT 5.00,
+                    ReviewsCount INT NOT NULL DEFAULT 0,
+                    Latitude DECIMAL(10,7) NULL,
+                    Longitude DECIMAL(10,7) NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+
+            IF OBJECT_ID('dbo.Admins', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Admins (
+                    AdminID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.Users(UserID) ON DELETE CASCADE,
+                    FullName NVARCHAR(150) NOT NULL,
+                    Department NVARCHAR(100) NULL DEFAULT 'System Administration',
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+
+            IF OBJECT_ID('dbo.ProviderApplications', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ProviderApplications (
+                    ApplicationID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL FOREIGN KEY REFERENCES dbo.Users(UserID) ON DELETE CASCADE,
+                    BusinessName NVARCHAR(255) NOT NULL,
+                    OwnerName NVARCHAR(150) NULL,
+                    Category NVARCHAR(100) NULL,
+                    BusinessAddress NVARCHAR(255) NULL,
+                    CoverageArea NVARCHAR(255) NULL,
+                    ContactNumber NVARCHAR(20) NULL,
+                    Description NVARCHAR(MAX) NULL,
+                    StartingPrice DECIMAL(18,2) NULL DEFAULT 0.00,
+                    BusinessPermitDoc NVARCHAR(255) NULL,
+                    GovtIDDoc NVARCHAR(255) NULL,
+                    ProfilePicture NVARCHAR(500) NULL,
+                    ApplicationStatus NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+                    Status NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+                    SubmittedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    ReviewedAt DATETIME2 NULL,
+                    RejectionReason NVARCHAR(500) NULL
+                );
+            END;
+        `);
+
         // 1. Ensure Roles exist
         const rolesCheck = await activePool.request().query("SELECT RoleName FROM dbo.Roles");
         const existingRoles = rolesCheck.recordset.map(r => r.RoleName);
