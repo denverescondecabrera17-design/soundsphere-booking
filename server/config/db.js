@@ -521,6 +521,87 @@ const autoSeedDatabase = async (activePool) => {
 
             console.log(' Admin account credentials updated: soundsphere@gmail.com');
         }
+
+        // 4. Ensure Default Service Provider Test Account Exists
+        const provEmail = 'provider@soundsphere.com';
+        const provPasswordHash = await bcrypt.hash('Provider@123', 10);
+        const provRoleRes = await activePool.request().query("SELECT RoleID FROM dbo.Roles WHERE RoleName = 'ServiceProvider'");
+        const provRoleId = provRoleRes.recordset.length > 0 ? provRoleRes.recordset[0].RoleID : 2;
+
+        const provCheck = await activePool.request()
+            .input('Email', sql.NVarChar(255), provEmail)
+            .query("SELECT UserID FROM dbo.Users WHERE Email = @Email");
+
+        if (provCheck.recordset.length === 0) {
+            const insertProvRes = await activePool.request()
+                .input('RoleID', sql.Int, provRoleId)
+                .input('Email', sql.NVarChar(255), provEmail)
+                .input('PasswordHash', sql.NVarChar(255), provPasswordHash)
+                .input('Phone', sql.NVarChar(20), '09171234567')
+                .input('EmailVerified', sql.Bit, 1)
+                .input('IsActive', sql.Bit, 1)
+                .input('AccountStatus', sql.NVarChar(20), 'Active')
+                .query(`
+                    INSERT INTO dbo.Users (RoleID, Email, PasswordHash, Phone, EmailVerified, IsActive, AccountStatus)
+                    OUTPUT INSERTED.UserID
+                    VALUES (@RoleID, @Email, @PasswordHash, @Phone, @EmailVerified, @IsActive, @AccountStatus)
+                `);
+
+            const provUserId = insertProvRes.recordset[0].UserID;
+            await activePool.request()
+                .input('UserID', sql.Int, provUserId)
+                .input('BusinessName', sql.NVarChar(255), 'SoundSphere Pro Audio & Lighting')
+                .input('Category', sql.NVarChar(100), 'Sound & Lights')
+                .input('VerificationStatus', sql.NVarChar(50), 'Approved')
+                .query(`
+                    IF OBJECT_ID('dbo.ServiceProviders', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.ServiceProviders (UserID, BusinessName, ServiceCategory, VerificationStatus)
+                        VALUES (@UserID, @BusinessName, @Category, @VerificationStatus);
+                    END
+                `);
+            console.log(' Service Provider test account created: provider@soundsphere.com');
+        }
+
+        // 5. Ensure Default Client Test Account Exists
+        const clientEmail = 'client@soundsphere.com';
+        const clientPasswordHash = await bcrypt.hash('Client@123', 10);
+        const clientRoleRes = await activePool.request().query("SELECT RoleID FROM dbo.Roles WHERE RoleName = 'Client'");
+        const clientRoleId = clientRoleRes.recordset.length > 0 ? clientRoleRes.recordset[0].RoleID : 3;
+
+        const clientCheck = await activePool.request()
+            .input('Email', sql.NVarChar(255), clientEmail)
+            .query("SELECT UserID FROM dbo.Users WHERE Email = @Email");
+
+        if (clientCheck.recordset.length === 0) {
+            const insertClientRes = await activePool.request()
+                .input('RoleID', sql.Int, clientRoleId)
+                .input('Email', sql.NVarChar(255), clientEmail)
+                .input('PasswordHash', sql.NVarChar(255), clientPasswordHash)
+                .input('Phone', sql.NVarChar(20), '09181234567')
+                .input('EmailVerified', sql.Bit, 1)
+                .input('IsActive', sql.Bit, 1)
+                .input('AccountStatus', sql.NVarChar(20), 'Active')
+                .query(`
+                    INSERT INTO dbo.Users (RoleID, Email, PasswordHash, Phone, EmailVerified, IsActive, AccountStatus)
+                    OUTPUT INSERTED.UserID
+                    VALUES (@RoleID, @Email, @PasswordHash, @Phone, @EmailVerified, @IsActive, @AccountStatus)
+                `);
+
+            const clientUserId = insertClientRes.recordset[0].UserID;
+            await activePool.request()
+                .input('UserID', sql.Int, clientUserId)
+                .input('FirstName', sql.NVarChar(100), 'Denver')
+                .input('LastName', sql.NVarChar(100), 'Cabrera')
+                .query(`
+                    IF OBJECT_ID('dbo.Clients', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Clients (UserID, FirstName, LastName)
+                        VALUES (@UserID, @FirstName, @LastName);
+                    END
+                `);
+            console.log(' Client test account created: client@soundsphere.com');
+        }
     } catch (err) {
         console.warn(' Auto-seed check notice:', err.message);
     }
