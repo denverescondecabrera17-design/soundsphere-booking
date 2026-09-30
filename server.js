@@ -61,12 +61,28 @@ app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
 });
 
-// Basic Server Connection Test Endpoint
-app.get('/api/health', (req, res) => {
+// Basic Server Connection & DB Diagnostics Endpoint
+app.get('/api/health', async (req, res) => {
+    let dbStatus = 'Disconnected';
+    let dbError = null;
+    try {
+        const pool = await connectDB();
+        if (pool && pool.connected) {
+            dbStatus = 'Connected';
+        } else if (pool) {
+            dbStatus = 'Pool initialized (Connecting)';
+        }
+    } catch (err) {
+        dbError = err.message;
+    }
+
     res.status(200).json({
         success: true,
-        message: 'SoundSphere API Server is running smoothly.',
-        service: 'SoundSphere E-Platform Backend',
+        message: 'SoundSphere API Server is running.',
+        dbStatus,
+        dbServer: process.env.DB_SERVER || '127.0.0.1',
+        dbName: process.env.DB_NAME || process.env.DB_DATABASE || 'SoundSphereDB',
+        dbError,
         timestamp: new Date().toISOString()
     });
 });
