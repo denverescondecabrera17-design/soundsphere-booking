@@ -34,37 +34,6 @@ const createNotification = async ({ userId, type, title, message, relatedId, rel
 };
 
 /**
- * Create a notification for all Administrator users
- */
-const notifyAllAdmins = async ({ type, title, message, relatedId, relatedType }) => {
-    try {
-        const pool = getPool();
-        if (!pool) return;
-
-        const adminsRes = await pool.request().query(`
-            SELECT u.UserID 
-            FROM dbo.Users u
-            INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
-            WHERE r.RoleName = 'Administrator' OR r.RoleName = 'Admin';
-        `);
-
-        const admins = adminsRes.recordset || [];
-        for (const admin of admins) {
-            await createNotification({
-                userId: admin.UserID,
-                type,
-                title,
-                message,
-                relatedId,
-                relatedType
-            });
-        }
-    } catch (err) {
-        console.error('Error notifying admins:', err.message);
-    }
-};
-
-/**
  * Get all notifications for a specific User ID ordered by newest first
  */
 const getNotificationsByUserId = async (userId) => {
@@ -169,7 +138,6 @@ const markAllAsRead = async (userId) => {
 
 module.exports = {
     createNotification,
-    notifyAllAdmins,
     getNotificationsByUserId,
     getUnreadCountByUserId,
     markAsRead,

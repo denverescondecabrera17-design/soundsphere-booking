@@ -3,7 +3,7 @@
  * Database operations for User accounts, Client profiles, and credentials
  */
 
-const { getPool, sql } = require('../config/db');
+const { getPool, getOrConnectPool, sql } = require('../config/db');
 
 /**
  * Ensure dbo.Clients and dbo.Users schema columns exist
@@ -43,43 +43,51 @@ const ensureSchemaUpToDate = async (pool) => {
  * @returns {Promise<object|null>}
  */
 const findUserByEmail = async (email) => {
-    const pool = getPool();
-    if (!pool) return null;
+    try {
+        let pool = getPool();
+        if (!pool) {
+            pool = await getOrConnectPool();
+        }
+        if (!pool) return null;
 
-    await ensureSchemaUpToDate(pool);
+        await ensureSchemaUpToDate(pool);
 
-    let query = `
-        SELECT 
-            u.UserID,
-            u.RoleID,
-            r.RoleName,
-            u.Email,
-            u.PasswordHash,
-            u.Phone,
-            u.ProfilePicture,
-            u.EmailVerified,
-            u.IsActive,
-            u.AccountStatus,
-            u.CreatedAt,
-            c.FirstName AS ClientFirstName,
-            c.MiddleName AS ClientMiddleName,
-            c.LastName AS ClientLastName,
-            c.Address AS ClientAddress,
-            sp.BusinessName,
-            a.FullName AS AdminFullName
-        FROM dbo.Users u
-        INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
-        LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-        LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
-        LEFT JOIN dbo.Admins a ON u.UserID = a.UserID
-        WHERE u.Email = @Email
-    `;
+        let query = `
+            SELECT 
+                u.UserID,
+                u.RoleID,
+                r.RoleName,
+                u.Email,
+                u.PasswordHash,
+                u.Phone,
+                u.ProfilePicture,
+                u.EmailVerified,
+                u.IsActive,
+                u.AccountStatus,
+                u.CreatedAt,
+                c.FirstName AS ClientFirstName,
+                c.MiddleName AS ClientMiddleName,
+                c.LastName AS ClientLastName,
+                c.Address AS ClientAddress,
+                sp.BusinessName,
+                a.FullName AS AdminFullName
+            FROM dbo.Users u
+            INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
+            LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+            LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
+            LEFT JOIN dbo.Admins a ON u.UserID = a.UserID
+            WHERE u.Email = @Email
+        `;
 
-    const result = await pool.request()
-        .input('Email', sql.NVarChar(255), email.trim().toLowerCase())
-        .query(query);
+        const result = await pool.request()
+            .input('Email', sql.NVarChar(255), (email || '').trim().toLowerCase())
+            .query(query);
 
-    return result.recordset[0] || null;
+        return result.recordset[0] || null;
+    } catch (err) {
+        console.warn('findUserByEmail database notice:', err.message);
+        return null;
+    }
 };
 
 /**

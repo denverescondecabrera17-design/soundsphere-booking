@@ -748,14 +748,22 @@ const connectDB = async () => {
 };
 
 const getPool = () => {
-    if (!pool) {
-        throw new Error(`Database connection is not initialized. Please verify DB_SERVER (${dbConfig.server}), DB_USER, DB_PASSWORD, DB_NAME, and DB_ENCRYPT=true are set in environment variables.`);
+    if (!pool || !pool.connected) {
+        return null;
     }
     return pool;
+};
+
+const getOrConnectPool = async () => {
+    if (pool && pool.connected) {
+        return pool;
+    }
+    return await connectDB();
 };
 
 module.exports = {
     sql,
     connectDB,
-    getPool
+    getPool,
+    getOrConnectPool
 };

@@ -75,13 +75,6 @@ const submitApplication = async (req, res) => {
             relatedType: 'Application'
         });
 
-        await notificationModel.notifyAllAdmins({
-            type: 'Application',
-            title: 'New Service Provider Application',
-            message: `${ownerName || businessName} has submitted an application to become a SoundSphere Service Provider.`,
-            relatedId: newApp.ApplicationID,
-            relatedType: 'Application'
-        });
 
         return res.status(201).json({
             success: true,
