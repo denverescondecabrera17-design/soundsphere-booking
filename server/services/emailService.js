@@ -153,7 +153,81 @@ const sendPasswordResetEmail = async ({ toEmail, clientName, resetUrl }) => {
     }
 };
 
+/**
+ * Send OTP Verification Email for Provider Application
+ * @param {object} params
+ * @param {string} params.toEmail - Business email address
+ * @param {string} params.applicantName - Name of business owner / applicant
+ * @param {string} params.businessName - Business Name
+ * @param {string} params.otpCode - Plain 6-digit numeric OTP
+ * @returns {Promise<object>}
+ */
+const sendProviderAppOTPEmail = async ({ toEmail, applicantName, businessName, otpCode }) => {
+    console.log(`\n==================================================`);
+    console.log(` 📧 SENDING PROVIDER APPLICATION GMAIL OTP DISPATCH`);
+    console.log(` FROM: ${process.env.SMTP_USER}`);
+    console.log(` TO: ${toEmail} (${applicantName || 'Applicant'})`);
+    console.log(` BUSINESS: ${businessName || 'SoundSphere Provider'}`);
+    console.log(` 🔑 6-DIGIT OTP CODE: [ ${otpCode} ]`);
+    console.log(`==================================================\n`);
+
+    const mailOptions = {
+        from: {
+            name: 'SoundSphere Provider Verification',
+            address: process.env.SMTP_USER
+        },
+        to: toEmail.trim().toLowerCase(),
+        replyTo: process.env.SMTP_USER,
+        subject: 'SoundSphere Provider Application - Email Verification Code',
+        text: `Hello ${applicantName || 'Applicant'},\n\nYou are applying to register "${businessName || 'your business'}" as a SoundSphere Service Provider.\n\nYour 6-digit verification code is:\n\n${otpCode}\n\nThis code will expire in 5 minutes.\n\nPlease enter this code in the registration wizard to continue.\n\nRegards,\nSoundSphere Team`,
+        html: `
+            <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: #0a192f; margin: 0; font-size: 24px; font-weight: 800;">Sound<span style="color: #2563eb;">Sphere</span></h2>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Service Provider Verification</p>
+                </div>
+
+                <div style="border-top: 3px solid #2563eb; padding-top: 20px;">
+                    <p style="font-size: 16px; color: #0a192f;">Hello <strong>${applicantName || 'Applicant'}</strong>,</p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                        You are submitting an application to register <strong>${businessName || 'your business'}</strong> as a certified Service Provider on SoundSphere.
+                    </p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                        Please use the 6-digit verification code below to verify your business email and continue with your application:
+                    </p>
+
+                    <div style="text-align: center; margin: 28px 0;">
+                        <div style="display: inline-block; padding: 16px 32px; background-color: #f0f4f8; border: 2px dashed #2563eb; border-radius: 8px; font-size: 32px; font-weight: 800; color: #0a192f; letter-spacing: 8px;">
+                            ${otpCode}
+                        </div>
+                    </div>
+
+                    <p style="font-size: 13px; color: #d97706; font-weight: 600; text-align: center;">
+                        ⏱ This verification code will expire in <strong>5 minutes</strong>.
+                    </p>
+
+                    <p style="font-size: 13px; color: #64748b; margin-top: 24px;">If you did not apply to become a SoundSphere Service Provider, please ignore this email.</p>
+                </div>
+
+                <div style="margin-top: 30px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                    &copy; ${new Date().getFullYear()} SoundSphere Team. All rights reserved.
+                </div>
+            </div>
+        `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(` REAL PROVIDER APP GMAIL OTP DISPATCH SUCCESSFUL! Message ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error(' Gmail SMTP Provider App OTP Error:', error.message);
+        throw error;
+    }
+};
+
 module.exports = {
     sendOTPEmail,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    sendProviderAppOTPEmail
 };

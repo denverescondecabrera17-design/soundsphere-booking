@@ -164,6 +164,9 @@ const autoSeedDatabase = async (activePool) => {
         if (!existingRoles.includes('ServiceProvider')) {
             await activePool.request().query("INSERT INTO dbo.Roles (RoleName, Description) VALUES ('ServiceProvider', 'Approved service provider')");
         }
+        if (!existingRoles.includes('Cashier')) {
+            await activePool.request().query("INSERT INTO dbo.Roles (RoleName, Description) VALUES ('Cashier', 'Finance and Cashier Staff')");
+        }
 
         // 2. Auto-Migrate dbo.Users for EmailVerified & AccountStatus columns
         const emailVerifiedCheck = await activePool.request().query(`
@@ -493,6 +496,42 @@ const autoSeedDatabase = async (activePool) => {
                 BEGIN
                     ALTER TABLE dbo.ProviderApplications ADD ProfilePicture NVARCHAR(500) NULL;
                 END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'PermitExpiryDate')
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ADD PermitExpiryDate DATE NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'PermitIssuedDate')
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ADD PermitIssuedDate DATE NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'GovtID_Url')
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ADD GovtID_Url NVARCHAR(MAX) NULL;
+                END
+                ELSE
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ALTER COLUMN GovtID_Url NVARCHAR(MAX) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'GovtID_Back_Url')
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ADD GovtID_Back_Url NVARCHAR(MAX) NULL;
+                END
+                ELSE
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ALTER COLUMN GovtID_Back_Url NVARCHAR(MAX) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'BusinessPermit_Url')
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ADD BusinessPermit_Url NVARCHAR(MAX) NULL;
+                END
+                ELSE
+                BEGIN
+                    ALTER TABLE dbo.ProviderApplications ALTER COLUMN BusinessPermit_Url NVARCHAR(MAX) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitExpiryDate')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitExpiryDate DATE NULL;
+                END
                 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UX_ProviderApplications_ActiveUser' AND object_id = OBJECT_ID('dbo.ProviderApplications'))
                 BEGIN
                     CREATE UNIQUE NONCLUSTERED INDEX UX_ProviderApplications_ActiveUser
@@ -553,6 +592,11 @@ const autoSeedDatabase = async (activePool) => {
                     CreatedAt DATETIME2 DEFAULT GETDATE() NOT NULL
                 );
             END;
+            
+            IF OBJECT_ID('dbo.Withdrawals', 'U') IS NOT NULL AND COL_LENGTH('dbo.Withdrawals', 'AdminNotes') IS NULL
+            BEGIN
+                ALTER TABLE dbo.Withdrawals ADD AdminNotes NVARCHAR(MAX) NULL;
+            END;
 
             -- Auto-Migrate dbo.ProviderReports Table
             IF OBJECT_ID('dbo.ProviderReports', 'U') IS NULL
@@ -582,6 +626,26 @@ const autoSeedDatabase = async (activePool) => {
             IF OBJECT_ID('dbo.ActivityLogs', 'U') IS NOT NULL
             BEGIN
                 ALTER TABLE dbo.ActivityLogs ALTER COLUMN Description NVARCHAR(MAX) NOT NULL;
+            END;
+
+            -- Auto-Migrate ServiceProviders MaxDailyBookings & ProviderDateCapacity table
+            IF OBJECT_ID('dbo.ServiceProviders', 'U') IS NOT NULL AND COL_LENGTH('dbo.ServiceProviders', 'MaxDailyBookings') IS NULL
+            BEGIN
+                ALTER TABLE dbo.ServiceProviders ADD MaxDailyBookings INT DEFAULT 1 WITH VALUES;
+            END;
+
+            IF OBJECT_ID('dbo.ProviderDateCapacity', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ProviderDateCapacity (
+                    CapacityID INT IDENTITY(1,1) PRIMARY KEY,
+                    ProviderID INT NOT NULL,
+                    SpecificDate NVARCHAR(50) NOT NULL,
+                    MaxBookings INT NOT NULL DEFAULT 1,
+                    Notes NVARCHAR(255) NULL,
+                    CreatedAt DATETIME2 DEFAULT GETDATE(),
+                    UpdatedAt DATETIME2 DEFAULT GETDATE(),
+                    CONSTRAINT UQ_ProviderDate UNIQUE (ProviderID, SpecificDate)
+                );
             END;
         `);
 
@@ -710,6 +774,61 @@ const autoSeedDatabase = async (activePool) => {
                     END
                 `);
             console.log(' Client test account created: client@soundsphere.com');
+        }
+
+        // 6. Ensure Default Cashier Account Exists
+        const cashierEmail = 'cashier@soundsphere.com';
+        const cashierPasswordHash = await bcrypt.hash('Cashier@123', 10);
+        const cashierRoleRes = await activePool.request().query("SELECT RoleID FROM dbo.Roles WHERE RoleName = 'Cashier'");
+        let cashierRoleId = 4;
+        if (cashierRoleRes.recordset.length > 0) {
+            cashierRoleId = cashierRoleRes.recordset[0].RoleID;
+        } else {
+            const newRoleRes = await activePool.request().query("INSERT INTO dbo.Roles (RoleName, Description) OUTPUT INSERTED.RoleID VALUES ('Cashier', 'Finance and Cashier Staff')");
+            cashierRoleId = newRoleRes.recordset[0].RoleID;
+        }
+
+        const cashierCheck = await activePool.request()
+            .input('Email', sql.NVarChar(255), cashierEmail)
+            .query("SELECT UserID FROM dbo.Users WHERE Email = @Email");
+
+        if (cashierCheck.recordset.length === 0) {
+            const insertCashierRes = await activePool.request()
+                .input('RoleID', sql.Int, cashierRoleId)
+                .input('Email', sql.NVarChar(255), cashierEmail)
+                .input('PasswordHash', sql.NVarChar(255), cashierPasswordHash)
+                .input('Phone', sql.NVarChar(20), '09191234567')
+                .input('EmailVerified', sql.Bit, 1)
+                .input('IsActive', sql.Bit, 1)
+                .input('AccountStatus', sql.NVarChar(20), 'Active')
+                .query(`
+                    INSERT INTO dbo.Users (RoleID, Email, PasswordHash, Phone, EmailVerified, IsActive, AccountStatus)
+                    OUTPUT INSERTED.UserID
+                    VALUES (@RoleID, @Email, @PasswordHash, @Phone, @EmailVerified, @IsActive, @AccountStatus)
+                `);
+
+            const cashierUserId = insertCashierRes.recordset[0].UserID;
+            await activePool.request()
+                .input('UserID', sql.Int, cashierUserId)
+                .input('FirstName', sql.NVarChar(100), 'Official')
+                .input('LastName', sql.NVarChar(100), 'Cashier')
+                .query(`
+                    IF OBJECT_ID('dbo.Clients', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Clients (UserID, FirstName, LastName)
+                        VALUES (@UserID, @FirstName, @LastName);
+                    END
+                `);
+            console.log(' Cashier account created: cashier@soundsphere.com');
+        } else {
+            // Ensure password and role are active
+            const cashierUserId = cashierCheck.recordset[0].UserID;
+            await activePool.request()
+                .input('UserID', sql.Int, cashierUserId)
+                .input('RoleID', sql.Int, cashierRoleId)
+                .input('PasswordHash', sql.NVarChar(255), cashierPasswordHash)
+                .query("UPDATE dbo.Users SET RoleID = @RoleID, PasswordHash = @PasswordHash, EmailVerified = 1, IsActive = 1, AccountStatus = 'Active' WHERE UserID = @UserID");
+            console.log(' Cashier account credentials updated: cashier@soundsphere.com');
         }
     } catch (err) {
         console.warn(' Auto-seed check notice:', err.message);

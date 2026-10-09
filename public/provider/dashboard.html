@@ -291,21 +291,286 @@
                     </div>
                 </div>
 
-                <!-- VIEW 5: AVAILABILITY CALENDAR -->
+                <!-- VIEW 5: AVAILABILITY & CAPACITY CALENDAR -->
                 <div class="provider-view-panel hidden" id="view-provider-calendar">
-                    <div class="view-header" style="margin-bottom:20px;">
-                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Availability Calendar</h2>
-                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Confirmed bookings automatically lock dates in your availability schedule.</p>
-                    </div>
+                    <!-- View Header with Default Capacity Global Settings Card -->
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Availability & Capacity Calendar</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.9rem;">Manage how many bookings you can take per day, set specific date limits, block dates, and inspect scheduled events.</p>
+                        </div>
 
-                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;">
-                        <div style="padding:30px; text-align:center; color:#475569;" id="calendar-container">
-                            <i class="fa-solid fa-calendar-check" style="font-size:3rem; color:#2563eb; margin-bottom:12px; display:block;"></i>
-                            <h4 style="margin:0 0 6px 0; color:#0a192f; font-size:1.1rem;">Calendar Schedule Active</h4>
-                            <p style="margin:0; font-size:0.88rem; color:#64748b;">All confirmed bookings automatically sync to your availability schedule.</p>
+                        <!-- Global Default Daily Capacity Setting Card -->
+                        <div class="default-capacity-card" style="background:#fff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 18px; display:flex; align-items:center; gap:14px; box-shadow:0 2px 8px rgba(37,99,235,0.06);">
+                            <div style="width:38px; height:38px; border-radius:10px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#2563eb; font-size:1.1rem;">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Default Daily Limit</div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:3px;">
+                                    <input type="number" id="prov-default-daily-capacity-input" min="1" max="20" value="1" style="width:60px; padding:5px 8px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:0.95rem; text-align:center; color:#0a192f; outline:none;">
+                                    <span style="font-size:0.82rem; color:#475569; font-weight:600;">bookings / day</span>
+                                    <button type="button" id="btn-save-default-capacity" style="background:#2563eb; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s ease;">
+                                        <i class="fa-solid fa-floppy-disk"></i> Save
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Main Calendar 2-Column Grid -->
+                    <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:22px; align-items:start;" id="prov-calendar-layout-grid">
+                        
+                        <!-- Left Column: Interactive Month Calendar -->
+                        <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                            
+                            <!-- Month Navigation & Controls -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #f1f5f9;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <button type="button" id="prov-cal-btn-prev" class="btn-cal-nav" title="Previous Month" style="width:36px; height:36px; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; cursor:pointer; color:#0a192f; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                    <h3 id="prov-cal-month-display" style="font-size:1.25rem; font-weight:800; color:#0a192f; margin:0; min-width:180px;">October 2026</h3>
+                                    <button type="button" id="prov-cal-btn-next" class="btn-cal-nav" title="Next Month" style="width:36px; height:36px; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; cursor:pointer; color:#0a192f; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <button type="button" id="prov-cal-btn-today" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                        <i class="fa-regular fa-calendar-check"></i> Today
+                                    </button>
+                                    <button type="button" id="prov-cal-btn-refresh" title="Refresh Calendar" style="width:36px; height:36px; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; cursor:pointer; color:#475569; display:flex; align-items:center; justify-content:center;">
+                                        <i class="fa-solid fa-rotate"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Day Names Header (Sun - Sat) -->
+                            <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; text-align:center; font-weight:700; font-size:0.8rem; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                                <div style="color:#ef4444;">Sun</div>
+                                <div>Mon</div>
+                                <div>Tue</div>
+                                <div>Wed</div>
+                                <div>Thu</div>
+                                <div>Fri</div>
+                                <div style="color:#2563eb;">Sat</div>
+                            </div>
+
+                            <!-- 7-Column Dynamic Calendar Grid -->
+                            <div id="prov-cal-cells-grid" class="prov-calendar-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; min-height:380px;">
+                                <!-- Dynamically generated day cells -->
+                            </div>
+
+                            <!-- Color Legend Bar -->
+                            <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; padding-top:14px; border-top:1px solid #f1f5f9; font-size:0.8rem; color:#475569;">
+                                <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="width:12px; height:12px; border-radius:3px; background:#dcfce7; border:1.5px solid #22c55e; display:inline-block;"></span>
+                                        <span>Available</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="width:12px; height:12px; border-radius:3px; background:#fee2e2; border:1.5px solid #ef4444; display:inline-block;"></span>
+                                        <span>Fully Booked</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="width:12px; height:12px; border-radius:3px; background:#fef3c7; border:1.5px solid #f59e0b; display:inline-block;"></span>
+                                        <span>Partially Booked</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="width:12px; height:12px; border-radius:3px; background:#e2e8f0; border:1.5px solid #cbd5e1; display:inline-block;"></span>
+                                        <span>Closed (Past Date)</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="width:12px; height:12px; border-radius:3px; background:#f8fafc; border:1.5px solid #94a3b8; display:inline-block;"></span>
+                                        <span>Blocked / 0 Limit</span>
+                                    </div>
+                                </div>
+                                <div style="font-weight:700; color:#0a192f;" id="prov-cal-today-text">
+                                    Today: Oct 9, 2026
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Column: Day Inspector & Specific Date Capacity Controls -->
+                        <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 2px 10px rgba(0,0,0,0.02);" id="prov-cal-inspector-panel">
+                            
+                            <!-- Selected Date Header Card -->
+                            <div style="background:linear-gradient(135deg, #0a192f 0%, #1e3a8a 100%); color:#fff; border-radius:12px; padding:18px; margin-bottom:18px;">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                    <span style="font-size:0.75rem; font-weight:800; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">SELECTED DATE</span>
+                                    <span id="prov-inspector-status-badge" style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:20px; background:#22c55e; color:#fff;">Available</span>
+                                </div>
+                                <h3 id="prov-inspector-date-title" style="font-size:1.3rem; margin:0 0 6px 0; font-weight:800; color:#fff;">Friday, Oct 23, 2026</h3>
+                                <div id="prov-inspector-summary-text" style="font-size:0.85rem; color:#bfdbfe;">0 active bookings &bull; Capacity: 1 booking allowed</div>
+                            </div>
+
+                            <!-- Specific Date Custom Capacity Override Card -->
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                    <i class="fa-solid fa-sliders" style="color:#2563eb;"></i>
+                                    <strong style="font-size:0.88rem; color:#0a192f;">Custom Capacity for this Specific Date</strong>
+                                </div>
+                                <p style="font-size:0.78rem; color:#64748b; margin:0 0 12px 0;">Set how many bookings you can take on this date. Set to <strong>0</strong> to block/close the date.</p>
+
+                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                    <div style="flex:1;">
+                                        <input type="number" id="prov-date-capacity-input" min="0" max="20" value="1" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:700; font-size:0.95rem; color:#0a192f; box-sizing:border-box; outline:none;">
+                                    </div>
+                                    <button type="button" id="btn-save-date-capacity" style="background:#2563eb; color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                                        <i class="fa-solid fa-check"></i> Save Limit
+                                    </button>
+                                </div>
+
+                                <!-- Quick Actions: 1-Click Block / Unblock & Reset to Default -->
+                                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                    <button type="button" id="btn-toggle-block-date" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-ban"></i> Block Date (Set 0)
+                                    </button>
+                                    <button type="button" id="btn-reset-date-capacity" style="background:#fff; color:#64748b; border:1px solid #cbd5e1; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
+                                    </button>
+                                </div>
+
+                                <div id="prov-past-date-notice" style="display:none; margin-top:10px; font-size:0.78rem; color:#64748b; background:#e2e8f0; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
+                                    <i class="fa-solid fa-lock" style="margin-right:4px; color:#475569;"></i> This is a past date. Capacity modifications and new bookings are closed.
+                                </div>
+                            </div>
+
+
+
+                            <!-- Scheduled Bookings on this Date Card -->
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <h4 style="margin:0; font-size:0.95rem; color:#0a192f; font-weight:800; display:flex; align-items:center; gap:8px;">
+                                        <i class="fa-solid fa-list-check" style="color:#2563eb;"></i> Bookings on this Date
+                                    </h4>
+                                    <span id="prov-inspector-bookings-count-badge" style="font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:12px;">0 Bookings</span>
+                                </div>
+
+                                <!-- Bookings List Container -->
+                                <div id="prov-inspector-bookings-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
                 </div>
+
+                <!-- View Scoped CSS Styles for Provider Calendar -->
+                <style>
+                    .prov-calendar-grid .prov-day-cell {
+                        min-height: 74px;
+                        background: #f8fafc;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 10px;
+                        padding: 8px 6px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        cursor: pointer;
+                        transition: all 0.18s ease;
+                        position: relative;
+                        user-select: none;
+                    }
+                    .prov-calendar-grid .prov-day-cell:hover:not(.empty) {
+                        border-color: #2563eb;
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px rgba(37,99,235,0.12);
+                    }
+                    .prov-calendar-grid .prov-day-cell.empty {
+                        background: transparent;
+                        border-color: transparent;
+                        cursor: default;
+                    }
+                    .prov-calendar-grid .prov-day-cell.selected {
+                        border-color: #2563eb !important;
+                        box-shadow: 0 0 0 2.5px #2563eb, 0 4px 12px rgba(37,99,235,0.2) !important;
+                        background: #eff6ff !important;
+                    }
+                    .prov-calendar-grid .prov-day-cell.today-cell {
+                        border-color: #3b82f6;
+                        background: #f0f9ff;
+                    }
+                    .prov-calendar-grid .prov-day-cell.today-cell .day-num {
+                        background: #2563eb;
+                        color: #fff;
+                        border-radius: 50%;
+                        width: 22px;
+                        height: 22px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-past {
+                        background: #f1f5f9;
+                        border-color: #cbd5e1;
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-past .day-num {
+                        color: #94a3b8 !important;
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-blocked {
+                        background: #f8fafc;
+                        border-color: #cbd5e1;
+                        background-image: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 6px, #f8fafc 6px, #f8fafc 12px);
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-full {
+                        background: #fff5f5;
+                        border-color: #fca5a5;
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-partial {
+                        background: #fffbeb;
+                        border-color: #fcd34d;
+                    }
+                    .prov-calendar-grid .prov-day-cell.is-available {
+                        background: #f0fdf4;
+                        border-color: #86efac;
+                    }
+                    .prov-day-badge {
+                        font-size: 0.68rem;
+                        font-weight: 800;
+                        padding: 2px 5px;
+                        border-radius: 5px;
+                        text-align: center;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        line-height: 1.2;
+                    }
+                    .badge-status-avail {
+                        background: #dcfce7;
+                        color: #15803d;
+                        border: 1px solid #bbf7d0;
+                    }
+                    .badge-status-full {
+                        background: #fee2e2;
+                        color: #b91c1c;
+                        border: 1px solid #fecaca;
+                    }
+                    .badge-status-partial {
+                        background: #fef3c7;
+                        color: #b45309;
+                        border: 1px solid #fde68a;
+                    }
+                    .badge-status-past {
+                        background: #e2e8f0;
+                        color: #64748b;
+                        border: 1px solid #cbd5e1;
+                    }
+                    .badge-status-blocked {
+                        background: #e2e8f0;
+                        color: #475569;
+                        border: 1px solid #cbd5e1;
+                    }
+                    @media (max-width: 900px) {
+                        #prov-calendar-layout-grid {
+                            grid-template-columns: 1fr !important;
+                        }
+                    }
+                </style>
 
                 <!-- VIEW 6: BUSINESS PROFILE -->
                 <div class="provider-view-panel hidden" id="view-provider-profile">

@@ -64,89 +64,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('http://localhost:5000/api/providers/me', { headers });
+            const res = await fetch('/api/providers/me', { headers });
             
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.profile) {
-                    currentProviderProfile = data.profile;
+            if (res.status === 401) {
+                alert('Your session has expired. Please log in again.');
+                window.location.href = '/login.html';
+                return false;
+            }
 
-                    // Update Topbar Profile Details
-                    const welcomeHeading = document.getElementById('welcome-heading');
-                    const headerProviderName = document.getElementById('header-provider-name');
-                    const dropdownEmail = document.getElementById('dropdown-provider-email');
-                    const dropdownStatus = document.getElementById('dropdown-provider-status');
+            if (res.status === 403 || !res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                alert(errData.message || 'Access Denied: The Provider Dashboard is strictly for clients who have applied as a service provider and have been approved by the Administrator.');
+                window.location.href = '/marketplace.html';
+                return false;
+            }
 
-                    const bName = data.profile.businessName || data.profile.ownerName || 'Service Provider';
-                    const oName = data.profile.ownerName || 'Provider Owner';
-                    const covArea = data.profile.coverageArea || 'Batangas';
-                    const avatarUrl = data.profile.profilePicture || data.profile.avatar || null;
+            const data = await res.json();
+            if (data.success && data.isApprovedProvider && data.profile) {
+                currentProviderProfile = data.profile;
 
-                    if (welcomeHeading) welcomeHeading.textContent = `Welcome back, ${bName}! 🎵`;
-                    if (headerProviderName) headerProviderName.textContent = bName;
-                    if (dropdownEmail) dropdownEmail.textContent = data.profile.email;
-                    if (dropdownStatus) dropdownStatus.textContent = `Approved Service Provider`;
+                // Update Topbar Profile Details
+                const welcomeHeading = document.getElementById('welcome-heading');
+                const headerProviderName = document.getElementById('header-provider-name');
+                const dropdownEmail = document.getElementById('dropdown-provider-email');
+                const dropdownStatus = document.getElementById('dropdown-provider-status');
 
-                    // Update Card & Modal Header Info
-                    const cardProfBizName = document.getElementById('card-prof-biz-name');
-                    const cardProfOwnerName = document.getElementById('card-prof-owner-name');
-                    const cardProfCoverage = document.getElementById('card-prof-coverage');
+                const bName = data.profile.businessName || data.profile.ownerName || 'Service Provider';
+                const oName = data.profile.ownerName || 'Provider Owner';
+                const covArea = data.profile.coverageArea || 'Batangas';
+                const avatarUrl = data.profile.profilePicture || data.profile.avatar || null;
 
-                    if (cardProfBizName) cardProfBizName.textContent = bName;
-                    if (cardProfOwnerName) cardProfOwnerName.textContent = oName;
-                    if (cardProfCoverage) cardProfCoverage.textContent = covArea;
+                if (welcomeHeading) welcomeHeading.textContent = `Welcome back, ${bName}! 🎵`;
+                if (headerProviderName) headerProviderName.textContent = bName;
+                if (dropdownEmail) dropdownEmail.textContent = data.profile.email;
+                if (dropdownStatus) dropdownStatus.textContent = `Approved Service Provider`;
 
-                    // Update Avatar Photo Previews Across Topbar, Dropdown, and Card Header
-                    const profAvatarImg = document.getElementById('prof-avatar-img');
-                    const profAvatarInitials = document.getElementById('prof-avatar-initials');
-                    const headerAvatarImg = document.getElementById('header-provider-avatar-img');
-                    const headerAvatarIcon = document.getElementById('header-provider-avatar-icon');
-                    const dropdownAvatarImg = document.getElementById('dropdown-provider-avatar-img');
-                    const dropdownAvatarIcon = document.getElementById('dropdown-provider-avatar-icon');
+                // Update Card & Modal Header Info
+                const cardProfBizName = document.getElementById('card-prof-biz-name');
+                const cardProfOwnerName = document.getElementById('card-prof-owner-name');
+                const cardProfCoverage = document.getElementById('card-prof-coverage');
 
-                    const formattedAvatarUrl = avatarUrl ? (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`) : null;
+                if (cardProfBizName) cardProfBizName.textContent = bName;
+                if (cardProfOwnerName) cardProfOwnerName.textContent = oName;
+                if (cardProfCoverage) cardProfCoverage.textContent = covArea;
 
-                    if (formattedAvatarUrl) {
-                        if (profAvatarImg) { profAvatarImg.src = formattedAvatarUrl; profAvatarImg.style.display = 'block'; }
-                        if (profAvatarInitials) profAvatarInitials.style.display = 'none';
+                // Update Avatar Photo Previews Across Topbar, Dropdown, and Card Header
+                const profAvatarImg = document.getElementById('prof-avatar-img');
+                const profAvatarInitials = document.getElementById('prof-avatar-initials');
+                const headerAvatarImg = document.getElementById('header-provider-avatar-img');
+                const headerAvatarIcon = document.getElementById('header-provider-avatar-icon');
+                const dropdownAvatarImg = document.getElementById('dropdown-provider-avatar-img');
+                const dropdownAvatarIcon = document.getElementById('dropdown-provider-avatar-icon');
 
-                        if (headerAvatarImg) { headerAvatarImg.src = formattedAvatarUrl; headerAvatarImg.style.display = 'block'; }
-                        if (headerAvatarIcon) headerAvatarIcon.style.display = 'none';
+                const formattedAvatarUrl = avatarUrl ? (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`) : null;
 
-                        if (dropdownAvatarImg) { dropdownAvatarImg.src = formattedAvatarUrl; dropdownAvatarImg.style.display = 'block'; }
-                        if (dropdownAvatarIcon) dropdownAvatarIcon.style.display = 'none';
-                    } else {
-                        if (profAvatarImg) profAvatarImg.style.display = 'none';
-                        if (profAvatarInitials) profAvatarInitials.style.display = 'flex';
+                if (formattedAvatarUrl) {
+                    if (profAvatarImg) { profAvatarImg.src = formattedAvatarUrl; profAvatarImg.style.display = 'block'; }
+                    if (profAvatarInitials) profAvatarInitials.style.display = 'none';
 
-                        if (headerAvatarImg) headerAvatarImg.style.display = 'none';
-                        if (headerAvatarIcon) headerAvatarIcon.style.display = 'block';
+                    if (headerAvatarImg) { headerAvatarImg.src = formattedAvatarUrl; headerAvatarImg.style.display = 'block'; }
+                    if (headerAvatarIcon) headerAvatarIcon.style.display = 'none';
 
-                        if (dropdownAvatarImg) dropdownAvatarImg.style.display = 'none';
-                        if (dropdownAvatarIcon) dropdownAvatarIcon.style.display = 'block';
-                    }
+                    if (dropdownAvatarImg) { dropdownAvatarImg.src = formattedAvatarUrl; dropdownAvatarImg.style.display = 'block'; }
+                    if (dropdownAvatarIcon) dropdownAvatarIcon.style.display = 'none';
+                } else {
+                    if (profAvatarImg) profAvatarImg.style.display = 'none';
+                    if (profAvatarInitials) profAvatarInitials.style.display = 'flex';
 
-                    // Update Business Profile View Elements
-                    const profBizName = document.getElementById('prof-biz-name');
-                    const profOwnerName = document.getElementById('prof-owner-name');
-                    const profEmail = document.getElementById('prof-email');
-                    const profContact = document.getElementById('prof-contact');
-                    const profCoverage = document.getElementById('prof-coverage');
+                    if (headerAvatarImg) headerAvatarImg.style.display = 'none';
+                    if (headerAvatarIcon) headerAvatarIcon.style.display = 'block';
 
-                    if (profBizName) profBizName.textContent = bName;
-                    if (profOwnerName) profOwnerName.textContent = oName;
-                    if (profEmail) profEmail.textContent = data.profile.email || 'N/A';
-                    if (profContact) profContact.textContent = data.profile.contactNumber || data.profile.phone || 'N/A';
-                    if (profCoverage) profCoverage.textContent = covArea;
-
-                    return true;
+                    if (dropdownAvatarImg) dropdownAvatarImg.style.display = 'none';
+                    if (dropdownAvatarIcon) dropdownAvatarIcon.style.display = 'block';
                 }
+
+                // Update Business Profile View Elements
+                const profBizName = document.getElementById('prof-biz-name');
+                const profOwnerName = document.getElementById('prof-owner-name');
+                const profEmail = document.getElementById('prof-email');
+                const profContact = document.getElementById('prof-contact');
+                const profCoverage = document.getElementById('prof-coverage');
+
+                if (profBizName) profBizName.textContent = bName;
+                if (profOwnerName) profOwnerName.textContent = oName;
+                if (profEmail) profEmail.textContent = data.profile.email || 'N/A';
+                if (profContact) profContact.textContent = data.profile.contactNumber || data.profile.phone || 'N/A';
+                if (profCoverage) profCoverage.textContent = covArea;
+
+                return true;
+            } else {
+                alert('Access Denied: You must be an approved Service Provider to access the Provider Portal.');
+                window.location.href = '/marketplace.html';
+                return false;
             }
         } catch (e) {
             console.warn('Authorization verification notice:', e.message);
+            alert('Unable to verify provider credentials. Redirecting to Marketplace.');
+            window.location.href = '/marketplace.html';
+            return false;
         }
-
-        return true;
     };
 
     // ------------------------------------------------------------------------
@@ -467,7 +483,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         let targetViewId = 'view-provider-dashboard';
         if (cleanHash === 'services-section' || cleanHash === 'view-provider-services' || cleanHash === 'packages-section' || cleanHash === 'view-provider-packages') targetViewId = 'view-provider-packages';
         else if (cleanHash === 'bookings-section' || cleanHash === 'view-provider-bookings') targetViewId = 'view-provider-bookings';
-        else if (cleanHash === 'calendar-section' || cleanHash === 'view-provider-calendar') targetViewId = 'view-provider-calendar';
+        else if (cleanHash === 'calendar-section' || cleanHash === 'view-provider-calendar') {
+            targetViewId = 'view-provider-calendar';
+            loadProviderCalendarSchedule();
+        }
         else if (cleanHash === 'profile-section' || cleanHash === 'view-provider-profile') targetViewId = 'view-provider-profile';
         else if (cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') targetViewId = 'view-provider-withdrawals';
         else if (cleanHash === 'reviews-section' || cleanHash === 'view-provider-reviews') targetViewId = 'view-provider-reviews';
@@ -1759,8 +1778,531 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await checkPayMongoReturn();
 
+    // ------------------------------------------------------------------------
+    // PROVIDER AVAILABILITY CALENDAR & CAPACITY MANAGEMENT CONTROLLER
+    // ------------------------------------------------------------------------
+    let provCalMonth = new Date().getMonth();
+    let provCalYear = new Date().getFullYear();
+    let provCalSelectedDate = null; // YYYY-MM-DD
+    let provCalData = {
+        defaultCapacity: 1,
+        bookings: [],
+        capacities: []
+    };
+
+    const MONTH_NAMES_FULL = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    const formatDateIsoStr = (year, month, day) => {
+        const mm = String(month + 1).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        return `${year}-${mm}-${dd}`;
+    };
+
+    const formatPrettyDateLong = (dateStr) => {
+        if (!dateStr) return 'Select Date';
+        const parts = dateStr.split('-');
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return `${DAY_NAMES_FULL[d.getDay()]}, ${MONTH_NAMES_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    };
+
+    // Load Provider Calendar Schedule from backend
+    const loadProviderCalendarSchedule = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const res = await fetch('/api/providers/calendar/schedule', { headers });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    provCalData = {
+                        defaultCapacity: data.defaultCapacity || 1,
+                        bookings: data.bookings || [],
+                        capacities: data.capacities || []
+                    };
+
+                    const defInput = document.getElementById('prov-default-daily-capacity-input');
+                    if (defInput) defInput.value = provCalData.defaultCapacity;
+                }
+            }
+        } catch (err) {
+            console.warn('Calendar schedule fetch notice:', err.message);
+        }
+
+        renderProviderCalendarGrid();
+    };
+
+    // Render Calendar Grid
+    const renderProviderCalendarGrid = () => {
+        const monthDisplay = document.getElementById('prov-cal-month-display');
+        const grid = document.getElementById('prov-cal-cells-grid');
+        const todayText = document.getElementById('prov-cal-today-text');
+
+        if (monthDisplay) {
+            monthDisplay.textContent = `${MONTH_NAMES_FULL[provCalMonth]} ${provCalYear}`;
+        }
+
+        const now = new Date();
+        const todayIso = formatDateIsoStr(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (todayText) {
+            todayText.textContent = `Today: ${MONTH_NAMES_FULL[now.getMonth()].substring(0, 3)} ${now.getDate()}, ${now.getFullYear()}`;
+        }
+
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const firstDayIndex = new Date(provCalYear, provCalMonth, 1).getDay();
+        const totalDaysInMonth = new Date(provCalYear, provCalMonth + 1, 0).getDate();
+
+        // If no selected date yet, default to today if in current month, or 1st day of month
+        if (!provCalSelectedDate || !provCalSelectedDate.startsWith(`${provCalYear}-${String(provCalMonth + 1).padStart(2, '0')}`)) {
+            if (provCalYear === now.getFullYear() && provCalMonth === now.getMonth()) {
+                provCalSelectedDate = todayIso;
+            } else {
+                provCalSelectedDate = formatDateIsoStr(provCalYear, provCalMonth, 1);
+            }
+        }
+
+        // Blank cells for alignment
+        for (let i = 0; i < firstDayIndex; i++) {
+            const blank = document.createElement('div');
+            blank.className = 'prov-day-cell empty';
+            grid.appendChild(blank);
+        }
+
+        // Build Day Cells
+        for (let d = 1; d <= totalDaysInMonth; d++) {
+            const cellDateIso = formatDateIsoStr(provCalYear, provCalMonth, d);
+            const cell = document.createElement('div');
+            cell.className = 'prov-day-cell';
+            cell.setAttribute('data-date', cellDateIso);
+
+            const isToday = (cellDateIso === todayIso);
+            const isSelected = (cellDateIso === provCalSelectedDate);
+            const isPast = (cellDateIso < todayIso);
+
+            if (isToday) cell.classList.add('today-cell');
+            if (isSelected) cell.classList.add('selected');
+
+            // Find capacity override if exists
+            const override = (provCalData.capacities || []).find(c => c.SpecificDate === cellDateIso);
+            const maxAllowed = override ? override.MaxBookings : provCalData.defaultCapacity;
+            const isBlocked = (maxAllowed === 0);
+
+            // Count bookings overlapping with this date
+            const activeBookings = (provCalData.bookings || []).filter(b => {
+                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                return (cellDateIso >= sDate && cellDateIso <= eDate);
+            });
+            const bookingCount = activeBookings.length;
+
+            let badgeHtml = '';
+            if (isPast) {
+                cell.classList.add('is-past');
+                const bookedTxt = bookingCount > 0 ? ` (${bookingCount})` : '';
+                badgeHtml = `<span class="prov-day-badge badge-status-past"><i class="fa-solid fa-lock"></i> Closed${bookedTxt}</span>`;
+            } else if (isBlocked) {
+                cell.classList.add('is-blocked');
+                badgeHtml = `<span class="prov-day-badge badge-status-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>`;
+            } else if (bookingCount >= maxAllowed) {
+                cell.classList.add('is-full');
+                badgeHtml = `<span class="prov-day-badge badge-status-full"><i class="fa-solid fa-lock"></i> Full (${bookingCount}/${maxAllowed})</span>`;
+            } else if (bookingCount > 0) {
+                cell.classList.add('is-partial');
+                badgeHtml = `<span class="prov-day-badge badge-status-partial"><i class="fa-solid fa-user-check"></i> ${bookingCount}/${maxAllowed} Booked</span>`;
+            } else {
+                cell.classList.add('is-available');
+                badgeHtml = `<span class="prov-day-badge badge-status-avail"><i class="fa-regular fa-circle-check"></i> ${maxAllowed} Avail</span>`;
+            }
+
+            cell.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="day-num" style="font-weight:800; font-size:0.95rem; color:#0a192f;">${d}</span>
+                    ${override ? `<i class="fa-solid fa-sliders" style="font-size:0.65rem; color:#2563eb;" title="Custom limit: ${override.MaxBookings}"></i>` : ''}
+                </div>
+                <div style="margin-top:4px;">
+                    ${badgeHtml}
+                </div>
+            `;
+
+            cell.addEventListener('click', () => {
+                provCalSelectedDate = cellDateIso;
+                document.querySelectorAll('.prov-calendar-grid .prov-day-cell').forEach(c => c.classList.remove('selected'));
+                cell.classList.add('selected');
+                renderInspectorPanel();
+            });
+
+            grid.appendChild(cell);
+        }
+
+        renderInspectorPanel();
+    };
+
+    // Render Inspector Panel for Selected Date
+    const renderInspectorPanel = () => {
+        if (!provCalSelectedDate) return;
+
+        const now = new Date();
+        const todayIso = formatDateIsoStr(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const dateTitle = document.getElementById('prov-inspector-date-title');
+        const statusBadge = document.getElementById('prov-inspector-status-badge');
+        const summaryText = document.getElementById('prov-inspector-summary-text');
+        const capacityInput = document.getElementById('prov-date-capacity-input');
+        const saveDateCapBtn = document.getElementById('btn-save-date-capacity');
+        const toggleBlockBtn = document.getElementById('btn-toggle-block-date');
+        const resetBtn = document.getElementById('btn-reset-date-capacity');
+        const bookingsList = document.getElementById('prov-inspector-bookings-list');
+        const countBadge = document.getElementById('prov-inspector-bookings-count-badge');
+        const customCapNotice = document.getElementById('prov-past-date-notice');
+
+        if (dateTitle) dateTitle.textContent = formatPrettyDateLong(provCalSelectedDate);
+
+        // Find capacity override for this date
+        const override = (provCalData.capacities || []).find(c => c.SpecificDate === provCalSelectedDate);
+        const maxAllowed = override ? override.MaxBookings : provCalData.defaultCapacity;
+        const isBlocked = (maxAllowed === 0);
+        const isPast = (provCalSelectedDate < todayIso);
+
+        // Filter bookings for this date
+        const activeBookings = (provCalData.bookings || []).filter(b => {
+            const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+            const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+            return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
+        });
+
+        if (capacityInput) capacityInput.value = maxAllowed;
+
+        if (countBadge) countBadge.textContent = `${activeBookings.length} Booking${activeBookings.length === 1 ? '' : 's'}`;
+
+        if (statusBadge && summaryText) {
+            if (isPast) {
+                statusBadge.textContent = 'Closed (Past Date)';
+                statusBadge.style.background = '#64748b';
+                summaryText.innerHTML = `Past date &bull; Booking window is closed (${activeBookings.length} booking${activeBookings.length === 1 ? '' : 's'} recorded).`;
+            } else if (isBlocked) {
+                statusBadge.textContent = 'Blocked / Closed';
+                statusBadge.style.background = '#64748b';
+                summaryText.innerHTML = `Date is currently blocked from new bookings (${activeBookings.length} existing booking${activeBookings.length === 1 ? '' : 's'}).`;
+            } else if (activeBookings.length >= maxAllowed) {
+                statusBadge.textContent = 'Fully Booked';
+                statusBadge.style.background = '#ef4444';
+                summaryText.innerHTML = `Capacity reached: ${activeBookings.length} of ${maxAllowed} booking(s) filled.`;
+            } else if (activeBookings.length > 0) {
+                statusBadge.textContent = 'Partially Booked';
+                statusBadge.style.background = '#f59e0b';
+                summaryText.innerHTML = `${activeBookings.length} booking scheduled &bull; ${maxAllowed - activeBookings.length} slot(s) remaining.`;
+            } else {
+                statusBadge.textContent = 'Available';
+                statusBadge.style.background = '#22c55e';
+                summaryText.innerHTML = `0 bookings scheduled &bull; Capacity: ${maxAllowed} booking(s) allowed.`;
+            }
+        }
+
+        // Toggle Block / Unblock Button Text
+        if (toggleBlockBtn) {
+            if (isBlocked) {
+                toggleBlockBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Unblock Date (Set ${provCalData.defaultCapacity})`;
+                toggleBlockBtn.style.color = '#15803d';
+                toggleBlockBtn.style.borderColor = '#86efac';
+            } else {
+                toggleBlockBtn.innerHTML = `<i class="fa-solid fa-ban"></i> Block Date (Set 0)`;
+                toggleBlockBtn.style.color = '#ef4444';
+                toggleBlockBtn.style.borderColor = '#fecaca';
+            }
+        }
+
+        // Reset to default button
+        if (resetBtn) {
+            resetBtn.style.display = override ? 'inline-flex' : 'none';
+        }
+
+        // Disable controls for past dates
+        if (isPast) {
+            if (capacityInput) capacityInput.disabled = true;
+            if (saveDateCapBtn) {
+                saveDateCapBtn.disabled = true;
+                saveDateCapBtn.style.opacity = '0.5';
+                saveDateCapBtn.style.cursor = 'not-allowed';
+            }
+            if (toggleBlockBtn) {
+                toggleBlockBtn.disabled = true;
+                toggleBlockBtn.style.opacity = '0.5';
+                toggleBlockBtn.style.cursor = 'not-allowed';
+            }
+            if (resetBtn) {
+                resetBtn.disabled = true;
+                resetBtn.style.opacity = '0.5';
+                resetBtn.style.cursor = 'not-allowed';
+            }
+            if (customCapNotice) {
+                customCapNotice.style.display = 'block';
+            }
+        } else {
+            if (capacityInput) capacityInput.disabled = false;
+            if (saveDateCapBtn) {
+                saveDateCapBtn.disabled = false;
+                saveDateCapBtn.style.opacity = '1';
+                saveDateCapBtn.style.cursor = 'pointer';
+            }
+            if (toggleBlockBtn) {
+                toggleBlockBtn.disabled = false;
+                toggleBlockBtn.style.opacity = '1';
+                toggleBlockBtn.style.cursor = 'pointer';
+            }
+            if (resetBtn) {
+                resetBtn.disabled = false;
+                resetBtn.style.opacity = '1';
+                resetBtn.style.cursor = 'pointer';
+            }
+            if (customCapNotice) {
+                customCapNotice.style.display = 'none';
+            }
+        }
+
+        // Render Bookings List
+        if (bookingsList) {
+            if (activeBookings.length === 0) {
+                bookingsList.innerHTML = `
+                    <div style="text-align:center; padding:32px 16px; background:#fff; border-radius:10px; border:1px dashed #cbd5e1; color:#94a3b8;">
+                        <i class="fa-regular fa-calendar-check" style="font-size:2rem; color:#cbd5e1; margin-bottom:8px; display:block;"></i>
+                        <strong style="color:#64748b; font-size:0.9rem; display:block;">No Bookings on this Date</strong>
+                        <span style="font-size:0.78rem;">This date is free and open for customer bookings.</span>
+                    </div>
+                `;
+            } else {
+                bookingsList.innerHTML = activeBookings.map(b => `
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,0.03); transition:0.2s;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                            <div>
+                                <strong style="font-size:0.92rem; color:#0a192f; display:block;">${b.ClientName || 'SoundSphere Client'}</strong>
+                                <span style="font-size:0.74rem; font-weight:700; color:#2563eb;">${b.BookingReference}</span>
+                            </div>
+                            <span class="status-badge status-${(b.BookingStatus || 'confirmed').toLowerCase()}" style="font-size:0.72rem; padding:2px 8px;">${b.BookingStatus || 'Confirmed'}</span>
+                        </div>
+                        <div style="font-size:0.84rem; color:#1e293b; font-weight:600; margin-bottom:6px;">
+                            <i class="fa-solid fa-cubes" style="color:#2563eb; margin-right:4px;"></i> ${b.PackageName}
+                        </div>
+                        <div style="font-size:0.78rem; color:#64748b; display:flex; flex-direction:column; gap:4px;">
+                            <div><i class="fa-regular fa-clock" style="color:#f59e0b; width:14px;"></i> ${b.StartTime || '08:00 AM'} - ${b.EndTime || '10:00 PM'}</div>
+                            <div><i class="fa-solid fa-location-dot" style="color:#ef4444; width:14px;"></i> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
+                            ${b.ClientPhone ? `<div><i class="fa-solid fa-phone" style="color:#10b981; width:14px;"></i> ${b.ClientPhone}</div>` : ''}
+                        </div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.82rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString()}</span>
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600;">Payment: <strong style="color:#0a192f;">${b.PaymentStatus || 'Paid'}</strong></span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    };
+
+    // Calendar Navigation Events
+    const prevCalBtn = document.getElementById('prov-cal-btn-prev');
+    if (prevCalBtn) {
+        prevCalBtn.addEventListener('click', () => {
+            provCalMonth--;
+            if (provCalMonth < 0) {
+                provCalMonth = 11;
+                provCalYear--;
+            }
+            renderProviderCalendarGrid();
+        });
+    }
+
+    const nextCalBtn = document.getElementById('prov-cal-btn-next');
+    if (nextCalBtn) {
+        nextCalBtn.addEventListener('click', () => {
+            provCalMonth++;
+            if (provCalMonth > 11) {
+                provCalMonth = 0;
+                provCalYear++;
+            }
+            renderProviderCalendarGrid();
+        });
+    }
+
+    const todayCalBtn = document.getElementById('prov-cal-btn-today');
+    if (todayCalBtn) {
+        todayCalBtn.addEventListener('click', () => {
+            const now = new Date();
+            provCalMonth = now.getMonth();
+            provCalYear = now.getFullYear();
+            provCalSelectedDate = formatDateIsoStr(now.getFullYear(), now.getMonth(), now.getDate());
+            renderProviderCalendarGrid();
+        });
+    }
+
+    const refreshCalBtn = document.getElementById('prov-cal-btn-refresh');
+    if (refreshCalBtn) {
+        refreshCalBtn.addEventListener('click', async () => {
+            refreshCalBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            await loadProviderCalendarSchedule();
+            refreshCalBtn.innerHTML = '<i class="fa-solid fa-rotate"></i>';
+            showToast('✓ Calendar schedule refreshed.', 'success');
+        });
+    }
+
+    // Save Default Daily Capacity Handler
+    const saveDefaultCapBtn = document.getElementById('btn-save-default-capacity');
+    if (saveDefaultCapBtn) {
+        saveDefaultCapBtn.addEventListener('click', async () => {
+            const input = document.getElementById('prov-default-daily-capacity-input');
+            const val = parseInt(input.value, 10);
+            if (isNaN(val) || val < 1) {
+                showToast('Default limit must be at least 1 booking per day.', 'error');
+                return;
+            }
+
+            try {
+                saveDefaultCapBtn.disabled = true;
+                saveDefaultCapBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+                const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+                const res = await fetch('/api/providers/calendar/default-capacity', {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ maxDailyBookings: val })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(data.message || `Default capacity updated to ${val} bookings/day.`, 'success');
+                    provCalData.defaultCapacity = val;
+                    renderProviderCalendarGrid();
+                } else {
+                    showToast(data.message || 'Failed to update default capacity.', 'error');
+                }
+            } catch (err) {
+                showToast('Error saving default capacity.', 'error');
+            } finally {
+                saveDefaultCapBtn.disabled = false;
+                saveDefaultCapBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save';
+            }
+        });
+    }
+
+    // Save Specific Date Capacity Handler
+    const saveDateCapBtn = document.getElementById('btn-save-date-capacity');
+    if (saveDateCapBtn) {
+        saveDateCapBtn.addEventListener('click', async () => {
+            if (!provCalSelectedDate) return;
+            const input = document.getElementById('prov-date-capacity-input');
+            const val = parseInt(input.value, 10);
+            if (isNaN(val) || val < 0) {
+                showToast('Please enter a valid capacity (0 to block, or 1+).', 'error');
+                return;
+            }
+
+            try {
+                saveDateCapBtn.disabled = true;
+                saveDateCapBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+                const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+                const res = await fetch('/api/providers/calendar/date-capacity', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ specificDate: provCalSelectedDate, maxBookings: val })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(data.message || `Capacity updated for ${provCalSelectedDate}.`, 'success');
+                    const existingIdx = (provCalData.capacities || []).findIndex(c => c.SpecificDate === provCalSelectedDate);
+                    if (existingIdx >= 0) {
+                        provCalData.capacities[existingIdx].MaxBookings = val;
+                    } else {
+                        provCalData.capacities.push({ SpecificDate: provCalSelectedDate, MaxBookings: val });
+                    }
+                    renderProviderCalendarGrid();
+                } else {
+                    showToast(data.message || 'Failed to save date capacity.', 'error');
+                }
+            } catch (err) {
+                showToast('Error saving date capacity.', 'error');
+            } finally {
+                saveDateCapBtn.disabled = false;
+                saveDateCapBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Limit';
+            }
+        });
+    }
+
+    // Toggle 1-Click Block / Unblock Handler
+    const toggleBlockBtn = document.getElementById('btn-toggle-block-date');
+    if (toggleBlockBtn) {
+        toggleBlockBtn.addEventListener('click', async () => {
+            if (!provCalSelectedDate) return;
+            const override = (provCalData.capacities || []).find(c => c.SpecificDate === provCalSelectedDate);
+            const currentCap = override ? override.MaxBookings : provCalData.defaultCapacity;
+            const newCap = (currentCap === 0) ? provCalData.defaultCapacity : 0;
+
+            const input = document.getElementById('prov-date-capacity-input');
+            if (input) input.value = newCap;
+
+            try {
+                const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+                const res = await fetch('/api/providers/calendar/date-capacity', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ specificDate: provCalSelectedDate, maxBookings: newCap })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(newCap === 0 ? `🚫 ${provCalSelectedDate} is now BLOCKED.` : `✅ ${provCalSelectedDate} unblocked (Capacity: ${newCap}).`, 'success');
+                    const existingIdx = (provCalData.capacities || []).findIndex(c => c.SpecificDate === provCalSelectedDate);
+                    if (existingIdx >= 0) {
+                        provCalData.capacities[existingIdx].MaxBookings = newCap;
+                    } else {
+                        provCalData.capacities.push({ SpecificDate: provCalSelectedDate, MaxBookings: newCap });
+                    }
+                    renderProviderCalendarGrid();
+                } else {
+                    showToast(data.message || 'Failed to update date status.', 'error');
+                }
+            } catch (err) {
+                showToast('Error updating date status.', 'error');
+            }
+        });
+    }
+
+    // Reset Specific Date to Default Capacity Handler
+    const resetDateCapBtn = document.getElementById('btn-reset-date-capacity');
+    if (resetDateCapBtn) {
+        resetDateCapBtn.addEventListener('click', async () => {
+            if (!provCalSelectedDate) return;
+
+            try {
+                const headers = { 'Authorization': `Bearer ${token}` };
+                const res = await fetch(`/api/providers/calendar/date-capacity/${provCalSelectedDate}`, {
+                    method: 'DELETE',
+                    headers
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(`Custom override removed. Date now uses default limit (${provCalData.defaultCapacity}).`, 'success');
+                    provCalData.capacities = (provCalData.capacities || []).filter(c => c.SpecificDate !== provCalSelectedDate);
+                    renderProviderCalendarGrid();
+                } else {
+                    showToast(data.message || 'Failed to reset date limit.', 'error');
+                }
+            } catch (err) {
+                showToast('Error resetting date limit.', 'error');
+            }
+        });
+    }
+
+
+
     // Initial Data Fetch
     await loadDashboardData();
     await loadPackages();
+    await loadProviderCalendarSchedule();
     switchProviderView(window.location.hash);
 });

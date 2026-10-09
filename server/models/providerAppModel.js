@@ -26,7 +26,10 @@ const findActiveApplicationByUserId = async (userId) => {
                 CoverageArea,
                 ContactNumber,
                 GovtID_Url,
+                GovtID_Back_Url,
                 BusinessPermit_Url,
+                PermitIssuedDate,
+                PermitExpiryDate,
                 OtherDocs_Url,
                 Status,
                 RejectionReason,
@@ -61,7 +64,10 @@ const findApplicationByUserId = async (userId) => {
                 CoverageArea,
                 ContactNumber,
                 GovtID_Url,
+                GovtID_Back_Url,
                 BusinessPermit_Url,
+                PermitIssuedDate,
+                PermitExpiryDate,
                 OtherDocs_Url,
                 Status,
                 RejectionReason,
@@ -80,7 +86,7 @@ const findApplicationByUserId = async (userId) => {
  * @param {object} params
  * @returns {Promise<object>} Created application record
  */
-const createApplication = async ({ userId, businessName, ownerName, businessAddress, coverageArea, contactNumber, govtIdUrl, businessPermitUrl, otherDocsUrl }) => {
+const createApplication = async ({ userId, businessName, ownerName, businessAddress, coverageArea, contactNumber, govtIdUrl, govtIdBackUrl, businessPermitUrl, permitIssuedDate, permitExpiryDate, otherDocsUrl }) => {
     const pool = getPool();
     if (!pool) throw new Error('Database connection pool not available.');
 
@@ -91,15 +97,18 @@ const createApplication = async ({ userId, businessName, ownerName, businessAddr
         .input('BusinessAddress', sql.NVarChar(255), businessAddress.trim())
         .input('CoverageArea', sql.NVarChar(255), coverageArea.trim())
         .input('ContactNumber', sql.NVarChar(20), contactNumber.trim())
-        .input('GovtID_Url', sql.NVarChar(500), govtIdUrl || 'uploaded_govt_id.png')
-        .input('BusinessPermit_Url', sql.NVarChar(500), businessPermitUrl || 'uploaded_permit.png')
+        .input('GovtID_Url', sql.NVarChar(sql.MAX), govtIdUrl || 'uploaded_govt_id_front.png')
+        .input('GovtID_Back_Url', sql.NVarChar(sql.MAX), govtIdBackUrl || 'uploaded_govt_id_back.png')
+        .input('BusinessPermit_Url', sql.NVarChar(sql.MAX), businessPermitUrl || 'uploaded_permit.png')
+        .input('PermitIssuedDate', sql.Date, permitIssuedDate ? new Date(permitIssuedDate) : null)
+        .input('PermitExpiryDate', sql.Date, permitExpiryDate ? new Date(permitExpiryDate) : null)
         .input('OtherDocs_Url', sql.NVarChar(500), otherDocsUrl || null)
         .query(`
             INSERT INTO dbo.ProviderApplications
-            (UserID, BusinessName, OwnerName, BusinessAddress, CoverageArea, ContactNumber, GovtID_Url, BusinessPermit_Url, OtherDocs_Url, Status)
+            (UserID, BusinessName, OwnerName, BusinessAddress, CoverageArea, ContactNumber, GovtID_Url, GovtID_Back_Url, BusinessPermit_Url, PermitIssuedDate, PermitExpiryDate, OtherDocs_Url, Status)
             OUTPUT INSERTED.ApplicationID, INSERTED.UserID, INSERTED.BusinessName, INSERTED.Status, INSERTED.SubmittedAt
             VALUES
-            (@UserID, @BusinessName, @OwnerName, @BusinessAddress, @CoverageArea, @ContactNumber, @GovtID_Url, @BusinessPermit_Url, @OtherDocs_Url, 'Pending');
+            (@UserID, @BusinessName, @OwnerName, @BusinessAddress, @CoverageArea, @ContactNumber, @GovtID_Url, @GovtID_Back_Url, @BusinessPermit_Url, @PermitIssuedDate, @PermitExpiryDate, @OtherDocs_Url, 'Pending');
         `);
 
     return result.recordset[0];
@@ -125,7 +134,10 @@ const getPendingApplications = async () => {
             pa.CoverageArea,
             pa.ContactNumber,
             pa.GovtID_Url,
+            pa.GovtID_Back_Url,
             pa.BusinessPermit_Url,
+            pa.PermitIssuedDate,
+            pa.PermitExpiryDate,
             pa.Status,
             pa.SubmittedAt
         FROM dbo.ProviderApplications pa

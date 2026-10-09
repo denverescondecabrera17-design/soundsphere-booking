@@ -1,5 +1,5 @@
 const path = require('path');
-const { sendOTPEmail, sendPasswordResetEmail } = require(path.join(__dirname, '../server/services/emailService'));
+const { sendOTPEmail, sendPasswordResetEmail, sendProviderAppOTPEmail } = require(path.join(__dirname, '../../server/services/emailService'));
 
 async function testEmail() {
     try {

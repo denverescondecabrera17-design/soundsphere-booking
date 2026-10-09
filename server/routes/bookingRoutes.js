@@ -24,6 +24,7 @@ router.get('/client-bookings', optionalVerifyToken, bookingController.getMyBooki
 router.get('/provider-bookings', optionalVerifyToken, bookingController.getProviderBookings);
 
 // ID lookup route dispatcher (Handles GET /api/packages/:id and GET /api/bookings/:id)
+router.post('/:id/cancel', optionalVerifyToken, bookingController.cancelBooking);
 router.get('/:id', (req, res, next) => {
     if (req.baseUrl && req.baseUrl.includes('packages')) {
         return bookingController.getPackageById(req, res, next);

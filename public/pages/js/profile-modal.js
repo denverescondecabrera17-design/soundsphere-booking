@@ -68,7 +68,16 @@ window.syncAllProfileUI = (userData = {}) => {
     const phone = userData.phone || userData.Phone || '';
     const address = userData.address || userData.ClientAddress || '';
     const avatarUrl = userData.avatar || userData.ProfilePicture || null;
-    const isApprovedProvider = Boolean(businessName || userData.role === 'ServiceProvider' || userData.RoleName === 'ServiceProvider');
+    const isApprovedProvider = Boolean(
+        userData.role === 'ServiceProvider' ||
+        userData.role === 'Provider' ||
+        userData.role === 'serviceprovider' ||
+        userData.RoleName === 'ServiceProvider' ||
+        userData.RoleName === 'Provider' ||
+        userData.roleId === 3 ||
+        userData.RoleID === 3 ||
+        (userData.providerStatus === 'Approved' || userData.verificationStatus === 'Approved' || userData.Status === 'Approved')
+    );
 
     // 1. Profile Header Elements
     const elHeaderName = document.getElementById('profile-user-fullname');
@@ -77,7 +86,7 @@ window.syncAllProfileUI = (userData = {}) => {
     const elHeaderAddress = document.getElementById('profile-user-address');
 
     if (elHeaderName) {
-        if (businessName) {
+        if (isApprovedProvider && businessName) {
             elHeaderName.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
                     <span style="font-size:1.4rem; font-weight:800; color:#0a192f;">${personalName}</span>
@@ -90,9 +99,9 @@ window.syncAllProfileUI = (userData = {}) => {
             elHeaderName.textContent = personalName;
         }
     }
-    if (elHeaderEmail) elHeaderEmail.textContent = email;
-    if (elHeaderPhone) elHeaderPhone.textContent = phone;
-    if (elHeaderAddress) elHeaderAddress.textContent = address;
+    if (elHeaderEmail) elHeaderEmail.textContent = email || 'No email';
+    if (elHeaderPhone) elHeaderPhone.textContent = phone || 'Phone not set';
+    if (elHeaderAddress) elHeaderAddress.textContent = address || 'Location not set';
 
     // 2. Account Settings Card Elements
     const elSettingsName = document.getElementById('settings-user-fullname');
@@ -102,9 +111,9 @@ window.syncAllProfileUI = (userData = {}) => {
     const elSettingsUsername = document.getElementById('settings-user-username');
 
     if (elSettingsName) elSettingsName.textContent = personalName;
-    if (elSettingsEmail) elSettingsEmail.textContent = email;
-    if (elSettingsPhone) elSettingsPhone.textContent = phone;
-    if (elSettingsAddress) elSettingsAddress.textContent = address;
+    if (elSettingsEmail) elSettingsEmail.textContent = email || 'No email';
+    if (elSettingsPhone) elSettingsPhone.textContent = phone || 'Not specified';
+    if (elSettingsAddress) elSettingsAddress.textContent = address || 'Not specified';
     if (elSettingsUsername) elSettingsUsername.textContent = email;
 
     // Update Top Navigation Bar User Name & Dropdown Items
@@ -116,17 +125,19 @@ window.syncAllProfileUI = (userData = {}) => {
     if (elUserDisplayName) elUserDisplayName.textContent = personalName;
     if (elDropdownTitle) elDropdownTitle.textContent = personalName;
     if (elDropdownRole) {
-        if (businessName) {
+        if (isApprovedProvider && businessName) {
             elDropdownRole.innerHTML = `<span style="font-weight:700; color:#2563eb;"><i class="fa-solid fa-store" style="font-size:0.8rem;"></i> ${businessName}</span> • Approved Provider`;
         } else {
-            elDropdownRole.textContent = 'Verified Client';
+            elDropdownRole.textContent = 'Client Account';
         }
     }
     if (elProviderLink) {
         if (isApprovedProvider) {
             elProviderLink.classList.remove('hidden');
+            elProviderLink.style.setProperty('display', 'flex', 'important');
         } else {
             elProviderLink.classList.add('hidden');
+            elProviderLink.style.setProperty('display', 'none', 'important');
         }
     }
 

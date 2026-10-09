@@ -268,7 +268,11 @@ const deletePackagePhoto = async (req, res) => {
  */
 const getProviderProfile = async (req, res) => {
     try {
-        const userId = req.user ? req.user.userId : (req.query.userId || 13);
+        const userId = req.user ? req.user.userId : req.query.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, isApprovedProvider: false, message: 'Authentication required.' });
+        }
+
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
@@ -286,51 +290,60 @@ const getProviderProfile = async (req, res) => {
                     u.CreatedAt AS UserCreatedAt,
                     r.RoleName,
                     sp.ProviderID,
-                    COALESCE(NULLIF(sp.BusinessName, ''), NULLIF(pa.BusinessName, ''), 'CHiCHa Lights and Sounds') AS BusinessName,
-                    COALESCE(NULLIF(sp.OwnerName, ''), NULLIF(c.FullName, ''), NULLIF(c.FirstName + ' ' + ISNULL(c.LastName, ''), ''), NULLIF(pa.OwnerName, ''), 'Denver Cabrera') AS OwnerName,
-                    COALESCE(NULLIF(sp.BusinessAddress, ''), NULLIF(pa.BusinessAddress, ''), 'Lian, Balayan, Nasugbu') AS BusinessAddress,
-                    COALESCE(NULLIF(sp.CoverageArea, ''), NULLIF(pa.CoverageArea, ''), 'Lian, Balayan, Nasugbu') AS CoverageArea,
-                    COALESCE(NULLIF(u.Phone, ''), 'N/A') AS ContactNumber,
-                    COALESCE(NULLIF(sp.VerificationStatus, ''), NULLIF(pa.Status, ''), 'Approved') AS VerificationStatus,
+                    sp.BusinessName,
+                    sp.OwnerName,
+                    sp.BusinessAddress,
+                    sp.CoverageArea,
+                    u.Phone AS ContactNumber,
+                    sp.VerificationStatus,
+                    pa.Status AS ApplicationStatus,
                     sp.CreatedAt AS ProviderApprovedAt
                 FROM dbo.Users u
                 LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
-                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
                 LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
                 LEFT JOIN dbo.ProviderApplications pa ON u.UserID = pa.UserID
                 WHERE u.UserID = @UserID;
             `);
 
         if (!result.recordset || result.recordset.length === 0) {
-            return res.status(404).json({ success: false, message: 'Provider account record not found.' });
+            return res.status(404).json({ success: false, isApprovedProvider: false, message: 'User account record not found.' });
         }
 
         const p = result.recordset[0];
         
-        // Authorization Guard Check: Must be RoleID 3 / ServiceProvider and VerificationStatus Approved
-        const isServiceProvider = (p.RoleID == 3 || p.RoleName === 'ServiceProvider' || p.ProviderID);
-        const isApproved = (p.VerificationStatus === 'Approved' || p.AccountStatus === 'Active');
-        const isApprovedProvider = Boolean(isServiceProvider && isApproved);
+        // Authorization Guard Check: Must have ServiceProvider role (RoleID 3) and an approved provider record
+        const isServiceProviderRole = (p.RoleID == 3 || p.RoleName === 'ServiceProvider');
+        const isApprovedProvider = Boolean(isServiceProviderRole && (p.VerificationStatus === 'Approved' || p.ApplicationStatus === 'Approved'));
+
+        if (!isApprovedProvider) {
+            return res.status(403).json({
+                success: false,
+                isApprovedProvider: false,
+                role: p.RoleName,
+                applicationStatus: p.ApplicationStatus || 'None',
+                message: 'Access denied. You must apply as a service provider and be approved by the admin to access the provider portal.'
+            });
+        }
 
         return res.status(200).json({
             success: true,
-            isApprovedProvider: isServiceProvider && isApproved,
+            isApprovedProvider: true,
             profile: {
                 userId: p.UserID,
+                providerId: p.ProviderID,
                 email: p.Email,
                 phone: p.Phone || p.ContactNumber,
                 role: p.RoleName || 'ServiceProvider',
                 accountStatus: p.AccountStatus || 'Active',
-                businessName: p.BusinessName,
-                ownerName: p.OwnerName,
-                businessAddress: p.BusinessAddress,
-                coverageArea: p.CoverageArea,
+                businessName: p.BusinessName || 'Service Provider Business',
+                ownerName: p.OwnerName || 'Service Provider Owner',
+                businessAddress: p.BusinessAddress || 'Batangas',
+                coverageArea: p.CoverageArea || 'Batangas',
                 contactNumber: p.ContactNumber || p.Phone,
-                verificationStatus: p.VerificationStatus,
+                verificationStatus: p.VerificationStatus || 'Approved',
                 profilePicture: p.ProviderProfilePicture || null,
                 avatar: p.ProviderProfilePicture || null,
                 clientProfilePicture: p.UserProfilePicture || null,
-                appliedAt: p.AppliedAt,
                 approvedAt: p.ProviderApprovedAt
             }
         });
@@ -530,13 +543,15 @@ const getDashboardStats = async (req, res) => {
         let reviewsList = [];
         try {
             const revRes = await pool.request().input('UID', userId).query(`
-                SELECT r.ReviewID, r.Rating, r.Comment, r.CreatedAt,
+                SELECT r.ReviewID, r.Rating, r.ReviewText AS Comment, r.SubmittedAt AS CreatedAt,
                 ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), ISNULL(u.Email, 'Client')) AS ClientName
                 FROM dbo.Reviews r
                 LEFT JOIN dbo.Users u ON r.UserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-                WHERE r.ProviderID = @UID OR r.ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID)
-                ORDER BY r.CreatedAt DESC;
+                WHERE r.ProviderID = @UID 
+                   OR r.ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID)
+                   OR r.BookingID IN (SELECT BookingID FROM dbo.Bookings WHERE ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID))
+                ORDER BY r.SubmittedAt DESC;
             `);
             reviewsList = revRes.recordset || [];
         } catch (e) {
@@ -715,14 +730,16 @@ const getProviderReviewsList = async (req, res) => {
             SELECT 
                 r.ReviewID,
                 r.Rating,
-                r.Comment,
-                r.CreatedAt,
-                COALESCE(c.FirstName + ' ' + c.LastName, u.Email) AS ClientName
+                r.ReviewText AS Comment,
+                r.SubmittedAt AS CreatedAt,
+                COALESCE(c.FirstName + ' ' + c.LastName, u.Email, 'Verified Client') AS ClientName
             FROM dbo.Reviews r
-            JOIN dbo.Users u ON r.ClientID = u.UserID
-            LEFT JOIN dbo.Clients c ON r.ClientID = c.UserID
-            WHERE r.ProviderID = @UID
-            ORDER BY r.CreatedAt DESC;
+            LEFT JOIN dbo.Users u ON r.UserID = u.UserID
+            LEFT JOIN dbo.Clients c ON r.UserID = c.UserID
+            WHERE r.ProviderID = @UID 
+               OR r.ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID)
+               OR r.BookingID IN (SELECT BookingID FROM dbo.Bookings WHERE ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID))
+            ORDER BY r.SubmittedAt DESC;
         `);
 
         const reviews = result.recordset || [];

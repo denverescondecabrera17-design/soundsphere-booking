@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const roleStr = (userObj.role || userObj.RoleName || userObj.roleName || '').toLowerCase();
                 const redirectTarget = (roleStr === 'admin' || roleStr === 'administrator') ? '/admin/dashboard.html' :
+                                       (roleStr === 'cashier') ? '/cashier/dashboard.html' :
                                        (roleStr === 'provider' || roleStr === 'serviceprovider') ? '/provider/dashboard.html' : '/marketplace.html';
 
                 showAlert(`Authentication successful! Redirecting to your dashboard...`, 'success');
@@ -377,6 +378,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     redirectTarget = '/provider/dashboard.html';
                 } else if (roleLower === 'admin' || roleLower === 'administrator') {
                     redirectTarget = '/admin/dashboard.html';
+                } else if (roleLower === 'cashier') {
+                    redirectTarget = '/cashier/dashboard.html';
                 } else if (!redirectTarget || redirectTarget === 'client/dashboard.html') {
                     redirectTarget = '/marketplace.html';
                 }

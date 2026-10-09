@@ -106,6 +106,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const conflictText = document.getElementById('schedule-conflict-text');
     const btnSubmit = document.getElementById('btn-submit-booking');
 
+    // Back to Select Date & Time / Open Calendar Handler
+    const handleBackToCalendarSelection = () => {
+        const pkgId = (packageData && (packageData.PackageID || packageData.id)) ? (packageData.PackageID || packageData.id) : targetPackageId;
+        const provId = (packageData && (packageData.ProviderID || packageData.providerId)) ? (packageData.ProviderID || packageData.providerId) : targetProviderId;
+        const pkgTitle = (packageData && (packageData.PackageName || packageData.title || packageData.name)) ? (packageData.PackageName || packageData.title || packageData.name) : 'Event Service Package';
+        const pkgPrice = (packageData && packageData.Price) ? packageData.Price : basePackagePrice;
+        const provName = (summaryProviderName && summaryProviderName.textContent && summaryProviderName.textContent !== 'Service Provider') ? summaryProviderName.textContent : 'SoundSphere Provider';
+        const curDate = (startDateInput && startDateInput.value) ? startDateInput.value : (prefilledDate || tomorrowStr);
+        const curTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : (prefilledStartTime || '08:00');
+
+        if (typeof window.openBookingCalendarModal === 'function') {
+            window.openBookingCalendarModal({
+                packageId: pkgId,
+                providerId: provId,
+                title: pkgTitle,
+                packageName: pkgTitle,
+                price: pkgPrice,
+                packagePrice: pkgPrice,
+                providerName: provName,
+                defaultDate: curDate,
+                startTime: curTime
+            });
+        } else if (provId) {
+            window.location.href = `provider-detail.html?id=${provId}&packageId=${pkgId}`;
+        } else if (document.referrer && document.referrer.includes(window.location.host)) {
+            window.history.back();
+        } else {
+            window.location.href = 'marketplace.html';
+        }
+    };
+
+    const btnHeaderBack = document.getElementById('btn-header-back-to-calendar');
+    const btnPageBack = document.getElementById('btn-page-back-to-calendar');
+    const btnChangeSchedule = document.getElementById('btn-change-selected-schedule');
+
+    if (btnHeaderBack) btnHeaderBack.addEventListener('click', handleBackToCalendarSelection);
+    if (btnPageBack) btnPageBack.addEventListener('click', handleBackToCalendarSelection);
+    if (btnChangeSchedule) btnChangeSchedule.addEventListener('click', handleBackToCalendarSelection);
+
     // Auto-populate Logged-In Client Information
     const autoPopulateClientInfo = async () => {
         const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
@@ -383,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return parseFloat(lastTier ? lastTier.ServiceFee : 2000);
     };
 
-    // Set Default Event Dates (Start & End) to Tomorrow
+    // Set Event Dates & Times (Start & End) from URL params, session selected package, or Default Tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const yyyy = tomorrow.getFullYear();
@@ -392,21 +431,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tomorrowStr = `${yyyy}-${mm}-${dd}`;
     const todayStr = new Date().toISOString().split('T')[0];
 
+    const prefilledDate = urlParams.get('date') || urlParams.get('eventDate') || (sessionSelected && (sessionSelected.eventDate || sessionSelected.date || sessionSelected.serviceStartDate));
+    const prefilledEndDate = urlParams.get('endDate') || (sessionSelected && sessionSelected.serviceEndDate) || prefilledDate;
+    const prefilledStartTime = urlParams.get('startTime') || urlParams.get('start_time') || (sessionSelected && (sessionSelected.startTime || sessionSelected.start_time));
+    const prefilledEndTime = urlParams.get('endTime') || urlParams.get('end_time') || (sessionSelected && (sessionSelected.endTime || sessionSelected.end_time));
+
+    const initialStartDate = prefilledDate || tomorrowStr;
+    const initialEndDate = prefilledEndDate || initialStartDate;
+
     if (startDateInput) {
         startDateInput.min = todayStr;
-        if (!startDateInput.value) startDateInput.value = tomorrowStr;
+        startDateInput.value = initialStartDate;
     }
     if (endDateInput) {
         endDateInput.min = todayStr;
-        if (!endDateInput.value) endDateInput.value = tomorrowStr;
+        endDateInput.value = initialEndDate;
+    }
+    if (startTimeInput && prefilledStartTime) {
+        startTimeInput.value = prefilledStartTime;
+    }
+    if (endTimeInput && prefilledEndTime) {
+        endTimeInput.value = prefilledEndTime;
     }
 
-    // Initialize Extra-Large Flatpickr Calendar Popup if library is loaded
+    // Initialize Extra-Large Flatpickr Calendar Popup if library is loaded and inputs are visible
     if (typeof flatpickr === 'function') {
-        if (startDateInput) {
+        if (startDateInput && startDateInput.type !== 'hidden') {
             flatpickr(startDateInput, {
                 minDate: 'today',
-                defaultDate: startDateInput.value || tomorrowStr,
+                defaultDate: initialStartDate,
                 animate: true,
                 onChange: function(selectedDates, dateStr) {
                     if (endDateInput && endDateInput.value < dateStr) {
@@ -416,10 +469,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         }
-        if (endDateInput) {
+        if (endDateInput && endDateInput.type !== 'hidden') {
             flatpickr(endDateInput, {
                 minDate: 'today',
-                defaultDate: endDateInput.value || tomorrowStr,
+                defaultDate: initialEndDate,
                 animate: true,
                 onChange: function() {
                     if (typeof calculateDuration === 'function') calculateDuration();
@@ -613,6 +666,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (summaryValDueNow) summaryValDueNow.textContent = `₱${fullVal.toLocaleString()}`;
             if (summaryValRemaining) summaryValRemaining.textContent = '₱0.00 (Fully Paid)';
         }
+
+        // Update Selected Date & Time displays in Summary
+        const summaryScheduleDate = document.getElementById('summary-schedule-date');
+        const summaryScheduleTime = document.getElementById('summary-schedule-time');
+        const summaryTableDate = document.getElementById('summary-table-date');
+        const summaryTableTime = document.getElementById('summary-table-time');
+
+        const curStartDate = (startDateInput && startDateInput.value) ? startDateInput.value : (prefilledDate || tomorrowStr);
+        const curEndDate = (endDateInput && endDateInput.value) ? endDateInput.value : curStartDate;
+        const curStartTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : (prefilledStartTime || '08:00');
+        const curEndTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : (prefilledEndTime || '22:00');
+
+        const formatPretty = (dStr) => {
+            if (!dStr) return 'Not selected';
+            try {
+                const parts = dStr.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                }
+                return dStr;
+            } catch (e) {
+                return dStr;
+            }
+        };
+
+        const format12h = (t24) => {
+            if (!t24) return '';
+            const parts = t24.split(':');
+            const h = parseInt(parts[0], 10);
+            const m = parts[1] || '00';
+            const period = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${String(h12).padStart(2, '0')}:${m} ${period}`;
+        };
+
+        const formattedDateText = (curStartDate === curEndDate || !curEndDate) ? formatPretty(curStartDate) : `${formatPretty(curStartDate)} – ${formatPretty(curEndDate)}`;
+        const formattedStartTimeOnly = curStartTime ? format12h(curStartTime) : '08:00 AM';
+        const durationDaySuffix = (calculatedDays && calculatedDays > 1) ? ` (${calculatedDays} Days)` : ` (1 Day)`;
+
+        if (summaryScheduleDate) summaryScheduleDate.textContent = formattedDateText;
+        if (summaryScheduleTime) summaryScheduleTime.innerHTML = `<i class="fa-regular fa-clock" style="font-size:0.75rem;"></i> Starts at ${formattedStartTimeOnly}${durationDaySuffix}`;
+        if (summaryTableDate) summaryTableDate.textContent = formattedDateText;
+        if (summaryTableTime) summaryTableTime.textContent = formattedStartTimeOnly;
     };
 
     if (planDownpaymentCard && planFullCard) {
@@ -1312,22 +1409,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const clientEmail = clientEmailInput ? clientEmailInput.value.trim() : '';
             const clientAltPhone = clientAltPhoneInput ? clientAltPhoneInput.value.trim() : '';
 
-            const eventName = eventNameInput.value.trim();
-            const eventType = eventTypeSelect.value;
-            const customEventType = customEventTypeInput ? customEventTypeInput.value.trim() : '';
-            const serviceStartDate = startDateInput ? startDateInput.value : '';
-            const serviceEndDate = endDateInput ? endDateInput.value : '';
+            const eventName = (eventNameInput && eventNameInput.value && eventNameInput.value.trim()) ? eventNameInput.value.trim() : (packageData ? `${packageData.PackageName} Booking` : 'SoundSphere Event Booking');
+            const eventType = (eventTypeSelect && eventTypeSelect.value) ? eventTypeSelect.value : 'Event';
+            const customEventType = (customEventTypeInput && customEventTypeInput.value.trim()) ? customEventTypeInput.value.trim() : '';
+            const serviceStartDate = (startDateInput && startDateInput.value) ? startDateInput.value : (initialStartDate || todayStr);
+            const serviceEndDate = (endDateInput && endDateInput.value) ? endDateInput.value : serviceStartDate;
             const serviceHireDays = calculatedDays || 1;
-            const startTime = startTimeInput.value;
-            const endTime = endTimeInput.value;
-            const eventPlace = placeSelect.value;
-            const venueName = venueNameInput.value.trim();
-            const eventAddress = completeAddressInput.value.trim();
+            const startTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : '08:00';
+            const endTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '22:00';
+            const eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
+            const venueName = (venueNameInput && venueNameInput.value.trim()) ? venueNameInput.value.trim() : '';
+            const eventAddress = (completeAddressInput && completeAddressInput.value.trim()) ? completeAddressInput.value.trim() : '';
             const locationNotes = locationNotesInput ? locationNotesInput.value.trim() : '';
 
-            if (!clientFirstName || !clientLastName || !clientPhone || !clientEmail || !eventName || !serviceStartDate || !serviceEndDate || !startTime || !endTime || !venueName || !eventAddress) {
+            if (!clientFirstName || !clientLastName || !clientPhone || !clientEmail || !venueName || !eventAddress) {
                 if (typeof window.showToast === 'function') {
-                    window.showToast('⚠️ Please complete all required client information, event details, service dates, and venue address fields.', 'warning');
+                    window.showToast('⚠️ Please complete all required client information, municipality, venue name, and event address fields.', 'warning');
                 }
                 return;
             }
@@ -1351,7 +1448,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         paymentType: selectedPaymentPlan,
                         paymentMethod: selectedPayMongoMethod,
                         clientEmail,
-                        clientName: clientFullname
+                        clientName: clientFullname,
+                        clientPhone
                     })
                 });
 

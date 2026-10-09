@@ -66,13 +66,19 @@ if (fs.existsSync(srcDetailJs)) {
 
 // 3b. Sync booking.html, booking-confirmation.html, booking.js, booking.css, checkout-modal.js, checkout-modal.html
 const syncFilesList = [
-    { src: '../client/booking.html', targets: ['../public/booking.html', '../client/pages/booking.html'] },
-    { src: '../client/booking-confirmation.html', targets: ['../public/booking-confirmation.html', '../client/pages/booking-confirmation.html'] },
+    { src: '../client/booking.html', targets: ['../public/booking.html', '../client/pages/booking.html', '../public/pages/booking.html'] },
+    { src: '../client/booking-confirmation.html', targets: ['../public/booking-confirmation.html', '../client/pages/booking-confirmation.html', '../public/pages/booking-confirmation.html'] },
     { src: '../client/js/booking.js', targets: ['../public/js/booking.js', '../client/pages/js/booking.js'] },
     { src: '../client/css/booking.css', targets: ['../public/css/booking.css', '../client/pages/css/booking.css'] },
     { src: '../client/js/checkout-modal.js', targets: ['../public/js/checkout-modal.js', '../client/pages/js/checkout-modal.js', '../public/pages/js/checkout-modal.js'] },
     { src: '../client/checkout-modal.html', targets: ['../public/checkout-modal.html', '../client/pages/checkout-modal.html'] },
-    { src: '../client/css/login.css', targets: ['../public/css/login.css', '../client/pages/css/login.css', '../public/pages/css/login.css'] }
+    { src: '../client/css/login.css', targets: ['../public/css/login.css', '../client/pages/css/login.css', '../public/pages/css/login.css'] },
+    { src: '../client/js/login.js', targets: ['../public/js/login.js', '../client/pages/js/login.js', '../public/pages/js/login.js'] },
+    { src: '../client/client-messages.html', targets: ['../public/client-messages.html', '../client/pages/client-messages.html', '../public/pages/client-messages.html'] },
+    { src: '../client/client-bookings.html', targets: ['../public/client-bookings.html', '../client/pages/client-bookings.html', '../public/pages/client-bookings.html'] },
+    { src: '../client/js/client-bookings.js', targets: ['../public/js/client-bookings.js', '../client/pages/js/client-bookings.js', '../public/pages/js/client-bookings.js'] },
+    { src: '../client/css/booking-calendar-modal.css', targets: ['../public/css/booking-calendar-modal.css', '../client/pages/css/booking-calendar-modal.css', '../client/client/css/booking-calendar-modal.css', '../public/client/css/booking-calendar-modal.css'] },
+    { src: '../client/js/booking-calendar-modal.js', targets: ['../public/js/booking-calendar-modal.js', '../client/pages/js/booking-calendar-modal.js'] }
 ];
 
 syncFilesList.forEach(item => {
@@ -212,12 +218,67 @@ const mktCssTargets = [
     path.join(__dirname, '../public/css/marketplace.css'),
     path.join(__dirname, '../public/pages/css/marketplace.css')
 ];
-if (fs.existsSync(srcMktCss)) {
-    const mktCssContent = fs.readFileSync(srcMktCss, 'utf8');
-    mktCssTargets.forEach(target => {
-        safeWriteFileSync(target, mktCssContent);
-        console.log(`Synced marketplace.css -> ${target}`);
+// 13. Sync profile-modal.js
+const srcProfileJs = path.join(__dirname, '../client/js/profile-modal.js');
+const profileJsTargets = [
+    path.join(__dirname, '../client/pages/js/profile-modal.js'),
+    path.join(__dirname, '../public/js/profile-modal.js'),
+    path.join(__dirname, '../public/pages/js/profile-modal.js')
+];
+if (fs.existsSync(srcProfileJs)) {
+    const profileJsContent = fs.readFileSync(srcProfileJs, 'utf8');
+    profileJsTargets.forEach(target => {
+        safeWriteFileSync(target, profileJsContent);
+        console.log(`Synced profile-modal.js -> ${target}`);
     });
 }
 
-console.log("✅ All package photos feature files synchronized successfully!");
+// 14. Sync client/dashboard.html
+const srcClientDashHtml = path.join(__dirname, '../client/client/dashboard.html');
+const clientDashHtmlTargets = [
+    path.join(__dirname, '../public/client/dashboard.html')
+];
+if (fs.existsSync(srcClientDashHtml)) {
+    const clientDashHtmlContent = fs.readFileSync(srcClientDashHtml, 'utf8');
+    clientDashHtmlTargets.forEach(target => {
+        safeWriteFileSync(target, clientDashHtmlContent);
+        console.log(`Synced client/dashboard.html -> ${target}`);
+    });
+}
+
+// 15. Sync CSS files to client/client/css and public/client/css
+['marketplace.css', 'styles.css', 'app-platform.css', 'profile-modal.css'].forEach(file => {
+    const src = path.join(__dirname, `../client/css/${file}`);
+    if (fs.existsSync(src)) {
+        const content = fs.readFileSync(src, 'utf8');
+        [
+            path.join(__dirname, `../client/client/css/${file}`),
+            path.join(__dirname, `../public/client/css/${file}`)
+        ].forEach(target => {
+            safeWriteFileSync(target, content);
+            console.log(`Synced ${file} -> ${target}`);
+        });
+    }
+});
+
+// 16. Sync Cashier Portal Files
+const cashierSyncList = [
+    { src: '../client/cashier/dashboard.html', targets: ['../public/cashier/dashboard.html', '../client/pages/cashier/dashboard.html'] },
+    { src: '../client/cashier/css/cashier.css', targets: ['../public/cashier/css/cashier.css', '../client/pages/cashier/css/cashier.css'] },
+    { src: '../client/cashier/js/cashier-dashboard.js', targets: ['../public/cashier/js/cashier-dashboard.js', '../client/pages/cashier/js/cashier-dashboard.js'] },
+    { src: '../client/admin/dashboard.html', targets: ['../public/admin/dashboard.html'] }
+];
+
+cashierSyncList.forEach(item => {
+    const fullSrc = path.join(__dirname, item.src);
+    if (fs.existsSync(fullSrc)) {
+        const content = fs.readFileSync(fullSrc, 'utf8');
+        item.targets.forEach(relTarget => {
+            const fullTarget = path.join(__dirname, relTarget);
+            safeWriteFileSync(fullTarget, content);
+            console.log(`Synced ${path.basename(item.src)} -> ${fullTarget}`);
+        });
+    }
+});
+
+console.log("✅ All files synchronized successfully!");

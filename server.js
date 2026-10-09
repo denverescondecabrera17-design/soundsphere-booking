@@ -19,6 +19,7 @@ const notificationRoutes = require('./server/routes/notificationRoutes');
 const messageRoutes = require('./server/routes/messageRoutes');
 const reportRoutes = require('./server/routes/reportRoutes');
 const subscriptionRoutes = require('./server/routes/subscriptionRoutes');
+const cashierRoutes = require('./server/routes/cashierRoutes');
 
 const { getMapsConfig } = require('./server/config/mapsConfig');
 
@@ -46,10 +47,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/provider-applications', providerAppRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cashier', cashierRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/packages', bookingRoutes);
 app.use('/api/payments', bookingRoutes);
+
+const bookingController = require('./server/controllers/bookingController');
+const { verifyToken } = require('./server/middleware/authMiddleware');
+const reviewRouter = express.Router();
+reviewRouter.post('/', verifyToken, bookingController.submitReview);
+reviewRouter.post('/reviews', verifyToken, bookingController.submitReview);
+app.use('/api/reviews', reviewRouter);
+
 app.get('/api/config/maps-key', getMapsConfig);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
@@ -118,6 +128,10 @@ app.get(['/marketplace.html', '/client/dashboard.html', '/client/dashboard'], (r
 
 app.get(['/provider/dashboard.html', '/provider/dashboard'], (req, res) => {
     res.sendFile(path.join(__dirname, 'client', 'provider', 'dashboard.html'));
+});
+
+app.get(['/cashier/dashboard.html', '/cashier/dashboard', '/cashier'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'cashier', 'dashboard.html'));
 });
 
 app.get(['/provider-detail.html', '/provider-detail', '/provider-profile.html', '/provider-profile'], (req, res) => {

@@ -1,0 +1,442 @@
+[
+  {
+    "file": "admin/dashboard.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/admin.css"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "booking-confirmation.html",
+    "css": [
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css",
+      "css/marketplace.css",
+      "css/app-platform.css",
+      "css/booking.css"
+    ],
+    "styleCount": 1,
+    "stylePreviews": [
+      ".confirmation-card {             max-width: 780px;             margin: 40px auto..."
+    ],
+    "hasViewport": true
+  },
+  {
+    "file": "booking.html",
+    "css": [
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css",
+      "css/marketplace.css",
+      "css/app-platform.css",
+      "css/booking.css",
+      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+      "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "checkout-modal.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/checkout-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "client/dashboard.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "/css/styles.css?v=6.0",
+      "/css/marketplace.css?v=3.0",
+      "/css/app-platform.css?v=3.0",
+      "/css/profile-modal.css?v=3.0",
+      "/css/client-messages.css?v=3.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "client-bookings.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/client-bookings.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "client-messages.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/client-messages.css?v=10.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "forgot-password.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "index.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "login.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "marketplace.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "/css/styles.css?v=6.0",
+      "/css/marketplace.css?v=3.0",
+      "/css/app-platform.css?v=3.0",
+      "/css/profile-modal.css?v=3.0",
+      "/css/client-messages.css?v=10.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/booking-confirmation.html",
+    "css": [
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css",
+      "css/marketplace.css",
+      "css/app-platform.css",
+      "css/booking.css"
+    ],
+    "styleCount": 1,
+    "stylePreviews": [
+      ".confirmation-card {             max-width: 780px;             margin: 40px auto..."
+    ],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/booking.html",
+    "css": [
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css",
+      "css/marketplace.css",
+      "css/app-platform.css",
+      "css/booking.css",
+      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+      "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/checkout-modal.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/checkout-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/client-bookings.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/client-bookings.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/client-messages.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/client-messages.css?v=10.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/forgot-password.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/index.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/login.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=8.0",
+      "css/login.css?v=8.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/marketplace.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "/css/styles.css?v=6.0",
+      "/css/marketplace.css?v=3.0",
+      "/css/app-platform.css?v=3.0",
+      "/css/profile-modal.css?v=3.0",
+      "/css/client-messages.css?v=10.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/provider/dashboard.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "../admin/css/admin.css?v=5.0",
+      "/admin/css/admin.css?v=5.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/provider-detail.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/provider-detail.css?v=1.0",
+      "css/checkout-modal.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/provider-profile.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/provider-detail.css?v=1.0",
+      "css/checkout-modal.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/register.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=8.0",
+      "css/login.css?v=8.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/reset-password.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "pages/verify-otp.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=4.0",
+      "css/login.css?v=4.0",
+      "css/otp.css?v=4.0"
+    ],
+    "styleCount": 1,
+    "stylePreviews": [
+      ".otp-inputs-grid {             display: flex !important;             justify-con..."
+    ],
+    "hasViewport": true
+  },
+  {
+    "file": "paymongo-payout.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    ],
+    "styleCount": 1,
+    "stylePreviews": [
+      ":root {             --pm-navy: #0A192F;             --pm-navy-card: #112240;    ..."
+    ],
+    "hasViewport": true
+  },
+  {
+    "file": "provider/dashboard.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "../admin/css/admin.css?v=5.0",
+      "/admin/css/admin.css?v=5.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "provider-detail.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/provider-detail.css?v=1.0",
+      "css/checkout-modal.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "provider-profile.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=5.0",
+      "css/marketplace.css?v=1.0",
+      "css/provider-detail.css?v=1.0",
+      "css/checkout-modal.css?v=1.0",
+      "css/profile-modal.css?v=1.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "register.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "reset-password.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=7.0",
+      "css/login.css?v=7.0"
+    ],
+    "styleCount": 0,
+    "stylePreviews": [],
+    "hasViewport": true
+  },
+  {
+    "file": "verify-otp.html",
+    "css": [
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+      "css/styles.css?v=4.0",
+      "css/login.css?v=4.0",
+      "css/otp.css?v=4.0"
+    ],
+    "styleCount": 1,
+    "stylePreviews": [
+      ".otp-inputs-grid {             display: flex !important;             justify-con..."
+    ],
+    "hasViewport": true
+  }
+]

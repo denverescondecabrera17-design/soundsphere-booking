@@ -71,6 +71,10 @@ const authorizeRoles = (...allowedRoles) => {
 
         if (normalizedAllowed.includes(userRole)) {
             isAuthorized = true;
+        } else if (normalizedAllowed.includes('cashier')) {
+            if (userRole === 'cashier' || userRoleId === 4 || userRole === 'administrator' || userRole === 'admin' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com') {
+                isAuthorized = true;
+            }
         } else if (normalizedAllowed.includes('administrator') || normalizedAllowed.includes('admin')) {
             if (userRole === 'administrator' || userRole === 'admin' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com') {
                 isAuthorized = true;

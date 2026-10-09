@@ -32,14 +32,9 @@
             </a>
 
             <div class="nav-actions">
-                <a href="marketplace.html" class="nav-action-btn">
+                <a href="marketplace.html" class="nav-action-btn" title="Back to Marketplace">
                     <i class="fa-solid fa-arrow-left"></i>
-                    <span>Back to Marketplace</span>
-                </a>
-
-                <a href="client-bookings.html" class="nav-action-btn">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    <span>My Bookings</span>
+                    <span>Back</span>
                 </a>
 
                 <!-- User Avatar Menu with Logout Dropdown -->
@@ -534,6 +529,89 @@
             <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
         </div>
     </footer>
+
+    <!-- ==================== PACKAGE DETAILS MODAL ==================== -->
+    <div class="profile-modal-overlay hidden" id="modal-package-detail" role="dialog" aria-modal="true" style="z-index: 10050;">
+        <div class="profile-modal-card" style="max-width: 680px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 18px; box-shadow: 0 25px 60px rgba(10, 25, 47, 0.3);">
+            <!-- Modal Header -->
+            <div class="profile-modal-header" style="padding: 18px 24px; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+                <div>
+                    <span id="pkg-modal-badge" style="display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                        Package Specification
+                    </span>
+                    <h2 id="pkg-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 900; color: #0f172a; line-height: 1.25;">
+                        Package Details
+                    </h2>
+                </div>
+                <button type="button" class="profile-close-btn" onclick="window.closePackageDetailModal()" aria-label="Close" style="font-size: 1.6rem; color: #64748b; cursor: pointer; border: none; background: transparent;">&times;</button>
+            </div>
+
+            <!-- Modal Scrollable Content -->
+            <div style="padding: 20px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                <!-- Price Banner -->
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rental Rate</div>
+                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                            <span id="pkg-modal-price" style="font-size: 1.6rem; font-weight: 900; color: #2563eb; letter-spacing: -0.5px;">₱0</span>
+                            <span id="pkg-modal-duration" style="font-size: 0.85rem; color: #64748b; font-weight: 700;">/ Event Rental</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.82rem; font-weight: 700; color: #334155;">
+                        <i class="fa-solid fa-shield-check" style="color: #10b981; font-size: 1rem;"></i> SoundSphere Verified Rig
+                    </div>
+                </div>
+
+                <!-- Photo Gallery Showcase -->
+                <div id="pkg-modal-photo-section" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.82rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-camera" style="color: #2563eb;"></i> Equipment & Setup Photos
+                    </div>
+                    <div id="pkg-modal-main-img-wrap" style="width: 100%; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; background: #000; position: relative; cursor: pointer;" onclick="const img = document.getElementById('pkg-modal-main-img'); if (img && window.openMarketplaceLightbox) window.openMarketplaceLightbox(img.src);" title="Click to enlarge">
+                        <img id="pkg-modal-main-img" src="" alt="Package Setup" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(10, 25, 47, 0.8); color: #ffffff; backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                            <i class="fa-solid fa-magnifying-glass-plus" style="color: #60a5fa;"></i> Click to enlarge
+                        </div>
+                    </div>
+                    <div id="pkg-modal-thumbnails" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;"></div>
+                </div>
+
+                <!-- Package Overview / Description -->
+                <div id="pkg-modal-desc-wrap">
+                    <div style="font-size: 0.82rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-info" style="color: #2563eb;"></i> Overview & Capabilities
+                    </div>
+                    <p id="pkg-modal-desc" style="font-size: 0.9rem; color: #334155; line-height: 1.55; margin: 0; background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0;"></p>
+                </div>
+
+                <!-- Inclusions Checklist -->
+                <div>
+                    <div style="font-size: 0.82rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-list-check" style="color: #2563eb;"></i> Included Equipment & Services
+                    </div>
+                    <ul id="pkg-modal-inclusions" style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;"></ul>
+                </div>
+
+                <!-- Service Protection Highlights -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 10px;">
+                    <i class="fa-solid fa-circle-check" style="color: #16a34a; font-size: 1.1rem; margin-top: 2px; flex-shrink: 0;"></i>
+                    <div style="font-size: 0.82rem; color: #166534; line-height: 1.45; font-weight: 600;">
+                        <strong>Includes On-Site Technicians & Setup:</strong> Equipment is transported, configured, tested, and operated on-site by certified sound and light technicians.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer Actions -->
+            <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-shrink: 0;">
+                <button type="button" onclick="window.closePackageDetailModal()" style="padding: 10px 20px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #475569; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'">
+                    Close
+                </button>
+                <button type="button" id="pkg-modal-btn-book" style="padding: 10px 24px; border: none; border-radius: 8px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; font-weight: 800; font-size: 0.92rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                    <i class="fa-solid fa-calendar-check"></i> Book Package Now
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="js/api.js?v=5.0"></script>

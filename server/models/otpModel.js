@@ -214,9 +214,69 @@ const verifyOTPAndActivateAccount = async ({ email, inputOtp }) => {
     }
 };
 
+/**
+ * Validate OTP without modifying user table (for Provider Application email verification)
+ * @param {object} params
+ * @param {string} params.email
+ * @param {string} params.inputOtp
+ * @returns {Promise<{ success: boolean, message: string }>}
+ */
+const verifyOTPOnly = async ({ email, inputOtp }) => {
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available.');
+
+    const otpRecord = await getLatestActiveOTPRecord(email);
+
+    if (!otpRecord) {
+        return {
+            success: false,
+            message: 'No active verification code found for this email. Please request a new code.'
+        };
+    }
+
+    const now = new Date();
+    if (now > new Date(otpRecord.ExpiresAt)) {
+        return {
+            success: false,
+            message: 'Your verification code has expired. Please request a new code.'
+        };
+    }
+
+    if (otpRecord.Attempts >= 5) {
+        return {
+            success: false,
+            message: 'Too many incorrect attempts. Please request a new verification code.'
+        };
+    }
+
+    const isMatch = await bcrypt.compare(inputOtp.trim(), otpRecord.OtpHash);
+
+    if (!isMatch) {
+        const attempts = await incrementOTPAttempts(otpRecord.OtpID);
+        const remaining = 5 - attempts;
+        return {
+            success: false,
+            message: remaining > 0 
+                ? `Invalid verification code. ${remaining} attempt(s) remaining.` 
+                : 'Invalid verification code. Attempts limit reached. Please request a new code.'
+        };
+    }
+
+    // Mark OTP as used
+    await pool.request()
+        .input('OtpID', sql.Int, otpRecord.OtpID)
+        .query('UPDATE dbo.OTPVerifications SET IsUsed = 1 WHERE OtpID = @OtpID');
+
+    return {
+        success: true,
+        message: 'Business email verified successfully.'
+    };
+};
+
 module.exports = {
     saveOTPRecord,
     getLatestActiveOTPRecord,
     incrementOTPAttempts,
-    verifyOTPAndActivateAccount
+    verifyOTPAndActivateAccount,
+    verifyOTPOnly
 };

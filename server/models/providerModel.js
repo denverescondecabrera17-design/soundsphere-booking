@@ -107,18 +107,20 @@ const getAllApprovedProviders = async (filters = {}) => {
                     r.SubmittedAt,
                     COALESCE(NULLIF(LTRIM(RTRIM(COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, ''))), ''), u.Email, 'Verified Client') AS ClientName,
                     b.PackageName,
-                    b.EventDate
+                    b.EventDate,
+                    COALESCE(spDirect.UserID, spViaBooking.UserID, r.ProviderID) AS ProviderUserID,
+                    COALESCE(spDirect.ProviderID, spViaBooking.ProviderID, r.ProviderID) AS SPID
                 FROM dbo.Reviews r
                 LEFT JOIN dbo.Users u ON r.UserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
                 LEFT JOIN dbo.Bookings b ON r.BookingID = b.BookingID
+                LEFT JOIN dbo.ServiceProviders spDirect ON (r.ProviderID = spDirect.ProviderID OR r.ProviderID = spDirect.UserID)
+                LEFT JOIN dbo.ServiceProviders spViaBooking ON (b.ProviderID = spViaBooking.ProviderID)
                 ORDER BY r.SubmittedAt DESC
             `);
 
             (revRes.recordset || []).forEach(row => {
-                const pid = row.ProviderID;
-                if (!reviewsMap[pid]) reviewsMap[pid] = [];
-                reviewsMap[pid].push({
+                const revObj = {
                     reviewId: row.ReviewID,
                     rating: row.Rating || 5,
                     comment: row.ReviewText || '',
@@ -126,6 +128,14 @@ const getAllApprovedProviders = async (filters = {}) => {
                     packageName: row.PackageName || 'Audio-Visual Rental',
                     eventDate: row.EventDate ? new Date(row.EventDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent Event',
                     submittedAt: row.SubmittedAt
+                };
+
+                const keys = [row.ProviderID, row.ProviderUserID, row.SPID].filter(Boolean);
+                keys.forEach(k => {
+                    if (!reviewsMap[k]) reviewsMap[k] = [];
+                    if (!reviewsMap[k].some(existing => existing.reviewId === row.ReviewID)) {
+                        reviewsMap[k].push(revObj);
+                    }
                 });
             });
         } catch (revErr) {
@@ -134,7 +144,7 @@ const getAllApprovedProviders = async (filters = {}) => {
 
         allProviders = (result.recordset || []).map(p => {
             const provPkgs = packagesMap[p.UserID] || [];
-            const provReviews = reviewsMap[p.UserID] || [];
+            const provReviews = reviewsMap[p.UserID] || reviewsMap[p.ProviderID] || [];
 
             let avgRating = 5.0;
             if (provReviews.length > 0) {

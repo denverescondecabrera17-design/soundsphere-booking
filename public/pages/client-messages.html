@@ -31,25 +31,15 @@
             </a>
 
             <div class="nav-actions">
-                <a href="marketplace.html" class="nav-action-btn">
-                    <i class="fa-solid fa-store"></i>
-                    <span>Marketplace</span>
-                </a>
-
-                <a href="client-bookings.html" class="nav-action-btn">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    <span>My Bookings</span>
+                <a href="javascript:void(0)" onclick="if (document.referrer && document.referrer.includes(window.location.host)) { history.back(); } else { window.location.href = 'marketplace.html'; }" class="nav-action-btn" title="Go Back">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Back</span>
                 </a>
 
                 <!-- Notification Bell with Dropdown Panel -->
                 <div class="icon-badge-btn" id="notif-btn" title="Notifications" style="position:relative;">
                     <i class="fa-regular fa-bell"></i>
                     <span class="badge-count" id="notif-badge-count">3</span>
-                </div>
-
-                <!-- Messages Active Icon -->
-                <div class="icon-badge-btn" title="Messages" style="background: rgba(255,255,255,0.25);">
-                    <i class="fa-regular fa-comments"></i>
                 </div>
 
                 <!-- User Avatar Menu with Logout Dropdown -->

@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirmCheckout = document.getElementById('btn-confirm-checkout');
 
     // State Variables
+    let currentLoadedProviderId = null;
     let selectedPackagePrice = 28000;
     let selectedPackageTitle = "Concert Line Array & Stage Lighting Rigs";
     
@@ -136,17 +137,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleSelect = () => {
             packageCards.forEach(c => {
                 c.classList.remove('selected-active');
-                const b = c.querySelector('.btn-select-package');
-                if (b) b.textContent = "Select Package";
             });
 
             card.classList.add('selected-active');
-            if (selectBtn) selectBtn.textContent = "Selected Package ✓";
 
-            selectedPackageTitle = card.getAttribute('data-title') || "Package";
-            selectedPackagePrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
+            const pTitle = card.getAttribute('data-title') || "Package";
+            const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
+            const inclusions = Array.from(card.querySelectorAll('.inclusions-list li')).map(li => li.textContent.trim());
+
+            selectedPackageTitle = pTitle;
+            selectedPackagePrice = pPrice;
 
             updateSummary();
+
+            window.openPackageDetailModal({
+                title: pTitle,
+                price: pPrice,
+                inclusions: inclusions
+            });
         };
 
         card.addEventListener('click', handleSelect);
@@ -244,7 +252,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSummary();
 
-    let currentLoadedProviderId = null;
+    // ========================================================================
+    // PACKAGE DETAILS MODAL CONTROLLER
+    // ========================================================================
+    window.closePackageDetailModal = () => {
+        const modal = document.getElementById('modal-package-detail');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    };
+
+    window.openPackageDetailModal = (pkgInfo) => {
+        if (!pkgInfo) return;
+
+        const modal = document.getElementById('modal-package-detail');
+        if (!modal) return;
+
+        const titleEl = document.getElementById('pkg-modal-title');
+        const priceEl = document.getElementById('pkg-modal-price');
+        const descEl = document.getElementById('pkg-modal-desc');
+        const descWrap = document.getElementById('pkg-modal-desc-wrap');
+        const inclusionsEl = document.getElementById('pkg-modal-inclusions');
+        const photoSection = document.getElementById('pkg-modal-photo-section');
+        const mainImg = document.getElementById('pkg-modal-main-img');
+        const thumbnailsEl = document.getElementById('pkg-modal-thumbnails');
+        const btnBook = document.getElementById('pkg-modal-btn-book');
+
+        const title = pkgInfo.title || pkgInfo.name || 'Audio-Visual Package';
+        const rawPrice = Number(pkgInfo.price) || 15000;
+        const priceFormatted = rawPrice.toLocaleString();
+        const description = pkgInfo.description || pkgInfo.desc || 'Professional-grade lights and sound equipment package tailored for outstanding event acoustics and stage ambiance.';
+        
+        let inclusions = [];
+        if (Array.isArray(pkgInfo.inclusions)) {
+            inclusions = pkgInfo.inclusions;
+        } else if (typeof pkgInfo.inclusions === 'string' && pkgInfo.inclusions.trim()) {
+            inclusions = pkgInfo.inclusions.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        } else {
+            inclusions = [pkgInfo.category || 'Sound System Setup', 'Professional Stage Equipment', 'On-Site Sound Technician'];
+        }
+
+        const photos = Array.isArray(pkgInfo.images) ? pkgInfo.images : (pkgInfo.images ? [pkgInfo.images] : []);
+
+        if (titleEl) titleEl.textContent = title;
+        if (priceEl) priceEl.textContent = `₱${priceFormatted}`;
+
+        if (descEl) {
+            descEl.textContent = description;
+            if (descWrap) descWrap.style.display = 'block';
+        }
+
+        if (inclusionsEl) {
+            inclusionsEl.innerHTML = inclusions.map(inc => `
+                <li style="display:flex; align-items:center; gap:8px; font-size:0.86rem; font-weight:600; color:#334155; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <i class="fa-solid fa-check" style="color:#10b981; font-weight:900; font-size:0.9rem;"></i>
+                    <span>${inc}</span>
+                </li>
+            `).join('');
+        }
+
+        // Photos gallery setup
+        if (photos.length > 0) {
+            const firstPhotoUrl = photos[0].url ? (photos[0].url.startsWith('/') || photos[0].url.startsWith('http') ? photos[0].url : `/${photos[0].url}`) : (typeof photos[0] === 'string' ? (photos[0].startsWith('/') || photos[0].startsWith('http') ? photos[0] : `/${photos[0]}`) : '');
+            if (firstPhotoUrl && mainImg) {
+                mainImg.src = firstPhotoUrl;
+                if (photoSection) photoSection.style.display = 'flex';
+
+                if (thumbnailsEl) {
+                    if (photos.length > 1) {
+                        thumbnailsEl.style.display = 'flex';
+                        thumbnailsEl.innerHTML = photos.map((pObj, pIdx) => {
+                            const pUrl = pObj.url ? (pObj.url.startsWith('/') || pObj.url.startsWith('http') ? pObj.url : `/${pObj.url}`) : (typeof pObj === 'string' ? (pObj.startsWith('/') || pObj.startsWith('http') ? pObj : `/${pObj}`) : '');
+                            if (!pUrl) return '';
+                            return `<img src="${pUrl}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#e2e8f0'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); const m = document.getElementById('pkg-modal-main-img'); if(m) m.src='${pUrl}'; this.parentElement.querySelectorAll('img').forEach(i => i.style.borderColor='#e2e8f0'); this.style.borderColor='#2563eb';" title="Click to view photo">`;
+                        }).join('');
+                    } else {
+                        thumbnailsEl.style.display = 'none';
+                        thumbnailsEl.innerHTML = '';
+                    }
+                }
+            } else if (photoSection) {
+                photoSection.style.display = 'none';
+            }
+        } else if (photoSection) {
+            photoSection.style.display = 'none';
+        }
+
+        // Bind Book Now button
+        if (btnBook) {
+            btnBook.onclick = () => {
+                window.closePackageDetailModal();
+                triggerBookingForPackage(title, rawPrice, pkgInfo.id || pkgInfo.offerId || 1);
+            };
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    // Close on backdrop click & ESC
+    const pkgDetailModalEl = document.getElementById('modal-package-detail');
+    if (pkgDetailModalEl) {
+        pkgDetailModalEl.addEventListener('click', (e) => {
+            if (e.target === pkgDetailModalEl) {
+                window.closePackageDetailModal();
+            }
+        });
+    }
 
     // Booking Checkout Trigger Helper
     const triggerBookingForPackage = (title, price, packageId = null) => {
@@ -272,6 +387,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const pkgId = packageId || currentUrlParams.get('pkgId') || currentUrlParams.get('packageId') || 1;
+
+        if (typeof window.openBookingCalendarModal === 'function') {
+            const providerTitleEl = document.getElementById('provider-detail-title');
+            const provName = providerTitleEl ? providerTitleEl.textContent.trim() : 'Service Provider';
+            window.openBookingCalendarModal({
+                packageId: pkgId,
+                providerId: activeProviderId,
+                title: title,
+                price: price,
+                providerName: provName,
+                defaultDate: selectedDate
+            });
+            return;
+        }
 
         const selectedPkgInfo = {
             packageId: pkgId,
@@ -352,6 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ratingScoreEl = document.getElementById('provider-rating-score-inline');
             const ratingCountEl = document.getElementById('provider-rating-count-inline');
             const ratingStarsEl = document.getElementById('provider-rating-stars-inline');
+            const ratingLineEl = document.getElementById('provider-detail-rating-line');
 
             const provRating = provider.rating || 5.0;
             const provRevCount = (Array.isArray(provider.reviews) && provider.reviews.length > 0) ? provider.reviews.length : 3;
@@ -364,6 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         ? `<i class="fa-solid fa-star"></i>` 
                         : `<i class="fa-regular fa-star" style="color:#cbd5e1;"></i>`
                 ).join('');
+            }
+
+            if (ratingLineEl) {
+                ratingLineEl.style.cursor = 'pointer';
+                ratingLineEl.title = 'Click to view all client ratings & reviews';
+                ratingLineEl.onclick = () => window.openClientReviewModal && window.openClientReviewModal();
             }
 
             if (badgeEl) {
@@ -461,41 +597,74 @@ document.addEventListener('DOMContentLoaded', () => {
                             selectedPackagePrice = pkg.price || 15000;
                         }
 
-                        const photos = Array.isArray(pkg.images) ? pkg.images : (pkg.images ? [pkg.images] : []);
+                        const rawPhotos = Array.isArray(pkg.images) ? pkg.images : (pkg.images ? [pkg.images] : []);
+                        const pkgPhotoUrls = rawPhotos.map(pObj => {
+                            const pUrl = typeof pObj === 'string' ? pObj : (pObj && pObj.url ? pObj.url : '');
+                            if (!pUrl) return '';
+                            return (pUrl.startsWith('/') || pUrl.startsWith('http')) ? pUrl : `/${pUrl}`;
+                        }).filter(Boolean);
+
+                        const pdetailKey = `pdetail-${idx}`;
+                        if (!window.packagePhotosMap) window.packagePhotosMap = {};
+                        window.packagePhotosMap[pdetailKey] = pkgPhotoUrls;
 
                         let photosGalleryHTML = '';
-                        if (photos.length > 0) {
-                            const firstPhotoUrl = photos[0].url ? (photos[0].url.startsWith('/') || photos[0].url.startsWith('http') ? photos[0].url : `/${photos[0].url}`) : (typeof photos[0] === 'string' ? (photos[0].startsWith('/') || photos[0].startsWith('http') ? photos[0] : `/${photos[0]}`) : '');
-                            if (firstPhotoUrl) {
-                                photosGalleryHTML = `
-                                    <div style="margin:14px 0 12px 0; border-top:1px solid #f1f5f9; padding-top:10px;">
-                                        <strong style="font-size:0.84rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:8px; font-weight:800;">
-                                            <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:4px;"></i> Setup / Equipment Photos
-                                        </strong>
-                                        <div class="pkg-photo-gallery" style="display:flex; flex-direction:column; gap:8px;">
-                                            <div style="width:100%; height:190px; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0; background:#000; position:relative; cursor:pointer;" onclick="event.stopPropagation(); const mainImg = document.getElementById('main-pkg-photo-${idx}'); window.openMarketplaceLightbox && window.openMarketplaceLightbox(mainImg ? mainImg.src : '${firstPhotoUrl}')" title="Click to enlarge photo">
-                                                <img id="main-pkg-photo-${idx}" src="${firstPhotoUrl}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                                                <div style="position:absolute; bottom:10px; right:10px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:700; pointer-events:none; display:flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,0.2);">
-                                                    <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Click to enlarge
-                                                </div>
-                                            </div>
-                                            ${photos.length > 1 ? `
-                                                <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
-                                                    ${photos.map((pObj, pIdx) => {
-                                                        const pUrl = pObj.url ? (pObj.url.startsWith('/') || pObj.url.startsWith('http') ? pObj.url : `/${pObj.url}`) : (typeof pObj === 'string' ? (pObj.startsWith('/') || pObj.startsWith('http') ? pObj : `/${pObj}`) : '');
-                                                        if (!pUrl) return '';
-                                                        return `<img src="${pUrl}" style="width:46px; height:46px; border-radius:8px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#e2e8f0'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); const m = document.getElementById('main-pkg-photo-${idx}'); if(m) m.src='${pUrl}'; this.parentElement.querySelectorAll('img').forEach(i => i.style.borderColor='#e2e8f0'); this.style.borderColor='#2563eb';" title="Click to view photo">`;
-                                                    }).join('')}
-                                                </div>
+                        if (pkgPhotoUrls.length > 0) {
+                            const firstPhotoUrl = pkgPhotoUrls[0];
+                            const hasMultiplePkgPhotos = pkgPhotoUrls.length > 1;
+
+                            photosGalleryHTML = `
+                                <div style="margin:10px 0 8px 0; border-top:1px solid #f1f5f9; padding-top:8px;">
+                                    <strong style="font-size:0.78rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px; font-weight:800; letter-spacing:0.3px;">
+                                        <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:4px;"></i> Setup / Equipment Photos
+                                    </strong>
+                                    <div class="pkg-photo-gallery" style="display:flex; flex-direction:column; gap:6px;">
+                                        <div class="offer-card-image-wrap" 
+                                             id="pkg-photo-wrap-${pdetailKey}" 
+                                             data-pkg-id="${pdetailKey}" 
+                                             data-photo-idx="0" 
+                                             style="width:100%; height:130px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; background:#000; position:relative; cursor:pointer; user-select:none;" 
+                                             onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${pdetailKey}'] && window.packagePhotosMap['${pdetailKey}'].length > 1) { window.switchCardPhoto('${pdetailKey}', 'next', event); } else { window.openCardGalleryLightbox('${pdetailKey}', event); } }" 
+                                             title="${hasMultiplePkgPhotos ? 'Click to swipe photo' : 'Click to enlarge photo'}">
+                                            <img id="main-offer-img-${pdetailKey}" src="${firstPhotoUrl}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">
+                                            
+                                            ${hasMultiplePkgPhotos ? `
+                                                <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${pdetailKey}', 'prev', event);" title="Previous photo" style="position:absolute; left:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                                    <i class="fa-solid fa-chevron-left" style="font-size:0.75rem;"></i>
+                                                </button>
+                                                <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${pdetailKey}', 'next', event);" title="Next photo" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                                    <i class="fa-solid fa-chevron-right" style="font-size:0.75rem;"></i>
+                                                </button>
+                                                <span id="card-photo-counter-${pdetailKey}" style="position:absolute; bottom:6px; left:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:2px 7px; border-radius:6px; font-size:0.65rem; font-weight:800; pointer-events:none; border:1px solid rgba(255,255,255,0.2);">
+                                                    1 / ${pkgPhotoUrls.length}
+                                                </span>
                                             ` : ''}
+
+                                            <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${pdetailKey}', event);" style="position:absolute; bottom:6px; right:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.25); z-index:3;">
+                                                <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Enlarge
+                                            </button>
                                         </div>
+                                        ${hasMultiplePkgPhotos ? `
+                                            <div id="card-thumbnails-row-${pdetailKey}" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;">
+                                                ${pkgPhotoUrls.map((pUrl, pIdx) => `
+                                                    <img src="${pUrl}" class="card-thumb-item ${pIdx === 0 ? 'active' : ''}" 
+                                                         data-pkg-id="${pdetailKey}" 
+                                                         data-idx="${pIdx}" 
+                                                         style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
+                                                         onclick="event.stopPropagation(); window.switchCardPhoto('${pdetailKey}', ${pIdx}, event);" 
+                                                         onmouseover="this.style.opacity='1'; this.style.transform='scale(1.08)';" 
+                                                         onmouseout="if(!this.classList.contains('active')) { this.style.opacity='0.65'; this.style.transform='scale(1)'; }" 
+                                                         title="Photo ${pIdx + 1} - Click to switch">
+                                                `).join('')}
+                                            </div>
+                                        ` : ''}
                                     </div>
-                                `;
-                            }
+                                </div>
+                            `;
                         }
 
                         return `
-                            <div class="package-card ${isDefault ? 'selected-active' : ''}" data-price="${pkg.price || 15000}" data-title="${title}" data-id="${offerId}">
+                            <div class="package-card ${isDefault ? 'selected-active' : ''}" data-price="${pkg.price || 15000}" data-title="${title}" data-id="${offerId}" data-pkg-idx="${idx}" style="cursor: pointer;" title="Click to view full package details">
                                 <div>
                                     ${isDefault ? `<div class="pkg-header-badge">POPULAR OFFER</div>` : ''}
                                     <div class="pkg-card-title">${title}</div>
@@ -513,51 +682,58 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${photosGalleryHTML}
                                 </div>
 
-                                <button type="button" class="btn-select-package" title="Book this package">
-                                    <i class="fa-solid fa-calendar-check"></i> Book Package Now
+                                <button type="button" class="btn-select-package" title="View full details and specifications">
+                                    <i class="fa-solid fa-eye"></i> View Details
                                 </button>
                             </div>
                         `;
                     }).join('');
 
-                    // Re-bind package click selection & instant checkout trigger
+                    // Re-bind package click to open Package Details Modal first
                     const updatedCards = Array.from(pkgGrid.querySelectorAll('.package-card'));
-                    updatedCards.forEach(card => {
+                    updatedCards.forEach((card, cIdx) => {
                         const selectBtn = card.querySelector('.btn-select-package');
                         const pTitle = card.getAttribute('data-title') || "Package";
                         const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
-                        const pId = card.getAttribute('data-id') || 1;
+                        const pkgData = uniqueOffers[cIdx] || {
+                            id: card.getAttribute('data-id') || (cIdx + 1),
+                            title: pTitle,
+                            price: pPrice
+                        };
 
-                        const handleBookingClick = () => {
+                        const handleDetailsClick = () => {
                             updatedCards.forEach(c => c.classList.remove('selected-active'));
                             card.classList.add('selected-active');
                             selectedPackageTitle = pTitle;
                             selectedPackagePrice = pPrice;
                             updateSummary();
-                            triggerBookingForPackage(pTitle, pPrice, pId);
+                            window.openPackageDetailModal(pkgData);
                         };
 
                         card.addEventListener('click', (e) => {
                             // Don't trigger modal if user clicked photo thumbnail
                             if (e.target.closest('.pkg-photo-gallery')) return;
-                            handleBookingClick();
+                            handleDetailsClick();
                         });
 
                         if (selectBtn) {
                             selectBtn.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                handleBookingClick();
+                                handleDetailsClick();
                             });
                         }
                     });
 
                     updateSummary();
 
-                    // If user arrived with a specific targetPkgId from Marketplace, auto-trigger checkout
+                    // If user arrived with a specific targetPkgId from Marketplace, open details modal first
                     if (targetPkgId) {
-                        setTimeout(() => {
-                            triggerBookingForPackage(selectedPackageTitle, selectedPackagePrice);
-                        }, 400);
+                        const targetPkg = uniqueOffers.find(p => String(p.id || p.offerId || p.package_id || p.service_id) === String(targetPkgId)) || uniqueOffers[0];
+                        if (targetPkg) {
+                            setTimeout(() => {
+                                window.openPackageDetailModal(targetPkg);
+                            }, 400);
+                        }
                     }
                     // Render Client Ratings & Reviews
                     renderClientReviews(provider);
@@ -726,6 +902,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             };
         });
+    };
+
+    window.toggleWriteReviewForm = function() {
+        const formBox = document.getElementById('collapsible-review-form-box');
+        const btnLabel = document.getElementById('btn-toggle-review-label');
+        if (!formBox) return;
+
+        if (formBox.style.display === 'none' || !formBox.style.display) {
+            formBox.style.display = 'block';
+            if (btnLabel) btnLabel.textContent = 'Hide Review Form';
+            const textInput = document.getElementById('review-input-text');
+            if (textInput) textInput.focus();
+        } else {
+            formBox.style.display = 'none';
+            if (btnLabel) btnLabel.textContent = 'Write a Client Review';
+        }
     };
 
     window.openClientReviewModal = function() {
@@ -1019,5 +1211,345 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         };
+    }
+});
+
+// ==================== GLOBAL PACKAGE PHOTO CAROUSEL & LIGHTBOX CONTROLLER ====================
+window.packagePhotosMap = window.packagePhotosMap || {};
+
+window.switchCardPhoto = (pkgId, target, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const urls = window.packagePhotosMap[pkgId] || [];
+    if (!urls || urls.length <= 1) return;
+
+    const wrap = document.querySelector(`.offer-card-image-wrap[data-pkg-id="${pkgId}"]`) || document.querySelector(`[data-pkg-id="${pkgId}"] .offer-card-image-wrap`) || document.getElementById(`pkg-photo-wrap-${pkgId}`);
+    const mainImg = document.getElementById(`main-offer-img-${pkgId}`) || document.getElementById(`main-pkg-photo-${pkgId}`) || (wrap ? wrap.querySelector('img.card-main-img, img.enlargeable-photo, img') : null);
+    const counter = document.getElementById(`card-photo-counter-${pkgId}`);
+    const thumbsRow = document.getElementById(`card-thumbnails-row-${pkgId}`);
+
+    let currentIdx = wrap ? parseInt(wrap.getAttribute('data-photo-idx') || '0', 10) : 0;
+    if (isNaN(currentIdx)) currentIdx = 0;
+
+    let newIdx = currentIdx;
+    if (target === 'next') {
+        newIdx = (currentIdx + 1) % urls.length;
+    } else if (target === 'prev') {
+        newIdx = (currentIdx - 1 + urls.length) % urls.length;
+    } else if (typeof target === 'number') {
+        newIdx = (target + urls.length) % urls.length;
+    }
+
+    if (wrap) wrap.setAttribute('data-photo-idx', newIdx);
+
+    if (mainImg) {
+        mainImg.style.opacity = '0.35';
+        mainImg.style.transform = target === 'prev' ? 'translateX(8px) scale(0.98)' : 'translateX(-8px) scale(0.98)';
+        setTimeout(() => {
+            mainImg.src = urls[newIdx];
+            mainImg.style.opacity = '1';
+            mainImg.style.transform = 'translateX(0) scale(1)';
+        }, 110);
+    }
+
+    if (counter) {
+        counter.textContent = `${newIdx + 1} / ${urls.length}`;
+    }
+
+    if (thumbsRow) {
+        const thumbs = thumbsRow.querySelectorAll('.card-thumb-item, img');
+        thumbs.forEach((th, idx) => {
+            if (idx === newIdx) {
+                th.classList.add('active');
+                th.style.borderColor = '#2563eb';
+                th.style.opacity = '1';
+                th.style.transform = 'scale(1.08)';
+                th.style.boxShadow = '0 2px 8px rgba(37,99,235,0.4)';
+                if (typeof th.scrollIntoView === 'function') {
+                    th.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            } else {
+                th.classList.remove('active');
+                th.style.borderColor = '#cbd5e1';
+                th.style.opacity = '0.65';
+                th.style.transform = 'scale(1)';
+                th.style.boxShadow = 'none';
+            }
+        });
+    }
+};
+
+window.openCardGalleryLightbox = (pkgId, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const urls = window.packagePhotosMap[pkgId] || [];
+    const wrap = document.querySelector(`.offer-card-image-wrap[data-pkg-id="${pkgId}"]`) || document.querySelector(`[data-pkg-id="${pkgId}"] .offer-card-image-wrap`);
+    const currentIdx = wrap ? parseInt(wrap.getAttribute('data-photo-idx') || '0', 10) : 0;
+    if (urls && urls.length > 0) {
+        window.openPhotoLightbox(urls, currentIdx);
+    } else {
+        const mainImg = document.getElementById(`main-offer-img-${pkgId}`) || (wrap ? wrap.querySelector('img') : null);
+        if (mainImg && mainImg.src) window.openPhotoLightbox(mainImg.src, 0);
+    }
+};
+
+// Touch / Swipe Gestures on Offer Card Image Wrappers
+document.addEventListener('touchstart', (e) => {
+    const wrap = e.target.closest('.offer-card-image-wrap');
+    if (!wrap || e.target.closest('.card-carousel-btn') || e.target.closest('.card-enlarge-btn')) return;
+    wrap._touchStartX = e.touches[0].clientX;
+    wrap._touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+    const wrap = e.target.closest('.offer-card-image-wrap');
+    if (!wrap || wrap._touchStartX === undefined) return;
+    const diffX = e.changedTouches[0].clientX - wrap._touchStartX;
+    const diffY = e.changedTouches[0].clientY - wrap._touchStartY;
+    wrap._touchStartX = undefined;
+
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+        const pkgId = wrap.getAttribute('data-pkg-id');
+        if (pkgId) {
+            if (diffX < 0) {
+                window.switchCardPhoto(pkgId, 'next');
+            } else {
+                window.switchCardPhoto(pkgId, 'prev');
+            }
+        }
+    }
+}, { passive: true });
+
+// Lightbox Viewer
+window._lightboxPhotos = [];
+window._lightboxIndex = 0;
+
+window.openPhotoLightbox = (imageSrcOrArray, startIndex = 0) => {
+    if (!imageSrcOrArray) return;
+
+    if (Array.isArray(imageSrcOrArray)) {
+        window._lightboxPhotos = imageSrcOrArray.filter(Boolean);
+        window._lightboxIndex = typeof startIndex === 'number' ? startIndex : 0;
+    } else if (typeof imageSrcOrArray === 'object' && imageSrcOrArray.images) {
+        window._lightboxPhotos = (imageSrcOrArray.images || []).filter(Boolean);
+        window._lightboxIndex = imageSrcOrArray.index || 0;
+    } else {
+        window._lightboxPhotos = [imageSrcOrArray];
+        window._lightboxIndex = 0;
+    }
+
+    if (window._lightboxPhotos.length === 0) return;
+    if (window._lightboxIndex < 0 || window._lightboxIndex >= window._lightboxPhotos.length) {
+        window._lightboxIndex = 0;
+    }
+
+    let modal = document.getElementById('photo-lightbox-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'photo-lightbox-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10, 20, 35, 0.96); backdrop-filter:blur(14px); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:99999999; opacity:0; transition:opacity 0.25s ease; box-sizing:border-box; padding:20px; user-select:none;';
+        modal.innerHTML = `
+            <!-- Top Controls Toolbar -->
+            <div style="position:absolute; top:20px; left:28px; z-index:100000000; display:flex; align-items:center; gap:12px;">
+                <span id="lightbox-counter-badge" style="background:rgba(255,255,255,0.18); color:#ffffff; padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight:800; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.25); display:none;">
+                    Photo 1 of 1
+                </span>
+            </div>
+
+            <div style="position:absolute; top:20px; right:28px; display:flex; align-items:center; gap:10px; z-index:100000000;">
+                <button type="button" id="lightbox-zoom-out-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+                <button type="button" id="lightbox-zoom-in-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+                <a id="lightbox-download-btn" href="" download="photo-attachment.jpg" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; text-decoration:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:background 0.2s ease;" title="Download Photo">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+                <button type="button" id="lightbox-close-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Close Viewer">&times;</button>
+            </div>
+
+            <!-- Left & Right Carousel Arrows -->
+            <button type="button" id="lightbox-prev-btn" style="position:absolute; left:24px; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.3); color:#ffffff; font-size:1.3rem; cursor:pointer; display:none; align-items:center; justify-content:center; backdrop-filter:blur(8px); z-index:100000000; transition:all 0.2s ease;" title="Previous Photo (Left Arrow)">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button type="button" id="lightbox-next-btn" style="position:absolute; right:24px; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.3); color:#ffffff; font-size:1.3rem; cursor:pointer; display:none; align-items:center; justify-content:center; backdrop-filter:blur(8px); z-index:100000000; transition:all 0.2s ease;" title="Next Photo (Right Arrow)">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            <!-- Main Image Viewport -->
+            <div id="lightbox-img-container" style="max-width:94vw; max-height:80vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:zoom-in;">
+                <img id="lightbox-full-img" src="" alt="Enlarged Photo Attachment" style="max-width:92vw; max-height:78vh; border-radius:14px; object-fit:contain; box-shadow:0 25px 60px rgba(0,0,0,0.75); transform:scale(1); transition:transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;">
+            </div>
+
+            <!-- Bottom Gallery Thumbnails Bar -->
+            <div id="lightbox-thumbnails-bar" style="position:absolute; bottom:20px; max-width:85vw; display:none; gap:10px; overflow-x:auto; padding:8px 16px; background:rgba(10,25,47,0.7); border-radius:16px; backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.15); z-index:100000000;">
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        let currentScale = 1.0;
+
+        const setScale = (scale) => {
+            currentScale = Math.min(Math.max(scale, 1.0), 3.0);
+            const img = modal.querySelector('#lightbox-full-img');
+            const container = modal.querySelector('#lightbox-img-container');
+            if (img) img.style.transform = `scale(${currentScale})`;
+            if (container) container.style.cursor = currentScale > 1.0 ? 'zoom-out' : 'zoom-in';
+        };
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'lightbox-close-btn' || e.target.closest('#lightbox-close-btn')) {
+                window.closePhotoLightbox();
+                return;
+            }
+            if (e.target.id === 'lightbox-prev-btn' || e.target.closest('#lightbox-prev-btn')) {
+                window.switchLightboxPhoto('prev');
+                return;
+            }
+            if (e.target.id === 'lightbox-next-btn' || e.target.closest('#lightbox-next-btn')) {
+                window.switchLightboxPhoto('next');
+                return;
+            }
+            if (e.target.id === 'lightbox-zoom-in-btn' || e.target.closest('#lightbox-zoom-in-btn')) {
+                setScale(currentScale + 0.5);
+                return;
+            }
+            if (e.target.id === 'lightbox-zoom-out-btn' || e.target.closest('#lightbox-zoom-out-btn')) {
+                setScale(currentScale - 0.5);
+                return;
+            }
+            if (e.target.id === 'lightbox-full-img') {
+                setScale(currentScale > 1.0 ? 1.0 : 1.8);
+                return;
+            }
+            if (e.target === modal || e.target.id === 'lightbox-img-container') {
+                window.closePhotoLightbox();
+            }
+        });
+
+        // Touch Swipe on Lightbox
+        let lbTouchStartX = 0;
+        let lbTouchStartY = 0;
+        modal.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches[0]) {
+                lbTouchStartX = e.touches[0].clientX;
+                lbTouchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        modal.addEventListener('touchend', (e) => {
+            if (e.changedTouches && e.changedTouches[0]) {
+                const diffX = e.changedTouches[0].clientX - lbTouchStartX;
+                const diffY = e.changedTouches[0].clientY - lbTouchStartY;
+                if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX < 0) {
+                        window.switchLightboxPhoto('next');
+                    } else {
+                        window.switchLightboxPhoto('prev');
+                    }
+                }
+            }
+        }, { passive: true });
+    }
+
+    window.updateLightboxDisplay();
+
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '0', 'important');
+
+    requestAnimationFrame(() => {
+        modal.style.setProperty('opacity', '1', 'important');
+    });
+};
+
+window.switchLightboxPhoto = (target) => {
+    const photos = window._lightboxPhotos || [];
+    if (photos.length <= 1) return;
+
+    if (target === 'next') {
+        window._lightboxIndex = (window._lightboxIndex + 1) % photos.length;
+    } else if (target === 'prev') {
+        window._lightboxIndex = (window._lightboxIndex - 1 + photos.length) % photos.length;
+    } else if (typeof target === 'number') {
+        window._lightboxIndex = (target + photos.length) % photos.length;
+    }
+
+    const modal = document.getElementById('photo-lightbox-modal');
+    const img = modal ? modal.querySelector('#lightbox-full-img') : null;
+    if (img) {
+        img.style.opacity = '0.3';
+        img.style.transform = target === 'prev' ? 'translateX(16px) scale(0.96)' : 'translateX(-16px) scale(0.96)';
+        setTimeout(() => {
+            window.updateLightboxDisplay();
+            img.style.opacity = '1';
+            img.style.transform = 'translateX(0) scale(1)';
+        }, 120);
+    } else {
+        window.updateLightboxDisplay();
+    }
+};
+
+window.updateLightboxDisplay = () => {
+    const modal = document.getElementById('photo-lightbox-modal');
+    if (!modal) return;
+
+    const photos = window._lightboxPhotos || [];
+    const idx = window._lightboxIndex || 0;
+    const currentSrc = photos[idx] || '';
+
+    const img = modal.querySelector('#lightbox-full-img');
+    const dlBtn = modal.querySelector('#lightbox-download-btn');
+    const counterBadge = modal.querySelector('#lightbox-counter-badge');
+    const prevBtn = modal.querySelector('#lightbox-prev-btn');
+    const nextBtn = modal.querySelector('#lightbox-next-btn');
+    const thumbBar = modal.querySelector('#lightbox-thumbnails-bar');
+
+    if (img) img.src = currentSrc;
+    if (dlBtn) dlBtn.href = currentSrc;
+
+    const isMultiple = photos.length > 1;
+    if (counterBadge) {
+        counterBadge.style.display = isMultiple ? 'inline-block' : 'none';
+        counterBadge.textContent = `Photo ${idx + 1} of ${photos.length}`;
+    }
+    if (prevBtn) prevBtn.style.display = isMultiple ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = isMultiple ? 'flex' : 'none';
+
+    if (thumbBar) {
+        if (isMultiple) {
+            thumbBar.style.display = 'flex';
+            thumbBar.innerHTML = photos.map((url, pIdx) => `
+                <img src="${url}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:2px solid ${pIdx === idx ? '#2563eb' : 'rgba(255,255,255,0.3)'}; opacity:${pIdx === idx ? '1' : '0.6'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); window.switchLightboxPhoto(${pIdx});" title="View photo ${pIdx + 1}">
+            `).join('');
+        } else {
+            thumbBar.style.display = 'none';
+        }
+    }
+};
+
+window.closePhotoLightbox = () => {
+    const modal = document.getElementById('photo-lightbox-modal');
+    const img = modal ? modal.querySelector('#lightbox-full-img') : null;
+    if (!modal) return;
+
+    modal.style.setProperty('opacity', '0', 'important');
+    if (img) img.style.transform = 'scale(0.92)';
+    setTimeout(() => {
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        if (img) img.src = '';
+    }, 250);
+};
+
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('photo-lightbox-modal');
+    const isVisible = modal && modal.style.display !== 'none' && modal.style.visibility !== 'hidden';
+    if (!isVisible) return;
+
+    if (e.key === 'Escape') {
+        window.closePhotoLightbox();
+    } else if (e.key === 'ArrowLeft') {
+        window.switchLightboxPhoto('prev');
+    } else if (e.key === 'ArrowRight') {
+        window.switchLightboxPhoto('next');
     }
 });

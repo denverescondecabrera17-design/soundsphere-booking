@@ -28,6 +28,7 @@ const createCheckoutSession = async ({
     paymentMethod = 'all',
     clientEmail = '',
     clientName = '',
+    clientPhone = '',
     originHost = 'http://localhost:5000'
 }) => {
     // Amount in cents (PayMongo requires centavos, e.g., 14750 PHP = 1475000 centavos)
@@ -47,6 +48,11 @@ const createCheckoutSession = async ({
         allowedPaymentTypes = ['gcash', 'paymaya', 'qrph', 'grab_pay'];
     }
 
+    const billingObj = {};
+    if (clientName) billingObj.name = clientName;
+    if (clientEmail) billingObj.email = clientEmail;
+    if (clientPhone) billingObj.phone = clientPhone;
+
     const payload = {
         data: {
             attributes: {
@@ -65,6 +71,7 @@ const createCheckoutSession = async ({
                 payment_method_types: allowedPaymentTypes,
                 success_url: `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success`,
                 cancel_url: `${originHost}/booking.html?cancelled=1`,
+                ...(Object.keys(billingObj).length > 0 ? { billing: billingObj } : {}),
                 metadata: {
                     bookingReference,
                     paymentType,

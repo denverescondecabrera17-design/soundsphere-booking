@@ -403,6 +403,8 @@ const login = async (req, res) => {
         const roleLower = (user.RoleName || '').toLowerCase();
         if (roleLower === 'administrator' || roleLower === 'admin') {
             redirectUrl = '/admin/dashboard.html';
+        } else if (roleLower === 'cashier') {
+            redirectUrl = '/cashier/dashboard.html';
         } else if (roleLower === 'serviceprovider' || roleLower === 'provider') {
             redirectUrl = '/provider/dashboard.html';
         }

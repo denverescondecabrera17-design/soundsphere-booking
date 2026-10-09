@@ -34,15 +34,29 @@ body.client-bookings-body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    width: 100%;
 }
 
 .bookings-main-container {
     width: 100%;
-    max-width: 100%;
-    margin: 32px 0;
-    padding: 0 40px;
+    max-width: 1200px;
+    margin: 32px auto;
+    padding: 0 16px;
     flex: 1;
     box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .bookings-main-container {
+        padding: 0 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .bookings-main-container {
+        padding: 0 32px;
+    }
 }
 
 .dashboard-header-title {
@@ -50,14 +64,15 @@ body.client-bookings-body {
 }
 
 .dashboard-header-title h1 {
-    font-size: 1.75rem;
+    font-size: 1.875rem;
     font-weight: 800;
     color: var(--navy-dark);
-    margin: 0 0 6px 0;
+    margin: 0 0 8px 0;
+    line-height: 1.25;
 }
 
 .dashboard-header-title p {
-    font-size: 0.96rem;
+    font-size: 1rem;
     color: var(--text-muted);
     margin: 0;
 }

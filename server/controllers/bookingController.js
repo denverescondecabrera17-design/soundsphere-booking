@@ -150,7 +150,7 @@ const checkAvailability = async (req, res) => {
 
 /**
  * GET /api/providers/:id/availability
- * Get all booked schedule slots for a provider (for calendar blackout)
+ * Get all booked schedule slots and capacity rules for a provider (for calendar blackout)
  */
 const getProviderAvailability = async (req, res) => {
     try {
@@ -159,16 +159,215 @@ const getProviderAvailability = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Valid Provider ID is required.' });
         }
 
-        const slots = await bookingModel.getProviderAvailabilitySlots(providerId);
+        const availData = await bookingModel.getProviderAvailabilitySlots(providerId);
 
         return res.status(200).json({
             success: true,
             providerId,
-            bookedSlots: slots
+            bookedSlots: availData.slots || [],
+            dateCapacities: availData.dateCapacities || [],
+            defaultMaxDailyBookings: availData.defaultMaxDailyBookings || 1
         });
     } catch (error) {
         console.error('Get Provider Availability Error:', error);
         return res.status(500).json({ success: false, message: 'Failed to retrieve provider availability.', error: error.message });
+    }
+};
+
+/**
+ * GET /api/providers/calendar/schedule
+ * Full calendar schedule, custom capacities, and booking details for provider dashboard
+ */
+const getProviderCalendarSchedule = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.query.userId || 13);
+        const data = await bookingModel.getProviderCalendarSchedule(userId);
+        return res.status(200).json({
+            success: true,
+            ...data
+        });
+    } catch (error) {
+        console.error('Get Provider Calendar Schedule Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load calendar schedule.', error: error.message });
+    }
+};
+
+/**
+ * PUT /api/providers/calendar/default-capacity
+ * Set Default Daily Booking Limit (e.g. 1, 2, 3...)
+ */
+const saveDefaultDailyCapacity = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
+        const { maxDailyBookings } = req.body;
+        if (!maxDailyBookings || parseInt(maxDailyBookings, 10) < 1) {
+            return res.status(400).json({ success: false, message: 'Max daily bookings must be at least 1.' });
+        }
+        const updated = await bookingModel.updateProviderDefaultCapacity(userId, maxDailyBookings);
+        return res.status(200).json({
+            success: true,
+            message: `Default daily booking limit updated to ${maxDailyBookings} booking(s) per day.`,
+            data: updated
+        });
+    } catch (error) {
+        console.error('Save Default Daily Capacity Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to update default daily capacity.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/providers/calendar/date-capacity
+ * Set Custom Capacity Override for a specific date (0 = Blocked, 1, 2, 3...)
+ */
+const saveDateCapacityOverride = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
+        const { specificDate, maxBookings, notes } = req.body;
+        if (!specificDate) {
+            return res.status(400).json({ success: false, message: 'Specific date (YYYY-MM-DD) is required.' });
+        }
+        if (maxBookings === undefined || maxBookings === null || parseInt(maxBookings, 10) < 0) {
+            return res.status(400).json({ success: false, message: 'Valid capacity (0 for blocked, or positive number) is required.' });
+        }
+        const result = await bookingModel.setProviderDateCapacity(userId, specificDate, maxBookings, notes);
+        return res.status(200).json({
+            success: true,
+            message: parseInt(maxBookings, 10) === 0 ? `Date ${specificDate} is now BLOCKED from bookings.` : `Capacity for ${specificDate} set to ${maxBookings} booking(s).`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Save Date Capacity Override Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to update date capacity.', error: error.message });
+    }
+};
+
+/**
+ * DELETE /api/providers/calendar/date-capacity/:date
+ * Remove Custom Capacity Override for a specific date (revert to default)
+ */
+const deleteDateCapacityOverride = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
+        const { date } = req.params;
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'Specific date is required.' });
+        }
+        await bookingModel.deleteProviderDateCapacity(userId, date);
+        return res.status(200).json({
+            success: true,
+            message: `Custom capacity override for ${date} removed. Date now uses default daily limit.`
+        });
+    } catch (error) {
+        console.error('Delete Date Capacity Override Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete date capacity override.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/providers/calendar/batch-capacity
+ * Set Custom Capacity for ALL dates, current month, date range, or weekend days
+ */
+const saveBatchDateCapacity = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
+        const { dates, startDate, endDate, month, year, maxBookings, notes, applyToMode, daysOfWeek } = req.body;
+
+        let targetDates = [];
+
+        if (Array.isArray(dates) && dates.length > 0) {
+            targetDates = dates;
+        } else if (applyToMode === 'month' && month !== undefined && year) {
+            const m = parseInt(month, 10);
+            const y = parseInt(year, 10);
+            const totalDays = new Date(y, m + 1, 0).getDate();
+            for (let d = 1; d <= totalDays; d++) {
+                const mm = String(m + 1).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                targetDates.push(`${y}-${mm}-${dd}`);
+            }
+        } else if (applyToMode === 'range' && startDate && endDate) {
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const y = curr.getFullYear();
+                const m = String(curr.getMonth() + 1).padStart(2, '0');
+                const d = String(curr.getDate()).padStart(2, '0');
+                targetDates.push(`${y}-${m}-${d}`);
+                curr.setDate(curr.getDate() + 1);
+            }
+        } else if (applyToMode === 'all_year' && year) {
+            const y = parseInt(year, 10);
+            for (let m = 1; m <= 12; m++) {
+                const totalDays = new Date(y, m, 0).getDate();
+                for (let d = 1; d <= totalDays; d++) {
+                    const mm = String(m).padStart(2, '0');
+                    const dd = String(d).padStart(2, '0');
+                    targetDates.push(`${y}-${mm}-${dd}`);
+                }
+            }
+        } else if (applyToMode === 'all_upcoming') {
+            const now = new Date();
+            const y = now.getFullYear();
+            const endY = y + 1;
+            let curr = new Date(y, now.getMonth(), now.getDate());
+            const end = new Date(endY, 11, 31);
+            while (curr <= end) {
+                const yr = curr.getFullYear();
+                const m = String(curr.getMonth() + 1).padStart(2, '0');
+                const d = String(curr.getDate()).padStart(2, '0');
+                targetDates.push(`${yr}-${m}-${d}`);
+                curr.setDate(curr.getDate() + 1);
+            }
+        }
+
+        // Optional filter by days of week
+        if (Array.isArray(daysOfWeek) && daysOfWeek.length > 0) {
+            targetDates = targetDates.filter(dStr => {
+                const parts = dStr.split('-');
+                const dayObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                return daysOfWeek.includes(dayObj.getDay());
+            });
+        }
+
+        if (targetDates.length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid dates selected for bulk capacity update.' });
+        }
+
+        const capacityVal = maxBookings !== undefined ? parseInt(maxBookings, 10) : 1;
+
+        const result = await bookingModel.setBatchProviderDateCapacity(userId, {
+            dates: targetDates,
+            maxBookings: capacityVal,
+            notes: notes || `Bulk capacity: ${capacityVal}`
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Custom capacity of ${capacityVal} booking(s) applied to all ${result.updatedCount} date(s) successfully!`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Save Batch Date Capacity Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to update batch capacity.', error: error.message });
+    }
+};
+
+/**
+ * DELETE /api/providers/calendar/batch-capacity
+ * Clear all specific date capacity overrides (reverts all dates to default)
+ */
+const clearBatchDateCapacity = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
+        const { month, year } = req.query;
+        await bookingModel.clearAllProviderDateCapacities(userId, { month, year });
+        return res.status(200).json({
+            success: true,
+            message: month && year ? `All custom date capacities for ${month}/${year} cleared.` : 'All custom date capacities cleared. All dates now use default daily limit.'
+        });
+    } catch (error) {
+        console.error('Clear Batch Date Capacity Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to clear custom capacities.', error: error.message });
     }
 };
 
@@ -187,6 +386,9 @@ const createBooking = async (req, res) => {
             bookingReference,
             packageId,
             providerId,
+            clientName,
+            clientPhone,
+            clientEmail,
             eventName,
             eventType,
             customEventType,
@@ -331,6 +533,9 @@ const createBooking = async (req, res) => {
         const bookingData = {
             bookingReference: bookingReference || null,
             clientUserId,
+            clientName: clientName || null,
+            clientPhone: clientPhone || null,
+            clientEmail: clientEmail || null,
             providerId: actualProviderId,
             packageId: targetPkg ? targetPkg.PackageID : (packageId ? parseInt(packageId, 10) : null),
             packageName: actualPackageName,
@@ -383,14 +588,16 @@ const createBooking = async (req, res) => {
         const refCode = newBooking.BookingReference;
 
         // NOTIFICATION CREATION
-        let clientName = 'A client';
+        let notifClientName = clientName || 'A client';
         let providerUserId = null;
 
         try {
-            const clientRes = await pool.request().input('UserID', sql.Int, clientUserId).query(`
-                SELECT ISNULL(NULLIF(c.FullName, ''), u.Email) AS Name FROM dbo.Users u LEFT JOIN dbo.Clients c ON u.UserID = c.UserID WHERE u.UserID = @UserID;
-            `);
-            if (clientRes.recordset && clientRes.recordset[0]) clientName = clientRes.recordset[0].Name;
+            if (!clientName) {
+                const clientRes = await pool.request().input('UserID', sql.Int, clientUserId).query(`
+                    SELECT ISNULL(NULLIF(c.FullName, ''), u.Email) AS Name FROM dbo.Users u LEFT JOIN dbo.Clients c ON u.UserID = c.UserID WHERE u.UserID = @UserID;
+                `);
+                if (clientRes.recordset && clientRes.recordset[0]) notifClientName = clientRes.recordset[0].Name;
+            }
 
             if (actualProviderId) {
                 const provRes = await pool.request().input('ProviderID', sql.Int, actualProviderId).query(`
@@ -567,23 +774,26 @@ const getPaymentsByBookingId = async (req, res) => {
 const submitReview = async (req, res) => {
     try {
         const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 8);
-        const { bookingId, providerId, rating, reviewText } = req.body;
+        const { bookingId, providerId, rating, reviewText, comment, review } = req.body;
 
-        if (!reviewText || !reviewText.trim()) {
+        const finalReviewText = (reviewText || comment || review || '').trim();
+        if (!finalReviewText) {
             return res.status(400).json({ success: false, message: 'Review text is required.' });
         }
 
-        let targetBookingId = bookingId ? parseInt(bookingId, 10) : null;
+        let targetBookingId = (bookingId || req.body.booking_id || req.body.BookingID) ? parseInt(bookingId || req.body.booking_id || req.body.BookingID, 10) : null;
+        let targetProviderId = (providerId || req.body.provider_id || req.body.ProviderID) ? parseInt(providerId || req.body.provider_id || req.body.ProviderID, 10) : null;
+        const targetRating = parseInt(rating || req.body.Rating || req.body.stars, 10) || 5;
 
-        // If no bookingId provided, attempt lookup of recent user booking with this provider
-        if (!targetBookingId && providerId) {
+        // If no bookingId provided, attempt lookup of recent client booking with this provider
+        if (!targetBookingId && targetProviderId) {
             try {
                 const { getPool } = require('../config/db');
                 const pool = getPool();
                 const bRes = await pool.request()
                     .input('UID', userId)
-                    .input('PID', parseInt(providerId, 10))
-                    .query(`SELECT TOP 1 BookingID FROM dbo.Bookings WHERE UserID = @UID AND (ProviderID = @PID OR ProviderUserID = @PID) ORDER BY BookingID DESC`);
+                    .input('PID', targetProviderId)
+                    .query(`SELECT TOP 1 BookingID FROM dbo.Bookings WHERE (ClientID = @UID) AND ProviderID = @PID ORDER BY BookingID DESC`);
                 if (bRes.recordset && bRes.recordset.length > 0) {
                     targetBookingId = bRes.recordset[0].BookingID;
                 }
@@ -595,9 +805,9 @@ const submitReview = async (req, res) => {
         const newReview = await bookingModel.createReview({
             bookingId: targetBookingId,
             userId,
-            providerId: providerId ? parseInt(providerId, 10) : null,
-            rating: parseInt(rating, 10) || 5,
-            reviewText: reviewText.trim()
+            providerId: targetProviderId,
+            rating: targetRating,
+            reviewText: finalReviewText
         });
 
         return res.status(201).json({ success: true, message: 'Review submitted successfully!', review: newReview });
@@ -613,7 +823,7 @@ const submitReview = async (req, res) => {
  */
 const createPayMongoCheckout = async (req, res) => {
     try {
-        const { amount, packageName, bookingReference, paymentType, paymentMethod, clientEmail, clientName } = req.body;
+        const { amount, packageName, bookingReference, paymentType, paymentMethod, clientEmail, clientName, clientPhone } = req.body;
         const originHost = `${req.protocol}://${req.get('host')}`;
 
         // Ensure official sequential booking reference is used
@@ -627,6 +837,7 @@ const createPayMongoCheckout = async (req, res) => {
             paymentMethod: paymentMethod || 'all',
             clientEmail: clientEmail || (req.user ? req.user.email : ''),
             clientName: clientName || '',
+            clientPhone: clientPhone || (req.user ? req.user.phone : ''),
             originHost
         });
 
@@ -639,11 +850,48 @@ const createPayMongoCheckout = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/bookings/:id/cancel
+ * Handles client booking cancellation within 3-hour limit
+ */
+const cancelBooking = async (req, res) => {
+    try {
+        const bookingId = parseInt(req.params.id, 10);
+        const clientUserId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || req.body.clientUserId);
+        const { reason } = req.body;
+
+        if (!bookingId || isNaN(bookingId)) {
+            return res.status(400).json({ success: false, message: 'Valid Booking ID is required.' });
+        }
+
+        const result = await bookingModel.cancelBookingByClient({
+            bookingId,
+            clientUserId,
+            reason
+        });
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Cancel Booking Controller Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process cancellation.', error: error.message });
+    }
+};
+
 module.exports = {
     getPackageById,
     getTransportationFees,
     checkAvailability,
     getProviderAvailability,
+    getProviderCalendarSchedule,
+    saveDefaultDailyCapacity,
+    saveDateCapacityOverride,
+    deleteDateCapacityOverride,
+    saveBatchDateCapacity,
+    clearBatchDateCapacity,
     createBooking,
     getBookingDetails,
     getMyBookings,
@@ -651,5 +899,6 @@ module.exports = {
     createPayment,
     getPaymentsByBookingId,
     submitReview,
-    createPayMongoCheckout
+    createPayMongoCheckout,
+    cancelBooking
 };

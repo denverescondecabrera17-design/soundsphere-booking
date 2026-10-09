@@ -294,78 +294,112 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? rawInclusions.map(s => String(s).trim()).filter(Boolean)
                 : String(rawInclusions).split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
 
-            const offerPhotos = Array.isArray(offer.images) ? offer.images : [];
-            let offerPhotoUrl = null;
-            if (offerPhotos.length > 0 && offerPhotos[0].url) {
-                const u = offerPhotos[0].url;
-                offerPhotoUrl = u.startsWith('/') || u.startsWith('http') ? u : `/${u}`;
-            }
+            const rawOfferPhotos = Array.isArray(offer.images) ? offer.images : (offer.images ? [offer.images] : []);
+            const photoUrls = rawOfferPhotos.map(img => {
+                const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
+                if (!raw) return '';
+                return (raw.startsWith('/') || raw.startsWith('http')) ? raw : `/${raw}`;
+            }).filter(Boolean);
+
+            const hasMultiplePhotos = photoUrls.length > 1;
+            const offerPhotoUrl = photoUrls.length > 0 ? photoUrls[0] : null;
+
+            if (!window.packagePhotosMap) window.packagePhotosMap = {};
+            window.packagePhotosMap[offer.PackageID] = photoUrls;
 
             const avatarSrc = offer.providerAvatar;
             const avatarHTML = avatarSrc ?
                 `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
                 `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
-                        return `
-                <div class="shopee-offer-card" data-id="${offer.providerId}" data-pkg-id="${offer.PackageID}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; box-shadow:0 3px 12px rgba(10,25,47,0.06); transition:all 0.25s ease; display:flex; flex-direction:column; justify-content:space-between; max-width:520px; width:100%; border-radius:16px;">
+                return `
+                <div class="shopee-offer-card" data-id="${offer.providerId}" data-pkg-id="${offer.PackageID}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(10,25,47,0.06); transition:all 0.25s ease; display:flex; flex-direction:column; justify-content:space-between; width:100%;">
                     <div>
-                        <!-- 1. Setup / Inclusion Photo (Click image to enlarge) -->
-                        <div class="offer-card-image-wrap" onclick="const img=this.querySelector('img'); if(img && img.src) window.openPhotoLightbox(img.src);" style="position:relative; height:240px; overflow:hidden; background:linear-gradient(135deg, #0a192f 0%, #1e3e62 100%); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Click photo to enlarge">
+                        <!-- 1. Setup / Inclusion Photo (Swipeable / Clickable Carousel) -->
+                        <div class="offer-card-image-wrap" 
+                             data-pkg-id="${offer.PackageID}" 
+                             data-photo-idx="0" 
+                             style="position:relative; height:180px; overflow:hidden; background:linear-gradient(135deg, #0a192f 0%, #1e3e62 100%); display:flex; align-items:center; justify-content:center; user-select:none; cursor:pointer;" 
+                             onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${offer.PackageID}'] && window.packagePhotosMap['${offer.PackageID}'].length > 1) { window.switchCardPhoto('${offer.PackageID}', 'next', event); } else { window.openCardGalleryLightbox('${offer.PackageID}', event); } }"
+                             title="${hasMultiplePhotos ? 'Click photo to swipe to next photo' : 'Click photo to enlarge'}">
                             ${offerPhotoUrl ? 
-                                `<img id="main-offer-img-${offer.PackageID}" src="${offerPhotoUrl}" alt="${offerTitle}" class="enlargeable-photo" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">` : 
-                                `<i class="fa-solid fa-sliders" style="font-size:3rem; color:rgba(255,255,255,0.2);"></i>`
+                                `<img id="main-offer-img-${offer.PackageID}" src="${offerPhotoUrl}" alt="${offerTitle}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">` : 
+                                `<i class="fa-solid fa-sliders" style="font-size:2.5rem; color:rgba(255,255,255,0.2);"></i>`
                             }
-                            <span style="position:absolute; top:12px; left:12px; background:rgba(37,99,235,0.95); color:#ffffff; padding:5px 14px; border-radius:16px; font-size:0.84rem; font-weight:800; text-transform:uppercase; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.25);">${category}</span>
-                            <span style="position:absolute; top:12px; right:12px; background:rgba(16,185,129,0.95); color:#ffffff; padding:5px 14px; border-radius:16px; font-size:0.84rem; font-weight:800; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.25);"><i class="fa-solid fa-circle-check"></i> Available</span>
-                            ${offerPhotoUrl ? `<span style="position:absolute; bottom:12px; right:12px; background:rgba(10,25,47,0.7); color:#ffffff; padding:4px 10px; border-radius:14px; font-size:0.75rem; font-weight:700; backdrop-filter:blur(4px); pointer-events:none;"><i class="fa-solid fa-magnifying-glass-plus"></i> Enlarge</span>` : ''}
+                            <span style="position:absolute; top:10px; left:10px; background:rgba(37,99,235,0.95); color:#ffffff; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; text-transform:uppercase; backdrop-filter:blur(4px); box-shadow:0 2px 4px rgba(0,0,0,0.2); pointer-events:none; z-index:2;">${category}</span>
+                            <span style="position:absolute; top:10px; right:10px; background:rgba(16,185,129,0.95); color:#ffffff; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; backdrop-filter:blur(4px); box-shadow:0 2px 4px rgba(0,0,0,0.2); pointer-events:none; z-index:2;"><i class="fa-solid fa-circle-check"></i> Available</span>
+
+                            ${hasMultiplePhotos ? `
+                                <!-- Left / Right Navigation Buttons -->
+                                <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${offer.PackageID}', 'prev', event);" title="Previous photo" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                    <i class="fa-solid fa-chevron-left" style="font-size:0.8rem;"></i>
+                                </button>
+                                <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${offer.PackageID}', 'next', event);" title="Next photo" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                    <i class="fa-solid fa-chevron-right" style="font-size:0.8rem;"></i>
+                                </button>
+
+                                <!-- Photo Counter Pill -->
+                                <span id="card-photo-counter-${offer.PackageID}" style="position:absolute; bottom:10px; left:10px; background:rgba(10,25,47,0.75); color:#ffffff; padding:2px 8px; border-radius:10px; font-size:0.6875rem; font-weight:800; backdrop-filter:blur(4px); pointer-events:none; border:1px solid rgba(255,255,255,0.2); z-index:2;">
+                                    1 / ${photoUrls.length}
+                                </span>
+                            ` : ''}
+
+                            ${offerPhotoUrl ? `
+                                <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${offer.PackageID}', event);" style="position:absolute; bottom:10px; right:10px; background:rgba(10,25,47,0.78); color:#ffffff; padding:3px 9px; border-radius:8px; font-size:0.6875rem; font-weight:700; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.2s; z-index:3;" title="Click to enlarge photo">
+                                    <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Enlarge
+                                </button>
+                            ` : ''}
                         </div>
 
-                        <!-- Mini Gallery Preview Thumbnails -->
-                        ${offerPhotos.length > 1 ? `
-                            <div style="display:flex; gap:6px; padding:8px 12px; background:#f8fafc; border-bottom:1px solid #e2e8f0; overflow-x:auto;">
-                                ${offerPhotos.slice(0, 4).map(img => {
-                                    const u = img.url.startsWith('/') || img.url.startsWith('http') ? img.url : `/${img.url}`;
-                                    return `<img src="${u}" class="enlargeable-photo" onclick="event.stopPropagation(); window.openPhotoLightbox('${u}');" style="width:44px; height:44px; border-radius:6px; object-fit:cover; border:1.5px solid #cbd5e1; cursor:pointer; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" title="Click to enlarge thumbnail">`;
-                                }).join('')}
+                        <!-- Mini Gallery Preview Thumbnails (Click to switch / swipe main photo) -->
+                        ${hasMultiplePhotos ? `
+                            <div id="card-thumbnails-row-${offer.PackageID}" style="display:flex; gap:6px; padding:6px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; overflow-x:auto;">
+                                ${photoUrls.map((u, pIdx) => `
+                                    <img src="${u}" class="card-thumb-item ${pIdx === 0 ? 'active' : ''}" 
+                                         data-pkg-id="${offer.PackageID}" 
+                                         data-idx="${pIdx}" 
+                                         onclick="event.stopPropagation(); window.switchCardPhoto('${offer.PackageID}', ${pIdx}, event);" 
+                                         style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s ease; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
+                                         onmouseover="this.style.opacity='1'; this.style.transform='scale(1.08)';" 
+                                         onmouseout="if(!this.classList.contains('active')) { this.style.opacity='0.65'; this.style.transform='scale(1)'; }" 
+                                         title="Photo ${pIdx + 1} - Click to switch">
+                                `).join('')}
                             </div>
                         ` : ''}
 
                         <!-- Card Content Body -->
-                        <div style="padding:22px 24px 16px 24px;">
+                        <div style="padding:16px 16px 8px 16px;">
                             <!-- 2. Service Offer Name (Clickable Title for Details Modal) -->
-                            <h3 onclick="window.openMarketplaceOfferModal ? window.openMarketplaceOfferModal('${offer.PackageID}', '${offer.providerId}') : window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="margin:0 0 10px 0; font-size:1.35rem; font-weight:800; color:#0a192f; line-height:1.35; min-height:2.7em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; transition:color 0.2s ease;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#0a192f'" title="Click to view offer details: ${offerTitle}">${offerTitle}</h3>
+                            <h3 onclick="window.openMarketplaceOfferModal ? window.openMarketplaceOfferModal('${offer.PackageID}', '${offer.providerId}') : window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="margin:0 0 8px 0; font-size:1.05rem; font-weight:800; color:#0a192f; line-height:1.35; min-height:2.7em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; transition:color 0.2s ease;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#0a192f'" title="Click to view offer details: ${offerTitle}">${offerTitle}</h3>
 
-                            <!-- 3. Price & 4. Rating -->
-                            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;">
-                                <div style="font-size:1.75rem; font-weight:900; color:#2563eb; letter-spacing:-0.5px;">
+                            <!-- 3. Price -->
+                            <div style="margin-bottom:10px;">
+                                <div style="font-size:1.25rem; font-weight:900; color:#2563eb; letter-spacing:-0.2px;">
                                     ₱${offerPrice.toLocaleString('en-US', {minimumFractionDigits: 2})} 
-                                    <span style="font-size:0.95rem; color:#475569; font-weight:600;">/ Event</span>
-                                </div>
-                                <div style="font-size:0.95rem; font-weight:800; color:#d97706; background:#fffbeb; padding:3px 8px; border-radius:10px; border:1px solid #fde68a;">
-                                    <i class="fa-solid fa-star"></i> 5.0
+                                    <span style="font-size:0.8125rem; color:#64748b; font-weight:600;">/ Event</span>
                                 </div>
                             </div>
 
                             <!-- 5. Short Description / Inclusions (Clickable for Details Modal) -->
-                            <div onclick="window.openMarketplaceOfferModal ? window.openMarketplaceOfferModal('${offer.PackageID}', '${offer.providerId}') : window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="margin-bottom:14px; background:#f8fafc; padding:12px 16px; border-radius:12px; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full inclusions list">
-                                <strong style="font-size:0.84rem; color:#334155; text-transform:uppercase; letter-spacing:0.6px; display:block; margin-bottom:6px; font-weight:800;">Inclusions:</strong>
-                                <ul style="list-style:none; padding:0; margin:0; font-size:0.98rem; color:#0f172a; display:flex; flex-direction:column; gap:4px;">
-                                    ${inclusionsArr.slice(0, 3).map(inc => `<li style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;"><i class="fa-solid fa-check" style="color:#059669; margin-right:8px; font-size:0.95rem; font-weight:900;"></i> ${inc}</li>`).join('')}
-                                    ${inclusionsArr.length > 3 ? `<li style="font-size:0.8rem; color:#475569; font-style:italic; font-weight:600; margin-top:2px;">+ ${inclusionsArr.length - 3} more included</li>` : ''}
+                            <div onclick="window.openMarketplaceOfferModal ? window.openMarketplaceOfferModal('${offer.PackageID}', '${offer.providerId}') : window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="margin-bottom:10px; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full inclusions list">
+                                <strong style="font-size:0.75rem; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px; font-weight:800;">Inclusions:</strong>
+                                <ul style="list-style:none; padding:0; margin:0; font-size:0.8125rem; color:#0f172a; display:flex; flex-direction:column; gap:3px;">
+                                    ${inclusionsArr.slice(0, 3).map(inc => `<li style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;"><i class="fa-solid fa-check" style="color:#059669; margin-right:6px; font-size:0.8125rem; font-weight:900;"></i> ${inc}</li>`).join('')}
+                                    ${inclusionsArr.length > 3 ? `<li style="font-size:0.75rem; color:#64748b; font-style:italic; font-weight:600; margin-top:2px;">+ ${inclusionsArr.length - 3} more included</li>` : ''}
                                 </ul>
                             </div>
 
                             <!-- 6. Provider Name & 7. Location (Clickable for Provider Profile) -->
-                            <div style="border-top:1px solid #e2e8f0; padding-top:12px; margin-top:10px;">
-                                <div style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}'" title="View Storefront Profile of ${offer.providerName}">
-                                    <div style="width:42px; height:42px; border-radius:50%; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.95rem; overflow:hidden; border:1.5px solid #93c5fd; flex-shrink:0;" onclick="event.stopPropagation(); const img = this.querySelector('img'); if (img && img.src) window.openPhotoLightbox(img.src); else window.location.href='/provider-detail.html?id=${offer.providerId}';">
+                            <div style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
+                                <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}'" title="View Storefront Profile of ${offer.providerName}">
+                                    <div style="width:32px; height:32px; border-radius:50%; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.875rem; overflow:hidden; border:1px solid #93c5fd; flex-shrink:0;" onclick="event.stopPropagation(); const img = this.querySelector('img'); if (img && img.src) window.openPhotoLightbox(img.src); else window.location.href='/provider-detail.html?id=${offer.providerId}';">
                                         ${avatarHTML}
                                     </div>
                                     <div style="overflow:hidden; flex:1;">
-                                        <a href="/provider-detail.html?id=${offer.providerId}" onclick="event.stopPropagation();" style="font-size:1.05rem; font-weight:800; color:#0a192f; text-decoration:none; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="Click to view ${offer.providerName} Profile">
-                                            ${offer.providerName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem; color:#2563eb; margin-left:4px;"></i>
+                                        <a href="/provider-detail.html?id=${offer.providerId}" onclick="event.stopPropagation();" style="font-size:0.875rem; font-weight:800; color:#0a192f; text-decoration:none; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="Click to view ${offer.providerName} Profile">
+                                            ${offer.providerName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.6875rem; color:#2563eb; margin-left:2px;"></i>
                                         </a>
-                                        <span style="font-size:0.98rem; color:#475569; font-weight:600; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
+                                        <span style="font-size:0.8125rem; color:#64748b; font-weight:500; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">
                                             <i class="fa-solid fa-location-dot" style="color:#ef4444; margin-right:4px;"></i> ${offer.coverageArea}
                                         </span>
                                     </div>
@@ -374,11 +408,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
 
-                    <!-- 9. Action Buttons -->
-                    <div style="padding:0 24px 24px 24px;">
-                        <div style="display:flex; gap:10px;">
-                            <button type="button" onclick="window.location.href='/client-messages.html?providerId=${offer.providerId}&providerName=${encodeURIComponent(offer.providerName)}'" style="flex:1; height:46px; border:1.5px solid #93c5fd; border-radius:10px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:1.0rem; cursor:pointer; transition:all 0.2s ease;" title="Message Provider"><i class="fa-solid fa-comment-dots"></i> Chat</button>
-                            <button type="button" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="flex:1.2; height:46px; border:none; border-radius:10px; background:#2563eb; color:#ffffff; font-weight:700; font-size:1.0rem; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,0.25); transition:all 0.2s ease;" title="Book Offer">Book Now</button>
+                    <!-- 9. Action Buttons (Standard 40px Touch Height) -->
+                    <div style="padding:0 16px 16px 16px;">
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" onclick="window.location.href='/client-messages.html?providerId=${offer.providerId}&providerName=${encodeURIComponent(offer.providerName)}'" style="flex:1; height:40px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.875rem; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Message Provider"><i class="fa-solid fa-comment-dots"></i> Chat</button>
+                            <button type="button" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">Book Now</button>
                         </div>
                     </div>
                 </div>
@@ -666,8 +700,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const bookings = data.bookings;
 
-            // Status Count Tracking
-            const counts = { pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+            // Helper for 12-hour AM/PM formatting
+            const formatDisplayTime = (timeStr) => {
+                if (!timeStr) return '06:00 PM';
+                if (/AM|PM/i.test(timeStr)) return timeStr;
+                const parts = String(timeStr).split(':');
+                if (parts.length < 2) return timeStr;
+                let hours = parseInt(parts[0], 10);
+                const minutes = parts[1].padStart(2, '0');
+                if (isNaN(hours)) return timeStr;
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                return `${hours}:${minutes} ${ampm}`;
+            };
+
+            // Status Count Tracking (All, Confirmed, Pending, Completed, Cancelled)
+            const counts = { all: bookings.length, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
             bookings.forEach(b => {
                 const st = (b.BookingStatus || 'Confirmed').toLowerCase().trim();
                 if (counts[st] !== undefined) {
@@ -677,10 +726,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Update subtab count badges in DOM (Pending (N), Confirmed (N), Completed (N), Cancelled (N))
+            // Update subtab count badges in DOM (All (N), Confirmed (N), Pending (N), Completed (N), Cancelled (N))
             document.querySelectorAll('.booking-status-filter-btn[data-status]').forEach(btn => {
                 const statusKey = (btn.getAttribute('data-status') || '').toLowerCase().trim();
-                const count = counts[statusKey] !== undefined ? counts[statusKey] : 0;
+                const count = counts[statusKey] !== undefined ? counts[statusKey] : (statusKey === 'all' ? bookings.length : 0);
                 const capitalized = statusKey.charAt(0).toUpperCase() + statusKey.slice(1);
                 btn.textContent = `${capitalized} (${count})`;
             });
@@ -702,47 +751,144 @@ document.addEventListener('DOMContentLoaded', () => {
                         const eDate = b.ServiceEndDate || b.EventDate || sDate;
                         const hireDays = b.ServiceHireDays || b.NumberOfDays || 1;
                         const dateText = (sDate === eDate) ? sDate : `${sDate} to ${eDate}`;
+                        let clientName = b.ClientName;
+                        if (Array.isArray(clientName)) clientName = clientName[0];
+                        if (!clientName || clientName === 'null') {
+                            clientName = (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
+                        }
+
+                        // 3-Hour Cancellation Calculation
+                        const createdAtRaw = b.CreatedAt;
+                        const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : Date.now();
+                        const nowMs = Date.now();
+                        const elapsedMinutes = Math.max(0, (nowMs - createdAtMs) / (1000 * 60));
+                        const maxAllowedMinutes = 180; // 3 hours
+                        const isWithin3Hours = elapsedMinutes <= maxAllowedMinutes;
+                        const remainingMinutes = Math.max(0, Math.floor(maxAllowedMinutes - elapsedMinutes));
+                        const remHours = Math.floor(remainingMinutes / 60);
+                        const remMins = remainingMinutes % 60;
+                        const timeRemainingText = remHours > 0 ? `${remHours}h ${remMins}m left` : `${remMins}m left`;
+
+                        let cancelBtnHtml = '';
+                        if (statusLower === 'cancelled' || statusLower === 'rejected') {
+                            cancelBtnHtml = `
+                                <span style="padding:10px 18px; font-size:0.88rem; font-weight:800; border-radius:10px; background:#fee2e2; color:#ef4444; display:inline-flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-ban"></i> Cancelled
+                                </span>
+                            `;
+                        } else if (statusLower === 'completed') {
+                            cancelBtnHtml = '';
+                        } else if (isWithin3Hours) {
+                            cancelBtnHtml = `
+                                <button type="button" class="btn-cancel-marketplace-booking" data-id="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" data-booking-id="${b.BookingID}" data-time-remaining="${timeRemainingText}" style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #fecdd3; background:#fff1f2; color:#be123c; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;" title="You have ${timeRemainingText} left to cancel this booking">
+                                    <i class="fa-solid fa-ban" style="color:#e11d48;"></i> Cancel Booking
+                                </button>
+                            `;
+                        } else {
+                            cancelBtnHtml = `
+                                <button type="button" disabled style="padding:10px 18px; font-size:0.95rem; font-weight:700; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#94a3b8; cursor:not-allowed; opacity:0.6; display:inline-flex; align-items:center; gap:8px;" title="Cancellation window closed. Bookings can only be cancelled within 3 hours of reservation.">
+                                    <i class="fa-solid fa-lock" style="color:#94a3b8;"></i> Cancel Closed (>3h)
+                                </button>
+                            `;
+                        }
 
                         let statusBadgeClass = 'status-confirmed';
                         if (statusLower === 'pending') statusBadgeClass = 'status-pending';
                         else if (statusLower === 'completed') statusBadgeClass = 'status-completed';
                         else if (statusLower === 'cancelled' || statusLower === 'rejected') statusBadgeClass = 'status-cancelled';
 
+                        const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
+                        const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
+                        const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
+                        const isDownpayment = (b.PaymentType === 'downpayment' || remainingBalVal > 0);
+
+                        const formattedStart = formatDisplayTime(b.StartTime);
+                        const formattedEnd = formatDisplayTime(b.EndTime);
+
                         return `
                             <div class="booking-item-card" data-booking-status="${statusLower}" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:24px 28px; margin-bottom:20px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:14px;">
-                                    <div style="display:flex; align-items:center; gap:12px;">
-                                        <span style="font-size:1.1rem; font-weight:900; color:#0a192f;"><i class="fa-solid fa-receipt" style="color:#2563eb;"></i> Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}</span>
+                                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                        <span style="font-size:1.1rem; font-weight:900; color:#0a192f;">Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}</span>
                                         <span style="font-size:0.88rem; color:#64748b; font-weight:600;">Booked on ${new Date(b.CreatedAt).toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'})}</span>
+                                        <span style="font-size:0.88rem; color:#1e293b; font-weight:700; background:#f1f5f9; padding:3px 10px; border-radius:6px;">Booked by: <strong>${clientName}</strong></span>
+                                        ${b.EventType ? `<span style="font-size:0.82rem; color:#2563eb; font-weight:800; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px;">${b.EventType}</span>` : ''}
                                     </div>
                                     <span class="status-badge ${statusBadgeClass}" style="padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.95rem;">${statusStr}</span>
                                 </div>
 
-                                <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
-                                    <img src="${b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:70px; height:70px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
-                                    <div style="flex:1; min-width:240px;">
+                                <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+                                    <img src="${b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
+                                    <div style="flex:1; min-width:260px;">
                                         <h4 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
-                                        <div style="font-size:1rem; font-weight:700; color:#2563eb; margin-bottom:6px;"><i class="fa-solid fa-store"></i> ${b.ProviderName || 'Sound & Lights Provider'}</div>
-                                        <div style="font-size:0.95rem; color:#475569; font-weight:600; display:flex; flex-wrap:wrap; gap:16px;">
-                                            <span><i class="fa-solid fa-calendar-day" style="color:#0284c7;"></i> ${dateText} (${hireDays} Day${hireDays > 1 ? 's' : ''})</span>
-                                            <span><i class="fa-solid fa-clock" style="color:#d97706;"></i> ${b.StartTime || '06:00 PM'} – ${b.EndTime || '10:00 PM'}</span>
-                                            <span><i class="fa-solid fa-location-dot" style="color:#10b981;"></i> ${b.VenueName ? b.VenueName + ' (' + (b.EventPlace || 'Batangas') + ')' : (b.EventAddress || b.EventPlace || 'Batangas')}</span>
+                                        <div style="font-size:1rem; font-weight:700; color:#2563eb; margin-bottom:10px;">${b.ProviderName || 'Sound & Lights Provider'}</div>
+                                        
+                                        <div style="font-size:0.92rem; color:#334155; font-weight:600; display:flex; flex-direction:column; gap:8px;">
+                                            <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                                                <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
+                                                <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
+                                                <span>Start Time: <strong style="color:#0f172a;">${formattedStart}</strong></span>
+                                            </div>
+                                            
+                                            <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                                                <span>Venue: <strong style="color:#0f172a;">${b.VenueName || 'Private Event Venue'}</strong></span>
+                                                <span>Location: <strong style="color:#0f172a;">${b.EventAddress || (b.EventPlace ? b.EventPlace + ', Batangas' : 'Batangas')}</strong></span>
+                                            </div>
+
+                                            ${b.EventName && b.EventName !== 'Event Service Booking' && b.EventName !== b.PackageName ? `
+                                            <div>
+                                                <span>Event Title: <strong style="color:#0f172a;">${b.EventName}</strong></span>
+                                            </div>` : ''}
+
+                                            ${b.LocationNotes ? `
+                                            <div style="background:#f8fafc; border-left:3px solid #64748b; padding:4px 10px; border-radius:4px; font-size:0.85rem; color:#475569;">
+                                                <strong>Client Note:</strong> ${b.LocationNotes}
+                                            </div>` : ''}
                                         </div>
                                     </div>
-                                    <div style="text-align:right; min-width:160px; display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+
+                                    <div style="text-align:right; min-width:200px; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                                         <div style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase;">Total Amount</div>
-                                        <div style="font-size:1.6rem; font-weight:900; color:#2563eb;">₱${parseFloat(b.TotalAmount || b.PackagePrice || 0).toLocaleString()}</div>
-                                        <span style="font-size:0.82rem; font-weight:800; background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:6px; display:inline-block;"><i class="fa-solid fa-lock"></i> ${b.PaymentStatus || 'Paid'} (${b.PaymentType === 'downpayment' ? '50% Deposit' : '100% Full'})</span>
+                                        <div style="font-size:1.65rem; font-weight:900; color:#2563eb;">₱${totalAmountVal.toLocaleString()}</div>
+                                        
+                                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                                            <span style="font-size:0.84rem; font-weight:800; background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #a7f3d0;">
+                                                Paid: ₱${amountPaidVal.toLocaleString()} (${isDownpayment ? '50% Deposit' : '100% Full'})
+                                            </span>
+                                            
+                                            ${remainingBalVal > 0 ? `
+                                            <span style="font-size:0.82rem; font-weight:800; background:#fff1f2; color:#be123c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #fecdd3;">
+                                                Balance: ₱${remainingBalVal.toLocaleString()} (Due on event)
+                                            </span>` : ''}
+                                        </div>
+
+                                        <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-align:right; margin-top:2px;">
+                                            Package: ₱${parseFloat(b.PackagePrice || 0).toLocaleString()} | Transpo: ₱${parseFloat(b.TransportationFee || 0).toLocaleString()}${b.DistanceKm ? ` (${b.DistanceKm}km)` : ''}${b.AdditionalDayCharges > 0 ? ` | Extra: ₱${parseFloat(b.AdditionalDayCharges).toLocaleString()}` : ''}
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
-                                    <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
-                                        <i class="fa-solid fa-file-invoice"></i> View Official Receipt
-                                    </a>
-                                    <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
-                                        <i class="fa-solid fa-comments"></i> Chat Provider
-                                    </a>
+                                    ${statusLower === 'completed' ? `
+                                        <button type="button" class="btn-card-rate-review" onclick="window.handleRateButtonClick(this)"
+                                            data-booking-id="${b.BookingID}"
+                                            data-provider-id="${b.ProviderID || ''}"
+                                            data-provider-name="${encodeURIComponent(b.ProviderName || 'Provider')}"
+                                            data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                            data-existing-rating="${b.Rating || ''}"
+                                            data-existing-review="${encodeURIComponent(b.ReviewText || '')}"
+                                            style="padding:10px 24px; font-size:0.95rem; font-weight:800; border:1.5px solid #cbd5e1; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#ffffff; color:#0a192f; box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.2s ease;">
+                                            <i class="fa-solid fa-star" style="color:#f59e0b;"></i> ${b.ReviewID ? `Rated (${b.Rating}★)` : 'To Rate'}
+                                        </button>
+                                    ` : `
+                                        <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
+                                            <i class="fa-solid fa-file-invoice"></i> View Official Receipt
+                                        </a>
+                                        ${cancelBtnHtml}
+                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
+                                            <i class="fa-solid fa-comments"></i> Chat Provider
+                                        </a>
+                                    `}
                                 </div>
                             </div>
                         `;
@@ -750,23 +896,122 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     myBookingsContainer.innerHTML = cardsHtml;
 
-                    // Active status pill filter execution
-                    const activeStatusBtn = document.querySelector('.booking-status-filter-btn.active');
-                    if (activeStatusBtn) {
-                        const targetSt = (activeStatusBtn.getAttribute('data-status') || '').toLowerCase();
-                        let matchCount = 0;
-                        document.querySelectorAll('#my-bookings-cards-container .booking-item-card[data-booking-status]').forEach(card => {
-                            const st = card.getAttribute('data-booking-status');
-                            if (st === targetSt) {
-                                card.style.display = 'flex';
-                                matchCount++;
-                            } else {
-                                card.style.display = 'none';
+                    // Attach Cancel Booking click listeners
+                    const cancelModal = document.getElementById('marketplace-cancel-modal');
+                    const cancelRefSpan = document.getElementById('marketplace-cancel-booking-ref');
+                    const cancelTimerSpan = document.getElementById('marketplace-cancel-timer-text');
+                    const cancelForm = document.getElementById('marketplace-cancel-form');
+
+                    document.querySelectorAll('.btn-cancel-marketplace-booking').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const bRef = btn.getAttribute('data-id');
+                            const bId = btn.getAttribute('data-booking-id');
+                            const timeRem = btn.getAttribute('data-time-remaining') || '3 hours';
+
+                            if (cancelForm) {
+                                cancelForm.dataset.bookingId = bId;
+                                cancelForm.dataset.bookingRef = bRef;
+                            }
+                            if (cancelRefSpan) cancelRefSpan.textContent = bRef;
+                            if (cancelTimerSpan) cancelTimerSpan.textContent = `${timeRem} left to cancel (3-hour limit)`;
+                            if (cancelModal) cancelModal.classList.remove('hidden');
+                        });
+                    });
+
+                    // Cancel Modal Close Buttons
+                    document.querySelectorAll('.btn-close-marketplace-cancel').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            if (cancelModal) cancelModal.classList.add('hidden');
+                        });
+                    });
+
+                    // Cancel Form Submit Handler
+                    if (cancelForm && !cancelForm.dataset.initialized) {
+                        cancelForm.dataset.initialized = 'true';
+                        cancelForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            const bookingId = cancelForm.dataset.bookingId;
+                            const bookingRef = cancelForm.dataset.bookingRef;
+
+                            if (!bookingId) {
+                                showToast('⚠️ No booking selected.', 'warning');
+                                return;
+                            }
+
+                            const reason = document.getElementById('marketplace-cancel-reason')?.value;
+                            const notes = document.getElementById('marketplace-cancel-notes')?.value ? document.getElementById('marketplace-cancel-notes').value.trim() : '';
+                            const fullReason = notes ? `${reason} - ${notes}` : reason;
+                            const submitBtn = document.getElementById('btn-submit-marketplace-cancel');
+
+                            if (!reason) {
+                                showToast('⚠️ Please select a cancellation reason.', 'warning');
+                                return;
+                            }
+
+                            try {
+                                if (submitBtn) {
+                                    submitBtn.disabled = true;
+                                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+                                }
+
+                                const headers = { 'Content-Type': 'application/json' };
+                                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                                const res = await fetch(`/api/bookings/${bookingId}/cancel`, {
+                                    method: 'POST',
+                                    headers,
+                                    body: JSON.stringify({
+                                        userId: user?.userId || user?.id,
+                                        reason: fullReason
+                                    })
+                                    });
+
+                                const data = await res.json();
+                                if (res.ok && data.success) {
+                                    showToast(`✓ Booking ${bookingRef || bookingId} successfully cancelled!`, 'success');
+                                    if (cancelModal) cancelModal.classList.add('hidden');
+                                    cancelForm.reset();
+                                    delete cancelForm.dataset.bookingId;
+                                    delete cancelForm.dataset.bookingRef;
+                                    if (typeof window.fetchUserBookings === 'function') {
+                                        window.fetchUserBookings();
+                                    }
+                                } else {
+                                    showToast(`⚠️ ${data.message || 'Failed to cancel booking.'}`, 'error');
+                                    if (data.expired) {
+                                        if (cancelModal) cancelModal.classList.add('hidden');
+                                        if (typeof window.fetchUserBookings === 'function') {
+                                            window.fetchUserBookings();
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                console.error('Cancel booking error:', err);
+                                showToast('Network error while cancelling booking.', 'error');
+                            } finally {
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Confirm Cancellation';
+                                }
                             }
                         });
-                        if (emptyMsg) {
-                            emptyMsg.style.display = matchCount === 0 ? 'block' : 'none';
+                    }
+
+                    // Active status pill filter execution
+                    const activeStatusBtn = document.querySelector('.booking-status-filter-btn.active');
+                    const targetSt = activeStatusBtn ? (activeStatusBtn.getAttribute('data-status') || 'all').toLowerCase() : 'all';
+                    let matchCount = 0;
+                    document.querySelectorAll('#my-bookings-cards-container .booking-item-card[data-booking-status]').forEach(card => {
+                        const st = card.getAttribute('data-booking-status');
+                        if (targetSt === 'all' || st === targetSt) {
+                            card.style.display = 'flex';
+                            matchCount++;
+                        } else {
+                            card.style.display = 'none';
                         }
+                    });
+                    if (emptyMsg) {
+                        emptyMsg.style.display = matchCount === 0 ? 'block' : 'none';
                     }
                 }
             }
@@ -785,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const dateText = (sDate === eDate) ? sDate : `${sDate} to ${eDate}`;
                         const providerName = b.ProviderName || b.BusinessName || 'CHICha Lights and Sounds';
                         const bookedOn = b.CreatedAt ? new Date(b.CreatedAt).toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}) : 'Recently';
+                        const clientName = b.ClientName || (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
 
                         let statusBadgeClass = 'status-completed';
                         let badgeBg = '#ecfdf5';
@@ -803,16 +1049,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="booking-history-card" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:24px 28px; margin-bottom:20px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:18px; width:100%; box-sizing:border-box;">
                                 <!-- Top Bar: Reference & Status -->
                                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:14px;">
-                                    <div style="display:flex; align-items:center; gap:12px;">
+                                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                         <span style="font-size:1.15rem; font-weight:900; color:#0a192f;">
-                                            <i class="fa-solid fa-receipt" style="color:#2563eb;"></i> Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID || 1).padStart(5, '0')}`}
+                                            Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID || 1).padStart(5, '0')}`}
                                         </span>
                                         <span style="font-size:0.98rem; color:#64748b; font-weight:600;">
                                             Booked on ${bookedOn}
                                         </span>
+                                        <span style="font-size:0.88rem; color:#1e293b; font-weight:700; background:#f1f5f9; padding:3px 10px; border-radius:6px;">
+                                            Booked by: <strong>${clientName}</strong>
+                                        </span>
                                     </div>
-                                    <span class="status-badge ${statusBadgeClass}" style="padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.95rem; background:${badgeBg}; color:${badgeColor}; display:inline-flex; align-items:center; gap:6px;">
-                                        <i class="fa-solid ${iconClass}"></i> ${statusStr}
+                                    <span class="status-badge ${statusBadgeClass}" style="padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.95rem; background:${badgeBg}; color:${badgeColor}; display:inline-flex; align-items:center;">
+                                        ${statusStr}
                                     </span>
                                 </div>
 
@@ -822,19 +1071,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div style="flex:1; min-width:260px;">
                                         <h4 style="margin:0 0 6px 0; font-size:1.35rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
                                         <div style="font-size:1.05rem; font-weight:700; color:#2563eb; margin-bottom:8px;">
-                                            <i class="fa-solid fa-store"></i> ${providerName}
+                                            ${providerName}
                                         </div>
                                         <div style="font-size:0.95rem; color:#475569; font-weight:600; display:flex; flex-wrap:wrap; gap:18px;">
-                                            <span><i class="fa-solid fa-calendar-day" style="color:#0284c7;"></i> ${dateText} (${hireDays} Day${hireDays > 1 ? 's' : ''})</span>
-                                            <span><i class="fa-solid fa-clock" style="color:#d97706;"></i> ${b.StartTime || '06:00 PM'} – ${b.EndTime || '10:00 PM'}</span>
-                                            <span><i class="fa-solid fa-location-dot" style="color:#10b981;"></i> ${b.VenueName ? b.VenueName + ' (' + (b.EventPlace || 'Batangas') + ')' : (b.EventAddress || b.EventPlace || 'Batangas')}</span>
+                                            <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
+                                            <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
+                                            <span>Start Time: <strong style="color:#0f172a;">${b.StartTime || '08:00 AM'}</strong></span>
+                                            <span>Venue: <strong style="color:#0f172a;">${b.VenueName || 'Private Event Venue'}</strong></span>
+                                            <span>Location: <strong style="color:#0f172a;">${b.EventAddress || (b.EventPlace ? b.EventPlace + ', Batangas' : 'Batangas')}</strong></span>
                                         </div>
                                     </div>
                                     <div style="text-align:right; min-width:180px; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                                         <div style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Amount</div>
                                         <div style="font-size:1.8rem; font-weight:900; color:#2563eb;">₱${parseFloat(b.TotalAmount || b.PackagePrice || 0).toLocaleString()}</div>
                                         <span style="font-size:0.85rem; font-weight:800; background:#ecfdf5; color:#047857; padding:5px 12px; border-radius:6px; display:inline-block;">
-                                            <i class="fa-solid fa-lock"></i> ${b.PaymentStatus || 'Paid'} (${b.PaymentType === 'downpayment' ? '50% Deposit' : '100% Full'})
+                                            ${b.PaymentStatus || 'Paid'} (${b.PaymentType === 'downpayment' ? '50% Deposit' : '100% Full'})
                                         </span>
                                     </div>
                                 </div>
@@ -867,18 +1118,147 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span>Expand Breakdown</span> <i class="fa-solid fa-chevron-down"></i>
                                     </button>
                                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                                        <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#f1f5f9; color:#0a192f; border:1.5px solid #cbd5e1;">
-                                            <i class="fa-solid fa-file-invoice"></i> View Official Receipt
-                                        </a>
-                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(providerName)}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#2563eb; color:#ffffff;">
-                                            <i class="fa-solid fa-comments"></i> Chat Provider
-                                        </a>
-
+                                        ${statusLower === 'completed' ? `
+                                            <button type="button" class="btn-card-rate-review" onclick="window.handleRateButtonClick(this)"
+                                                data-booking-id="${b.BookingID}"
+                                                data-provider-id="${b.ProviderID || ''}"
+                                                data-provider-name="${encodeURIComponent(b.ProviderName || providerName || 'Provider')}"
+                                                data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                                data-existing-rating="${b.Rating || ''}"
+                                                data-existing-review="${encodeURIComponent(b.ReviewText || '')}"
+                                                style="padding:10px 24px; font-size:0.95rem; font-weight:800; border:1.5px solid #cbd5e1; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#ffffff; color:#0a192f; box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.2s ease;">
+                                                <i class="fa-solid fa-star" style="color:#f59e0b;"></i> ${b.ReviewID ? `Rated (${b.Rating}★)` : 'To Rate'}
+                                            </button>
+                                        ` : `
+                                            <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#f1f5f9; color:#0a192f; border:1.5px solid #cbd5e1;">
+                                                <i class="fa-solid fa-file-invoice"></i> View Official Receipt
+                                            </a>
+                                            <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(providerName)}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#2563eb; color:#ffffff;">
+                                                <i class="fa-solid fa-comments"></i> Chat Provider
+                                            </a>
+                                        `}
                                     </div>
                                 </div>
                             </div>
                         `;
                     }).join('');
+                }
+            }
+
+            // Populate Payment Balances tab (#payment-balances-cards-container)
+            const balancesContainer = document.getElementById('payment-balances-cards-container');
+            const totalDueAmountEl = document.getElementById('balances-total-due-amount');
+
+            if (balancesContainer) {
+                const dueBookings = bookings.filter(b => {
+                    const statusLower = (b.BookingStatus || '').toLowerCase();
+                    if (statusLower === 'cancelled' || statusLower === 'rejected') return false;
+                    const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
+                    const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
+                    const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
+                    return remainingBalVal > 0;
+                });
+
+                let sumOutstandingDue = 0;
+
+                if (dueBookings.length > 0) {
+                    balancesContainer.innerHTML = dueBookings.map(b => {
+                        const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
+                        const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
+                        const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
+                        sumOutstandingDue += remainingBalVal;
+
+                        const sDate = b.ServiceStartDate || b.EventDate || 'N/A';
+                        const eDate = b.ServiceEndDate || b.EventDate || sDate;
+                        const dateText = (sDate === eDate) ? sDate : `${sDate} to ${eDate}`;
+                        const formattedStart = formatDisplayTime(b.StartTime);
+                        let clientName = b.ClientName;
+                        if (Array.isArray(clientName)) clientName = clientName[0];
+                        if (!clientName || clientName === 'null') {
+                            clientName = (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
+                        }
+
+                        return `
+                            <div class="booking-balance-card" style="background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #e11d48; border-radius:18px; padding:24px 28px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:14px;">
+                                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                        <span style="font-size:1.1rem; font-weight:900; color:#0a192f;">Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}</span>
+                                        <span style="font-size:0.88rem; color:#64748b; font-weight:600;">Booked on ${new Date(b.CreatedAt).toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'})}</span>
+                                        <span style="font-size:0.88rem; color:#1e293b; font-weight:700; background:#f1f5f9; padding:3px 10px; border-radius:6px;">Booked by: <strong>${clientName}</strong></span>
+                                        ${b.EventType ? `<span style="font-size:0.82rem; color:#2563eb; font-weight:800; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px;">${b.EventType}</span>` : ''}
+                                    </div>
+                                    <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.9rem;">
+                                        Partial Payment (50% Downpayment)
+                                    </span>
+                                </div>
+
+                                <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+                                    <img src="${b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
+                                    <div style="flex:1; min-width:260px;">
+                                        <h4 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
+                                        <div style="font-size:1rem; font-weight:700; color:#2563eb; margin-bottom:10px;">${b.ProviderName || 'Sound & Lights Provider'}</div>
+                                        
+                                        <div style="font-size:0.92rem; color:#334155; font-weight:600; display:flex; flex-direction:column; gap:8px;">
+                                            <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                                                <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
+                                                <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
+                                                <span>Start Time: <strong style="color:#0f172a;">${formattedStart}</strong></span>
+                                            </div>
+                                            <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                                                <span>Venue: <strong style="color:#0f172a;">${b.VenueName || 'Private Event Venue'}</strong></span>
+                                                <span>Location: <strong style="color:#0f172a;">${b.EventAddress || (b.EventPlace ? b.EventPlace + ', Batangas' : 'Batangas')}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Due and Financial Breakdown Box -->
+                                    <div style="text-align:right; min-width:230px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; background:#f8fafc; border:1px solid #e2e8f0; padding:16px 20px; border-radius:14px;">
+                                        <div style="display:flex; justify-content:space-between; width:100%; gap:16px;">
+                                            <span style="font-size:0.85rem; font-weight:700; color:#64748b;">Total Package & Transpo:</span>
+                                            <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">₱${totalAmountVal.toLocaleString()}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; width:100%; gap:16px;">
+                                            <span style="font-size:0.85rem; font-weight:700; color:#059669;">Initial Deposit Paid:</span>
+                                            <span style="font-size:0.95rem; font-weight:800; color:#059669;">-₱${amountPaidVal.toLocaleString()}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; width:100%; gap:16px; border-top:1.5px dashed #cbd5e1; padding-top:8px;">
+                                            <span style="font-size:0.9rem; font-weight:800; color:#be123c;">Remaining Due:</span>
+                                            <span style="font-size:1.45rem; font-weight:900; color:#e11d48;">₱${remainingBalVal.toLocaleString()}</span>
+                                        </div>
+                                        <div style="font-size:0.8rem; font-weight:700; color:#475569; background:#fff1f2; border-radius:6px; padding:4px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fecdd3;">
+                                            Due Date: <strong>${dateText}</strong> (On event day)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
+                                    <button type="button" class="btn-pay-balance-due btn-card-primary" 
+                                            data-booking-id="${b.BookingID}" 
+                                            data-booking-ref="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" 
+                                            data-amount="${remainingBalVal}" 
+                                            data-pkg-name="${encodeURIComponent(b.PackageName || 'Event Service Package')}" 
+                                            data-client-name="${encodeURIComponent(clientName)}"
+                                            data-client-email="${encodeURIComponent(b.ClientEmail || user?.email || '')}"
+                                            data-client-phone="${encodeURIComponent(b.ClientPhone || user?.phone || '')}"
+                                            style="padding:12px 28px; font-size:1rem; font-weight:800; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                                        <i class="fa-solid fa-credit-card"></i> Pay Remaining Balance (₱${remainingBalVal.toLocaleString()})
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    balancesContainer.innerHTML = `
+                        <div id="payment-balances-empty-msg" style="text-align:center; padding:48px 24px; background:#ffffff; border-radius:14px; border:1px solid #cbd5e1; box-shadow:0 2px 8px rgba(10,25,47,0.04);">
+                            <i class="fa-solid fa-circle-check" style="font-size:2.5rem; color:#10b981; margin-bottom:12px; display:block;"></i>
+                            <h3 style="color:#0a192f; margin:0 0 6px 0; font-size:1.15rem; font-weight:800;">No outstanding balances!</h3>
+                            <p style="color:#64748b; font-size:0.88rem; font-weight:500; margin:0;">All your bookings are fully settled. Any future bookings with a 50% downpayment will show their remaining balance here.</p>
+                        </div>
+                    `;
+                }
+
+                if (totalDueAmountEl) {
+                    totalDueAmountEl.textContent = `₱${sumOutstandingDue.toLocaleString()}`;
                 }
             }
         } catch (err) {
@@ -889,7 +1269,71 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderMyBookingsCards = window.fetchUserBookings;
 
     // 4. GLOBAL DELEGATED EVENT LISTENER FOR ALL CLICK INTERACTIONS
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
+        // -1. Pay Remaining Balance Button -> Direct to PayMongo Test Payment
+        const payBalanceBtn = e.target.closest('.btn-pay-balance-due');
+        if (payBalanceBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const bookingId = payBalanceBtn.getAttribute('data-booking-id');
+            const bookingRef = payBalanceBtn.getAttribute('data-booking-ref');
+            const amount = parseFloat(payBalanceBtn.getAttribute('data-amount') || 0);
+            const pkgName = decodeURIComponent(payBalanceBtn.getAttribute('data-pkg-name') || 'Event Package');
+            const clientName = decodeURIComponent(payBalanceBtn.getAttribute('data-client-name') || '');
+            const clientEmail = decodeURIComponent(payBalanceBtn.getAttribute('data-client-email') || '');
+            const clientPhone = decodeURIComponent(payBalanceBtn.getAttribute('data-client-phone') || '');
+
+            if (!amount || amount <= 0) {
+                if (typeof showToast === 'function') showToast('No outstanding balance due for this booking.', 'info');
+                return;
+            }
+
+            const origHtml = payBalanceBtn.innerHTML;
+            payBalanceBtn.disabled = true;
+            payBalanceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Initializing PayMongo...';
+
+            try {
+                const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch('/api/payments/paymongo/checkout', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        amount: amount,
+                        packageName: `Remaining Balance: ${pkgName} (${bookingRef})`,
+                        bookingReference: bookingRef,
+                        paymentType: 'full',
+                        paymentMethod: 'all',
+                        clientEmail: clientEmail,
+                        clientName: clientName,
+                        clientPhone: clientPhone
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success && data.checkoutUrl) {
+                    if (typeof showToast === 'function') showToast('✓ Directing to PayMongo test payment gateway...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.checkoutUrl;
+                    }, 400);
+                } else {
+                    if (typeof showToast === 'function') showToast(`⚠️ ${data.message || 'Failed to initialize PayMongo checkout.'}`, 'error');
+                    payBalanceBtn.disabled = false;
+                    payBalanceBtn.innerHTML = origHtml;
+                }
+            } catch (err) {
+                console.error('PayMongo balance checkout error:', err);
+                if (typeof showToast === 'function') showToast('Network error connecting to PayMongo gateway.', 'error');
+                payBalanceBtn.disabled = false;
+                payBalanceBtn.innerHTML = origHtml;
+            }
+            return;
+        }
+
         // 0. Provider Wizard Submit Button
         const wizardSubmitBtn = e.target.closest('#btn-wizard-submit');
         if (wizardSubmitBtn) {
@@ -901,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // A. Profile Subtab Buttons (My Bookings | Booking History | Account Settings)
+        // A. Profile Subtab Buttons (My Bookings | Booking History | Account Settings | Payment Balances)
         const subtabBtn = e.target.closest('.subtab-btn');
         if (subtabBtn) {
             e.preventDefault();
@@ -916,7 +1360,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 bookings: document.getElementById('profile-sec-bookings'),
                 reviews: document.getElementById('profile-sec-reviews'),
                 history: document.getElementById('profile-sec-history'),
-                settings: document.getElementById('profile-sec-settings')
+                settings: document.getElementById('profile-sec-settings'),
+                balances: document.getElementById('profile-sec-balances')
             };
 
             Object.keys(profileSections).forEach(secKey => {
@@ -1047,6 +1492,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const openSecNotifBtn = e.target.closest('#btn-open-sec-notifications');
         if (openSecNotifBtn) {
             e.preventDefault();
+            const savedPref = JSON.parse(localStorage.getItem('soundsphere_pref_notif') || '{"emailNotif":true,"inappNotif":true}');
+            const emailBox = document.getElementById('pref-email-notif');
+            const inappBox = document.getElementById('pref-inapp-notif');
+            if (emailBox) emailBox.checked = savedPref.emailNotif !== false;
+            if (inappBox) inappBox.checked = savedPref.inappNotif !== false;
+
             const modal = document.getElementById('modal-sec-notifications');
             if (modal) modal.classList.remove('hidden');
             return;
@@ -1063,6 +1514,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const openSecPrivacyBtn = e.target.closest('#btn-open-sec-privacy');
         if (openSecPrivacyBtn) {
             e.preventDefault();
+            const savedPrivacy = JSON.parse(localStorage.getItem('soundsphere_pref_privacy') || '{"showPhone":true}');
+            const showPhoneBox = document.getElementById('pref-show-phone');
+            if (showPhoneBox) showPhoneBox.checked = savedPrivacy.showPhone !== false;
+
             const modal = document.getElementById('modal-sec-privacy');
             if (modal) modal.classList.remove('hidden');
             return;
@@ -1081,7 +1536,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (openProviderAppBtn) {
             e.preventDefault();
             const providerAppModal = document.getElementById('modal-provider-application');
-            if (providerAppModal) providerAppModal.classList.remove('hidden');
+            if (providerAppModal) {
+                // Auto-fill user information if available
+                const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : {};
+                const ownerFirst = document.getElementById('app-owner-firstname');
+                const ownerMiddle = document.getElementById('app-owner-middlename');
+                const ownerLast = document.getElementById('app-owner-lastname');
+                const bizPhone = document.getElementById('app-biz-phone');
+                const bizEmail = document.getElementById('app-biz-email');
+
+                if (ownerFirst && !ownerFirst.value && user.firstName) ownerFirst.value = user.firstName;
+                if (ownerMiddle && !ownerMiddle.value && user.middleName) ownerMiddle.value = user.middleName;
+                if (ownerLast && !ownerLast.value && user.lastName) ownerLast.value = user.lastName;
+                if (bizPhone && !bizPhone.value && user.phone) bizPhone.value = user.phone;
+                if (bizEmail && !bizEmail.value && user.email) bizEmail.value = user.email;
+
+                providerAppModal.classList.remove('hidden');
+            }
             return;
         }
 
@@ -1213,23 +1684,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Populate Step 4 Review Summary
             const bizName = document.getElementById('app-biz-name')?.value || 'Cabrera Lights & Sound System';
+            const ownerFirst = document.getElementById('app-owner-firstname')?.value.trim() || '';
+            const ownerMiddle = document.getElementById('app-owner-middlename')?.value.trim() || '';
+            const ownerLast = document.getElementById('app-owner-lastname')?.value.trim() || '';
+            const ownerFullName = [ownerFirst, ownerMiddle, ownerLast].filter(Boolean).join(' ') || 'Denver Cabrera';
             const bizPhone = document.getElementById('app-biz-phone')?.value || '09516028992';
             const bizEmail = document.getElementById('app-biz-email')?.value || 'dendenescondecabrera17@gmail.com';
-            const bizDesc = document.getElementById('app-biz-desc')?.value || document.getElementById('app-service-desc')?.value || 'Professional lights & sound rental.';
-
+            const permitIssued = document.getElementById('app-permit-issued')?.value || '';
+            const permitExpiry = document.getElementById('app-permit-expiry')?.value || '';
             const selectedServices = Array.from(document.querySelectorAll('.app-service-chk:checked')).map(c => c.value);
             const selectedLocations = Array.from(document.querySelectorAll('.app-location-chk:checked')).map(c => c.value);
+            const bizDesc = selectedServices.length > 0 ? selectedServices.join(', ') : 'Professional lights & sound rental.';
 
             const summaryBizName = document.getElementById('summary-biz-name');
+            const summaryOwnerName = document.getElementById('summary-owner-name');
             const summaryBizPhone = document.getElementById('summary-biz-phone');
             const summaryBizEmail = document.getElementById('summary-biz-email');
+            const summaryBizAddress = document.getElementById('summary-biz-address');
+            const summaryGovtIdFront = document.getElementById('summary-govt-id-front');
+            const summaryGovtIdBack = document.getElementById('summary-govt-id-back');
+            const summaryPermit = document.getElementById('summary-permit');
+            const summaryPermitIssued = document.getElementById('summary-permit-issued');
+            const summaryPermitExpiry = document.getElementById('summary-permit-expiry');
             const summaryServices = document.getElementById('summary-services');
             const summaryLocations = document.getElementById('summary-locations');
             const summaryDescription = document.getElementById('summary-description');
 
+            const bizAddress = document.getElementById('app-biz-address')?.value.trim() || 'Balayan, Batangas';
+
             if (summaryBizName) summaryBizName.textContent = bizName;
+            if (summaryOwnerName) summaryOwnerName.textContent = ownerFullName;
             if (summaryBizPhone) summaryBizPhone.textContent = bizPhone;
             if (summaryBizEmail) summaryBizEmail.textContent = bizEmail;
+            if (summaryBizAddress) summaryBizAddress.textContent = bizAddress;
+            if (summaryGovtIdFront) summaryGovtIdFront.textContent = window.providerAppGovtIdFrontData ? 'Uploaded ✓' : 'Attached';
+            if (summaryGovtIdBack) summaryGovtIdBack.textContent = window.providerAppGovtIdBackData ? 'Uploaded ✓' : 'Attached';
+            if (summaryPermit) summaryPermit.textContent = window.providerAppPermitData ? 'Uploaded ✓' : 'Attached';
+            if (summaryPermitIssued) summaryPermitIssued.textContent = permitIssued ? new Date(permitIssued).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not specified';
+            if (summaryPermitExpiry) summaryPermitExpiry.textContent = permitExpiry ? new Date(permitExpiry).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not specified';
             if (summaryServices) summaryServices.textContent = selectedServices.length > 0 ? selectedServices.join(', ') : 'None selected';
             if (summaryLocations) summaryLocations.textContent = selectedLocations.length > 0 ? selectedLocations.join(', ') : 'None selected';
             if (summaryDescription) summaryDescription.textContent = bizDesc;
@@ -1246,23 +1738,437 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Global image state for Application wizard
+    window.providerAppGovtIdFrontData = null;
+    window.providerAppGovtIdBackData = null;
+    window.providerAppPermitData = null;
+
+    window.clearGovtIdFrontUpload = () => {
+        window.providerAppGovtIdFrontData = null;
+        const input = document.getElementById('app-govt-id-front-input');
+        if (input) input.value = '';
+        const previewWrap = document.getElementById('govt-id-front-preview-wrap');
+        const placeholder = document.getElementById('govt-id-front-placeholder');
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+    };
+
+    window.clearGovtIdBackUpload = () => {
+        window.providerAppGovtIdBackData = null;
+        const input = document.getElementById('app-govt-id-back-input');
+        if (input) input.value = '';
+        const previewWrap = document.getElementById('govt-id-back-preview-wrap');
+        const placeholder = document.getElementById('govt-id-back-placeholder');
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+    };
+
+    window.clearPermitUpload = () => {
+        window.providerAppPermitData = null;
+        const input = document.getElementById('app-permit-input');
+        if (input) input.value = '';
+        const previewWrap = document.getElementById('permit-preview-wrap');
+        const placeholder = document.getElementById('permit-placeholder');
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+    };
+
+    // Document file change listeners
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.id === 'app-govt-id-front-input') {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('⚠ Valid ID (Front) image file must be less than 5MB.', 'warning');
+                    e.target.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    window.providerAppGovtIdFrontData = re.target.result;
+                    const previewImg = document.getElementById('govt-id-front-preview-img');
+                    const fileName = document.getElementById('govt-id-front-filename');
+                    const previewWrap = document.getElementById('govt-id-front-preview-wrap');
+                    const placeholder = document.getElementById('govt-id-front-placeholder');
+                    if (previewImg) previewImg.src = re.target.result;
+                    if (fileName) fileName.textContent = file.name;
+                    if (previewWrap) previewWrap.style.display = 'flex';
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        } else if (e.target && e.target.id === 'app-govt-id-back-input') {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('⚠ Valid ID (Back) image file must be less than 5MB.', 'warning');
+                    e.target.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    window.providerAppGovtIdBackData = re.target.result;
+                    const previewImg = document.getElementById('govt-id-back-preview-img');
+                    const fileName = document.getElementById('govt-id-back-filename');
+                    const previewWrap = document.getElementById('govt-id-back-preview-wrap');
+                    const placeholder = document.getElementById('govt-id-back-placeholder');
+                    if (previewImg) previewImg.src = re.target.result;
+                    if (fileName) fileName.textContent = file.name;
+                    if (previewWrap) previewWrap.style.display = 'flex';
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        } else if (e.target && e.target.id === 'app-permit-input') {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('⚠ Business Permit image must be less than 5MB.', 'warning');
+                    e.target.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    window.providerAppPermitData = re.target.result;
+                    const previewImg = document.getElementById('permit-preview-img');
+                    const fileName = document.getElementById('permit-filename');
+                    const previewWrap = document.getElementById('permit-preview-wrap');
+                    const placeholder = document.getElementById('permit-placeholder');
+                    if (previewImg) previewImg.src = re.target.result;
+                    if (fileName) fileName.textContent = file.name;
+                    if (previewWrap) previewWrap.style.display = 'flex';
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+
+    // Global OTP Verification State for Provider Application
+    window.providerAppEmailVerified = null;
+    window.providerOtpTimer = null;
+    window.providerOtpCooldownTimer = null;
+
+    // Reset verified email if user changes the email input field
+    const bizEmailInput = document.getElementById('app-biz-email');
+    if (bizEmailInput) {
+        bizEmailInput.addEventListener('input', () => {
+            if (window.providerAppEmailVerified && window.providerAppEmailVerified !== bizEmailInput.value.trim().toLowerCase()) {
+                window.providerAppEmailVerified = null;
+            }
+        });
+    }
+
+    // Start 5-minute countdown for OTP expiration
+    window.startProviderOtpCountdown = (durationSeconds = 300) => {
+        if (window.providerOtpTimer) clearInterval(window.providerOtpTimer);
+        let remaining = durationSeconds;
+        const countdownEl = document.getElementById('provider-otp-countdown');
+        const timerMsgEl = document.getElementById('provider-otp-timer-msg');
+
+        const updateDisplay = () => {
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            if (countdownEl) {
+                countdownEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            if (remaining <= 0) {
+                clearInterval(window.providerOtpTimer);
+                if (timerMsgEl) {
+                    timerMsgEl.innerHTML = '<span style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Code expired. Please click Resend Code.</span>';
+                }
+            }
+            remaining--;
+        };
+
+        if (timerMsgEl) {
+            timerMsgEl.innerHTML = '<i class="fa-solid fa-stopwatch"></i> Code expires in <span id="provider-otp-countdown">05:00</span>';
+        }
+        updateDisplay();
+        window.providerOtpTimer = setInterval(updateDisplay, 1000);
+    };
+
+    // Trigger Send OTP Email to Gmail
+    window.triggerProviderAppSendOtp = async (isResend = false) => {
+        const bizName = document.getElementById('app-biz-name')?.value.trim() || 'SoundSphere Provider';
+        const ownerFirst = document.getElementById('app-owner-firstname')?.value.trim() || '';
+        const ownerMiddle = document.getElementById('app-owner-middlename')?.value.trim() || '';
+        const ownerLast = document.getElementById('app-owner-lastname')?.value.trim() || '';
+        const ownerFullName = [ownerFirst, ownerMiddle, ownerLast].filter(Boolean).join(' ') || 'Applicant';
+        const bizEmail = document.getElementById('app-biz-email')?.value.trim().toLowerCase() || '';
+
+        if (!bizEmail) {
+            showToast('⚠ Please provide a valid Business Email.', 'warning');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(bizEmail)) {
+            showToast('⚠ Please enter a valid email address.', 'warning');
+            return;
+        }
+
+        const btnVerify = document.getElementById('btn-verify-provider-otp');
+        const btnResend = document.getElementById('btn-resend-provider-otp');
+
+        if (isResend && btnResend) {
+            btnResend.disabled = true;
+            btnResend.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
+        }
+
+        showToast(`📧 Sending verification code to ${bizEmail}...`, 'info');
+
+        try {
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : null;
+            const headers = token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+
+            const response = await fetch('/api/provider-applications/send-otp', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    email: bizEmail,
+                    businessName: bizName,
+                    ownerName: ownerFullName
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                showToast(`✕ ${data.message || 'Failed to send OTP code.'}`, 'error');
+                if (isResend && btnResend) {
+                    btnResend.disabled = false;
+                    btnResend.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend Code';
+                }
+                return;
+            }
+
+            // Populate and open OTP Modal
+            const targetEmailEl = document.getElementById('provider-otp-target-email');
+            if (targetEmailEl) targetEmailEl.textContent = bizEmail;
+
+            const otpInput = document.getElementById('provider-app-otp-input');
+            if (otpInput) {
+                otpInput.value = '';
+                setTimeout(() => otpInput.focus(), 150);
+            }
+
+            const otpModal = document.getElementById('modal-provider-email-otp');
+            if (otpModal) otpModal.classList.remove('hidden');
+
+            window.startProviderOtpCountdown(300);
+
+            showToast(`✓ Verification code sent to ${bizEmail}!`, 'success');
+
+            // Handle Resend cooldown (30s)
+            if (btnResend) {
+                let cooldown = 30;
+                btnResend.disabled = true;
+                btnResend.style.opacity = '0.6';
+                btnResend.style.cursor = 'not-allowed';
+                
+                if (window.providerOtpCooldownTimer) clearInterval(window.providerOtpCooldownTimer);
+                window.providerOtpCooldownTimer = setInterval(() => {
+                    btnResend.innerHTML = `<i class="fa-solid fa-clock"></i> Resend (${cooldown}s)`;
+                    cooldown--;
+                    if (cooldown < 0) {
+                        clearInterval(window.providerOtpCooldownTimer);
+                        btnResend.disabled = false;
+                        btnResend.style.opacity = '1';
+                        btnResend.style.cursor = 'pointer';
+                        btnResend.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend Code';
+                    }
+                }, 1000);
+            }
+
+        } catch (err) {
+            console.error('Error sending provider OTP:', err);
+            showToast('✕ Network error while sending OTP. Please check your connection.', 'error');
+            if (isResend && btnResend) {
+                btnResend.disabled = false;
+                btnResend.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend Code';
+            }
+        }
+    };
+
+    // Verify OTP Code
+    window.verifyProviderAppOtp = async () => {
+        const bizEmail = document.getElementById('app-biz-email')?.value.trim().toLowerCase() || '';
+        const otpInput = document.getElementById('provider-app-otp-input');
+        const otpCode = otpInput?.value.trim() || '';
+
+        if (!otpCode || otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+            showToast('⚠ Please enter the complete 6-digit numeric verification code.', 'warning');
+            if (otpInput) otpInput.focus();
+            return;
+        }
+
+        const btnVerify = document.getElementById('btn-verify-provider-otp');
+        let origHTML = '<i class="fa-solid fa-circle-check"></i> Verify & Continue';
+        if (btnVerify) {
+            origHTML = btnVerify.innerHTML;
+            btnVerify.disabled = true;
+            btnVerify.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+            btnVerify.style.opacity = '0.7';
+        }
+
+        try {
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : null;
+            const headers = token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+
+            const response = await fetch('/api/provider-applications/verify-otp', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    email: bizEmail,
+                    otp: otpCode
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                showToast(`✕ ${data.message || 'Incorrect verification code.'}`, 'error');
+                if (btnVerify) {
+                    btnVerify.disabled = false;
+                    btnVerify.innerHTML = origHTML;
+                    btnVerify.style.opacity = '1';
+                }
+                if (otpInput) {
+                    otpInput.select();
+                    otpInput.focus();
+                }
+                return;
+            }
+
+            // OTP verified successfully!
+            window.providerAppEmailVerified = bizEmail;
+
+            if (window.providerOtpTimer) clearInterval(window.providerOtpTimer);
+            if (window.providerOtpCooldownTimer) clearInterval(window.providerOtpCooldownTimer);
+
+            // Hide OTP modal
+            const otpModal = document.getElementById('modal-provider-email-otp');
+            if (otpModal) otpModal.classList.add('hidden');
+
+            if (btnVerify) {
+                btnVerify.disabled = false;
+                btnVerify.innerHTML = origHTML;
+                btnVerify.style.opacity = '1';
+            }
+
+            showToast('✓ Business Email verified successfully!', 'success');
+
+            // Automatically advance to Step 2!
+            updateWizardUI(2);
+
+        } catch (err) {
+            console.error('Error verifying OTP:', err);
+            showToast('✕ Network error while verifying code. Please try again.', 'error');
+            if (btnVerify) {
+                btnVerify.disabled = false;
+                btnVerify.innerHTML = origHTML;
+                btnVerify.style.opacity = '1';
+            }
+        }
+    };
+
+    // Close / Cancel OTP Modal
+    const btnCancelOtp = document.getElementById('btn-cancel-provider-otp');
+    if (btnCancelOtp) {
+        btnCancelOtp.addEventListener('click', () => {
+            const otpModal = document.getElementById('modal-provider-email-otp');
+            if (otpModal) otpModal.classList.add('hidden');
+            if (window.providerOtpTimer) clearInterval(window.providerOtpTimer);
+        });
+    }
+
+    // Resend OTP Click
+    const btnResendOtp = document.getElementById('btn-resend-provider-otp');
+    if (btnResendOtp) {
+        btnResendOtp.addEventListener('click', () => {
+            window.triggerProviderAppSendOtp(true);
+        });
+    }
+
+    // Verify OTP Button Click
+    const btnVerifyOtp = document.getElementById('btn-verify-provider-otp');
+    if (btnVerifyOtp) {
+        btnVerifyOtp.addEventListener('click', () => {
+            window.verifyProviderAppOtp();
+        });
+    }
+
+    // Enter key support on OTP input
+    const otpInputEl = document.getElementById('provider-app-otp-input');
+    if (otpInputEl) {
+        otpInputEl.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                window.verifyProviderAppOtp();
+            }
+        });
+    }
+
     // Wizard Next Button Click
     const btnWizardNext = document.getElementById('btn-wizard-next');
     if (btnWizardNext) {
         btnWizardNext.addEventListener('click', () => {
             if (currentWizardStep === 1) {
                 const bizName = document.getElementById('app-biz-name')?.value.trim();
+                const ownerFirst = document.getElementById('app-owner-firstname')?.value.trim();
+                const ownerLast = document.getElementById('app-owner-lastname')?.value.trim();
                 const bizPhone = document.getElementById('app-biz-phone')?.value.trim();
-                const bizEmail = document.getElementById('app-biz-email')?.value.trim();
+                const bizEmail = document.getElementById('app-biz-email')?.value.trim().toLowerCase();
+                const bizAddress = document.getElementById('app-biz-address')?.value.trim();
+                const permitIssued = document.getElementById('app-permit-issued')?.value;
+                const permitExpiry = document.getElementById('app-permit-expiry')?.value;
 
-                if (!bizName || !bizPhone || !bizEmail) {
-                    showToast('⚠ Please fill in all required fields (Business Name, Phone, and Email).', 'warning');
+                if (!bizName) {
+                    showToast('⚠ Please enter your Business Name.', 'warning');
+                    return;
+                }
+                if (!ownerFirst || !ownerLast) {
+                    showToast('⚠ Please enter the owner First Name and Last Name.', 'warning');
+                    return;
+                }
+                if (!bizPhone || !bizEmail) {
+                    showToast('⚠ Please fill in contact details (Phone and Email).', 'warning');
+                    return;
+                }
+                if (!bizAddress) {
+                    showToast('⚠ Please enter your complete Business Address.', 'warning');
+                    return;
+                }
+                if (!window.providerAppGovtIdFrontData && !document.getElementById('app-govt-id-front-input')?.files?.length) {
+                    showToast('⚠ Please upload the Front Side of your Valid Government ID.', 'warning');
+                    return;
+                }
+                if (!window.providerAppGovtIdBackData && !document.getElementById('app-govt-id-back-input')?.files?.length) {
+                    showToast('⚠ Please upload the Back Side of your Valid Government ID.', 'warning');
+                    return;
+                }
+                if (!window.providerAppPermitData && !document.getElementById('app-permit-input')?.files?.length) {
+                    showToast('⚠ Please upload an image of your Business Permit.', 'warning');
+                    return;
+                }
+                if (!permitIssued) {
+                    showToast('⚠ Please select the Business Permit date issued.', 'warning');
+                    return;
+                }
+                if (!permitExpiry) {
+                    showToast('⚠ Please select the Business Permit expiration date.', 'warning');
+                    return;
+                }
+
+                // Verify Email with OTP before proceeding to Step 2
+                if (!window.providerAppEmailVerified || window.providerAppEmailVerified !== bizEmail) {
+                    window.triggerProviderAppSendOtp();
                     return;
                 }
             } else if (currentWizardStep === 2) {
                 const selectedServices = document.querySelectorAll('.app-service-chk:checked');
                 if (selectedServices.length === 0) {
-                    showToast('⚠ Please select at least one service category.', 'warning');
+                    showToast('⚠ Please select at least one service package.', 'warning');
                     return;
                 }
             } else if (currentWizardStep === 3) {
@@ -1328,16 +2234,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const bizName = document.getElementById('app-biz-name')?.value.trim() || '';
+            const ownerFirst = document.getElementById('app-owner-firstname')?.value.trim() || '';
+            const ownerMiddle = document.getElementById('app-owner-middlename')?.value.trim() || '';
+            const ownerLast = document.getElementById('app-owner-lastname')?.value.trim() || '';
+            const ownerFullName = [ownerFirst, ownerMiddle, ownerLast].filter(Boolean).join(' ');
             const bizPhone = document.getElementById('app-biz-phone')?.value.trim() || '';
             const bizEmail = document.getElementById('app-biz-email')?.value.trim() || '';
-            const bizDesc = document.getElementById('app-biz-desc')?.value.trim() || document.getElementById('app-service-desc')?.value.trim() || 'Professional sound, lighting, and stage equipment rentals.';
-
+            const bizAddress = document.getElementById('app-biz-address')?.value.trim() || '';
+            const permitIssued = document.getElementById('app-permit-issued')?.value || null;
+            const permitExpiry = document.getElementById('app-permit-expiry')?.value || null;
             const selectedServices = Array.from(document.querySelectorAll('.app-service-chk:checked')).map(c => c.value);
             const selectedLocations = Array.from(document.querySelectorAll('.app-location-chk:checked')).map(c => c.value);
+            const bizDesc = selectedServices.length > 0 ? selectedServices.join(', ') : 'Professional sound, lighting, and stage equipment rentals.';
 
             // Validation Checks
             if (!bizName) {
                 showToast('⚠ Please enter your Business Name.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!ownerFirst || !ownerLast) {
+                showToast('⚠ Please enter the owner First Name and Last Name.', 'warning');
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
                 window.isProviderAppSubmitting = false;
                 return;
@@ -1348,8 +2266,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.isProviderAppSubmitting = false;
                 return;
             }
+            if (!bizAddress) {
+                showToast('⚠ Please enter your complete Business Address.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!window.providerAppGovtIdFrontData) {
+                showToast('⚠ Please upload the Front Side of your Valid ID.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!window.providerAppGovtIdBackData) {
+                showToast('⚠ Please upload the Back Side of your Valid ID.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!window.providerAppPermitData) {
+                showToast('⚠ Please upload your Business Permit image.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!permitIssued) {
+                showToast('⚠ Please select the Business Permit date issued.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!permitExpiry) {
+                showToast('⚠ Please select the Business Permit expiry date.', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
             if (selectedServices.length === 0) {
-                showToast('⚠ Please select at least one Service category.', 'warning');
+                showToast('⚠ Please select at least one Service package.', 'warning');
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
                 window.isProviderAppSubmitting = false;
                 return;
@@ -1367,12 +2321,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 userId: user.userId,
                 businessName: bizName,
-                ownerName: user.name || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : bizName),
-                businessAddress: selectedLocations.join(', ') || 'Balayan, Batangas',
+                ownerName: ownerFullName || user.name || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : bizName),
+                businessAddress: bizAddress || selectedLocations.join(', ') || 'Balayan, Batangas',
                 coverageArea: selectedLocations.join(', ') || 'Balayan, Batangas',
                 contactNumber: bizPhone,
-                govtIdUrl: 'uploaded_govt_id.png',
-                businessPermitUrl: 'uploaded_permit.png'
+                govtIdUrl: window.providerAppGovtIdFrontData || 'uploaded_govt_id_front.png',
+                govtIdBackUrl: window.providerAppGovtIdBackData || 'uploaded_govt_id_back.png',
+                businessPermitUrl: window.providerAppPermitData || 'uploaded_permit.png',
+                permitIssuedDate: permitIssued,
+                permitExpiryDate: permitExpiry
             };
 
             const headers = token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
@@ -1476,51 +2433,56 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (authUser.role === 'ServiceProvider' || authUser.role === 'Provider') {
+        const isProviderRole = Boolean(
+            authUser.role === 'ServiceProvider' ||
+            authUser.role === 'Provider' ||
+            authUser.role === 'serviceprovider' ||
+            authUser.RoleName === 'ServiceProvider' ||
+            authUser.RoleName === 'Provider' ||
+            authUser.roleId === 3 ||
+            authUser.RoleID === 3
+        );
+
+        if (isProviderRole) {
             currentStatus = 'Approved';
         }
 
         try {
             const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : null;
-            if (!token || token === 'token' || token.split('.').length !== 3) return; // Do not fetch if token is absent, dummy, or invalid format
-            
-            // If user is already an approved provider, no need to query provider-applications
-            if (currentStatus === 'Approved') return;
+            if (token && token !== 'token' && token.split('.').length === 3 && currentStatus !== 'Approved') {
+                const headers = { 'Authorization': `Bearer ${token}` };
+                const res = await fetch('/api/provider-applications/my-application', { headers });
 
-            const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('/api/provider-applications/my-application', { headers });
-
-            if (res.status === 401) {
-                // Token is expired or invalid on backend - clear stored token to prevent repeated 401 errors
-                localStorage.removeItem('soundsphere_auth_token');
-                localStorage.removeItem('soundsphere_jwt_token');
-                if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.clearAuthSession) {
-                    SoundSphereAPI.clearAuthSession();
+                if (res.status === 401) {
+                    localStorage.removeItem('soundsphere_auth_token');
+                    localStorage.removeItem('soundsphere_jwt_token');
+                    if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.clearAuthSession) {
+                        SoundSphereAPI.clearAuthSession();
+                    }
+                    return;
                 }
-                return;
-            }
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.application) {
-                    const myApp = data.application;
-                    if (myApp.Status === 'Approved') {
-                        currentStatus = 'Approved';
-                        // Update local auth user role if promoted
-                        if (authUser && authUser.role !== 'ServiceProvider') {
-                            authUser.role = 'ServiceProvider';
-                            authUser.RoleName = 'ServiceProvider';
-                            if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.setAuthSession) {
-                                SoundSphereAPI.setAuthSession(token || 'token', authUser, true);
-                            } else {
-                                localStorage.setItem('soundsphere_user_info', JSON.stringify(authUser));
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.application) {
+                        const myApp = data.application;
+                        if (myApp.Status === 'Approved') {
+                            currentStatus = 'Approved';
+                            if (authUser && authUser.role !== 'ServiceProvider') {
+                                authUser.role = 'ServiceProvider';
+                                authUser.RoleName = 'ServiceProvider';
+                                if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.setAuthSession) {
+                                    SoundSphereAPI.setAuthSession(token || 'token', authUser, true);
+                                } else {
+                                    localStorage.setItem('soundsphere_user_info', JSON.stringify(authUser));
+                                }
                             }
+                        } else if (myApp.Status === 'Rejected') {
+                            currentStatus = 'Rejected';
+                            rejectReason = myApp.RejectionReason || 'Incomplete business registration details.';
+                        } else if (myApp.Status === 'Pending') {
+                            currentStatus = 'Pending Approval';
                         }
-                    } else if (myApp.Status === 'Rejected') {
-                        currentStatus = 'Rejected';
-                        rejectReason = myApp.RejectionReason || 'Incomplete business registration details.';
-                    } else if (myApp.Status === 'Pending') {
-                        currentStatus = 'Pending Approval';
                     }
                 }
             }
@@ -1531,6 +2493,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = document.getElementById('provider-app-status-badge');
         const desc = document.getElementById('provider-app-desc-text');
         const btnContainer = document.getElementById('provider-app-btn-container');
+
+        const providerDashLink = document.getElementById('dropdown-provider-dashboard-link');
+        const dropRole = document.getElementById('dropdown-user-role');
 
         if (currentStatus === 'Pending Approval' || currentStatus === 'Pending Review' || currentStatus === 'Pending') {
             if (badge) {
@@ -1545,6 +2510,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 `;
             }
+            if (providerDashLink) {
+                providerDashLink.classList.add('hidden');
+                providerDashLink.style.setProperty('display', 'none', 'important');
+            }
+            if (dropRole) dropRole.textContent = 'Client Account';
         } else if (currentStatus === 'Approved') {
             if (badge) {
                 badge.textContent = '✓ Approved';
@@ -1558,10 +2528,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </a>
                 `;
             }
-            const providerDashLink = document.getElementById('dropdown-provider-dashboard-link');
-            const dropRole = document.getElementById('dropdown-user-role');
-            if (providerDashLink) providerDashLink.classList.remove('hidden');
-            if (dropRole) dropRole.textContent = 'Client + Service Provider';
+            if (providerDashLink) {
+                providerDashLink.classList.remove('hidden');
+                providerDashLink.style.setProperty('display', 'flex', 'important');
+            }
+            if (dropRole) dropRole.textContent = 'Service Provider';
         } else if (currentStatus === 'Rejected') {
             if (badge) {
                 badge.textContent = 'Rejected';
@@ -1575,6 +2546,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 `;
             }
+            if (providerDashLink) {
+                providerDashLink.classList.add('hidden');
+                providerDashLink.style.setProperty('display', 'none', 'important');
+            }
+            if (dropRole) dropRole.textContent = 'Client Account';
         } else {
             if (badge) {
                 badge.textContent = 'Not Applied';
@@ -1588,6 +2564,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 `;
             }
+            if (providerDashLink) {
+                providerDashLink.classList.add('hidden');
+                providerDashLink.style.setProperty('display', 'none', 'important');
+            }
+            if (dropRole) dropRole.textContent = 'Client Account';
         }
     };
 
@@ -1705,11 +2686,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formSecNotif) {
         formSecNotif.addEventListener('submit', (e) => {
             e.preventDefault();
-            const emailNotif = document.getElementById('pref-email-notif')?.checked;
-            const inappNotif = document.getElementById('pref-inapp-notif')?.checked;
-            const promoNotif = document.getElementById('pref-promo-notif')?.checked;
+            const emailNotif = document.getElementById('pref-email-notif')?.checked ?? true;
+            const inappNotif = document.getElementById('pref-inapp-notif')?.checked ?? true;
 
-            localStorage.setItem('soundsphere_pref_notif', JSON.stringify({ emailNotif, inappNotif, promoNotif }));
+            localStorage.setItem('soundsphere_pref_notif', JSON.stringify({ emailNotif, inappNotif }));
+
+            if (inappNotif && typeof window !== 'undefined' && 'Notification' in window) {
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+
             showToast('✓ Notification preferences saved successfully!', 'success');
             document.getElementById('modal-sec-notifications')?.classList.add('hidden');
         });
@@ -1720,11 +2707,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formSecPrivacy) {
         formSecPrivacy.addEventListener('submit', (e) => {
             e.preventDefault();
-            const profileVisibility = document.getElementById('pref-privacy-profile')?.value;
-            const showPhone = document.getElementById('pref-show-phone')?.checked;
-            const analyticsCookies = document.getElementById('pref-analytics-cookies')?.checked;
+            const showPhone = document.getElementById('pref-show-phone')?.checked ?? true;
 
-            localStorage.setItem('soundsphere_pref_privacy', JSON.stringify({ profileVisibility, showPhone, analyticsCookies }));
+            localStorage.setItem('soundsphere_pref_privacy', JSON.stringify({ showPhone }));
             showToast('✓ Privacy settings saved successfully!', 'success');
             document.getElementById('modal-sec-privacy')?.classList.add('hidden');
         });
@@ -2182,12 +3167,108 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnMarkAllRead = document.getElementById('btn-mark-all-read');
     const dropdownTabAll = document.getElementById('dropdown-tab-all');
     const dropdownTabUnread = document.getElementById('dropdown-tab-unread');
+    const btnViewAllNotifs = document.getElementById('btn-view-all-notifications');
+
+    // Modals
+    const modalNotifDetail = document.getElementById('modal-notification-detail');
+    const btnCloseNotifDetail = document.getElementById('btn-close-notif-detail');
+    const btnDismissNotifDetail = document.getElementById('btn-dismiss-notif-detail');
+
+    const modalAllNotifs = document.getElementById('modal-all-notifications');
+    const btnCloseAllNotifs = document.getElementById('btn-close-all-notifs');
+    const btnDismissAllNotifs = document.getElementById('btn-dismiss-all-notifs');
+    const btnModalMarkAllRead = document.getElementById('btn-modal-mark-all-read');
+    const inputSearchAllNotifs = document.getElementById('input-search-all-notifs');
+    const allNotifsListContainer = document.getElementById('all-notifications-list-container');
+    const allNotifTotalBadge = document.getElementById('all-notif-total-badge');
+    const allNotifCountSummary = document.getElementById('all-notif-count-summary');
 
     let currentNotifFilter = 'all';
+    let currentModalNotifFilter = 'all';
+    let currentModalSearchQuery = '';
     let currentNotificationsCache = [];
 
+    let knownNotifIds = new Set();
+    let isInitialNotifFetch = true;
+
+    window.triggerInAppPushAlert = (title, message, options = {}) => {
+        const savedPref = JSON.parse(localStorage.getItem('soundsphere_pref_notif') || '{"inappNotif":true}');
+        if (savedPref.inappNotif === false) return;
+
+        // 1. Browser Push Notification
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                const bNotif = new Notification(title, {
+                    body: message,
+                    icon: '/images/concert_line_array.png'
+                });
+                bNotif.onclick = () => {
+                    window.focus();
+                    if (options.notificationId && typeof window.viewSingleNotification === 'function') {
+                        window.viewSingleNotification(options.notificationId);
+                    }
+                    bNotif.close();
+                };
+            } catch (e) {}
+        }
+
+        // 2. High-visibility Interactive Floating In-App Push Banner
+        let pushContainer = document.getElementById('inapp-push-alert-container');
+        if (!pushContainer) {
+            pushContainer = document.createElement('div');
+            pushContainer.id = 'inapp-push-alert-container';
+            pushContainer.style.cssText = 'position:fixed; top:24px; right:24px; z-index:9999999; display:flex; flex-direction:column; gap:12px; pointer-events:none; max-width:380px; width:calc(100vw - 48px);';
+            document.body.appendChild(pushContainer);
+        }
+
+        const alertEl = document.createElement('div');
+        alertEl.style.cssText = 'pointer-events:auto; background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#ffffff; border-radius:14px; padding:14px 18px; box-shadow:0 12px 32px rgba(10,25,47,0.35), 0 0 0 1px rgba(255,255,255,0.1); display:flex; align-items:flex-start; gap:14px; transform:translateX(120%); transition:transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease; cursor:pointer; overflow:hidden; position:relative;';
+
+        alertEl.innerHTML = `
+            <div style="width:38px; height:38px; border-radius:10px; background:rgba(37,99,235,0.2); border:1px solid rgba(59,130,246,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; margin-top:2px;">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px;">SoundSphere In-App Alert</div>
+                <strong style="font-size:0.92rem; color:#ffffff; font-weight:800; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px;">${title}</strong>
+                <p style="margin:0; font-size:0.82rem; color:#cbd5e1; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${message}</p>
+            </div>
+            <button type="button" class="close-push-btn" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:0; line-height:1; display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; transition:color 0.2s;" title="Close">&times;</button>
+        `;
+
+        pushContainer.appendChild(alertEl);
+
+        requestAnimationFrame(() => {
+            alertEl.style.transform = 'translateX(0)';
+        });
+
+        const dismiss = () => {
+            alertEl.style.transform = 'translateX(120%)';
+            alertEl.style.opacity = '0';
+            setTimeout(() => {
+                alertEl.remove();
+            }, 350);
+        };
+
+        alertEl.querySelector('.close-push-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            dismiss();
+        });
+
+        alertEl.addEventListener('click', () => {
+            dismiss();
+            if (options.notificationId && typeof window.viewSingleNotification === 'function') {
+                window.viewSingleNotification(options.notificationId);
+            } else if (options.url) {
+                window.location.href = options.url;
+            }
+        });
+
+        setTimeout(dismiss, 6000);
+    };
+
     const fetchNotifications = async () => {
-        const token = localStorage.getItem('token') || localStorage.getItem('soundsphere_token');
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
         if (!token) return;
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
@@ -2197,6 +3278,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentNotificationsCache = data.notifications || data.data || [];
                 const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
 
+                // Fire In-App Push Alerts for newly arrived unread notifications
+                if (!isInitialNotifFetch) {
+                    currentNotificationsCache.forEach(n => {
+                        const id = n.NotificationID || n.id;
+                        const isUnread = !n.IsRead && n.IsRead !== 1;
+                        if (isUnread && !knownNotifIds.has(id)) {
+                            window.triggerInAppPushAlert(n.Title || 'New Notification', n.Message || '', { notificationId: id });
+                        }
+                    });
+                }
+
+                currentNotificationsCache.forEach(n => {
+                    const id = n.NotificationID || n.id;
+                    knownNotifIds.add(id);
+                });
+                isInitialNotifFetch = false;
+
                 if (notificationBadge) {
                     if (unreadCount > 0) {
                         notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
@@ -2205,11 +3303,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         notificationBadge.classList.add('hidden');
                     }
                 }
+
+                if (allNotifTotalBadge) {
+                    allNotifTotalBadge.textContent = unreadCount > 0 ? `${unreadCount} Unread` : `${currentNotificationsCache.length} Total`;
+                }
+
                 renderNotificationList();
+                if (modalAllNotifs && modalAllNotifs.style.display === 'flex') {
+                    renderAllNotificationsModalList();
+                }
             }
         } catch (err) {
             console.warn('Notifications fetch error:', err.message);
         }
+    };
+
+    // Helper to format date nicely
+    const formatNotifDate = (dateVal) => {
+        if (!dateVal) return 'Just now';
+        const d = new Date(dateVal);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
 
     const renderNotificationList = () => {
@@ -2220,17 +3334,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filtered.length === 0) {
-            notificationList.innerHTML = `<div style="padding:32px 20px; text-align:center; color:#64748b; font-size:1.0rem;">No notifications found.</div>`;
+            notificationList.innerHTML = `<div style="padding:32px 20px; text-align:center; color:#64748b; font-size:0.95rem;"><i class="fa-solid fa-bell-slash" style="font-size:1.8rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>No notifications found.</div>`;
             return;
         }
 
         notificationList.innerHTML = filtered.map(n => {
             const isUnread = !n.IsRead && n.IsRead !== 1;
-            const createdDate = new Date(n.CreatedAt || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const createdDate = formatNotifDate(n.CreatedAt);
+            const id = n.NotificationID || n.id;
             return `
-                <div class="notification-item ${isUnread ? 'unread' : ''}" style="padding:14px 20px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer; transition:background 0.2s ease;" onclick="window.markSingleNotificationRead(${n.NotificationID || n.id})">
+                <div class="notification-item ${isUnread ? 'unread' : ''}" style="padding:14px 20px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer; transition:background 0.2s ease;" onclick="window.viewSingleNotification(${id})">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                        <strong style="font-size:1.0rem; color:#0a192f; font-weight:800;">${n.Title || n.type || 'Notification'}</strong>
+                        <strong style="font-size:0.95rem; color:#0a192f; font-weight:800;">${n.Title || n.type || 'Notification'}</strong>
                         <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">${createdDate}</span>
                     </div>
                     <p style="margin:0; font-size:0.86rem; color:#475569; line-height:1.4;">${n.Message || n.message || ''}</p>
@@ -2240,21 +3355,309 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.markSingleNotificationRead = async (id) => {
-        const token = localStorage.getItem('token') || localStorage.getItem('soundsphere_token');
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
         if (!token || !id) return;
         try {
             await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            fetchNotifications();
+            // Update local item
+            const item = currentNotificationsCache.find(n => (n.NotificationID || n.id) == id);
+            if (item) item.IsRead = 1;
+            const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
+            if (notificationBadge) {
+                if (unreadCount > 0) {
+                    notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    notificationBadge.classList.remove('hidden');
+                } else {
+                    notificationBadge.classList.add('hidden');
+                }
+            }
+            renderNotificationList();
         } catch (e) {}
     };
 
+    // Open Single Notification Details in Modal
+    window.viewSingleNotification = (id) => {
+        const notif = currentNotificationsCache.find(n => (n.NotificationID || n.id) == id);
+        if (!notif) return;
+
+        // Mark as read immediately in UI
+        notif.IsRead = 1;
+        const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
+        if (notificationBadge) {
+            if (unreadCount > 0) {
+                notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.classList.add('hidden');
+            }
+        }
+        renderNotificationList();
+
+        // Mark as read on backend
+        window.markSingleNotificationRead(id);
+
+        // Hide dropdown
+        if (notificationPanel) notificationPanel.classList.add('hidden');
+
+        // Populate detail modal
+        const title = notif.Title || notif.type || 'Notification Update';
+        const message = notif.Message || notif.message || '';
+        const dateStr = formatNotifDate(notif.CreatedAt);
+
+        const titleEl = document.getElementById('notif-detail-title');
+        const timeEl = document.getElementById('notif-detail-time');
+        const msgEl = document.getElementById('notif-detail-message');
+        const badgeEl = document.getElementById('notif-detail-badge');
+        const statusEl = document.getElementById('notif-detail-status');
+        const iconEl = document.getElementById('notif-detail-icon');
+        const iconBox = document.getElementById('notif-detail-icon-box');
+        const actionsEl = document.getElementById('notif-detail-actions');
+
+        if (titleEl) titleEl.textContent = title;
+        if (timeEl) timeEl.textContent = dateStr;
+        if (msgEl) msgEl.textContent = message;
+        if (statusEl) {
+            statusEl.textContent = 'Read';
+            statusEl.style.background = '#dcfce7';
+            statusEl.style.color = '#15803d';
+        }
+
+        // Detect Category and Icons
+        const fullText = (title + ' ' + message).toLowerCase();
+        let catName = 'System Alert';
+        let iconClass = 'fa-bell';
+        let iconColor = '#f59e0b';
+        let boxBg = 'rgba(245, 158, 11, 0.2)';
+
+        if (/booking|reservation|event/i.test(fullText)) {
+            catName = 'Booking Confirmation';
+            iconClass = 'fa-calendar-check';
+            iconColor = '#10b981';
+            boxBg = 'rgba(16, 185, 129, 0.2)';
+        } else if (/payment|paid|receipt|invoice|gcash|cashier|payout/i.test(fullText)) {
+            catName = 'Payment Update';
+            iconClass = 'fa-receipt';
+            iconColor = '#2563eb';
+            boxBg = 'rgba(37, 99, 235, 0.2)';
+        } else if (/message|chat|inquiry/i.test(fullText)) {
+            catName = 'Message Alert';
+            iconClass = 'fa-comments';
+            iconColor = '#8b5cf6';
+            boxBg = 'rgba(139, 92, 246, 0.2)';
+        }
+
+        if (badgeEl) {
+            badgeEl.textContent = catName;
+            badgeEl.style.color = iconColor;
+            badgeEl.style.background = boxBg;
+            badgeEl.style.border = `1px solid ${iconColor}`;
+        }
+        if (iconEl) iconEl.className = `fa-solid ${iconClass}`;
+        if (iconBox) {
+            iconBox.style.background = boxBg;
+            iconBox.style.color = iconColor;
+        }
+
+        // Check for Booking Reference (e.g. SS-2026-00012)
+        let actionsHtml = '';
+        const refMatch = message.match(/SS-\d{4}-\d+/i) || message.match(/SS-[A-Z0-9-]+/i);
+        if (refMatch) {
+            const bookingRef = refMatch[0];
+            actionsHtml += `
+                <a href="/booking-confirmation.html?ref=${encodeURIComponent(bookingRef)}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.92rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:background 0.2s ease;">
+                    <i class="fa-solid fa-file-invoice"></i> View Official Booking Receipt (${bookingRef})
+                </a>
+            `;
+        }
+
+        if (actionsEl) {
+            actionsEl.innerHTML = actionsHtml;
+        }
+
+        if (modalNotifDetail) {
+            modalNotifDetail.classList.remove('hidden');
+            modalNotifDetail.style.display = 'flex';
+        }
+    };
+
+    window.closeNotificationDetailModal = () => {
+        if (modalNotifDetail) {
+            modalNotifDetail.classList.add('hidden');
+            modalNotifDetail.style.display = 'none';
+        }
+    };
+
+    // Open Full Notifications Center Modal
+    window.openAllNotificationsModal = () => {
+        if (notificationPanel) notificationPanel.classList.add('hidden');
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.remove('hidden');
+            modalAllNotifs.style.display = 'flex';
+            currentModalNotifFilter = 'all';
+            currentModalSearchQuery = '';
+            if (inputSearchAllNotifs) inputSearchAllNotifs.value = '';
+            
+            // Reset active button
+            document.querySelectorAll('.all-notif-filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-filter') === 'all') {
+                    btn.style.background = '#2563eb';
+                    btn.style.color = '#ffffff';
+                } else {
+                    btn.style.background = '#e2e8f0';
+                    btn.style.color = '#475569';
+                }
+            });
+
+            renderAllNotificationsModalList();
+        }
+    };
+
+    window.closeAllNotificationsModal = () => {
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+    };
+
+    const renderAllNotificationsModalList = () => {
+        if (!allNotifsListContainer) return;
+
+        let list = [...currentNotificationsCache];
+
+        // Apply Filter
+        if (currentModalNotifFilter === 'unread') {
+            list = list.filter(n => !n.IsRead && n.IsRead !== 1);
+        } else if (currentModalNotifFilter === 'booking') {
+            list = list.filter(n => /booking|reservation|event/i.test((n.Title || '') + ' ' + (n.Message || '')));
+        } else if (currentModalNotifFilter === 'payment') {
+            list = list.filter(n => /payment|paid|receipt|invoice|gcash|cashier/i.test((n.Title || '') + ' ' + (n.Message || '')));
+        }
+
+        // Apply Search
+        if (currentModalSearchQuery.trim()) {
+            const q = currentModalSearchQuery.toLowerCase();
+            list = list.filter(n => (n.Title || '').toLowerCase().includes(q) || (n.Message || '').toLowerCase().includes(q));
+        }
+
+        if (allNotifCountSummary) {
+            allNotifCountSummary.textContent = `Showing ${list.length} of ${currentNotificationsCache.length} notifications`;
+        }
+
+        if (list.length === 0) {
+            allNotifsListContainer.innerHTML = `
+                <div style="padding:48px 20px; text-align:center; color:#64748b;">
+                    <i class="fa-solid fa-bell-slash" style="font-size:2.4rem; color:#cbd5e1; display:block; margin-bottom:12px;"></i>
+                    <strong style="font-size:1.05rem; color:#0a192f; display:block; margin-bottom:4px;">No notifications found</strong>
+                    <p style="margin:0; font-size:0.86rem;">Try clearing search filters to see all messages.</p>
+                </div>
+            `;
+            return;
+        }
+
+        allNotifsListContainer.innerHTML = list.map(n => {
+            const isUnread = !n.IsRead && n.IsRead !== 1;
+            const createdDate = formatNotifDate(n.CreatedAt);
+            const id = n.NotificationID || n.id;
+            const fullText = (n.Title || '') + ' ' + (n.Message || '');
+
+            let iconClass = 'fa-bell';
+            let iconColor = '#f59e0b';
+            let boxBg = 'rgba(245, 158, 11, 0.15)';
+
+            if (/booking|reservation|event/i.test(fullText)) {
+                iconClass = 'fa-calendar-check';
+                iconColor = '#10b981';
+                boxBg = 'rgba(16, 185, 129, 0.15)';
+            } else if (/payment|paid|receipt|invoice/i.test(fullText)) {
+                iconClass = 'fa-receipt';
+                iconColor = '#2563eb';
+                boxBg = 'rgba(37, 99, 235, 0.15)';
+            } else if (/message|chat/i.test(fullText)) {
+                iconClass = 'fa-comments';
+                iconColor = '#8b5cf6';
+                boxBg = 'rgba(139, 92, 246, 0.15)';
+            }
+
+            return `
+                <div class="all-notif-item" style="padding:16px 20px; margin-bottom:10px; border-radius:14px; border:1px solid ${isUnread ? '#bfdbfe' : '#e2e8f0'}; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer; display:flex; gap:16px; align-items:flex-start;" onclick="window.viewSingleNotification(${id})">
+                    <div style="width:42px; height:42px; border-radius:12px; background:${boxBg}; color:${iconColor}; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; margin-top:2px;">
+                        <i class="fa-solid ${iconClass}"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                            <strong style="font-size:0.98rem; color:#0a192f; font-weight:800;">${n.Title || n.type || 'Notification'}</strong>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">${createdDate}</span>
+                                ${isUnread ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
+                            </div>
+                        </div>
+                        <p style="margin:0 0 6px 0; font-size:0.88rem; color:#334155; line-height:1.5;">${n.Message || n.message || ''}</p>
+                        <span style="font-size:0.75rem; color:#2563eb; font-weight:700;">Click to view details & actions →</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    // Modal Filter Tabs
+    document.querySelectorAll('.all-notif-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            currentModalNotifFilter = e.target.getAttribute('data-filter') || 'all';
+            document.querySelectorAll('.all-notif-filter-btn').forEach(b => {
+                b.style.background = '#e2e8f0';
+                b.style.color = '#475569';
+            });
+            e.target.style.background = '#2563eb';
+            e.target.style.color = '#ffffff';
+            renderAllNotificationsModalList();
+        });
+    });
+
+    if (inputSearchAllNotifs) {
+        inputSearchAllNotifs.addEventListener('input', (e) => {
+            currentModalSearchQuery = e.target.value;
+            renderAllNotificationsModalList();
+        });
+    }
+
+    if (btnModalMarkAllRead) {
+        btnModalMarkAllRead.addEventListener('click', async () => {
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+            if (!token) return;
+            try {
+                await fetch('http://localhost:5000/api/notifications/read-all', {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                currentNotificationsCache.forEach(n => n.IsRead = 1);
+                fetchNotifications();
+            } catch (e) {}
+        });
+    }
+
+    // Modal Close Buttons
+    btnCloseNotifDetail?.addEventListener('click', window.closeNotificationDetailModal);
+    btnDismissNotifDetail?.addEventListener('click', window.closeNotificationDetailModal);
+    btnCloseAllNotifs?.addEventListener('click', window.closeAllNotificationsModal);
+    btnDismissAllNotifs?.addEventListener('click', window.closeAllNotificationsModal);
+    btnViewAllNotifs?.addEventListener('click', window.openAllNotificationsModal);
+
+    // Modal Outside Click Dismiss
+    modalNotifDetail?.addEventListener('click', (e) => {
+        if (e.target === modalNotifDetail) window.closeNotificationDetailModal();
+    });
+    modalAllNotifs?.addEventListener('click', (e) => {
+        if (e.target === modalAllNotifs) window.closeAllNotificationsModal();
+    });
+
+    // Dropdown Bell Toggle
     if (btnNotificationBell && notificationPanel) {
         btnNotificationBell.addEventListener('click', (e) => {
             e.stopPropagation();
-            const userDropdown = document.getElementById('user-dropdown-menu') || document.getElementById('header-user-dropdown');
+            const userDropdown = document.getElementById('user-dropdown-menu') || document.getElementById('header-user-dropdown') || document.getElementById('user-dropdown');
             if (userDropdown) userDropdown.classList.add('hidden');
 
             const isHidden = notificationPanel.classList.contains('hidden');
@@ -2270,13 +3673,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnMarkAllRead) {
         btnMarkAllRead.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const token = localStorage.getItem('token') || localStorage.getItem('soundsphere_token');
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
             if (!token) return;
             try {
                 await fetch('http://localhost:5000/api/notifications/read-all', {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                currentNotificationsCache.forEach(n => n.IsRead = 1);
                 fetchNotifications();
             } catch (e) {}
         });
@@ -2314,6 +3718,276 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ------------------------------------------------------------------------
+    // Real-time Rate & Review Modal Controller for Completed Bookings
+    // ------------------------------------------------------------------------
+    let currentSelectedRating = 5;
+    const ratingLabels = {
+        1: '1.0 - Terrible',
+        2: '2.0 - Poor',
+        3: '3.0 - Average',
+        4: '4.0 - Very Good!',
+        5: '5.0 - Excellent!'
+    };
+
+    window.safeDecodeString = (str) => {
+        if (!str) return '';
+        try {
+            return decodeURIComponent(str);
+        } catch (e) {
+            return String(str);
+        }
+    };
+
+    window.handleRateButtonClick = (btn) => {
+        if (!btn) return;
+        const bookingId = btn.getAttribute('data-booking-id');
+        const providerId = btn.getAttribute('data-provider-id');
+        const providerName = btn.getAttribute('data-provider-name');
+        const packageName = btn.getAttribute('data-package-name');
+        const existingRating = btn.getAttribute('data-existing-rating');
+        const existingReview = btn.getAttribute('data-existing-review');
+
+        window.openRateReviewModal({
+            bookingId: bookingId ? parseInt(bookingId, 10) : null,
+            providerId: providerId ? parseInt(providerId, 10) : null,
+            providerName: window.safeDecodeString(providerName),
+            packageName: window.safeDecodeString(packageName),
+            existingRating: existingRating ? parseInt(existingRating, 10) : null,
+            existingReview: window.safeDecodeString(existingReview)
+        });
+    };
+
+    // Global Delegated Click Listener for Rate & Review Button
+    document.addEventListener('click', (e) => {
+        const rateBtn = e.target.closest('.btn-card-rate-review');
+        if (rateBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.handleRateButtonClick(rateBtn);
+        }
+    });
+
+    window.openRateReviewModal = (options = {}) => {
+        let modal = document.getElementById('modal-rate-review');
+        if (!modal) {
+            // Dynamically inject modal if not already present in DOM
+            const modalMarkup = `
+                <div class="modal-overlay hidden" id="modal-rate-review" role="dialog" aria-modal="true" style="position:fixed; inset:0; background:rgba(10,25,47,0.7); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:999999; padding:16px;">
+                    <div class="modal-card" style="background:#ffffff; border-radius:20px; width:100%; max-width:540px; box-shadow:0 25px 60px rgba(10,25,47,0.3); overflow:hidden;">
+                        <div style="padding:22px 26px; background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#ffffff; display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:44px; height:44px; border-radius:12px; background:rgba(245, 158, 11, 0.2); border:1px solid rgba(245, 158, 11, 0.4); color:#f59e0b; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                                <div>
+                                    <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:#ffffff;">Rate & Review Provider</h3>
+                                    <p style="margin:3px 0 0 0; font-size:0.84rem; color:#94a3b8;" id="rate-modal-provider-name">Service Provider Review</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close-rate-modal" style="background:none; border:none; font-size:1.5rem; color:#94a3b8; cursor:pointer; line-height:1;" title="Close">&times;</button>
+                        </div>
+                        <form id="form-rate-review" style="padding:24px 26px; display:flex; flex-direction:column; gap:18px;">
+                            <input type="hidden" id="rate-modal-booking-id" value="">
+                            <input type="hidden" id="rate-modal-provider-id" value="">
+                            <div style="padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase;">Completed Booking</span>
+                                    <div style="font-size:0.95rem; font-weight:800; color:#0a192f; margin-top:2px;" id="rate-modal-package-name">Audio-Visual Event Package</div>
+                                </div>
+                                <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:20px;">
+                                    <i class="fa-solid fa-circle-check"></i> Completed
+                                </span>
+                            </div>
+                            <div style="text-align:center; padding:12px 0 6px 0;">
+                                <label style="display:block; font-size:0.92rem; font-weight:800; color:#0a192f; margin-bottom:8px;">
+                                    Overall Rating <span style="color:#ef4444;">*</span>
+                                </label>
+                                <div id="rate-stars-container" style="display:inline-flex; gap:10px; font-size:2rem; cursor:pointer; color:#cbd5e1;">
+                                    <i class="fa-solid fa-star rate-star" data-rating="1" style="transition:transform 0.15s, color 0.15s;"></i>
+                                    <i class="fa-solid fa-star rate-star" data-rating="2" style="transition:transform 0.15s, color 0.15s;"></i>
+                                    <i class="fa-solid fa-star rate-star" data-rating="3" style="transition:transform 0.15s, color 0.15s;"></i>
+                                    <i class="fa-solid fa-star rate-star" data-rating="4" style="transition:transform 0.15s, color 0.15s;"></i>
+                                    <i class="fa-solid fa-star rate-star" data-rating="5" style="transition:transform 0.15s, color 0.15s;"></i>
+                                </div>
+                                <div id="rate-star-text" style="font-size:0.9rem; font-weight:800; color:#f59e0b; margin-top:6px;">5.0 - Excellent!</div>
+                            </div>
+                            <div>
+                                <label for="rate-review-text" style="display:block; font-size:0.88rem; font-weight:800; color:#0a192f; margin-bottom:6px;">
+                                    Your Feedback & Experience <span style="color:#ef4444;">*</span>
+                                </label>
+                                <textarea id="rate-review-text" rows="4" required style="width:100%; padding:12px 14px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.9rem; font-family:inherit; color:#0a192f; box-sizing:border-box; outline:none;" placeholder="Describe how the setup, sound quality, technician support, and punctuality went for your event..."></textarea>
+                                <span style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Your verified review will be posted publicly on the provider's SoundSphere profile.</span>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                                <button type="button" class="btn-close-rate-modal" style="padding:10px 18px; border:1.5px solid #cbd5e1; border-radius:10px; background:#ffffff; color:#475569; font-weight:700; font-size:0.9rem; cursor:pointer;">Cancel</button>
+                                <button type="submit" id="btn-submit-rate-review" style="padding:10px 24px; border:none; border-radius:10px; background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color:#ffffff; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(245,158,11,0.35);">
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Review
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalMarkup);
+            modal = document.getElementById('modal-rate-review');
+            initRateReviewModal();
+        }
+
+        const bookingIdInput = document.getElementById('rate-modal-booking-id');
+        const providerIdInput = document.getElementById('rate-modal-provider-id');
+        const providerNameEl = document.getElementById('rate-modal-provider-name');
+        const packageNameEl = document.getElementById('rate-modal-package-name');
+        const reviewTextEl = document.getElementById('rate-review-text');
+
+        const rawProvName = options.providerName ? window.safeDecodeString(options.providerName) : 'Service Provider';
+        const rawPkgName = options.packageName ? window.safeDecodeString(options.packageName) : 'Audio-Visual Event Package';
+        const rawReview = options.existingReview ? window.safeDecodeString(options.existingReview) : '';
+
+        if (bookingIdInput) bookingIdInput.value = options.bookingId || '';
+        if (providerIdInput) providerIdInput.value = options.providerId || '';
+        if (providerNameEl) providerNameEl.textContent = `Reviewing ${rawProvName}`;
+        if (packageNameEl) packageNameEl.textContent = rawPkgName;
+        if (reviewTextEl) reviewTextEl.value = rawReview;
+
+        currentSelectedRating = options.existingRating ? parseInt(options.existingRating, 10) : 5;
+        updateStarRatingUI(currentSelectedRating);
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+    };
+
+    window.closeRateReviewModal = () => {
+        const modal = document.getElementById('modal-rate-review');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    };
+
+    function updateStarRatingUI(rating) {
+        const starContainer = document.getElementById('rate-stars-container');
+        const textEl = document.getElementById('rate-star-text');
+        if (starContainer) {
+            starContainer.querySelectorAll('.rate-star').forEach(star => {
+                const starVal = parseInt(star.getAttribute('data-rating'), 10);
+                if (starVal <= rating) {
+                    star.style.color = '#f59e0b';
+                    star.classList.remove('fa-regular');
+                    star.classList.add('fa-solid');
+                } else {
+                    star.style.color = '#cbd5e1';
+                    star.classList.remove('fa-solid');
+                    star.classList.add('fa-regular');
+                }
+            });
+        }
+        if (textEl) {
+            textEl.textContent = ratingLabels[rating] || `${rating}.0`;
+        }
+    }
+
+    function initRateReviewModal() {
+        const modal = document.getElementById('modal-rate-review');
+        if (!modal) return;
+
+        // Close buttons
+        modal.querySelectorAll('.btn-close-rate-modal').forEach(btn => {
+            btn.addEventListener('click', window.closeRateReviewModal);
+        });
+
+        // Click outside modal to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) window.closeRateReviewModal();
+        });
+
+        // Interactive Stars
+        const starContainer = document.getElementById('rate-stars-container');
+        if (starContainer) {
+            starContainer.querySelectorAll('.rate-star').forEach(star => {
+                star.addEventListener('mouseenter', () => {
+                    const hoverVal = parseInt(star.getAttribute('data-rating'), 10);
+                    updateStarRatingUI(hoverVal);
+                });
+                star.addEventListener('click', () => {
+                    currentSelectedRating = parseInt(star.getAttribute('data-rating'), 10);
+                    updateStarRatingUI(currentSelectedRating);
+                });
+            });
+            starContainer.addEventListener('mouseleave', () => {
+                updateStarRatingUI(currentSelectedRating);
+            });
+        }
+
+        // Form Submission
+        const form = document.getElementById('form-rate-review');
+        if (form && !form.dataset.initialized) {
+            form.dataset.initialized = 'true';
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const bookingId = document.getElementById('rate-modal-booking-id')?.value;
+                const providerId = document.getElementById('rate-modal-provider-id')?.value;
+                const reviewText = document.getElementById('rate-review-text')?.value;
+                const submitBtn = document.getElementById('btn-submit-rate-review');
+
+                if (!reviewText || !reviewText.trim()) {
+                    showToast('⚠️ Please enter your review comments.', 'warning');
+                    return;
+                }
+
+                const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+                if (!token) {
+                    showToast('⚠️ Please log in to submit your review.', 'warning');
+                    return;
+                }
+
+                try {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+                    }
+
+                    const res = await fetch('http://localhost:5000/api/reviews', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            bookingId: bookingId ? parseInt(bookingId, 10) : null,
+                            providerId: providerId ? parseInt(providerId, 10) : null,
+                            rating: currentSelectedRating,
+                            reviewText: reviewText.trim()
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        showToast('✓ Thank you! Your review has been submitted and published to the provider profile.', 'success');
+                        window.closeRateReviewModal();
+                        form.reset();
+                        if (typeof window.fetchUserBookings === 'function') {
+                            window.fetchUserBookings();
+                        }
+                    } else {
+                        showToast(`⚠️ ${data.message || 'Failed to submit review.'}`, 'error');
+                    }
+                } catch (err) {
+                    showToast('⚠️ Error submitting review. Please try again.', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Review';
+                    }
+                }
+            });
+        }
+    }
+
+    initRateReviewModal();
+
     // Initial Notifications Fetch & Polling every 10 seconds
     fetchNotifications();
     setInterval(fetchNotifications, 10000);
@@ -2327,9 +4001,132 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Global Photo Lightbox Viewer Controller
-window.openPhotoLightbox = (imageSrc) => {
-    if (!imageSrc) return;
+// ==================== GLOBAL PHOTO CAROUSEL & SWIPE CONTROLLERS ====================
+window.packagePhotosMap = window.packagePhotosMap || {};
+
+window.switchCardPhoto = (pkgId, target, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const urls = window.packagePhotosMap[pkgId] || [];
+    if (!urls || urls.length <= 1) return;
+
+    const wrap = document.querySelector(`.offer-card-image-wrap[data-pkg-id="${pkgId}"]`) || document.querySelector(`[data-pkg-id="${pkgId}"] .offer-card-image-wrap`) || document.getElementById(`pkg-photo-wrap-${pkgId}`);
+    const mainImg = document.getElementById(`main-offer-img-${pkgId}`) || document.getElementById(`main-pkg-photo-${pkgId}`) || (wrap ? wrap.querySelector('img.card-main-img, img.enlargeable-photo, img') : null);
+    const counter = document.getElementById(`card-photo-counter-${pkgId}`);
+    const thumbsRow = document.getElementById(`card-thumbnails-row-${pkgId}`);
+
+    let currentIdx = wrap ? parseInt(wrap.getAttribute('data-photo-idx') || '0', 10) : 0;
+    if (isNaN(currentIdx)) currentIdx = 0;
+
+    let newIdx = currentIdx;
+    if (target === 'next') {
+        newIdx = (currentIdx + 1) % urls.length;
+    } else if (target === 'prev') {
+        newIdx = (currentIdx - 1 + urls.length) % urls.length;
+    } else if (typeof target === 'number') {
+        newIdx = (target + urls.length) % urls.length;
+    }
+
+    if (wrap) wrap.setAttribute('data-photo-idx', newIdx);
+
+    if (mainImg) {
+        mainImg.style.opacity = '0.35';
+        mainImg.style.transform = target === 'prev' ? 'translateX(8px) scale(0.98)' : 'translateX(-8px) scale(0.98)';
+        setTimeout(() => {
+            mainImg.src = urls[newIdx];
+            mainImg.style.opacity = '1';
+            mainImg.style.transform = 'translateX(0) scale(1)';
+        }, 110);
+    }
+
+    if (counter) {
+        counter.textContent = `${newIdx + 1} / ${urls.length}`;
+    }
+
+    if (thumbsRow) {
+        const thumbs = thumbsRow.querySelectorAll('.card-thumb-item, img');
+        thumbs.forEach((th, idx) => {
+            if (idx === newIdx) {
+                th.classList.add('active');
+                th.style.borderColor = '#2563eb';
+                th.style.opacity = '1';
+                th.style.transform = 'scale(1.08)';
+                th.style.boxShadow = '0 2px 8px rgba(37,99,235,0.4)';
+                if (typeof th.scrollIntoView === 'function') {
+                    th.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            } else {
+                th.classList.remove('active');
+                th.style.borderColor = '#cbd5e1';
+                th.style.opacity = '0.65';
+                th.style.transform = 'scale(1)';
+                th.style.boxShadow = 'none';
+            }
+        });
+    }
+};
+
+window.openCardGalleryLightbox = (pkgId, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const urls = window.packagePhotosMap[pkgId] || [];
+    const wrap = document.querySelector(`.offer-card-image-wrap[data-pkg-id="${pkgId}"]`) || document.querySelector(`[data-pkg-id="${pkgId}"] .offer-card-image-wrap`);
+    const currentIdx = wrap ? parseInt(wrap.getAttribute('data-photo-idx') || '0', 10) : 0;
+    if (urls && urls.length > 0) {
+        window.openPhotoLightbox(urls, currentIdx);
+    } else {
+        const mainImg = document.getElementById(`main-offer-img-${pkgId}`) || (wrap ? wrap.querySelector('img') : null);
+        if (mainImg && mainImg.src) window.openPhotoLightbox(mainImg.src, 0);
+    }
+};
+
+// Touch / Swipe Gestures on Offer Card Image Wrappers
+document.addEventListener('touchstart', (e) => {
+    const wrap = e.target.closest('.offer-card-image-wrap');
+    if (!wrap || e.target.closest('.card-carousel-btn') || e.target.closest('.card-enlarge-btn')) return;
+    wrap._touchStartX = e.touches[0].clientX;
+    wrap._touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+    const wrap = e.target.closest('.offer-card-image-wrap');
+    if (!wrap || wrap._touchStartX === undefined) return;
+    const diffX = e.changedTouches[0].clientX - wrap._touchStartX;
+    const diffY = e.changedTouches[0].clientY - wrap._touchStartY;
+    wrap._touchStartX = undefined;
+
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+        const pkgId = wrap.getAttribute('data-pkg-id');
+        if (pkgId) {
+            if (diffX < 0) {
+                window.switchCardPhoto(pkgId, 'next');
+            } else {
+                window.switchCardPhoto(pkgId, 'prev');
+            }
+        }
+    }
+}, { passive: true });
+
+// ==================== GLOBAL PHOTO LIGHTBOX VIEWER CONTROLLER ====================
+window._lightboxPhotos = [];
+window._lightboxIndex = 0;
+
+window.openPhotoLightbox = (imageSrcOrArray, startIndex = 0) => {
+    if (!imageSrcOrArray) return;
+
+    if (Array.isArray(imageSrcOrArray)) {
+        window._lightboxPhotos = imageSrcOrArray.filter(Boolean);
+        window._lightboxIndex = typeof startIndex === 'number' ? startIndex : 0;
+    } else if (typeof imageSrcOrArray === 'object' && imageSrcOrArray.images) {
+        window._lightboxPhotos = (imageSrcOrArray.images || []).filter(Boolean);
+        window._lightboxIndex = imageSrcOrArray.index || 0;
+    } else {
+        window._lightboxPhotos = [imageSrcOrArray];
+        window._lightboxIndex = 0;
+    }
+
+    if (window._lightboxPhotos.length === 0) return;
+    if (window._lightboxIndex < 0 || window._lightboxIndex >= window._lightboxPhotos.length) {
+        window._lightboxIndex = 0;
+    }
 
     let modal = document.getElementById('photo-lightbox-modal');
     if (!modal) {
@@ -2337,8 +4134,15 @@ window.openPhotoLightbox = (imageSrc) => {
         modal.id = 'photo-lightbox-modal';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
-        modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10, 20, 35, 0.96); backdrop-filter:blur(12px); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:99999999; opacity:0; transition:opacity 0.25s ease; box-sizing:border-box; padding:20px; user-select:none;';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10, 20, 35, 0.96); backdrop-filter:blur(14px); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:99999999; opacity:0; transition:opacity 0.25s ease; box-sizing:border-box; padding:20px; user-select:none;';
         modal.innerHTML = `
+            <!-- Top Controls Toolbar -->
+            <div style="position:absolute; top:20px; left:28px; z-index:100000000; display:flex; align-items:center; gap:12px;">
+                <span id="lightbox-counter-badge" style="background:rgba(255,255,255,0.18); color:#ffffff; padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight:800; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.25); display:none;">
+                    Photo 1 of 1
+                </span>
+            </div>
+
             <div style="position:absolute; top:20px; right:28px; display:flex; align-items:center; gap:10px; z-index:100000000;">
                 <button type="button" id="lightbox-zoom-out-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
                 <button type="button" id="lightbox-zoom-in-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
@@ -2347,11 +4151,22 @@ window.openPhotoLightbox = (imageSrc) => {
                 </a>
                 <button type="button" id="lightbox-close-btn" style="background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:44px; height:44px; border-radius:50%; font-size:1.6rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s ease;" title="Close Viewer">&times;</button>
             </div>
-            <div id="lightbox-img-container" style="max-width:96vw; max-height:90vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:zoom-in;">
-                <img id="lightbox-full-img" src="" alt="Enlarged Photo Attachment" style="max-width:94vw; max-height:88vh; border-radius:14px; object-fit:contain; box-shadow:0 25px 60px rgba(0,0,0,0.7); transform:scale(1); transition:transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+
+            <!-- Left & Right Carousel Arrows -->
+            <button type="button" id="lightbox-prev-btn" style="position:absolute; left:24px; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.3); color:#ffffff; font-size:1.3rem; cursor:pointer; display:none; align-items:center; justify-content:center; backdrop-filter:blur(8px); z-index:100000000; transition:all 0.2s ease;" title="Previous Photo (Left Arrow)">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button type="button" id="lightbox-next-btn" style="position:absolute; right:24px; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.3); color:#ffffff; font-size:1.3rem; cursor:pointer; display:none; align-items:center; justify-content:center; backdrop-filter:blur(8px); z-index:100000000; transition:all 0.2s ease;" title="Next Photo (Right Arrow)">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            <!-- Main Image Viewport -->
+            <div id="lightbox-img-container" style="max-width:94vw; max-height:80vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:zoom-in;">
+                <img id="lightbox-full-img" src="" alt="Enlarged Photo Attachment" style="max-width:92vw; max-height:78vh; border-radius:14px; object-fit:contain; box-shadow:0 25px 60px rgba(0,0,0,0.75); transform:scale(1); transition:transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;">
             </div>
-            <div style="position:absolute; bottom:20px; background:rgba(0,0,0,0.5); color:#ffffff; padding:6px 16px; border-radius:20px; font-size:0.82rem; font-weight:700; backdrop-filter:blur(4px); pointer-events:none; display:flex; align-items:center; gap:8px;">
-                <i class="fa-solid fa-magnifying-glass-plus"></i> Click image or use buttons to Zoom In / Out
+
+            <!-- Bottom Gallery Thumbnails Bar -->
+            <div id="lightbox-thumbnails-bar" style="position:absolute; bottom:20px; max-width:85vw; display:none; gap:10px; overflow-x:auto; padding:8px 16px; background:rgba(10,25,47,0.7); border-radius:16px; backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.15); z-index:100000000;">
             </div>
         `;
         document.body.appendChild(modal);
@@ -2371,6 +4186,14 @@ window.openPhotoLightbox = (imageSrc) => {
                 window.closePhotoLightbox();
                 return;
             }
+            if (e.target.id === 'lightbox-prev-btn' || e.target.closest('#lightbox-prev-btn')) {
+                window.switchLightboxPhoto('prev');
+                return;
+            }
+            if (e.target.id === 'lightbox-next-btn' || e.target.closest('#lightbox-next-btn')) {
+                window.switchLightboxPhoto('next');
+                return;
+            }
             if (e.target.id === 'lightbox-zoom-in-btn' || e.target.closest('#lightbox-zoom-in-btn')) {
                 setScale(currentScale + 0.5);
                 return;
@@ -2387,15 +4210,33 @@ window.openPhotoLightbox = (imageSrc) => {
                 window.closePhotoLightbox();
             }
         });
+
+        // Touch Swipe on Lightbox
+        let lbTouchStartX = 0;
+        let lbTouchStartY = 0;
+        modal.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches[0]) {
+                lbTouchStartX = e.touches[0].clientX;
+                lbTouchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        modal.addEventListener('touchend', (e) => {
+            if (e.changedTouches && e.changedTouches[0]) {
+                const diffX = e.changedTouches[0].clientX - lbTouchStartX;
+                const diffY = e.changedTouches[0].clientY - lbTouchStartY;
+                if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX < 0) {
+                        window.switchLightboxPhoto('next');
+                    } else {
+                        window.switchLightboxPhoto('prev');
+                    }
+                }
+            }
+        }, { passive: true });
     }
 
-    const img = modal.querySelector('#lightbox-full-img');
-    const dlBtn = modal.querySelector('#lightbox-download-btn');
-    if (!img) return;
-
-    img.src = imageSrc;
-    if (dlBtn) dlBtn.href = imageSrc;
-    img.style.transform = 'scale(1)';
+    window.updateLightboxDisplay();
 
     modal.classList.remove('hidden');
     modal.style.setProperty('display', 'flex', 'important');
@@ -2405,6 +4246,71 @@ window.openPhotoLightbox = (imageSrc) => {
     requestAnimationFrame(() => {
         modal.style.setProperty('opacity', '1', 'important');
     });
+};
+
+window.switchLightboxPhoto = (target) => {
+    const photos = window._lightboxPhotos || [];
+    if (photos.length <= 1) return;
+
+    if (target === 'next') {
+        window._lightboxIndex = (window._lightboxIndex + 1) % photos.length;
+    } else if (target === 'prev') {
+        window._lightboxIndex = (window._lightboxIndex - 1 + photos.length) % photos.length;
+    } else if (typeof target === 'number') {
+        window._lightboxIndex = (target + photos.length) % photos.length;
+    }
+
+    const modal = document.getElementById('photo-lightbox-modal');
+    const img = modal ? modal.querySelector('#lightbox-full-img') : null;
+    if (img) {
+        img.style.opacity = '0.3';
+        img.style.transform = target === 'prev' ? 'translateX(16px) scale(0.96)' : 'translateX(-16px) scale(0.96)';
+        setTimeout(() => {
+            window.updateLightboxDisplay();
+            img.style.opacity = '1';
+            img.style.transform = 'translateX(0) scale(1)';
+        }, 120);
+    } else {
+        window.updateLightboxDisplay();
+    }
+};
+
+window.updateLightboxDisplay = () => {
+    const modal = document.getElementById('photo-lightbox-modal');
+    if (!modal) return;
+
+    const photos = window._lightboxPhotos || [];
+    const idx = window._lightboxIndex || 0;
+    const currentSrc = photos[idx] || '';
+
+    const img = modal.querySelector('#lightbox-full-img');
+    const dlBtn = modal.querySelector('#lightbox-download-btn');
+    const counterBadge = modal.querySelector('#lightbox-counter-badge');
+    const prevBtn = modal.querySelector('#lightbox-prev-btn');
+    const nextBtn = modal.querySelector('#lightbox-next-btn');
+    const thumbBar = modal.querySelector('#lightbox-thumbnails-bar');
+
+    if (img) img.src = currentSrc;
+    if (dlBtn) dlBtn.href = currentSrc;
+
+    const isMultiple = photos.length > 1;
+    if (counterBadge) {
+        counterBadge.style.display = isMultiple ? 'inline-block' : 'none';
+        counterBadge.textContent = `Photo ${idx + 1} of ${photos.length}`;
+    }
+    if (prevBtn) prevBtn.style.display = isMultiple ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = isMultiple ? 'flex' : 'none';
+
+    if (thumbBar) {
+        if (isMultiple) {
+            thumbBar.style.display = 'flex';
+            thumbBar.innerHTML = photos.map((url, pIdx) => `
+                <img src="${url}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:2px solid ${pIdx === idx ? '#2563eb' : 'rgba(255,255,255,0.3)'}; opacity:${pIdx === idx ? '1' : '0.6'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); window.switchLightboxPhoto(${pIdx});" title="View photo ${pIdx + 1}">
+            `).join('');
+        } else {
+            thumbBar.style.display = 'none';
+        }
+    }
 };
 
 window.closePhotoLightbox = () => {
@@ -2421,10 +4327,12 @@ window.closePhotoLightbox = () => {
     }, 250);
 };
 
-// Global Event Delegation for all enlargeable photos
+// Global Event Delegation for Standalone Enlargeable Photos & Chat Attachments
 document.addEventListener('click', (e) => {
-    const imgEl = e.target.closest('.message-bubble img, .chat-photo-attachment, .enlargeable-photo, .offer-card-image-wrap img, #offer-details-modal-body img, img.clickable-photo');
-    if (imgEl && imgEl.src && !e.target.closest('#photo-lightbox-modal') && !imgEl.classList.contains('no-lightbox')) {
+    if (e.target.closest('#photo-lightbox-modal') || e.target.closest('.card-carousel-btn') || e.target.closest('.card-thumb-item') || e.target.closest('.offer-card-image-wrap')) return;
+
+    const imgEl = e.target.closest('.message-bubble img, .chat-photo-attachment, .clickable-photo, [data-action="enlarge"]');
+    if (imgEl && imgEl.src && !imgEl.classList.contains('no-lightbox')) {
         e.preventDefault();
         e.stopPropagation();
         window.openPhotoLightbox(imgEl.src);
@@ -2432,5 +4340,15 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') window.closePhotoLightbox();
+    const modal = document.getElementById('photo-lightbox-modal');
+    const isVisible = modal && modal.style.display !== 'none' && modal.style.visibility !== 'hidden';
+    if (!isVisible) return;
+
+    if (e.key === 'Escape') {
+        window.closePhotoLightbox();
+    } else if (e.key === 'ArrowLeft') {
+        window.switchLightboxPhoto('prev');
+    } else if (e.key === 'ArrowRight') {
+        window.switchLightboxPhoto('next');
+    }
 });
