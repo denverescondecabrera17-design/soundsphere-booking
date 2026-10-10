@@ -140,6 +140,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
                         const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
 
+                        let isOverdue = false;
+                        let daysOverdue = 0;
+                        if (sDate && sDate !== 'N/A') {
+                            const match = String(sDate).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                            if (match) {
+                                const targetMidnight = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10)).getTime();
+                                const now = new Date();
+                                const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                                const diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+                                if (diffDays < 0) {
+                                    isOverdue = true;
+                                    daysOverdue = Math.abs(diffDays);
+                                }
+                            }
+                        }
+
                         return {
                             id: b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`,
                             bookingId: b.BookingID,
@@ -170,9 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             totalPrice: totalAmountVal,
                             amountPaid: amountPaidVal,
                             remainingBalance: remainingBalVal,
+                            isOverdue,
+                            daysOverdue,
                             paymentType: b.PaymentType || 'full',
                             paymentStatus: b.PaymentStatus || 'Paid',
-                            paymentStatusClass: (remainingBalVal > 0) ? 'paid-partial' : 'paid-full',
+                            paymentStatusClass: (remainingBalVal > 0) ? (isOverdue ? 'paid-overdue' : 'paid-partial') : 'paid-full',
                             status: b.BookingStatus || 'Confirmed',
                             reviewId: b.ReviewID,
                             rating: b.Rating,
@@ -309,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="total-price-label">Total Booking Amount</div>
                         <div class="total-price-amount">₱${b.totalPrice.toLocaleString()}</div>
                         <div style="font-size:0.82rem; font-weight:700; color:#10b981; margin-top:4px;">Paid: ₱${b.amountPaid.toLocaleString()} (${b.paymentType === 'full' ? '100% Full' : '50% Down'})</div>
-                        ${b.remainingBalance > 0 ? `<div style="font-size:0.82rem; font-weight:800; color:#ef4444; margin-top:2px;">Balance: ₱${b.remainingBalance.toLocaleString()} (Due on event date)</div>` : `<div style="font-size:0.82rem; font-weight:700; color:#2563eb; margin-top:2px;">Remaining Balance Paid</div>`}
+                        ${b.remainingBalance > 0 ? (b.isOverdue ? `<div style="font-size:0.82rem; font-weight:800; color:#dc2626; margin-top:2px;"><i class="fa-solid fa-triangle-exclamation"></i> Overdue: ₱${b.remainingBalance.toLocaleString()} (${b.daysOverdue}d past due)</div>` : `<div style="font-size:0.82rem; font-weight:800; color:#ef4444; margin-top:2px;">Balance: ₱${b.remainingBalance.toLocaleString()} (Due on event date)</div>`) : `<div style="font-size:0.82rem; font-weight:700; color:#2563eb; margin-top:2px;">Remaining Balance Paid</div>`}
                         <div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-top:6px; border-top:1px dashed #e2e8f0; padding-top:4px;">
                             Pkg: ₱${b.packagePrice.toLocaleString()} | Transpo: ₱${b.transportationFee.toLocaleString()}${b.distanceKm ? ` (${b.distanceKm}km)` : ''}${b.additionalDayCharges > 0 ? ` | Extra: ₱${b.additionalDayCharges.toLocaleString()}` : ''}
                         </div>

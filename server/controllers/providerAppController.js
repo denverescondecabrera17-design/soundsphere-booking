@@ -126,11 +126,21 @@ const submitApplication = async (req, res) => {
         businessAddress = sanitizeInput(businessAddress);
         coverageArea = sanitizeInput(coverageArea);
         contactNumber = sanitizeInput(contactNumber);
+        if (contactNumber) {
+            contactNumber = contactNumber.replace(/\D/g, '');
+        }
 
         if (!businessName || !ownerName || !businessAddress || !coverageArea || !contactNumber) {
             return res.status(400).json({
                 success: false,
                 message: 'All application fields (Business Name, Owner Name, Business Address, Coverage Area, Contact Number) are required.'
+            });
+        }
+
+        if (!/^\d{7,15}$/.test(contactNumber)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Business contact number must contain numbers only (e.g. 09171234567).'
             });
         }
 

@@ -137,10 +137,10 @@
 
             <!-- Browse Categories & Place Section -->
             <div class="section-wrapper" style="padding-top: 12px; padding-bottom: 12px;">
-                <div class="minimal-category-row" style="display: flex; align-items: center; gap: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 20px; box-shadow: 0 1px 4px rgba(10,25,47,0.04);">
+                <div class="minimal-category-row" style="display: flex; align-items: center; gap: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 20px; box-shadow: 0 1px 4px rgba(10,25,47,0.04); flex-wrap: wrap;">
                     
                     <!-- Place Dropdown -->
-                    <div class="filter-dropdown-group" style="display: flex; align-items: center; gap: 12px; width: 100%; max-width: 420px;">
+                    <div class="filter-dropdown-group" style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px; max-width: 360px;">
                         <label for="home-place-select" style="font-size: 0.875rem; font-weight: 700; color: #0a192f; white-space: nowrap;">Place:</label>
                         <div style="position: relative; flex: 1;">
                             <select id="home-place-select" name="home_place_select" style="width: 100%; height: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0 34px 0 12px; font-size: 0.9375rem; font-weight: 600; color: #0a192f; font-family: inherit; cursor: pointer; outline: none; appearance: none; transition: all 0.2s ease;">
@@ -148,6 +148,21 @@
                                 <option value="Lian">Lian</option>
                                 <option value="Balayan">Balayan</option>
                                 <option value="Nasugbu">Nasugbu</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #2563eb; font-size: 0.8125rem; pointer-events: none;"></i>
+                        </div>
+                    </div>
+
+                    <!-- Package Category Dropdown -->
+                    <div class="filter-dropdown-group" style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 280px; max-width: 400px;">
+                        <label for="home-category-select" style="font-size: 0.875rem; font-weight: 700; color: #0a192f; white-space: nowrap;">Package Category:</label>
+                        <div style="position: relative; flex: 1;">
+                            <select id="home-category-select" name="home_category_select" style="width: 100%; height: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0 34px 0 12px; font-size: 0.9375rem; font-weight: 600; color: #0a192f; font-family: inherit; cursor: pointer; outline: none; appearance: none; transition: all 0.2s ease;">
+                                <option value="all">All Packages</option>
+                                <option value="Basic Package">Basic Package</option>
+                                <option value="Standard Package">Standard Package</option>
+                                <option value="Full Band Package">Full Band Package</option>
+                                <option value="Premium Package">Premium Package</option>
                             </select>
                             <i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #2563eb; font-size: 0.8125rem; pointer-events: none;"></i>
                         </div>
@@ -175,49 +190,7 @@
             </div>
         </section>
 
-        <!-- ==================== SEARCH VIEW (HIDDEN DYNAMIC SEARCH RESULTS) ==================== -->
-        <section class="platform-view-panel hidden" id="view-search">
-            <div class="section-wrapper">
-                <div class="section-header-title">
-                    <div>
-                        <h2><i class="fa-solid fa-magnifying-glass" style="color:#2563eb;"></i> Search Results</h2>
-                        <p id="search-results-count">Showing Results</p>
-                    </div>
-                </div>
 
-                <div class="search-filter-layout">
-                    <!-- Filters Sidebar -->
-                    <aside class="filter-sidebar-card">
-                        <div style="font-size: 1.15rem; font-weight: 800; color: #0a192f; display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
-                            <span><i class="fa-solid fa-sliders" style="color: #2563eb; margin-right: 6px;"></i> Equipment Filters</span>
-                            <a href="#" style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: none; padding: 4px 10px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe;" onclick="location.reload();">Reset</a>
-                        </div>
-
-                        <div class="filter-group">
-                            <label for="main-search-input">Keyword Search</label>
-                            <input type="text" id="main-search-input" name="main_search_input" class="filter-input" placeholder="e.g. Line array, wedding lights, Balayan..." autocomplete="off">
-                        </div>
-
-                        <div class="filter-group">
-                            <label for="search-location-select">Place</label>
-                            <select id="search-location-select" name="search_location_select" class="filter-select">
-                                <option value="all">All Places</option>
-                                <option value="Lian">Lian</option>
-                                <option value="Balayan">Balayan</option>
-                                <option value="Nasugbu">Nasugbu</option>
-                            </select>
-                        </div>
-                    </aside>
-
-                    <!-- Search Results Grid -->
-                    <main>
-                        <div class="providers-responsive-grid" id="search-results-grid">
-                            <!-- Rendered dynamically via app-platform.js -->
-                        </div>
-                    </main>
-                </div>
-            </div>
-        </section>
 
         <!-- ==================== VIEW 2: MESSAGES (MESSENGER UI) ==================== -->
         <section class="platform-view-panel hidden" id="view-messages">
@@ -322,7 +295,10 @@
                         <i class="fa-solid fa-gear"></i> Account Settings
                     </button>
                     <button type="button" class="subtab-btn" id="subtab-btn-balances" data-subtab="balances">
-                        <i class="fa-solid fa-wallet"></i> Payment Balances
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Payment Balances
+                    </button>
+                    <button type="button" class="subtab-btn" id="subtab-btn-wallet" data-subtab="wallet">
+                        <i class="fa-solid fa-wallet"></i> Wallet
                     </button>
                 </div>
             </div>
@@ -492,28 +468,137 @@
                     </div>
                 </div>
 
+                <!-- 6. REFUND WALLET (AUTOMATIC REFUNDS & CASHIER PAYOUT REQUESTS) -->
+                <div id="profile-sec-wallet" class="hidden">
+                    <!-- Top Balance Card -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px; background:linear-gradient(135deg, #0a192f 0%, #1e3a8a 100%); border-radius:18px; padding:24px 28px; color:#ffffff; box-shadow:0 8px 24px rgba(10,25,47,0.12);">
+                        <div>
+                            <div style="font-size:0.85rem; font-weight:700; color:#93c5fd; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                                <i class="fa-solid fa-wallet" style="margin-right:6px;"></i> SoundSphere Refund Wallet
+                            </div>
+                            <div style="display:flex; align-items:baseline; gap:8px;">
+                                <span style="font-size:2.4rem; font-weight:900; color:#ffffff;" id="wallet-display-balance">₱0.00</span>
+                                <span style="font-size:0.88rem; color:#cbd5e1; font-weight:600;">Available Refund Balance</span>
+                            </div>
+                            <p style="margin:8px 0 0 0; color:#bfdbfe; font-size:0.84rem; max-width:540px; line-height:1.4;">
+                                Automatic refunds for cancelled bookings go directly into your wallet. Request a payout to your GCash, Maya, or Bank account, processed manually by the Cashier.
+                            </p>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px; align-items:flex-end;">
+                            <div style="background:rgba(255,255,255,0.12); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:8px 16px; text-align:right;">
+                                <div style="font-size:0.75rem; color:#bfdbfe; font-weight:600; text-transform:uppercase;">Pending Cashier Payout</div>
+                                <div style="font-size:1.1rem; font-weight:800; color:#fde047;" id="wallet-pending-payout">₱0.00</div>
+                            </div>
+                            <button type="button" id="btn-open-wallet-withdraw" class="btn-primary" style="height:44px; padding:0 22px; font-size:0.92rem; font-weight:800; border-radius:10px; background:#2563eb; color:#ffffff; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(37,99,235,0.4); transition:all 0.2s;">
+                                <i class="fa-solid fa-money-bill-transfer"></i> Request Refund Payout
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Payout Requests Section -->
+                    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; padding:22px; margin-bottom:20px; box-shadow:0 2px 8px rgba(10,25,47,0.04);">
+                        <h4 style="margin:0 0 14px 0; font-size:1.05rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-clock-rotate-left" style="color:#2563eb;"></i> Payout Requests Sent to Cashier
+                        </h4>
+                        <div id="wallet-requests-container">
+                            <p style="color:#64748b; font-size:0.88rem; margin:0;">No pending or previous payout requests.</p>
+                        </div>
+                    </div>
+
+                    <!-- Transaction History Section -->
+                    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; padding:22px; box-shadow:0 2px 8px rgba(10,25,47,0.04);">
+                        <h4 style="margin:0 0 14px 0; font-size:1.05rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-list-check" style="color:#10b981;"></i> Wallet Activity & Refund History
+                        </h4>
+                        <div id="wallet-transactions-container">
+                            <p style="color:#64748b; font-size:0.88rem; margin:0;">No wallet activity recorded yet.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </section>
 
+        <!-- Client Refund Payout Request Modal -->
+        <div id="modal-refund-request" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10,25,47,0.7); backdrop-filter:blur(4px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px;">
+            <div style="background:#ffffff; border-radius:18px; width:100%; max-width:480px; box-shadow:0 20px 40px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #e2e8f0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
+                    <h3 style="margin:0; font-size:1.15rem; font-weight:900; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-money-bill-transfer" style="color:#2563eb;"></i> Request Refund Payout
+                    </h3>
+                    <button type="button" id="close-refund-modal-btn" style="background:none; border:none; font-size:1.4rem; color:#64748b; cursor:pointer; line-height:1;">&times;</button>
+                </div>
+                <form id="form-refund-request" style="padding:22px 24px;">
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:0.84rem; color:#1e40af;">
+                        <i class="fa-solid fa-circle-info"></i> The Cashier will manually disburse your refund via your selected account and provide a payment reference number.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <label style="font-size:0.84rem; font-weight:700; color:#334155;">Amount to Withdraw (₱)</label>
+                            <span style="font-size:0.78rem; font-weight:700; color:#2563eb; cursor:pointer;" id="btn-refund-max-amount">Max: <span id="lbl-refund-max-val">₱0.00</span></span>
+                        </div>
+                        <input type="number" step="0.01" id="refund-input-amount" class="form-control" style="height:44px; font-size:1.1rem; font-weight:800; color:#0a192f; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" required placeholder="0.00">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Payout Method</label>
+                        <select id="refund-select-method" class="form-select" style="height:42px; font-size:0.92rem; font-weight:600; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 12px; width:100%; box-sizing:border-box;" required>
+                            <option value="GCash">GCash E-Wallet</option>
+                            <option value="Maya">Maya Wallet</option>
+                            <option value="Bank Transfer">Bank Transfer (BDO / BPI / UnionBank / Landbank)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Account Holder Name</label>
+                        <input type="text" id="refund-input-name" class="form-control" style="height:42px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Denver Cabrera" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Account Number / Mobile Number</label>
+                        <input type="text" id="refund-input-number" class="form-control" style="height:42px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. 09516028992 or Bank Acc #" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Optional Notes to Cashier</label>
+                        <input type="text" id="refund-input-notes" class="form-control" style="height:40px; font-size:0.86rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Refund for cancelled booking">
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" id="btn-cancel-refund-modal" style="height:42px; padding:0 18px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.88rem; cursor:pointer;">Cancel</button>
+                        <button type="submit" id="btn-submit-refund-req" style="height:42px; padding:0 22px; border-radius:8px; border:none; background:#2563eb; color:#ffffff; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            <span>Submit to Cashier</span> <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </main>
 
-    <!-- ==================== MODERN MULTI-STEP SERVICE PROVIDER APPLICATION INTERFACE ==================== -->
-    <div class="modal-overlay hidden" id="modal-provider-application" role="dialog" aria-modal="true" style="overflow-y: auto; padding: 20px 14px; display: flex; align-items: center; justify-content: center;">
-        <div class="modal-card" style="max-width: 860px; width: 96%; max-height: 90vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(10, 25, 47, 0.3); background: #ffffff;">
-            
-            <!-- Application Header Bar -->
-            <div class="modal-header" style="padding: 18px 28px; background: #ffffff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+    <!-- ==================== MODERN FULLSCREEN SERVICE PROVIDER APPLICATION INTERFACE ==================== -->
+    <div class="provider-fullscreen-app hidden" id="modal-provider-application" role="region" aria-label="Become a SoundSphere Service Provider">
+        
+        <!-- Application Fullscreen Header Bar -->
+        <header class="provider-fullscreen-header">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button type="button" class="btn-close-modal" id="close-provider-app-modal-btn" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 16px; font-size:0.86rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <div style="height:28px; width:1px; background:#e2e8f0;"></div>
                 <div>
-                    <h2 style="margin:0; font-size:1.35rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:10px;">
-                        <i class="fa-solid fa-store" style="color:#2563eb; font-size:1.35rem;"></i> Become a SoundSphere Service Provider
-                    </h2>
-                    <p style="margin:4px 0 0 0; font-size:0.84rem; color:#64748b; line-height:1.4;">Offer your services, reach more clients, and manage your bookings through SoundSphere.</p>
+                    <h1 style="margin:0; font-size:1.25rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-store" style="color:#2563eb; font-size:1.25rem;"></i> Become a SoundSphere Service Provider
+                    </h1>
+                    <p style="margin:2px 0 0 0; font-size:0.82rem; color:#64748b; line-height:1.3;">Offer your services, reach more clients, and manage your bookings through SoundSphere.</p>
                 </div>
-                <button type="button" class="btn-close-modal" id="close-provider-app-modal-btn" style="font-size:1.6rem; color:#64748b; background:none; border:none; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#0a192f'" onmouseout="this.style.color='#64748b'">&times;</button>
             </div>
+        </header>
 
-            <!-- Application Stepper Progress Indicator Bar -->
-            <div id="provider-wizard-stepper-bar" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:12px 28px; flex-wrap:wrap; gap:10px; flex-shrink: 0;">
+        <!-- Application Stepper Progress Indicator Bar -->
+        <div id="provider-wizard-stepper-bar" class="provider-fullscreen-stepper">
+            <div style="max-width:920px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div class="wizard-step-item active" data-step="1" style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.84rem; color:#2563eb;">
                     <span class="step-num-bubble" style="width:28px; height:28px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; box-shadow:0 2px 6px rgba(37,99,235,0.25);">1</span>
                     <span>1. Business Info</span>
@@ -534,9 +619,12 @@
                     <span>4. Review & Submit</span>
                 </div>
             </div>
+        </div>
 
-            <!-- Scrollable Form Body Content -->
-            <form id="form-provider-application" style="padding: 24px 28px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <!-- Fullscreen Content Area -->
+        <main class="provider-fullscreen-content">
+            <div class="provider-fullscreen-card">
+                <form id="form-provider-application" style="display:flex; flex-direction:column; justify-content:space-between; min-height:100%;">
                 
                 <!-- STEP 1: BUSINESS INFORMATION -->
                 <div class="wizard-step-panel" id="app-step-1">
@@ -569,7 +657,7 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                             <div>
                                 <label style="font-size:0.85rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">Business Phone Number <span style="color:#ef4444;">*</span></label>
-                                <input type="tel" id="app-biz-phone" placeholder="Enter business contact number" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:8px; padding:0 14px; font-family:inherit; box-sizing:border-box; font-size:0.85rem; transition:border-color 0.2s;">
+                                <input type="tel" id="app-biz-phone" inputmode="numeric" pattern="[0-9]*" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="09171234567" style="width:100%; height:40px; border:1px solid #cbd5e1; border-radius:8px; padding:0 14px; font-family:inherit; box-sizing:border-box; font-size:0.85rem; transition:border-color 0.2s;">
                                 <small style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Client inquiry line.</small>
                             </div>
                             <div>
@@ -701,7 +789,7 @@
                         <label class="category-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-service-chk" value="Basic Package" checked style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.88rem; color:#0a192f; display:block;"><i class="fa-solid fa-cube" style="color:#2563eb;"></i> Basic Package</strong>
+                                <strong style="font-size:0.88rem; color:#0a192f; display:block;">Basic Package</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Essential Audio & Lights</span>
                             </div>
                         </label>
@@ -709,7 +797,7 @@
                         <label class="category-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-service-chk" value="Standard Package" checked style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.88rem; color:#0a192f; display:block;"><i class="fa-solid fa-sliders" style="color:#f59e0b;"></i> Standard Package</strong>
+                                <strong style="font-size:0.88rem; color:#0a192f; display:block;">Standard Package</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Party Sound & Stage Lighting</span>
                             </div>
                         </label>
@@ -717,7 +805,7 @@
                         <label class="category-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-service-chk" value="Full Band Package" style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.88rem; color:#0a192f; display:block;"><i class="fa-solid fa-guitar" style="color:#8b5cf6;"></i> Full Band Package</strong>
+                                <strong style="font-size:0.88rem; color:#0a192f; display:block;">Full Band Package</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Complete Band & Concert Rig</span>
                             </div>
                         </label>
@@ -725,7 +813,7 @@
                         <label class="category-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-service-chk" value="Premium Package" style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.88rem; color:#0a192f; display:block;"><i class="fa-solid fa-crown" style="color:#10b981;"></i> Premium Package</strong>
+                                <strong style="font-size:0.88rem; color:#0a192f; display:block;">Premium Package</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Grand Stage, Truss & LED Wall</span>
                             </div>
                         </label>
@@ -741,7 +829,7 @@
                         <label class="location-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-location-chk" value="Lian" checked style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.92rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Lian</strong>
+                                <strong style="font-size:0.92rem; color:#0a192f; display:block;">Lian</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Lian Resorts & Venues</span>
                             </div>
                         </label>
@@ -749,7 +837,7 @@
                         <label class="location-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-location-chk" value="Balayan" checked style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.92rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Balayan</strong>
+                                <strong style="font-size:0.92rem; color:#0a192f; display:block;">Balayan</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Balayan Town & Halls</span>
                             </div>
                         </label>
@@ -757,7 +845,7 @@
                         <label class="location-selection-card" style="display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.2s ease;">
                             <input type="checkbox" class="app-location-chk" value="Nasugbu" style="width:18px; height:18px; accent-color:#2563eb;">
                             <div>
-                                <strong style="font-size:0.92rem; color:#0a192f; display:block;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Nasugbu</strong>
+                                <strong style="font-size:0.92rem; color:#0a192f; display:block;">Nasugbu</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">Nasugbu Beaches & Plazas</span>
                             </div>
                         </label>
@@ -883,8 +971,9 @@
                     </button>
                 </div>
 
-            </form>
-        </div>
+                </form>
+            </div>
+        </main>
     </div>
 
     <!-- ==================== PROVIDER APPLICATION EMAIL OTP MODAL ==================== -->
@@ -1547,7 +1636,7 @@
     <!-- Scripts with Cache-Busting Parameters -->
     <script src="/js/api.js?v=6.0"></script>
     <script src="/js/booking-calendar-modal.js?v=1.0"></script>
-    <script src="/js/app-platform.js?v=5.0"></script>
+    <script src="/js/app-platform.js?v=5.3"></script>
     <script src="/js/profile-modal.js?v=3.0"></script>
     <script src="/js/notifications.js?v=1.0"></script>
     <script src="/js/marketplace.js?v=7.0"></script>

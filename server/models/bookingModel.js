@@ -227,9 +227,9 @@ const getProviderCalendarSchedule = async (providerUserIdOrProviderId) => {
                     b.BookingStatus,
                     b.PaymentStatus,
                     b.CreatedAt,
-                    ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email) AS ClientName,
-                    u.Phone AS ClientPhone,
-                    u.Email AS ClientEmail
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName,
+                    COALESCE(NULLIF(b.ClientPhone, ''), u.Phone) AS ClientPhone,
+                    COALESCE(NULLIF(b.ClientEmail, ''), u.Email) AS ClientEmail
                 FROM dbo.Bookings b
                 LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
@@ -289,6 +289,29 @@ const setProviderDateCapacity = async (providerUserIdOrProviderId, specificDate,
     const { providerId } = await resolveProviderId(pool, providerUserIdOrProviderId);
     const capacityVal = Math.max(0, parseInt(maxBookings, 10));
 
+    // Check count of active bookings scheduled on this specific date
+    const checkBookings = await pool.request()
+        .input('ProviderID', sql.Int, providerId)
+        .input('SpecificDate', sql.NVarChar(50), specificDate)
+        .query(`
+            SELECT COUNT(*) AS activeCount
+            FROM dbo.Bookings b
+            WHERE b.ProviderID = @ProviderID
+              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+              AND (
+                  ISNULL(b.ServiceStartDate, b.EventDate) <= @SpecificDate 
+                  AND ISNULL(b.ServiceEndDate, b.EventDate) >= @SpecificDate
+              );
+        `);
+
+    const activeCount = (checkBookings.recordset && checkBookings.recordset[0]) ? (checkBookings.recordset[0].activeCount || 0) : 0;
+
+    if (capacityVal < activeCount) {
+        const error = new Error(`Cannot set capacity to ${capacityVal}. You already have ${activeCount} booking(s) scheduled on ${specificDate}. Minimum allowed capacity is ${activeCount}.`);
+        error.statusCode = 400;
+        throw error;
+    }
+
     const result = await pool.request()
         .input('ProviderID', sql.Int, providerId)
         .input('SpecificDate', sql.NVarChar(50), specificDate)
@@ -320,7 +343,30 @@ const deleteProviderDateCapacity = async (providerUserIdOrProviderId, specificDa
     const pool = getPool();
     if (!pool) throw new Error('Database connection pool not available.');
 
-    const { providerId } = await resolveProviderId(pool, providerUserIdOrProviderId);
+    const { providerId, defaultCapacity } = await resolveProviderId(pool, providerUserIdOrProviderId);
+
+    // Verify default capacity is not less than active bookings on this date
+    const checkBookings = await pool.request()
+        .input('ProviderID', sql.Int, providerId)
+        .input('SpecificDate', sql.NVarChar(50), specificDate)
+        .query(`
+            SELECT COUNT(*) AS activeCount
+            FROM dbo.Bookings b
+            WHERE b.ProviderID = @ProviderID
+              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+              AND (
+                  ISNULL(b.ServiceStartDate, b.EventDate) <= @SpecificDate 
+                  AND ISNULL(b.ServiceEndDate, b.EventDate) >= @SpecificDate
+              );
+        `);
+
+    const activeCount = (checkBookings.recordset && checkBookings.recordset[0]) ? (checkBookings.recordset[0].activeCount || 0) : 0;
+
+    if (defaultCapacity < activeCount) {
+        const error = new Error(`Cannot reset to default daily limit (${defaultCapacity}) because ${activeCount} booking(s) are already scheduled on ${specificDate}. Minimum allowed capacity is ${activeCount}.`);
+        error.statusCode = 400;
+        throw error;
+    }
 
     await pool.request()
         .input('ProviderID', sql.Int, providerId)
@@ -835,16 +881,38 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
         .input('BookingID', sql.Int, bookingId)
         .query(`
             UPDATE dbo.Bookings 
-            SET BookingStatus = 'Cancelled'
+            SET BookingStatus = 'Cancelled', UpdatedAt = GETDATE()
             WHERE BookingID = @BookingID;
         `);
 
+    // Automatic Refund Credit to Client Wallet if client had paid downpayment/full
+    const refundAmount = parseFloat(booking.AmountPaid || 0);
+    let refundResult = null;
+    if (refundAmount > 0 && booking.ClientUserID) {
+        try {
+            const walletService = require('../services/walletService');
+            refundResult = await walletService.creditWalletForRefund({
+                userId: booking.ClientUserID,
+                amount: refundAmount,
+                bookingId: booking.BookingID,
+                bookingReference: booking.BookingReference,
+                reason: `Automatic refund for booking cancelled by client (${booking.PackageName || 'Event Service'})`
+            });
+        } catch (rfErr) {
+            console.error('Wallet refund on client cancel notice:', rfErr);
+        }
+    }
+
     return {
         success: true,
-        message: 'Booking successfully cancelled within the 3-hour grace period.',
+        message: refundAmount > 0 
+            ? `Booking cancelled. A refund of ₱${refundAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been automatically credited to your Wallet!` 
+            : 'Booking successfully cancelled within the 3-hour grace period.',
         bookingId,
         cancelledAt: new Date(),
-        reason: reason || 'Cancelled by client'
+        reason: reason || 'Cancelled by client',
+        refundAmount,
+        walletCredited: !!(refundResult && refundResult.credited)
     };
 };
 

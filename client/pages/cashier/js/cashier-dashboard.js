@@ -177,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (cleanHash === 'withdrawals') {
             topbarTitle.textContent = 'Provider Withdrawals & Payouts';
             loadWithdrawalsList();
+        } else if (cleanHash === 'refunds') {
+            topbarTitle.textContent = 'Client Refund Disbursements';
+            loadClientRefundsList();
         } else if (cleanHash === 'subscriptions') {
             topbarTitle.textContent = 'Provider Subscription Payments';
             loadCashierSubscriptions();
@@ -293,6 +296,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (subRevEl) subRevEl.textContent = formatPHP(stats.totalSubscriptionRevenue || 0);
             if (subActiveEl) subActiveEl.textContent = `${stats.activeSubscriptionsCount || 0} active provider plans`;
 
+            // Client Refund metrics
+            const refCountEl = document.getElementById('stat-pending-refunds');
+            const refAmtEl = document.getElementById('stat-pending-refunds-amount');
+            const refSidebarBadge = document.getElementById('sidebar-refunds-badge');
+
+            if (refCountEl) refCountEl.textContent = stats.pendingRefundsCount || 0;
+            if (refAmtEl) refAmtEl.textContent = `${formatPHP(stats.pendingRefundsAmount || 0)} to disburse`;
+
+            if (refSidebarBadge) {
+                if (stats.pendingRefundsCount > 0) {
+                    refSidebarBadge.textContent = stats.pendingRefundsCount;
+                    refSidebarBadge.style.display = 'inline-block';
+                } else {
+                    refSidebarBadge.style.display = 'none';
+                }
+            }
+
             if (sidebarBadge) {
                 if (stats.pendingWithdrawalsCount > 0) {
                     sidebarBadge.textContent = stats.pendingWithdrawalsCount;
@@ -339,6 +359,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshOverviewBtn) {
         refreshOverviewBtn.addEventListener('click', loadCashierSummary);
     }
+
+    document.getElementById('btn-goto-withdrawals')?.addEventListener('click', () => switchView('withdrawals'));
+    document.getElementById('btn-goto-refunds')?.addEventListener('click', () => switchView('refunds'));
+    document.getElementById('btn-goto-reports-daily')?.addEventListener('click', () => {
+        switchView('reports');
+        document.querySelector('.period-tab-btn[data-period="daily"]')?.click();
+    });
+    document.getElementById('btn-goto-reports-monthly')?.addEventListener('click', () => {
+        switchView('reports');
+        document.querySelector('.period-tab-btn[data-period="monthly"]')?.click();
+    });
 
     // ----------------------------------------------------
     // 4. Provider Withdrawals List & Actions
@@ -746,6 +777,320 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<i class="fa-solid fa-ban"></i> Reject Request`;
+            }
+        });
+    }
+
+    // ----------------------------------------------------
+    // 4-B. Client Refund Requests Management (Disbursements & Rejections)
+    // ----------------------------------------------------
+    let currentRefundsList = [];
+    let currentRefundFilter = 'Pending';
+
+    async function loadClientRefundsList() {
+        const tbody = document.getElementById('refunds-table-body');
+        if (!tbody) return;
+
+        try {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:28px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Loading client refund requests...</td></tr>`;
+
+            const res = await fetch('/api/cashier/refund-requests', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (handleCashierAuthError(res, data)) return;
+
+            if (!data.success) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:28px; color:#ef4444;">Failed to load refunds: ${data.message}</td></tr>`;
+                return;
+            }
+
+            currentRefundsList = data.refundRequests || [];
+            updateRefundFilterCounts();
+            renderRefundsTable();
+        } catch (err) {
+            console.error('Error fetching refund requests:', err);
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:28px; color:#ef4444;">Network error loading refund requests.</td></tr>`;
+        }
+    }
+
+    function updateRefundFilterCounts() {
+        const pendingCount = currentRefundsList.filter(r => r.Status === 'Pending').length;
+        const approvedCount = currentRefundsList.filter(r => r.Status === 'Approved').length;
+        const rejectedCount = currentRefundsList.filter(r => r.Status === 'Rejected').length;
+        const allCount = currentRefundsList.length;
+
+        const countPendEl = document.getElementById('count-ref-pending');
+        const countApprEl = document.getElementById('count-ref-approved');
+        const countRejEl = document.getElementById('count-ref-rejected');
+        const countAllEl = document.getElementById('count-ref-all');
+        const refSidebarBadge = document.getElementById('sidebar-refunds-badge');
+
+        if (countPendEl) countPendEl.textContent = pendingCount;
+        if (countApprEl) countApprEl.textContent = approvedCount;
+        if (countRejEl) countRejEl.textContent = rejectedCount;
+        if (countAllEl) countAllEl.textContent = allCount;
+
+        if (refSidebarBadge) {
+            if (pendingCount > 0) {
+                refSidebarBadge.textContent = pendingCount;
+                refSidebarBadge.style.display = 'inline-block';
+            } else {
+                refSidebarBadge.style.display = 'none';
+            }
+        }
+    }
+
+    function renderRefundsTable() {
+        const tbody = document.getElementById('refunds-table-body');
+        if (!tbody) return;
+
+        const searchVal = (document.getElementById('refund-search-input')?.value || '').toLowerCase().trim();
+
+        let filtered = currentRefundsList;
+        if (currentRefundFilter !== 'All') {
+            filtered = filtered.filter(r => (r.Status || 'Pending') === currentRefundFilter);
+        }
+
+        if (searchVal) {
+            filtered = filtered.filter(r => {
+                const name = (r.ClientName || '').toLowerCase();
+                const acc = (r.AccountNumber || '').toLowerCase();
+                const ref = (r.ReferenceNumber || '').toLowerCase();
+                const id = String(r.RefundRequestID || '');
+                return name.includes(searchVal) || acc.includes(searchVal) || ref.includes(searchVal) || id.includes(searchVal);
+            });
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#64748b;">No client refund requests found matching filter '${currentRefundFilter}'.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(r => {
+            let statusBadge = 'badge-pending';
+            if (r.Status === 'Approved') statusBadge = 'badge-approved';
+            if (r.Status === 'Rejected') statusBadge = 'badge-rejected';
+
+            const isPending = (r.Status || 'Pending') === 'Pending';
+            const actionHtml = isPending ? `
+                <div style="display:flex; gap:6px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" title="Manually Disburse Payment">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Disburse
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
+                        <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                </div>
+            ` : (r.Status === 'Approved' ? `
+                <div style="text-align:right;">
+                    <strong style="color:#059669; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Ref: ${r.ReferenceNumber || 'Manual'}</strong>
+                    ${r.AdminNotes ? `<div style="font-size:0.75rem; color:#64748b;">${r.AdminNotes}</div>` : ''}
+                </div>
+            ` : `
+                <div style="text-align:right;">
+                    <span style="color:#dc2626; font-size:0.82rem;"><i class="fa-solid fa-xmark"></i> ${r.AdminNotes || 'Rejected'}</span>
+                </div>
+            `);
+
+            return `
+                <tr>
+                    <td><strong>#REF-${r.RefundRequestID}</strong></td>
+                    <td>
+                        <div style="font-weight:700; color:#0a192f;">${r.ClientName || 'Client'}</div>
+                        <div style="font-size:0.8rem; color:#64748b;">${r.ClientEmail || r.UserEmail || 'No Email'}</div>
+                        ${r.ClientPhone ? `<div style="font-size:0.78rem; color:#64748b;">📞 ${r.ClientPhone}</div>` : ''}
+                    </td>
+                    <td><strong class="flow-outflow" style="font-size:1.05rem; color:#ef4444;">-${formatPHP(r.Amount)}</strong></td>
+                    <td><span class="badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-weight:700;">${r.PayoutMethod || 'GCash'}</span></td>
+                    <td>
+                        <div style="font-weight:700; color:#1e293b;">${r.AccountName || '-'}</div>
+                        <div style="font-family:monospace; font-weight:800; font-size:0.95rem; color:#0a192f;">${r.AccountNumber || '-'}</div>
+                    </td>
+                    <td><span style="font-size:0.85rem; color:#475569;">${formatDateTime(r.RequestedAt)}</span></td>
+                    <td><span class="badge ${statusBadge}">${r.Status || 'Pending'}</span></td>
+                    <td style="text-align:right;">${actionHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Filter pill clicks
+    const refundPills = document.querySelectorAll('#refund-filter-pills .period-pill');
+    refundPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            refundPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentRefundFilter = pill.getAttribute('data-ref-filter') || 'Pending';
+            renderRefundsTable();
+        });
+    });
+
+    document.getElementById('refund-search-input')?.addEventListener('input', renderRefundsTable);
+    document.getElementById('btn-refresh-refunds')?.addEventListener('click', loadClientRefundsList);
+
+    // Table click delegation for Disburse & Reject
+    document.getElementById('refunds-table-body')?.addEventListener('click', (e) => {
+        const disburseBtn = e.target.closest('.btn-disburse-refund');
+        if (disburseBtn) {
+            const reqId = disburseBtn.getAttribute('data-id');
+            openCashierDisburseModal(reqId);
+            return;
+        }
+
+        const rejectBtn = e.target.closest('.btn-reject-refund');
+        if (rejectBtn) {
+            const reqId = rejectBtn.getAttribute('data-id');
+            openCashierRejectModal(reqId);
+            return;
+        }
+    });
+
+    // Modal: Disburse Client Refund
+    const modalCashierDisburse = document.getElementById('modal-cashier-disburse-refund');
+    const formCashierDisburse = document.getElementById('form-cashier-disburse-refund');
+
+    function openCashierDisburseModal(reqId) {
+        const item = currentRefundsList.find(r => String(r.RefundRequestID) === String(reqId));
+        if (!item) return;
+
+        document.getElementById('cashier-disburse-request-id').value = item.RefundRequestID;
+        document.getElementById('cashier-disburse-client-name').textContent = item.ClientName || 'Client';
+        document.getElementById('cashier-disburse-amount').textContent = formatPHP(item.Amount);
+        document.getElementById('cashier-disburse-channel').textContent = item.PayoutMethod || 'GCash';
+        document.getElementById('cashier-disburse-account-name').textContent = item.AccountName || 'Account';
+        document.getElementById('cashier-disburse-account-number').textContent = item.AccountNumber || '-';
+        document.getElementById('cashier-disburse-ref-number').value = '';
+        document.getElementById('cashier-disburse-notes').value = '';
+
+        modalCashierDisburse.classList.add('active');
+    }
+
+    function closeCashierDisburseModal() {
+        if (!modalCashierDisburse) return;
+        modalCashierDisburse.classList.remove('active');
+    }
+
+    document.getElementById('btn-close-cashier-disburse')?.addEventListener('click', closeCashierDisburseModal);
+    document.getElementById('btn-cancel-cashier-disburse')?.addEventListener('click', closeCashierDisburseModal);
+
+    if (formCashierDisburse) {
+        formCashierDisburse.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reqId = document.getElementById('cashier-disburse-request-id').value;
+            const refNo = document.getElementById('cashier-disburse-ref-number').value.trim();
+            const notes = document.getElementById('cashier-disburse-notes').value.trim();
+
+            if (!refNo) {
+                alert('Please enter the payment transaction reference number (e.g. from your GCash or Bank app).');
+                return;
+            }
+
+            const submitBtn = document.getElementById('btn-submit-cashier-disburse');
+            const origHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Disbursing...`;
+
+            try {
+                const res = await fetch(`/api/cashier/refund-requests/${reqId}/approve`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        referenceNumber: refNo,
+                        notes: notes || `Manually disbursed via GCash/Bank (Ref: ${refNo})`
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to approve refund.');
+                }
+
+                alert(`🎉 Refund Successfully Marked as Disbursed!\n\nReference: ${refNo}\nThe client has been notified in-app.`);
+                closeCashierDisburseModal();
+                loadClientRefundsList();
+                loadCashierSummary();
+            } catch (err) {
+                console.error('Error approving refund:', err);
+                alert(`⚠️ Error: ${err.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origHtml;
+            }
+        });
+    }
+
+    // Modal: Reject Client Refund
+    const modalCashierReject = document.getElementById('modal-cashier-reject-refund');
+    const formCashierReject = document.getElementById('form-cashier-reject-refund');
+
+    function openCashierRejectModal(reqId) {
+        const item = currentRefundsList.find(r => String(r.RefundRequestID) === String(reqId));
+        if (!item) return;
+
+        document.getElementById('cashier-reject-request-id').value = item.RefundRequestID;
+        document.getElementById('cashier-reject-client-name').textContent = item.ClientName || 'Client';
+        document.getElementById('cashier-reject-amount').textContent = formatPHP(item.Amount);
+        document.getElementById('cashier-reject-reason').value = '';
+
+        modalCashierReject.classList.add('active');
+    }
+
+    function closeCashierRejectModal() {
+        if (!modalCashierReject) return;
+        modalCashierReject.classList.remove('active');
+    }
+
+    document.getElementById('btn-close-cashier-reject')?.addEventListener('click', closeCashierRejectModal);
+    document.getElementById('btn-cancel-cashier-reject')?.addEventListener('click', closeCashierRejectModal);
+
+    if (formCashierReject) {
+        formCashierReject.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reqId = document.getElementById('cashier-reject-request-id').value;
+            const reason = document.getElementById('cashier-reject-reason').value.trim();
+
+            if (!reason) {
+                alert('Please state a reason for rejecting the refund request.');
+                return;
+            }
+
+            const submitBtn = document.getElementById('btn-submit-cashier-reject');
+            const origHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+
+            try {
+                const res = await fetch(`/api/cashier/refund-requests/${reqId}/reject`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to reject refund.');
+                }
+
+                alert(`Refund Request #${reqId} Rejected.\n\nThe funds have been automatically returned to the client's wallet balance.`);
+                closeCashierRejectModal();
+                loadClientRefundsList();
+                loadCashierSummary();
+            } catch (err) {
+                console.error('Error rejecting refund:', err);
+                alert(`⚠️ Error: ${err.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origHtml;
             }
         });
     }

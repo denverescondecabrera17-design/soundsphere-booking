@@ -12,33 +12,15 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=8.0">
-    <link rel="stylesheet" href="css/login.css?v=8.0">
+    <link rel="stylesheet" href="css/styles.css?v=7.0">
+    <link rel="stylesheet" href="css/login.css?v=7.0">
 </head>
 <body class="login-body-bg">
 
-    <!-- ==================== 1. SHOPEE-STYLE HEADER ==================== -->
+    <!-- Header Navigation -->
     <header class="shopee-header">
-        <!-- Top Mini Utility Bar -->
-        <div class="top-utility-bar">
-            <div class="container">
-                <ul class="utility-links">
-                    <li><a href="/index.html"><i class="fa-solid fa-store"></i> Seller Centre</a></li>
-                    <li><a href="/provider/register.html"><i class="fa-solid fa-briefcase"></i> Become a Service Provider</a></li>
-                    <li><a href="#"><i class="fa-solid fa-mobile-screen"></i> Download App</a></li>
-                </ul>
-                <ul class="utility-links">
-                    <li><a href="#"><i class="fa-regular fa-bell"></i> Notifications</a></li>
-                    <li><a href="#"><i class="fa-regular fa-circle-question"></i> Help & Support</a></li>
-                    <li><a href="#"><i class="fa-solid fa-globe"></i> English</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Main Search & Auth Header Bar -->
         <div class="main-header">
-            <div class="container">
-                <!-- Brand Logo -->
+            <div class="container" style="justify-content: space-between;">
                 <a href="/index.html" class="brand-logo">
                     <i class="fa-solid fa-compact-disc"></i>
                     <div>
@@ -46,25 +28,12 @@
                         <span class="tagline-sub">Book Lights & Sounds with Ease</span>
                     </div>
                 </a>
-
-                <!-- Central Search Bar -->
-                <div class="shopee-search-container">
-                    <input type="text" class="search-input" placeholder="Search sound systems, stage lights, DJ gear, event packages..." onclick="window.location.href='/index.html';">
-                    <button type="button" class="btn-search" aria-label="Search" onclick="window.location.href='/index.html';">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
-                </div>
-
-                <!-- User Auth Actions -->
-                <div class="header-actions">
-                    <a href="/login.html" class="btn-auth-outline">Login</a>
-                    <a href="/register.html" class="btn-auth-solid">Sign Up</a>
-                </div>
+                <a href="/index.html" class="btn-auth-outline"><i class="fa-solid fa-arrow-left"></i> Back</a>
             </div>
         </div>
     </header>
 
-    <!-- ==================== 2. MAIN STANDALONE AUTH CARD CONTAINER ==================== -->
+    <!-- Main Auth Card Container -->
     <main class="auth-wrapper">
         <div class="auth-card">
             <!-- Left Branding Side -->
@@ -144,65 +113,20 @@
                             <span>Continue with Google / Gmail</span>
                         </button>
                     </div>
-
-                    <div style="margin-top: 14px; text-align: center; font-size: 0.95rem; color: #475569;">
-                        Don't have an account? <a href="/register.html" style="color: #2563eb; font-weight: 700; text-decoration: none;">Sign Up</a>
-                    </div>
                 </form>
             </div>
         </div>
     </main>
 
-    <!-- ==================== 3. SHOPEE-STYLE 4-COLUMN FOOTER ==================== -->
+    <!-- Footer -->
     <footer class="shopee-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h4>Customer Care</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Help Centre</a></li>
-                        <li><a href="#">How to Book a Service</a></li>
-                        <li><a href="#">Payment Methods</a></li>
-                        <li><a href="#">SoundSphere Guarantee</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>About SoundSphere</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="/provider/register.html">Service Provider Registration</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Payment Partners</h4>
-                    <div class="payment-badges" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">GCash</span>
-                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Maya</span>
-                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Bank Transfer</span>
-                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700;">Visa / MC</span>
-                    </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Coverage Areas</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Metro Manila</a></li>
-                        <li><a href="#">Rizal & Cavite</a></li>
-                        <li><a href="#">Laguna & Batangas</a></li>
-                        <li><a href="#">Bulacan & Pampanga</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.</p>
-            </div>
+        <div class="container" style="text-align: center;">
+            <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
         </div>
     </footer>
 
     <!-- Scripts -->
-    <script src="pages/js/api.js?v=8.0"></script>
-    <script src="pages/js/login.js?v=8.0"></script>
+    <script src="pages/js/api.js?v=7.0"></script>
+    <script src="pages/js/login.js?v=7.0"></script>
 </body>
 </html>

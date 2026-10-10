@@ -20,6 +20,11 @@ router.get('/withdrawals/:id/paymongo-verify', cashierController.verifyWithdrawa
 router.put('/withdrawals/:id/approve', cashierController.approveWithdrawalRequest);
 router.put('/withdrawals/:id/reject', cashierController.rejectWithdrawalRequest);
 
+// Client Refund Payout Management
+router.get('/refund-requests', cashierController.getClientRefundRequests);
+router.put('/refund-requests/:id/approve', cashierController.approveClientRefundRequest);
+router.put('/refund-requests/:id/reject', cashierController.rejectClientRefundRequest);
+
 // Income Reports (Daily, Weekly, Monthly, Yearly)
 router.get('/reports/income', cashierController.getIncomeReport);
 

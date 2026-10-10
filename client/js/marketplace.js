@@ -274,6 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.verified && Array.isArray(p.packages) && p.packages.length > 0) {
                 p.packages.forEach(pkg => {
                     if (pkg.isActive !== false && pkg.isActive !== 0) {
+                        const pkgCat = String(pkg.Category || pkg.category || '').toLowerCase().trim();
+                        const filterCat = (activeCategory || 'all').toLowerCase().trim();
+                        if (filterCat !== 'all' && filterCat !== '' && pkgCat !== filterCat) {
+                            return;
+                        }
+
                         const offerObj = {
                             ...pkg,
                             providerId: p.id || p.userId,
@@ -438,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="padding:0 16px 16px 16px;">
                         <div style="display:flex; gap:8px;">
                             <button type="button" onclick="window.location.href='/client-messages.html?providerId=${offer.providerId}&providerName=${encodeURIComponent(offer.providerName)}'" style="flex:1; height:40px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.875rem; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Message Provider"><i class="fa-solid fa-comment-dots"></i> Chat</button>
-                            <button type="button" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">Book Now</button>
+                            <button type="button" onclick="window.bookMarketplaceOffer ? window.bookMarketplaceOffer('${offer.PackageID}', '${offer.providerId}', '${encodeURIComponent(offerTitle)}', ${offerPrice}, '${encodeURIComponent(offer.providerName || '')}') : window.location.href='/booking.html?package_id=${offer.PackageID}&provider_id=${offer.providerId}'" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">Book Now</button>
                         </div>
                     </div>
                 </div>
@@ -486,12 +492,77 @@ document.addEventListener('DOMContentLoaded', () => {
         navSearchInput.addEventListener('input', handleUniversalSearchInput);
     }
 
+    const homeCategorySelect = document.getElementById('home-category-select');
+    const searchCategorySelect = document.getElementById('search-category-select');
+
     if (homePlaceSelect) {
         homePlaceSelect.addEventListener('change', (e) => {
             const val = e.target.value;
             locationQuery = (val === 'all' || val === 'All') ? '' : val;
             fetchProvidersFromAPI();
         });
+    }
+
+    if (homeCategorySelect) {
+        homeCategorySelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            activeCategory = (val === 'all' || val === 'All') ? 'All' : val;
+            if (searchCategorySelect) searchCategorySelect.value = val;
+            fetchProvidersFromAPI();
+        });
+    }
+
+    if (searchCategorySelect) {
+        searchCategorySelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            activeCategory = (val === 'all' || val === 'All') ? 'All' : val;
+            if (homeCategorySelect) homeCategorySelect.value = val;
+            fetchProvidersFromAPI();
+        });
+    }
+
+    // Direct Booking Action from Marketplace Offer Cards - Shows Calendar First!
+    if (!window.bookMarketplaceOffer) {
+        window.bookMarketplaceOffer = (packageId, providerId, title, price, providerName) => {
+            const decodedTitle = title ? decodeURIComponent(title) : 'Service Package';
+            const decodedProvName = providerName ? decodeURIComponent(providerName) : 'SoundSphere Service Provider';
+            const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+            const isProviderUser = user && (user.role === 'ServiceProvider' || user.roleId === 3 || user.isProvider);
+            if (isProviderUser && (String(user.userId) === String(providerId) || String(user.id) === String(providerId) || String(user.providerId) === String(providerId))) {
+                if (typeof showToast === 'function') {
+                    showToast('⚠️ You cannot book your own service package.', 'warning');
+                } else if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.showNotification) {
+                    SoundSphereAPI.showNotification('Provider Notice: You cannot book your own service package.', 'info');
+                } else {
+                    alert('Provider Notice: You cannot book your own service package.');
+                }
+                return;
+            }
+
+            try {
+                sessionStorage.setItem('soundsphere_selected_package', JSON.stringify({
+                    packageId: packageId,
+                    providerId: providerId,
+                    title: decodedTitle,
+                    price: Number(price) || 0,
+                    providerName: decodedProvName
+                }));
+            } catch(e) {}
+
+            // User must see the calendar first!
+            if (typeof window.openBookingCalendarModal === 'function') {
+                window.openBookingCalendarModal({
+                    packageId: packageId,
+                    providerId: providerId,
+                    title: decodedTitle,
+                    price: Number(price) || 0,
+                    providerName: decodedProvName
+                });
+                return;
+            }
+
+            window.location.href = `/booking.html?package_id=${packageId}&provider_id=${providerId}`;
+        };
     }
 
     // Global Offer Details Modal Handler
@@ -760,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button type="button" onclick="window.location.href='/client-messages.html?providerId=${targetOffer.providerId}&providerName=${encodeURIComponent(targetOffer.providerName)}'" style="flex:1; height:52px; border:1px solid #cbd5e1; border-radius:12px; background:#ffffff; color:#0a192f; font-weight:800; font-size:1.05rem; cursor:pointer; transition:all 0.2s ease;">
                             <i class="fa-solid fa-comment-dots" style="color:#2563eb; margin-right:8px;"></i> Message Provider
                         </button>
-                        <button type="button" onclick="window.location.href='/provider-detail.html?id=${targetOffer.providerId}&pkgId=${targetOffer.PackageID}'" style="flex:1.4; height:52px; border:none; border-radius:12px; background:#2563eb; color:#ffffff; font-weight:800; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                        <button type="button" onclick="window.bookMarketplaceOffer ? window.bookMarketplaceOffer('${targetOffer.PackageID}', '${targetOffer.providerId}', '${encodeURIComponent(targetOffer.PackageName || targetOffer.name || 'Service Package')}', ${targetOffer.Price || targetOffer.price || 0}, '${encodeURIComponent(targetOffer.providerName || '')}') : window.location.href='/booking.html?package_id=${targetOffer.PackageID}&provider_id=${targetOffer.providerId}'" style="flex:1.4; height:52px; border:none; border-radius:12px; background:#2563eb; color:#ffffff; font-weight:800; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
                             <i class="fa-solid fa-calendar-check" style="margin-right:8px;"></i> Book This Offer Now
                         </button>
                     </div>

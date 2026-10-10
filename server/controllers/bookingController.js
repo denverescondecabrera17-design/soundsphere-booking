@@ -237,7 +237,7 @@ const saveDateCapacityOverride = async (req, res) => {
         });
     } catch (error) {
         console.error('Save Date Capacity Override Error:', error);
-        return res.status(500).json({ success: false, message: 'Failed to update date capacity.', error: error.message });
+        return res.status(error.statusCode || 400).json({ success: false, message: error.message || 'Failed to update date capacity.' });
     }
 };
 
@@ -259,7 +259,7 @@ const deleteDateCapacityOverride = async (req, res) => {
         });
     } catch (error) {
         console.error('Delete Date Capacity Override Error:', error);
-        return res.status(500).json({ success: false, message: 'Failed to delete date capacity override.', error: error.message });
+        return res.status(error.statusCode || 400).json({ success: false, message: error.message || 'Failed to delete date capacity override.' });
     }
 };
 

@@ -75,10 +75,13 @@ const syncFilesList = [
     { src: '../client/css/login.css', targets: ['../public/css/login.css', '../client/pages/css/login.css', '../public/pages/css/login.css'] },
     { src: '../client/js/login.js', targets: ['../public/js/login.js', '../client/pages/js/login.js', '../public/pages/js/login.js'] },
     { src: '../client/client-messages.html', targets: ['../public/client-messages.html', '../client/pages/client-messages.html', '../public/pages/client-messages.html'] },
+    { src: '../client/css/client-messages.css', targets: ['../public/css/client-messages.css', '../client/pages/css/client-messages.css', '../public/pages/css/client-messages.css', '../client/client/css/client-messages.css', '../public/client/css/client-messages.css'] },
+    { src: '../client/js/client-messages.js', targets: ['../public/js/client-messages.js', '../client/pages/js/client-messages.js', '../public/pages/js/client-messages.js'] },
     { src: '../client/client-bookings.html', targets: ['../public/client-bookings.html', '../client/pages/client-bookings.html', '../public/pages/client-bookings.html'] },
     { src: '../client/js/client-bookings.js', targets: ['../public/js/client-bookings.js', '../client/pages/js/client-bookings.js', '../public/pages/js/client-bookings.js'] },
     { src: '../client/css/booking-calendar-modal.css', targets: ['../public/css/booking-calendar-modal.css', '../client/pages/css/booking-calendar-modal.css', '../client/client/css/booking-calendar-modal.css', '../public/client/css/booking-calendar-modal.css'] },
-    { src: '../client/js/booking-calendar-modal.js', targets: ['../public/js/booking-calendar-modal.js', '../client/pages/js/booking-calendar-modal.js'] }
+    { src: '../client/js/booking-calendar-modal.js', targets: ['../public/js/booking-calendar-modal.js', '../client/pages/js/booking-calendar-modal.js'] },
+    { src: '../client/client/dashboard.html', targets: ['../public/client/dashboard.html'] }
 ];
 
 syncFilesList.forEach(item => {

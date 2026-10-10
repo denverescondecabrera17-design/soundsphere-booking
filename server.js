@@ -20,6 +20,7 @@ const messageRoutes = require('./server/routes/messageRoutes');
 const reportRoutes = require('./server/routes/reportRoutes');
 const subscriptionRoutes = require('./server/routes/subscriptionRoutes');
 const cashierRoutes = require('./server/routes/cashierRoutes');
+const walletRoutes = require('./server/routes/walletRoutes');
 
 const { getMapsConfig } = require('./server/config/mapsConfig');
 
@@ -52,6 +53,7 @@ app.use('/api/providers', providerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/packages', bookingRoutes);
 app.use('/api/payments', bookingRoutes);
+app.use('/api/wallet', walletRoutes);
 
 const bookingController = require('./server/controllers/bookingController');
 const { verifyToken } = require('./server/middleware/authMiddleware');
@@ -166,7 +168,9 @@ app.use((req, res) => {
     });
 });
 
-// Initialize DB and Start Express Server
+// Initialize DB, Background Schedulers and Start Express Server
+const { startBalanceReminderScheduler } = require('./server/services/balanceReminderService');
+
 const startServer = async () => {
     await connectDB();
     app.listen(PORT, () => {
@@ -176,7 +180,11 @@ const startServer = async () => {
         console.log(` Service Providers API ready at http://localhost:${PORT}/api/providers`);
         console.log(` Provider Applications API ready at http://localhost:${PORT}/api/provider-applications`);
         console.log(` Admin API ready at http://localhost:${PORT}/api/admin`);
+
+        // Start automated 1-day balance reminder scheduler (in-app notification + email)
+        startBalanceReminderScheduler();
     });
 };
 
 startServer();
+

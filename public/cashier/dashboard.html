@@ -38,6 +38,11 @@
                     <span>Withdrawals</span>
                     <span class="nav-badge" id="sidebar-pending-badge" style="display:none;">0</span>
                 </a>
+                <a href="#refunds" class="nav-link" id="nav-refunds">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>Client Refunds</span>
+                    <span class="nav-badge" id="sidebar-refunds-badge" style="display:none; background:#ef4444;">0</span>
+                </a>
                 <a href="#subscriptions" class="nav-link" id="nav-subscriptions">
                     <i class="fa-solid fa-crown"></i>
                     <span>Subscription Payments</span>
@@ -149,6 +154,17 @@
                         </div>
 
                         <div class="metric-card">
+                            <div class="metric-icon-box icon-rose" style="background:#fee2e2; color:#dc2626;">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </div>
+                            <div class="metric-body">
+                                <div class="metric-label">Pending Client Refunds</div>
+                                <div class="metric-value" id="stat-pending-refunds" style="color:#dc2626;">0</div>
+                                <div class="metric-subtext" id="stat-pending-refunds-amount">₱0.00 to disburse</div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
                             <div class="metric-icon-box icon-purple">
                                 <i class="fa-solid fa-crown"></i>
                             </div>
@@ -170,6 +186,9 @@
                         <div class="panel-card-body" style="display:flex; gap:12px; flex-wrap:wrap;">
                             <button type="button" class="btn btn-primary" id="btn-goto-withdrawals">
                                 <i class="fa-solid fa-money-bill-transfer"></i> Review Pending Withdrawals
+                            </button>
+                            <button type="button" class="btn btn-danger" id="btn-goto-refunds" style="background:#dc2626; border-color:#dc2626; color:#ffffff;">
+                                <i class="fa-solid fa-hand-holding-dollar"></i> Review Client Refunds
                             </button>
                             <a href="https://dashboard.paymongo.com" target="_blank" rel="noopener noreferrer" class="btn btn-paymongo" style="text-decoration:none;">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Open PayMongo Portal
@@ -269,6 +288,69 @@
                                     <tbody id="withdrawals-table-body">
                                         <tr>
                                             <td colspan="7" style="text-align:center; padding:28px; color:#64748b;">Loading withdrawal requests...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==========================================
+                     VIEW 2.5: CLIENT REFUNDS DISBURSEMENT
+                     ========================================== -->
+                <div class="view-panel" id="view-refunds">
+                    <div class="panel-card">
+                        <div class="panel-card-header" style="flex-wrap:wrap; gap:12px;">
+                            <div>
+                                <h3 class="panel-title" style="margin-bottom:4px;">
+                                    <i class="fa-solid fa-hand-holding-dollar" style="color:#ef4444;"></i> Client Refund Disbursements
+                                </h3>
+                                <p style="font-size:0.875rem; color:#64748b; margin:0;">
+                                    Review refund payout requests from clients with cancelled bookings. Manually transfer the refund via GCash, Maya, or Bank, then record the reference number.
+                                </p>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-refunds">
+                                    <i class="fa-solid fa-rotate-right"></i> Refresh List
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="panel-card-body">
+                            <!-- Filter Toolbar -->
+                            <div class="filter-toolbar">
+                                <div class="filter-group">
+                                    <div class="period-pill-group" id="refund-filter-pills">
+                                        <button type="button" class="period-pill active" data-ref-filter="Pending">Pending (<span id="count-ref-pending">0</span>)</button>
+                                        <button type="button" class="period-pill" data-ref-filter="Approved">Disbursed (<span id="count-ref-approved">0</span>)</button>
+                                        <button type="button" class="period-pill" data-ref-filter="Rejected">Rejected (<span id="count-ref-rejected">0</span>)</button>
+                                        <button type="button" class="period-pill" data-ref-filter="All">All Requests (<span id="count-ref-all">0</span>)</button>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <input type="text" id="refund-search-input" class="input-control" placeholder="Search client name, reference, account #..." style="width:280px;">
+                                </div>
+                            </div>
+
+                            <!-- Refund Requests Table -->
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Req ID</th>
+                                            <th>Client Details</th>
+                                            <th>Amount</th>
+                                            <th>Channel</th>
+                                            <th>Destination Account</th>
+                                            <th>Date Requested</th>
+                                            <th>Status</th>
+                                            <th style="text-align:right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="refunds-table-body">
+                                        <tr>
+                                            <td colspan="8" style="text-align:center; padding:28px; color:#64748b;">Loading client refund requests...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1113,12 +1195,100 @@
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline" id="btn-close-pm-verify">Close</button>
-                <button type="button" class="btn btn-success" id="btn-pm-verify-proceed-disburse">
-                    <i class="fa-solid fa-money-bill-wave"></i> Proceed to Withdraw / Disburse Payout
-                </button>
+    <!-- ==========================================================================
+         MODAL 5: CASHIER CLIENT REFUND DISBURSEMENT MODAL
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-cashier-disburse-refund">
+        <div class="modal-card" style="max-width:540px;">
+            <div class="modal-header" style="background:linear-gradient(135deg, #0a192f, #1e3a5f);">
+                <h3><i class="fa-solid fa-money-bill-transfer" style="color:#10b981;"></i> Disburse Client Refund</h3>
+                <button type="button" class="modal-close" id="btn-close-cashier-disburse">&times;</button>
             </div>
+            <form id="form-cashier-disburse-refund">
+                <input type="hidden" id="cashier-disburse-request-id" value="">
+                <div class="modal-body">
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:0.86rem; color:#1e40af; line-height:1.45;">
+                        <i class="fa-solid fa-circle-info"></i> Please send the payment manually via your <strong>GCash, Maya, or Online Banking</strong> application to the client's destination account below, then input your payment reference number.
+                    </div>
+
+                    <div class="modal-info-box" style="margin-bottom:18px; padding:16px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px;">
+                        <div class="modal-info-row" style="margin-bottom:8px;">
+                            <span class="modal-info-label" style="font-weight:700; color:#64748b;">Client Name:</span>
+                            <span class="modal-info-val" id="cashier-disburse-client-name" style="font-weight:800; color:#0a192f;">-</span>
+                        </div>
+                        <div class="modal-info-row" style="margin-bottom:8px;">
+                            <span class="modal-info-label" style="font-weight:700; color:#64748b;">Amount to Transfer:</span>
+                            <span class="modal-info-val" id="cashier-disburse-amount" style="font-weight:900; color:#059669; font-size:1.3rem;">₱0.00</span>
+                        </div>
+                        <div class="modal-info-row" style="margin-bottom:8px;">
+                            <span class="modal-info-label" style="font-weight:700; color:#64748b;">Payout Channel:</span>
+                            <span class="modal-info-val" id="cashier-disburse-channel" style="font-weight:800; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:6px; font-size:0.85rem;">-</span>
+                        </div>
+                        <div class="modal-info-row" style="margin-bottom:8px;">
+                            <span class="modal-info-label" style="font-weight:700; color:#64748b;">Account Holder:</span>
+                            <span class="modal-info-val" id="cashier-disburse-account-name" style="font-weight:800; color:#0a192f;">-</span>
+                        </div>
+                        <div class="modal-info-row">
+                            <span class="modal-info-label" style="font-weight:700; color:#64748b;">Account / Mobile #:</span>
+                            <span class="modal-info-val" id="cashier-disburse-account-number" style="font-weight:900; color:#2563eb; font-size:1.15rem; font-family:monospace; letter-spacing:0.5px;">-</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label for="cashier-disburse-ref-number" style="font-weight:700; color:#0a192f; margin-bottom:6px; display:block;">Payment Reference / Transaction ID *</label>
+                        <input type="text" id="cashier-disburse-ref-number" class="input-control" placeholder="e.g. GCASH-REF-998822 or Bank Ref #" required style="height:42px; font-weight:700;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cashier-disburse-notes" style="font-weight:700; color:#0a192f; margin-bottom:6px; display:block;">Cashier Notes (Optional)</label>
+                        <input type="text" id="cashier-disburse-notes" class="input-control" placeholder="e.g. Manually sent via GCash Express" style="height:40px;">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="btn-cancel-cashier-disburse">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="btn-submit-cashier-disburse" style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-check"></i> <span>Confirm & Mark as Disbursed</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL 6: CASHIER CLIENT REFUND REJECTION MODAL
+         ========================================================================== -->
+    <div class="modal-overlay" id="modal-cashier-reject-refund">
+        <div class="modal-card" style="max-width:480px;">
+            <div class="modal-header" style="background:linear-gradient(135deg, #7f1d1d, #991b1b);">
+                <h3><i class="fa-solid fa-triangle-exclamation" style="color:#fca5a5;"></i> Reject Refund Request</h3>
+                <button type="button" class="modal-close" id="btn-close-cashier-reject">&times;</button>
+            </div>
+            <form id="form-cashier-reject-refund">
+                <input type="hidden" id="cashier-reject-request-id" value="">
+                <div class="modal-body">
+                    <div style="background:#fee2e2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:0.86rem; color:#991b1b; line-height:1.45;">
+                        <i class="fa-solid fa-circle-exclamation"></i> <strong>Funds will be restored:</strong> Rejecting this request will immediately return <strong id="cashier-reject-amount">₱0.00</strong> back into the client's wallet so they can re-request with verified details.
+                    </div>
+
+                    <div class="modal-info-row" style="margin-bottom:14px; padding:10px 14px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                        <span class="modal-info-label" style="font-weight:700; color:#64748b;">Client Name:</span>
+                        <span class="modal-info-val" id="cashier-reject-client-name" style="font-weight:800; color:#0a192f;">-</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cashier-reject-reason" style="font-weight:700; color:#0a192f; margin-bottom:6px; display:block;">Reason for Rejection *</label>
+                        <textarea id="cashier-reject-reason" class="input-control" rows="3" placeholder="e.g. Destination mobile number is unregistered or account name mismatch" required></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="btn-cancel-cashier-reject">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="btn-submit-cashier-reject" style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-arrow-rotate-left"></i> <span>Reject & Restore Wallet Balance</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

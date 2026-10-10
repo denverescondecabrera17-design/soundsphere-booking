@@ -117,7 +117,7 @@ const getAdminStats = async (req, res) => {
             SELECT 
                 b.BookingID,
                 b.ClientUserID,
-                ISNULL(c.FirstName + ' ' + c.LastName, u.Email) AS ClientName,
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName,
                 u.Email AS ClientEmail,
                 b.ProviderID,
                 ISNULL(sp.BusinessName, 'SoundSphere Service Provider') AS ProviderName,
@@ -675,7 +675,7 @@ const getPaymentsOverview = async (req, res) => {
                 ISNULL(b.BookingReference, CONCAT('SS-2026-', RIGHT('00000' + CAST(b.BookingID AS VARCHAR(10)), 5))) AS BookingReference,
                 b.PackageName,
                 b.TotalAmount AS BookingTotal,
-                ISNULL(c.FirstName + ' ' + c.LastName, u.Email) AS ClientName,
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName,
                 u.Email AS ClientEmail,
                 u.Phone AS ClientPhone,
                 ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName,

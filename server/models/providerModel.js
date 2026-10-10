@@ -201,7 +201,11 @@ const getAllApprovedProviders = async (filters = {}) => {
 
     // Apply Category Filtering
     if (filters.category && filters.category !== 'All' && filters.category !== 'all') {
-        allProviders = allProviders.filter(p => p.categories.includes(filters.category));
+        const catFilter = filters.category.toLowerCase().trim();
+        allProviders = allProviders.filter(p => (p.categories || []).some(c => {
+            const cleanC = String(c).toLowerCase().trim();
+            return cleanC === catFilter || cleanC.includes(catFilter) || catFilter.includes(cleanC);
+        }));
     }
 
     // Apply Universal Search Filtering (Place, Events, Inclusions/Equipment, Business Name, Categories, Package Details)

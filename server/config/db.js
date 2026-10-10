@@ -260,6 +260,14 @@ const autoSeedDatabase = async (activePool) => {
                     CONSTRAINT FK_Bookings_Users FOREIGN KEY (ClientUserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
                 );
             END
+
+            IF OBJECT_ID('dbo.Bookings', 'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Bookings') AND name = 'BalanceReminderSentAt')
+                BEGIN
+                    ALTER TABLE dbo.Bookings ADD BalanceReminderSentAt DATETIME2 NULL;
+                END
+            END
         `);
 
         // Auto-Migrate dbo.Reviews Table
@@ -647,6 +655,176 @@ const autoSeedDatabase = async (activePool) => {
                     CONSTRAINT UQ_ProviderDate UNIQUE (ProviderID, SpecificDate)
                 );
             END;
+
+            -- Auto-Migrate dbo.OTPVerifications Table
+            IF OBJECT_ID('dbo.OTPVerifications', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.OTPVerifications (
+                    OtpID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL,
+                    Email NVARCHAR(255) NOT NULL,
+                    OtpHash NVARCHAR(255) NOT NULL,
+                    ExpiresAt DATETIME2 NOT NULL,
+                    Attempts INT NOT NULL DEFAULT 0,
+                    IsUsed BIT NOT NULL DEFAULT 0,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    CONSTRAINT FK_OTPVerifications_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+                );
+            END;
+
+            -- Auto-Migrate dbo.ProviderSubscriptions Table
+            IF OBJECT_ID('dbo.ProviderSubscriptions', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ProviderSubscriptions (
+                    SubscriptionID INT IDENTITY(1,1) PRIMARY KEY,
+                    ProviderID INT NOT NULL,
+                    UserID INT NOT NULL,
+                    PlanType NVARCHAR(50) NOT NULL DEFAULT 'free_trial',
+                    PlanName NVARCHAR(100) NOT NULL DEFAULT 'Free Trial (1st Month)',
+                    Price DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                    BillingCycle NVARCHAR(50) NOT NULL DEFAULT '30_days',
+                    Status NVARCHAR(50) NOT NULL DEFAULT 'Active',
+                    StartDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    EndDate DATETIME2 NOT NULL,
+                    HasUsedFreeTrial BIT NOT NULL DEFAULT 0,
+                    PayMongoSessionID NVARCHAR(150) NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    CONSTRAINT FK_ProviderSubscriptions_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+                );
+            END;
+
+            -- Auto-Migrate dbo.SubscriptionPayments Table
+            IF OBJECT_ID('dbo.SubscriptionPayments', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.SubscriptionPayments (
+                    PaymentID INT IDENTITY(1,1) PRIMARY KEY,
+                    SubscriptionID INT NOT NULL,
+                    ProviderID INT NOT NULL,
+                    PlanType NVARCHAR(50) NOT NULL,
+                    PlanName NVARCHAR(100) NOT NULL,
+                    Amount DECIMAL(18,2) NOT NULL,
+                    Currency NVARCHAR(10) NOT NULL DEFAULT 'PHP',
+                    PaymentMethod NVARCHAR(50) NOT NULL DEFAULT 'PayMongo',
+                    PayMongoSessionID NVARCHAR(150) NULL,
+                    PayMongoPaymentID NVARCHAR(150) NULL,
+                    PaymentStatus NVARCHAR(50) NOT NULL DEFAULT 'Paid',
+                    PaymentDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    Notes NVARCHAR(MAX) NULL
+                );
+            END;
+
+            -- Auto-Migrate dbo.TransportationFees Table
+            IF OBJECT_ID('dbo.TransportationFees', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.TransportationFees (
+                    FeeID INT IDENTITY(1,1) PRIMARY KEY,
+                    MinDistanceKm DECIMAL(18,2) NOT NULL,
+                    MaxDistanceKm DECIMAL(18,2) NOT NULL,
+                    ServiceFee DECIMAL(18,2) NOT NULL,
+                    IsActive BIT DEFAULT 1,
+                    CreatedAt DATETIME DEFAULT GETDATE()
+                );
+
+                INSERT INTO dbo.TransportationFees (MinDistanceKm, MaxDistanceKm, ServiceFee, IsActive) VALUES
+                (0.00, 10.00, 500.00, 1),
+                (10.01, 20.00, 750.00, 1),
+                (20.01, 30.00, 1000.00, 1),
+                (30.01, 40.00, 1250.00, 1),
+                (40.01, 50.00, 1500.00, 1),
+                (50.01, 999.00, 2000.00, 1);
+            END;
+
+            -- Auto-Migrate dbo.ClientWallets Table
+            IF OBJECT_ID('dbo.ClientWallets', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ClientWallets (
+                    WalletID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL UNIQUE,
+                    Balance DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    CONSTRAINT FK_ClientWallets_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+                );
+            END;
+
+            -- Auto-Migrate dbo.WalletTransactions Table
+            IF OBJECT_ID('dbo.WalletTransactions', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.WalletTransactions (
+                    TransactionID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL,
+                    Amount DECIMAL(18,2) NOT NULL,
+                    TransactionType NVARCHAR(50) NOT NULL,
+                    Description NVARCHAR(500) NOT NULL,
+                    BalanceAfter DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                    RelatedBookingID INT NULL,
+                    BookingReference NVARCHAR(50) NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    CONSTRAINT FK_WalletTransactions_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+                );
+            END;
+
+            -- Auto-Migrate dbo.RefundRequests Table
+            IF OBJECT_ID('dbo.RefundRequests', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.RefundRequests (
+                    RefundRequestID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL,
+                    ClientName NVARCHAR(200) NOT NULL,
+                    ClientEmail NVARCHAR(150) NULL,
+                    ClientPhone NVARCHAR(50) NULL,
+                    Amount DECIMAL(18,2) NOT NULL,
+                    PayoutMethod NVARCHAR(50) NOT NULL,
+                    AccountName NVARCHAR(150) NOT NULL,
+                    AccountNumber NVARCHAR(100) NOT NULL,
+                    Status NVARCHAR(30) NOT NULL DEFAULT 'Pending',
+                    ReferenceNumber NVARCHAR(100) NULL,
+                    AdminNotes NVARCHAR(500) NULL,
+                    RequestedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    ProcessedAt DATETIME2 NULL,
+                    ProcessedBy INT NULL,
+                    CONSTRAINT FK_RefundRequests_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+                );
+            END;
+
+            -- Auto-Migrate Extended Columns in dbo.Bookings
+            IF OBJECT_ID('dbo.Bookings', 'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.Bookings', 'BookingReference') IS NULL ALTER TABLE dbo.Bookings ADD BookingReference NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'PackageID') IS NULL ALTER TABLE dbo.Bookings ADD PackageID INT NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventName') IS NULL ALTER TABLE dbo.Bookings ADD EventName NVARCHAR(150) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventType') IS NULL ALTER TABLE dbo.Bookings ADD EventType NVARCHAR(100) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'StartTime') IS NULL ALTER TABLE dbo.Bookings ADD StartTime NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EndTime') IS NULL ALTER TABLE dbo.Bookings ADD EndTime NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'NumberOfHours') IS NULL ALTER TABLE dbo.Bookings ADD NumberOfHours DECIMAL(5,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'NumberOfDays') IS NULL ALTER TABLE dbo.Bookings ADD NumberOfDays INT NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventPlace') IS NULL ALTER TABLE dbo.Bookings ADD EventPlace NVARCHAR(255) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'VenueName') IS NULL ALTER TABLE dbo.Bookings ADD VenueName NVARCHAR(255) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventAddress') IS NULL ALTER TABLE dbo.Bookings ADD EventAddress NVARCHAR(255) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventLatitude') IS NULL ALTER TABLE dbo.Bookings ADD EventLatitude DECIMAL(10,7) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EventLongitude') IS NULL ALTER TABLE dbo.Bookings ADD EventLongitude DECIMAL(10,7) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'LocationNotes') IS NULL ALTER TABLE dbo.Bookings ADD LocationNotes NVARCHAR(500) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'PackagePrice') IS NULL ALTER TABLE dbo.Bookings ADD PackagePrice DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'PaymentType') IS NULL ALTER TABLE dbo.Bookings ADD PaymentType NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'AmountPaid') IS NULL ALTER TABLE dbo.Bookings ADD AmountPaid DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'RemainingBalance') IS NULL ALTER TABLE dbo.Bookings ADD RemainingBalance DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'CommissionRate') IS NULL ALTER TABLE dbo.Bookings ADD CommissionRate DECIMAL(5,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'CommissionAmount') IS NULL ALTER TABLE dbo.Bookings ADD CommissionAmount DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ProviderEarnings') IS NULL ALTER TABLE dbo.Bookings ADD ProviderEarnings DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'UpdatedAt') IS NULL ALTER TABLE dbo.Bookings ADD UpdatedAt DATETIME2 NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ServiceStartDate') IS NULL ALTER TABLE dbo.Bookings ADD ServiceStartDate NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ServiceEndDate') IS NULL ALTER TABLE dbo.Bookings ADD ServiceEndDate NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ServiceHireDays') IS NULL ALTER TABLE dbo.Bookings ADD ServiceHireDays INT NULL;
+                IF COL_LENGTH('dbo.Bookings', 'AdditionalDayCharges') IS NULL ALTER TABLE dbo.Bookings ADD AdditionalDayCharges DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'TransportationFee') IS NULL ALTER TABLE dbo.Bookings ADD TransportationFee DECIMAL(18,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'DistanceKm') IS NULL ALTER TABLE dbo.Bookings ADD DistanceKm DECIMAL(10,2) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'EscrowStatus') IS NULL ALTER TABLE dbo.Bookings ADD EscrowStatus NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ClientName') IS NULL ALTER TABLE dbo.Bookings ADD ClientName NVARCHAR(150) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ClientPhone') IS NULL ALTER TABLE dbo.Bookings ADD ClientPhone NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'ClientEmail') IS NULL ALTER TABLE dbo.Bookings ADD ClientEmail NVARCHAR(255) NULL;
+                IF COL_LENGTH('dbo.Bookings', 'BalanceReminderSentAt') IS NULL ALTER TABLE dbo.Bookings ADD BalanceReminderSentAt DATETIME2 NULL;
+            END;
         `);
 
         // 3. Ensure Default Admin Account Exists with Updated Credentials
@@ -695,7 +873,8 @@ const autoSeedDatabase = async (activePool) => {
             console.log(' Admin account credentials updated: soundsphere@gmail.com');
         }
 
-        // 4. Ensure Default Service Provider Test Account Exists
+        // 4. Default Service Provider Test Account (Disabled - prevent dummy test provider from reappearing)
+        /*
         const provEmail = 'provider@soundsphere.com';
         const provPasswordHash = await bcrypt.hash('Provider@123', 10);
         const provRoleRes = await activePool.request().query("SELECT RoleID FROM dbo.Roles WHERE RoleName = 'ServiceProvider'");
@@ -735,6 +914,7 @@ const autoSeedDatabase = async (activePool) => {
                 `);
             console.log(' Service Provider test account created: provider@soundsphere.com');
         }
+        */
 
         // 5. Ensure Default Client Test Account Exists
         const clientEmail = 'client@soundsphere.com';

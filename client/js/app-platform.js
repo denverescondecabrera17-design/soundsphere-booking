@@ -23,9 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Switch View Panel Handler with URL Hash & Session Persistence
     const switchView = (viewName) => {
+        const effectiveView = (viewName === 'search' && !document.getElementById('view-search')) ? 'home' : viewName;
         Object.keys(views).forEach(key => {
             if (views[key]) {
-                if (key === viewName) {
+                if (key === effectiveView) {
                     views[key].classList.remove('hidden');
                 } else {
                     views[key].classList.add('hidden');
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (navTabs[key]) {
-                if (key === viewName) {
+                if (key === effectiveView || (viewName === 'search' && key === 'home')) {
                     navTabs[key].classList.add('active');
                 } else {
                     navTabs[key].classList.remove('active');
@@ -42,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Save state to sessionStorage & location hash so refreshing F5 stays on current page
-        sessionStorage.setItem('soundsphere_active_view', viewName);
-        if (window.location.hash !== '#' + viewName) {
-            history.replaceState(null, null, '#' + viewName);
+        sessionStorage.setItem('soundsphere_active_view', effectiveView);
+        if (window.location.hash !== '#' + effectiveView) {
+            history.replaceState(null, null, '#' + effectiveView);
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -62,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (typeof window.fetchUserBookings === 'function') {
                 window.fetchUserBookings();
+            }
+            const activeSubtab = sessionStorage.getItem('soundsphere_active_subtab');
+            if (activeSubtab === 'wallet' && typeof window.loadClientWalletData === 'function') {
+                window.loadClientWalletData();
             }
         }
     };
@@ -157,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (heroSearchBtn) {
         heroSearchBtn.addEventListener('click', () => {
+            if (document.getElementById('home-featured-providers-grid') || !document.getElementById('view-search')) return;
             const query = heroSearchInput ? heroSearchInput.value.trim() : '';
             const homeCategorySelect = document.getElementById('home-category-select');
             const homePlaceSelect = document.getElementById('home-place-select');
@@ -169,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (heroSearchInput) {
         heroSearchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                if (document.getElementById('home-featured-providers-grid') || !document.getElementById('view-search')) return;
                 e.preventDefault();
                 const query = heroSearchInput.value.trim();
                 const homeCategorySelect = document.getElementById('home-category-select');
@@ -185,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (homeCategorySelect) {
         homeCategorySelect.addEventListener('change', () => {
+            if (document.getElementById('home-featured-providers-grid') || !document.getElementById('view-search')) return;
             const selectedCategory = homeCategorySelect.value;
             const selectedPlace = homePlaceSelect ? homePlaceSelect.value : 'all';
             const query = heroSearchInput ? heroSearchInput.value.trim() : '';
@@ -194,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (homePlaceSelect) {
         homePlaceSelect.addEventListener('change', () => {
+            if (document.getElementById('home-featured-providers-grid') || !document.getElementById('view-search')) return;
             const selectedPlace = homePlaceSelect.value;
             const selectedCategory = homeCategorySelect ? homeCategorySelect.value : 'all';
             const query = heroSearchInput ? heroSearchInput.value.trim() : '';
@@ -271,6 +280,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         return allOffers;
+    };
+
+    // Direct Booking Action from Marketplace Offer Cards - Shows Calendar First!
+    window.bookMarketplaceOffer = (packageId, providerId, title, price, providerName) => {
+        const decodedTitle = title ? decodeURIComponent(title) : 'Service Package';
+        const decodedProvName = providerName ? decodeURIComponent(providerName) : 'SoundSphere Service Provider';
+        const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+        const isProviderUser = user && (user.role === 'ServiceProvider' || user.roleId === 3 || user.isProvider);
+        if (isProviderUser && (String(user.userId) === String(providerId) || String(user.id) === String(providerId) || String(user.providerId) === String(providerId))) {
+            if (typeof showToast === 'function') {
+                showToast('⚠️ You cannot book your own service package.', 'warning');
+            } else if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.showNotification) {
+                SoundSphereAPI.showNotification('Provider Notice: You cannot book your own service package.', 'info');
+            } else {
+                alert('Provider Notice: You cannot book your own service package.');
+            }
+            return;
+        }
+
+        try {
+            sessionStorage.setItem('soundsphere_selected_package', JSON.stringify({
+                packageId: packageId,
+                providerId: providerId,
+                title: decodedTitle,
+                price: Number(price) || 0,
+                providerName: decodedProvName
+            }));
+        } catch(e) {}
+
+        // Show the Calendar first!
+        if (typeof window.openBookingCalendarModal === 'function') {
+            window.openBookingCalendarModal({
+                packageId: packageId,
+                providerId: providerId,
+                title: decodedTitle,
+                price: Number(price) || 0,
+                providerName: decodedProvName
+            });
+            return;
+        }
+
+        window.location.href = `/booking.html?package_id=${packageId}&provider_id=${providerId}`;
     };
 
     // Helper to render Shopee-Style Service Offer Cards HTML
@@ -412,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="padding:0 16px 16px 16px;">
                         <div style="display:flex; gap:8px;">
                             <button type="button" onclick="window.location.href='/client-messages.html?providerId=${offer.providerId}&providerName=${encodeURIComponent(offer.providerName)}'" style="flex:1; height:40px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.875rem; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Message Provider"><i class="fa-solid fa-comment-dots"></i> Chat</button>
-                            <button type="button" onclick="window.location.href='/provider-detail.html?id=${offer.providerId}&pkgId=${offer.PackageID}'" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">Book Now</button>
+                            <button type="button" onclick="window.bookMarketplaceOffer('${offer.PackageID}', '${offer.providerId}', '${encodeURIComponent(offerTitle)}', ${offerPrice}, '${encodeURIComponent(offer.providerName || '')}')" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">Book Now</button>
                         </div>
                     </div>
                 </div>
@@ -757,6 +808,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             clientName = (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
                         }
 
+                        // Overdue check for booking balance
+                        let isOverdue = false;
+                        let daysOverdue = 0;
+                        if (sDate && sDate !== 'N/A') {
+                            const match = String(sDate).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                            if (match) {
+                                const targetYear = parseInt(match[1], 10);
+                                const targetMonth = parseInt(match[2], 10) - 1;
+                                const targetDay = parseInt(match[3], 10);
+                                const targetMidnight = new Date(targetYear, targetMonth, targetDay).getTime();
+                                const now = new Date();
+                                const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                                const diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+                                if (diffDays < 0) {
+                                    isOverdue = true;
+                                    daysOverdue = Math.abs(diffDays);
+                                }
+                            }
+                        }
+
                         // 3-Hour Cancellation Calculation
                         const createdAtRaw = b.CreatedAt;
                         const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : Date.now();
@@ -856,10 +927,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 Paid: ₱${amountPaidVal.toLocaleString()} (${isDownpayment ? '50% Deposit' : '100% Full'})
                                             </span>
                                             
-                                            ${remainingBalVal > 0 ? `
+                                            ${remainingBalVal > 0 ? (isOverdue ? `
+                                            <span style="font-size:0.82rem; font-weight:800; background:#fee2e2; color:#b91c1c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; border:1.5px solid #f87171;">
+                                                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Overdue: ₱${remainingBalVal.toLocaleString()} (${daysOverdue}d past due)
+                                            </span>` : `
                                             <span style="font-size:0.82rem; font-weight:800; background:#fff1f2; color:#be123c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #fecdd3;">
                                                 Balance: ₱${remainingBalVal.toLocaleString()} (Due on event)
-                                            </span>` : ''}
+                                            </span>`) : ''}
                                         </div>
 
                                         <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-align:right; margin-top:2px;">
@@ -880,6 +954,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                             style="padding:10px 24px; font-size:0.95rem; font-weight:800; border:1.5px solid #cbd5e1; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#ffffff; color:#0a192f; box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.2s ease;">
                                             <i class="fa-solid fa-star" style="color:#f59e0b;"></i> ${b.ReviewID ? `Rated (${b.Rating}★)` : 'To Rate'}
                                         </button>
+                                    ` : (statusLower === 'cancelled' || statusLower === 'rejected') ? `
+                                        ${cancelBtnHtml}
                                     ` : `
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
@@ -1129,6 +1205,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 style="padding:10px 24px; font-size:0.95rem; font-weight:800; border:1.5px solid #cbd5e1; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#ffffff; color:#0a192f; box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.2s ease;">
                                                 <i class="fa-solid fa-star" style="color:#f59e0b;"></i> ${b.ReviewID ? `Rated (${b.Rating}★)` : 'To Rate'}
                                             </button>
+                                        ` : (statusLower === 'cancelled' || statusLower === 'rejected') ? `
+                                            <span style="padding:10px 18px; font-size:0.88rem; font-weight:800; border-radius:10px; background:#fee2e2; color:#ef4444; display:inline-flex; align-items:center; gap:6px;">
+                                                <i class="fa-solid fa-ban"></i> Cancelled
+                                            </span>
                                         ` : `
                                             <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#f1f5f9; color:#0a192f; border:1.5px solid #cbd5e1;">
                                                 <i class="fa-solid fa-file-invoice"></i> View Official Receipt
@@ -1162,7 +1242,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 let sumOutstandingDue = 0;
 
                 if (dueBookings.length > 0) {
-                    balancesContainer.innerHTML = dueBookings.map(b => {
+                    const overdueCount = dueBookings.filter(b => {
+                        const sDate = b.ServiceStartDate || b.EventDate;
+                        if (!sDate || sDate === 'N/A') return false;
+                        const match = String(sDate).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (!match) return false;
+                        const targetMidnight = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10)).getTime();
+                        const now = new Date();
+                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                        return Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24)) < 0;
+                    }).length;
+
+                    const overdueBannerHtml = overdueCount > 0 ? `
+                        <div style="background:#fef2f2; border:1.5px solid #fecaca; border-left:6px solid #dc2626; border-radius:12px; padding:14px 20px; display:flex; align-items:center; gap:14px; margin-bottom:12px; box-shadow:0 2px 8px rgba(220,38,38,0.06);">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size:1.6rem; color:#dc2626; flex-shrink:0;"></i>
+                            <div>
+                                <div style="color:#991b1b; font-weight:900; font-size:0.95rem;">Action Required: You have ${overdueCount} overdue payment balance${overdueCount === 1 ? '' : 's'}</div>
+                                <div style="color:#7f1d1d; font-size:0.85rem; font-weight:600; margin-top:2px;">The event/service start date has already passed. Please settle overdue balances immediately to keep your account in good standing.</div>
+                            </div>
+                        </div>
+                    ` : '';
+
+                    balancesContainer.innerHTML = overdueBannerHtml + dueBookings.map(b => {
                         const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
                         const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
                         const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
@@ -1178,8 +1279,126 @@ document.addEventListener('DOMContentLoaded', () => {
                             clientName = (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
                         }
 
+                        // Overdue and Due Date Calculation
+                        let isOverdue = false;
+                        let daysOverdue = 0;
+                        let isDueToday = false;
+                        let isDueTomorrow = false;
+                        let diffDays = null;
+
+                        if (sDate && sDate !== 'N/A') {
+                            const match = String(sDate).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                            if (match) {
+                                const targetYear = parseInt(match[1], 10);
+                                const targetMonth = parseInt(match[2], 10) - 1;
+                                const targetDay = parseInt(match[3], 10);
+                                const targetMidnight = new Date(targetYear, targetMonth, targetDay).getTime();
+                                const now = new Date();
+                                const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                                diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+                                if (diffDays < 0) {
+                                    isOverdue = true;
+                                    daysOverdue = Math.abs(diffDays);
+                                } else if (diffDays === 0) {
+                                    isDueToday = true;
+                                } else if (diffDays === 1) {
+                                    isDueTomorrow = true;
+                                }
+                            }
+                        }
+
+                        let statusHeaderBadgeHtml = '';
+                        if (isOverdue) {
+                            statusHeaderBadgeHtml = `
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="background:#fee2e2; color:#b91c1c; border:1.5px solid #ef4444; padding:6px 14px; border-radius:20px; font-weight:900; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(220,38,38,0.15);">
+                                        <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Payment Overdue (${daysOverdue} day${daysOverdue === 1 ? '' : 's'} ago)
+                                    </span>
+                                    <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">
+                                        Partial Payment (50% Downpayment)
+                                    </span>
+                                </div>
+                            `;
+                        } else if (isDueToday) {
+                            statusHeaderBadgeHtml = `
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="background:#fef3c7; color:#b45309; border:1.5px solid #f59e0b; padding:6px 14px; border-radius:20px; font-weight:900; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-bell" style="color:#d97706;"></i> Balance Due Today!
+                                    </span>
+                                    <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">
+                                        Partial Payment (50% Downpayment)
+                                    </span>
+                                </div>
+                            `;
+                        } else if (isDueTomorrow) {
+                            statusHeaderBadgeHtml = `
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="background:#fef9c3; color:#854d0e; border:1.5px solid #eab308; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-clock" style="color:#ca8a04;"></i> Due Tomorrow
+                                    </span>
+                                    <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">
+                                        Partial Payment (50% Downpayment)
+                                    </span>
+                                </div>
+                            `;
+                        } else {
+                            statusHeaderBadgeHtml = `
+                                <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.9rem;">
+                                    Partial Payment (50% Downpayment)
+                                </span>
+                            `;
+                        }
+
+                        const cardBorderStyle = isOverdue
+                            ? 'background:#fffafa; border:1.5px solid #fca5a5; border-left:6px solid #dc2626; border-radius:18px; padding:24px 28px; box-shadow:0 6px 20px rgba(220,38,38,0.08); display:flex; flex-direction:column; gap:16px;'
+                            : 'background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #e11d48; border-radius:18px; padding:24px 28px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;';
+
+                        const dueBoxHtml = isOverdue ? `
+                            <div style="font-size:0.82rem; font-weight:800; color:#991b1b; background:#fee2e2; border-radius:6px; padding:6px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fca5a5; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Overdue since <strong>${dateText}</strong> (${daysOverdue} day${daysOverdue === 1 ? '' : 's'} late)
+                            </div>
+                        ` : isDueToday ? `
+                            <div style="font-size:0.82rem; font-weight:800; color:#92400e; background:#fef3c7; border-radius:6px; padding:6px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fde68a; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                <i class="fa-solid fa-bell" style="color:#d97706;"></i> Due Date: <strong>${dateText}</strong> (Due Today!)
+                            </div>
+                        ` : isDueTomorrow ? `
+                            <div style="font-size:0.82rem; font-weight:800; color:#854d0e; background:#fef9c3; border-radius:6px; padding:6px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fef08a; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                <i class="fa-solid fa-clock" style="color:#ca8a04;"></i> Due Date: <strong>${dateText}</strong> (Due Tomorrow)
+                            </div>
+                        ` : `
+                            <div style="font-size:0.8rem; font-weight:700; color:#475569; background:#fff1f2; border-radius:6px; padding:4px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fecdd3;">
+                                Due Date: <strong>${dateText}</strong> (On event day)
+                            </div>
+                        `;
+
+                        const payBtnHtml = isOverdue ? `
+                            <button type="button" class="btn-pay-balance-due btn-card-primary" 
+                                    data-booking-id="${b.BookingID}" 
+                                    data-booking-ref="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" 
+                                    data-amount="${remainingBalVal}" 
+                                    data-pkg-name="${encodeURIComponent(b.PackageName || 'Event Service Package')}" 
+                                    data-client-name="${encodeURIComponent(clientName)}"
+                                    data-client-email="${encodeURIComponent(b.ClientEmail || (currentUser && currentUser.email) || '')}"
+                                    data-client-phone="${encodeURIComponent(b.ClientPhone || (currentUser && currentUser.phone) || '')}"
+                                    style="padding:12px 28px; font-size:1rem; font-weight:900; border:none; border-radius:10px; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(220,38,38,0.35); transition:all 0.2s ease;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Pay Overdue Balance (₱${remainingBalVal.toLocaleString()})
+                            </button>
+                        ` : `
+                            <button type="button" class="btn-pay-balance-due btn-card-primary" 
+                                    data-booking-id="${b.BookingID}" 
+                                    data-booking-ref="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" 
+                                    data-amount="${remainingBalVal}" 
+                                    data-pkg-name="${encodeURIComponent(b.PackageName || 'Event Service Package')}" 
+                                    data-client-name="${encodeURIComponent(clientName)}"
+                                    data-client-email="${encodeURIComponent(b.ClientEmail || (currentUser && currentUser.email) || '')}"
+                                    data-client-phone="${encodeURIComponent(b.ClientPhone || (currentUser && currentUser.phone) || '')}"
+                                    style="padding:12px 28px; font-size:1rem; font-weight:800; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                                <i class="fa-solid fa-credit-card"></i> Pay Remaining Balance (₱${remainingBalVal.toLocaleString()})
+                            </button>
+                        `;
+
                         return `
-                            <div class="booking-balance-card" style="background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #e11d48; border-radius:18px; padding:24px 28px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;">
+                            <div class="booking-balance-card" style="${cardBorderStyle}">
                                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:14px;">
                                     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                         <span style="font-size:1.1rem; font-weight:900; color:#0a192f;">Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}</span>
@@ -1187,9 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span style="font-size:0.88rem; color:#1e293b; font-weight:700; background:#f1f5f9; padding:3px 10px; border-radius:6px;">Booked by: <strong>${clientName}</strong></span>
                                         ${b.EventType ? `<span style="font-size:0.82rem; color:#2563eb; font-weight:800; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px;">${b.EventType}</span>` : ''}
                                     </div>
-                                    <span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.9rem;">
-                                        Partial Payment (50% Downpayment)
-                                    </span>
+                                    ${statusHeaderBadgeHtml}
                                 </div>
 
                                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
@@ -1212,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
 
                                     <!-- Due and Financial Breakdown Box -->
-                                    <div style="text-align:right; min-width:230px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; background:#f8fafc; border:1px solid #e2e8f0; padding:16px 20px; border-radius:14px;">
+                                    <div style="text-align:right; min-width:240px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; background:${isOverdue ? '#fef2f2' : '#f8fafc'}; border:1px solid ${isOverdue ? '#fecaca' : '#e2e8f0'}; padding:16px 20px; border-radius:14px;">
                                         <div style="display:flex; justify-content:space-between; width:100%; gap:16px;">
                                             <span style="font-size:0.85rem; font-weight:700; color:#64748b;">Total Package & Transpo:</span>
                                             <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">₱${totalAmountVal.toLocaleString()}</span>
@@ -1221,28 +1438,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <span style="font-size:0.85rem; font-weight:700; color:#059669;">Initial Deposit Paid:</span>
                                             <span style="font-size:0.95rem; font-weight:800; color:#059669;">-₱${amountPaidVal.toLocaleString()}</span>
                                         </div>
-                                        <div style="display:flex; justify-content:space-between; width:100%; gap:16px; border-top:1.5px dashed #cbd5e1; padding-top:8px;">
-                                            <span style="font-size:0.9rem; font-weight:800; color:#be123c;">Remaining Due:</span>
-                                            <span style="font-size:1.45rem; font-weight:900; color:#e11d48;">₱${remainingBalVal.toLocaleString()}</span>
+                                        <div style="display:flex; justify-content:space-between; width:100%; gap:16px; border-top:1.5px dashed ${isOverdue ? '#f87171' : '#cbd5e1'}; padding-top:8px;">
+                                            <span style="font-size:0.9rem; font-weight:800; color:${isOverdue ? '#b91c1c' : '#be123c'};">${isOverdue ? 'Overdue Balance Due:' : 'Remaining Due:'}</span>
+                                            <span style="font-size:1.45rem; font-weight:900; color:${isOverdue ? '#dc2626' : '#e11d48'};">₱${remainingBalVal.toLocaleString()}</span>
                                         </div>
-                                        <div style="font-size:0.8rem; font-weight:700; color:#475569; background:#fff1f2; border-radius:6px; padding:4px 10px; width:100%; box-sizing:border-box; text-align:center; border:1px solid #fecdd3;">
-                                            Due Date: <strong>${dateText}</strong> (On event day)
-                                        </div>
+                                        ${dueBoxHtml}
                                     </div>
                                 </div>
 
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
-                                    <button type="button" class="btn-pay-balance-due btn-card-primary" 
-                                            data-booking-id="${b.BookingID}" 
-                                            data-booking-ref="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" 
-                                            data-amount="${remainingBalVal}" 
-                                            data-pkg-name="${encodeURIComponent(b.PackageName || 'Event Service Package')}" 
-                                            data-client-name="${encodeURIComponent(clientName)}"
-                                            data-client-email="${encodeURIComponent(b.ClientEmail || user?.email || '')}"
-                                            data-client-phone="${encodeURIComponent(b.ClientPhone || user?.phone || '')}"
-                                            style="padding:12px 28px; font-size:1rem; font-weight:800; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
-                                        <i class="fa-solid fa-credit-card"></i> Pay Remaining Balance (₱${remainingBalVal.toLocaleString()})
-                                    </button>
+                                    ${payBtnHtml}
                                 </div>
                             </div>
                         `;
@@ -1345,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // A. Profile Subtab Buttons (My Bookings | Booking History | Account Settings | Payment Balances)
+        // A. Profile Subtab Buttons (My Bookings | Booking History | Account Settings | Payment Balances | Wallet)
         const subtabBtn = e.target.closest('.subtab-btn');
         if (subtabBtn) {
             e.preventDefault();
@@ -1361,7 +1566,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 reviews: document.getElementById('profile-sec-reviews'),
                 history: document.getElementById('profile-sec-history'),
                 settings: document.getElementById('profile-sec-settings'),
-                balances: document.getElementById('profile-sec-balances')
+                balances: document.getElementById('profile-sec-balances'),
+                wallet: document.getElementById('profile-sec-wallet')
             };
 
             Object.keys(profileSections).forEach(secKey => {
@@ -1373,6 +1579,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+
+            if (targetSec === 'wallet' && typeof window.loadClientWalletData === 'function') {
+                window.loadClientWalletData();
+            }
             return;
         }
 
@@ -1548,7 +1758,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (ownerFirst && !ownerFirst.value && user.firstName) ownerFirst.value = user.firstName;
                 if (ownerMiddle && !ownerMiddle.value && user.middleName) ownerMiddle.value = user.middleName;
                 if (ownerLast && !ownerLast.value && user.lastName) ownerLast.value = user.lastName;
-                if (bizPhone && !bizPhone.value && user.phone) bizPhone.value = user.phone;
+                if (bizPhone && !bizPhone.value && user.phone) bizPhone.value = String(user.phone).replace(/\D/g, '');
                 if (bizEmail && !bizEmail.value && user.email) bizEmail.value = user.email;
 
                 providerAppModal.classList.remove('hidden');
@@ -1556,13 +1766,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // G. Close Service Provider Application Modal Button
-        const closeProviderAppBtn = e.target.closest('#close-provider-app-modal-btn');
+        // G. Close / Exit Service Provider Application Fullscreen View
+        const closeProviderAppBtn = e.target.closest('#close-provider-app-modal-btn, #close-provider-app-modal-btn-x, .close-provider-app-btn');
         if (closeProviderAppBtn) {
             e.preventDefault();
             const providerAppModal = document.getElementById('modal-provider-application');
             if (providerAppModal) providerAppModal.classList.add('hidden');
             return;
+        }
+    });
+
+    // Escape key closes fullscreen provider application if active
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const otpModal = document.getElementById('modal-provider-email-otp');
+            if (otpModal && !otpModal.classList.contains('hidden')) return;
+            const providerAppModal = document.getElementById('modal-provider-application');
+            if (providerAppModal && !providerAppModal.classList.contains('hidden')) {
+                providerAppModal.classList.add('hidden');
+            }
         }
     });
 
@@ -2109,6 +2331,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Strict numeric enforcement on Business Phone Number and all phone fields (numbers only)
+    const bizPhoneInput = document.getElementById('app-biz-phone');
+    if (bizPhoneInput) {
+        bizPhoneInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+    }
+
+    // Global listener ensuring all phone inputs only accept numbers
+    document.addEventListener('input', (e) => {
+        if (!e.target) return;
+        if (e.target.id === 'app-biz-phone' || 
+            e.target.id === 'profile-phone' || 
+            e.target.id === 'booking-client-phone' || 
+            e.target.id === 'edit-provider-phone' || 
+            e.target.id === 'modal-reg-phone' || 
+            (e.target.tagName === 'INPUT' && e.target.type === 'tel' && !e.target.classList.contains('otp-digit-input'))) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        }
+    });
+
     // Wizard Next Button Click
     const btnWizardNext = document.getElementById('btn-wizard-next');
     if (btnWizardNext) {
@@ -2133,6 +2376,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (!bizPhone || !bizEmail) {
                     showToast('⚠ Please fill in contact details (Phone and Email).', 'warning');
+                    return;
+                }
+                if (!/^\d{10,11}$/.test(bizPhone)) {
+                    showToast('⚠ Business phone number must be numbers only (10-11 digits, e.g. 09171234567).', 'warning');
                     return;
                 }
                 if (!bizAddress) {
@@ -2262,6 +2509,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!bizPhone || !bizEmail) {
                 showToast('⚠ Please enter valid Contact Information (Phone & Email).', 'warning');
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
+                window.isProviderAppSubmitting = false;
+                return;
+            }
+            if (!/^\d{10,11}$/.test(bizPhone)) {
+                showToast('⚠ Business phone number must be numbers only (10-11 digits, e.g. 09171234567).', 'warning');
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
                 window.isProviderAppSubmitting = false;
                 return;
@@ -2577,7 +2830,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 7. INITIAL VIEW & BROWSER NAVIGATION BACK/FORWARD LOGIC
     const handleNavState = () => {
-        const activeView = window.location.hash.replace('#', '') || sessionStorage.getItem('soundsphere_active_view') || 'home';
+        let activeView = window.location.hash.replace('#', '') || sessionStorage.getItem('soundsphere_active_view') || 'home';
+        if (activeView === 'balances') {
+            activeView = 'profile';
+            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
+        }
         if (views[activeView]) {
             switchView(activeView);
         } else {
@@ -2606,6 +2863,342 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Always fetch latest Service Provider Application Status directly from SQL Server on DOM Load
     updateAccountSettingsProviderStatus();
+
+    // 8-B. CLIENT WALLET & REFUND PAYOUT CONTROLLER
+    let activeClientWalletBalance = 0;
+
+    window.loadClientWalletData = async function() {
+        const balEl = document.getElementById('wallet-display-balance');
+        const pendingEl = document.getElementById('wallet-pending-payout');
+        const reqContainer = document.getElementById('wallet-requests-container');
+        const txContainer = document.getElementById('wallet-transactions-container');
+        const maxValLbl = document.getElementById('lbl-refund-max-val');
+        const amtInput = document.getElementById('refund-input-amount');
+
+        if (!balEl) return;
+
+        try {
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token') || '');
+            const authUser = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+            const userId = authUser ? (authUser.userId || authUser.id || authUser.UserID) : '';
+
+            const url = `/api/wallet/my-wallet${userId ? `?userId=${userId}` : ''}`;
+            const res = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            const resData = await res.json();
+            if (!resData.success || !resData.data) {
+                console.warn('Could not load wallet data:', resData.message);
+                return;
+            }
+
+            const data = resData.data;
+            activeClientWalletBalance = parseFloat(data.balance || 0);
+            const pendingAmt = parseFloat(data.pendingAmount || 0);
+
+            balEl.textContent = `₱${activeClientWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (pendingEl) {
+                pendingEl.textContent = `₱${pendingAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            if (maxValLbl) {
+                maxValLbl.textContent = `₱${activeClientWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            if (amtInput) {
+                amtInput.max = activeClientWalletBalance;
+            }
+
+            // Render Payout Requests sent to Cashier
+            if (reqContainer) {
+                const requests = data.refundRequests || [];
+                if (requests.length === 0) {
+                    reqContainer.innerHTML = `
+                        <div style="text-align:center; padding:32px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
+                            <i class="fa-solid fa-clock-rotate-left" style="font-size:2rem; color:#94a3b8; margin-bottom:8px; display:block;"></i>
+                            <p style="color:#64748b; font-size:0.9rem; margin:0; font-weight:700;">No refund payout requests yet.</p>
+                            <p style="color:#94a3b8; font-size:0.82rem; margin:4px 0 0 0;">When you request a payout of your refund balance, the progress with the Cashier will appear here.</p>
+                        </div>
+                    `;
+                } else {
+                    reqContainer.innerHTML = `
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #e2e8f0; color:#475569; font-weight:700;">
+                                        <th style="padding:10px 12px;">Req #</th>
+                                        <th style="padding:10px 12px;">Amount</th>
+                                        <th style="padding:10px 12px;">Channel</th>
+                                        <th style="padding:10px 12px;">Destination Account</th>
+                                        <th style="padding:10px 12px;">Requested Date</th>
+                                        <th style="padding:10px 12px;">Status</th>
+                                        <th style="padding:10px 12px;">Cashier Remarks / Ref</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${requests.map(r => {
+                                        let badgeBg = '#fef3c7';
+                                        let badgeColor = '#d97706';
+                                        let badgeIcon = 'fa-hourglass-half';
+                                        let statusLabel = 'Pending Cashier';
+
+                                        if (r.Status === 'Approved') {
+                                            badgeBg = '#d1fae5';
+                                            badgeColor = '#059669';
+                                            badgeIcon = 'fa-circle-check';
+                                            statusLabel = 'Disbursed (Paid)';
+                                        } else if (r.Status === 'Rejected') {
+                                            badgeBg = '#fee2e2';
+                                            badgeColor = '#dc2626';
+                                            badgeIcon = 'fa-circle-xmark';
+                                            statusLabel = 'Rejected (Returned)';
+                                        }
+
+                                        const dateStr = r.RequestedAt ? new Date(r.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                                        const refLine = r.ReferenceNumber ? `<div style="font-weight:800; color:#0a192f;"><i class="fa-solid fa-receipt" style="color:#2563eb;"></i> Ref: ${r.ReferenceNumber}</div>` : '';
+                                        const notesLine = r.AdminNotes ? `<div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${r.AdminNotes}</div>` : '<div style="color:#94a3b8; font-size:0.8rem;">Awaiting manual transfer</div>';
+
+                                        return `
+                                            <tr style="border-bottom:1px solid #f1f5f9;">
+                                                <td style="padding:12px; font-weight:800; color:#0a192f;">#REF-${r.RefundRequestID}</td>
+                                                <td style="padding:12px; font-weight:900; color:#2563eb; font-size:0.95rem;">₱${parseFloat(r.Amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td style="padding:12px;"><span style="background:#eff6ff; color:#1e40af; padding:3px 8px; border-radius:6px; font-weight:800; font-size:0.8rem;">${r.PayoutMethod || 'GCash'}</span></td>
+                                                <td style="padding:12px;">
+                                                    <div style="font-weight:700; color:#1e293b;">${r.AccountName || 'Account'}</div>
+                                                    <div style="font-size:0.82rem; color:#64748b;">${r.AccountNumber || ''}</div>
+                                                </td>
+                                                <td style="padding:12px; color:#475569;">${dateStr}</td>
+                                                <td style="padding:12px;">
+                                                    <span style="display:inline-flex; align-items:center; gap:5px; background:${badgeBg}; color:${badgeColor}; padding:4px 10px; border-radius:20px; font-size:0.78rem; font-weight:800;">
+                                                        <i class="fa-solid ${badgeIcon}"></i> ${statusLabel}
+                                                    </span>
+                                                </td>
+                                                <td style="padding:12px;">${refLine}${notesLine}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            }
+
+            // Render Wallet Activity & Refund History
+            if (txContainer) {
+                const txs = data.transactions || [];
+                if (txs.length === 0) {
+                    txContainer.innerHTML = `
+                        <div style="text-align:center; padding:32px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
+                            <i class="fa-solid fa-list-check" style="font-size:2rem; color:#94a3b8; margin-bottom:8px; display:block;"></i>
+                            <p style="color:#64748b; font-size:0.9rem; margin:0; font-weight:700;">No wallet activity recorded yet.</p>
+                            <p style="color:#94a3b8; font-size:0.82rem; margin:4px 0 0 0;">Cancelled booking refunds and payout withdrawals will be logged here.</p>
+                        </div>
+                    `;
+                } else {
+                    txContainer.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            ${txs.map(t => {
+                                const isPositive = parseFloat(t.Amount) > 0;
+                                const amtSign = isPositive ? '+' : '';
+                                const amtColor = isPositive ? '#10b981' : '#ef4444';
+                                const iconClass = isPositive ? 'fa-arrow-down-left' : 'fa-arrow-up-right';
+                                const iconBg = isPositive ? '#ecfdf5' : '#fef2f2';
+                                const iconColor = isPositive ? '#059669' : '#dc2626';
+                                const dateFormatted = t.CreatedAt ? new Date(t.CreatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+                                return `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; gap:12px; flex-wrap:wrap;">
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            <div style="width:40px; height:40px; border-radius:10px; background:${iconBg}; color:${iconColor}; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0;">
+                                                <i class="fa-solid ${iconClass}"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight:800; color:#0a192f; font-size:0.92rem;">${t.Description || 'Wallet Transaction'}</div>
+                                                <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${dateFormatted} ${t.BookingReference ? `• Ref: ${t.BookingReference}` : ''}</div>
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <div style="font-size:1.1rem; font-weight:900; color:${amtColor};">${amtSign}₱${Math.abs(parseFloat(t.Amount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                                            <div style="font-size:0.78rem; color:#64748b; font-weight:700;">Balance After: ₱${parseFloat(t.BalanceAfter).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+            }
+        } catch (err) {
+            console.error('Wallet fetch error:', err);
+        }
+    };
+
+    // Modal Triggers: Request Refund Payout
+    const btnOpenWithdraw = document.getElementById('btn-open-wallet-withdraw');
+    const modalRefund = document.getElementById('modal-refund-request');
+    const btnCloseRefund = document.getElementById('close-refund-modal-btn');
+    const btnCancelRefund = document.getElementById('btn-cancel-refund-modal');
+    const btnMaxAmount = document.getElementById('btn-refund-max-amount');
+    const formRefund = document.getElementById('form-refund-request');
+
+    const openRefundModal = () => {
+        if (!modalRefund) return;
+        if (activeClientWalletBalance <= 0) {
+            alert('Your Refund Wallet currently has ₱0.00.\n\nAutomatic refunds from cancelled bookings will appear here instantly. Once available, you can request a payout anytime.');
+            return;
+        }
+
+        modalRefund.classList.remove('hidden');
+        modalRefund.style.display = 'flex';
+
+        // Auto fill amount & client details
+        const amtInput = document.getElementById('refund-input-amount');
+        const maxValLbl = document.getElementById('lbl-refund-max-val');
+        const nameInput = document.getElementById('refund-input-name');
+        const numInput = document.getElementById('refund-input-number');
+
+        if (amtInput) amtInput.value = activeClientWalletBalance.toFixed(2);
+        if (maxValLbl) maxValLbl.textContent = `₱${activeClientWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const authUser = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+        if (authUser) {
+            const clientName = authUser.fullName || authUser.name || (authUser.ClientFirstName ? `${authUser.ClientFirstName} ${authUser.ClientLastName || ''}`.trim() : '') || localStorage.getItem('soundsphere_user_name') || '';
+            const clientPhone = authUser.phone || authUser.Phone || '';
+            if (nameInput && !nameInput.value && clientName) nameInput.value = clientName;
+            if (numInput && !numInput.value && clientPhone) numInput.value = clientPhone;
+        }
+    };
+
+    const closeRefundModal = () => {
+        if (!modalRefund) return;
+        modalRefund.classList.add('hidden');
+        modalRefund.style.display = 'none';
+    };
+
+    if (btnOpenWithdraw) {
+        btnOpenWithdraw.addEventListener('click', (e) => {
+            e.preventDefault();
+            openRefundModal();
+        });
+    }
+
+    if (btnCloseRefund) {
+        btnCloseRefund.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeRefundModal();
+        });
+    }
+
+    if (btnCancelRefund) {
+        btnCancelRefund.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeRefundModal();
+        });
+    }
+
+    if (modalRefund) {
+        modalRefund.addEventListener('click', (e) => {
+            if (e.target === modalRefund) closeRefundModal();
+        });
+    }
+
+    if (btnMaxAmount) {
+        btnMaxAmount.addEventListener('click', (e) => {
+            e.preventDefault();
+            const amtInput = document.getElementById('refund-input-amount');
+            if (amtInput && activeClientWalletBalance > 0) {
+                amtInput.value = activeClientWalletBalance.toFixed(2);
+            }
+        });
+    }
+
+    if (formRefund) {
+        formRefund.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const amtInput = document.getElementById('refund-input-amount');
+            const methodSelect = document.getElementById('refund-select-method');
+            const nameInput = document.getElementById('refund-input-name');
+            const numInput = document.getElementById('refund-input-number');
+            const notesInput = document.getElementById('refund-input-notes');
+            const submitBtn = document.getElementById('btn-submit-refund-req');
+
+            const reqAmt = parseFloat(amtInput?.value || 0);
+            if (isNaN(reqAmt) || reqAmt <= 0) {
+                alert('Please enter a valid refund amount greater than ₱0.00.');
+                return;
+            }
+            if (reqAmt > activeClientWalletBalance) {
+                alert(`The requested amount (₱${reqAmt.toFixed(2)}) exceeds your available wallet balance of ₱${activeClientWalletBalance.toFixed(2)}.`);
+                return;
+            }
+
+            const method = methodSelect?.value || 'GCash';
+            const accountName = nameInput?.value.trim() || '';
+            const accountNumber = numInput?.value.trim() || '';
+            const notes = notesInput?.value.trim() || '';
+
+            if (!accountName || !accountNumber) {
+                alert('Please provide your Account Holder Name and Mobile / Account Number.');
+                return;
+            }
+
+            const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+            }
+
+            try {
+                const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token') || '');
+                const authUser = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+
+                const res = await fetch('/api/wallet/request-refund', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({
+                        userId: authUser ? (authUser.userId || authUser.id || authUser.UserID) : undefined,
+                        amount: reqAmt,
+                        payoutMethod: method,
+                        accountName,
+                        accountNumber,
+                        notes,
+                        clientName: accountName,
+                        clientEmail: authUser?.email,
+                        clientPhone: authUser?.phone
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to submit refund request.');
+                }
+
+                alert(`🎉 Refund Request Submitted to Cashier!\n\nAmount: ₱${reqAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nChannel: ${method}\nAccount: ${accountName} (${accountNumber})\n\nOur Cashier will manually verify and send the funds to your account.`);
+
+                closeRefundModal();
+                formRefund.reset();
+                await window.loadClientWalletData();
+            } catch (err) {
+                console.error('Submit refund request error:', err);
+                alert(`⚠️ Error: ${err.message}`);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origBtnHtml;
+                }
+            }
+        });
+    }
+
+    // Auto-load wallet if on wallet subtab on page load
+    if (sessionStorage.getItem('soundsphere_active_subtab') === 'wallet') {
+        window.loadClientWalletData();
+    }
 
     // 8. SECURITY & PREFERENCES FORM CONTROLLERS
     // Eye toggles for Change Password modal
@@ -3432,16 +4025,23 @@ document.addEventListener('DOMContentLoaded', () => {
         let iconColor = '#f59e0b';
         let boxBg = 'rgba(245, 158, 11, 0.2)';
 
-        if (/booking|reservation|event/i.test(fullText)) {
-            catName = 'Booking Confirmation';
-            iconClass = 'fa-calendar-check';
-            iconColor = '#10b981';
-            boxBg = 'rgba(16, 185, 129, 0.2)';
+        const isBalanceNotif = /balance|due date|outstanding|remaining balance/i.test(fullText) || notif.NotificationType === 'BalanceDueReminder';
+
+        if (isBalanceNotif) {
+            catName = 'Payment Balance';
+            iconClass = 'fa-wallet';
+            iconColor = '#e11d48';
+            boxBg = 'rgba(225, 29, 72, 0.15)';
         } else if (/payment|paid|receipt|invoice|gcash|cashier|payout/i.test(fullText)) {
             catName = 'Payment Update';
             iconClass = 'fa-receipt';
             iconColor = '#2563eb';
             boxBg = 'rgba(37, 99, 235, 0.2)';
+        } else if (/booking|reservation|event/i.test(fullText)) {
+            catName = 'Booking Confirmation';
+            iconClass = 'fa-calendar-check';
+            iconColor = '#10b981';
+            boxBg = 'rgba(16, 185, 129, 0.2)';
         } else if (/message|chat|inquiry/i.test(fullText)) {
             catName = 'Message Alert';
             iconClass = 'fa-comments';
@@ -3464,9 +4064,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check for Booking Reference (e.g. SS-2026-00012)
         let actionsHtml = '';
         const refMatch = message.match(/SS-\d{4}-\d+/i) || message.match(/SS-[A-Z0-9-]+/i);
-        if (refMatch) {
-            const bookingRef = refMatch[0];
-            actionsHtml += `
+        const bookingRef = refMatch ? refMatch[0] : '';
+
+        if (isBalanceNotif) {
+            actionsHtml = `
+                <button type="button" class="btn-notif-view-balance" onclick="window.goToPaymentBalancesTab('${bookingRef}')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                    <i class="fa-solid fa-wallet"></i> View Payment Balance${bookingRef ? ` (${bookingRef})` : ''}
+                </button>
+            `;
+        } else if (bookingRef) {
+            actionsHtml = `
                 <a href="/booking-confirmation.html?ref=${encodeURIComponent(bookingRef)}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.92rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:background 0.2s ease;">
                     <i class="fa-solid fa-file-invoice"></i> View Official Booking Receipt (${bookingRef})
                 </a>
@@ -3487,6 +4094,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalNotifDetail) {
             modalNotifDetail.classList.add('hidden');
             modalNotifDetail.style.display = 'none';
+        }
+    };
+
+    // Navigate directly to Payment Balances tab from Notification Modal
+    window.goToPaymentBalancesTab = (bookingRef) => {
+        if (typeof window.closeNotificationDetailModal === 'function') {
+            window.closeNotificationDetailModal();
+        }
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+        if (notificationPanel) {
+            notificationPanel.classList.add('hidden');
+        }
+
+        const balancesSubtabBtn = document.getElementById('subtab-btn-balances');
+        const balancesSec = document.getElementById('profile-sec-balances');
+
+        if (balancesSubtabBtn) {
+            if (typeof switchView === 'function') {
+                switchView('profile');
+            } else {
+                const profileNav = document.getElementById('nav-profile-tab');
+                if (profileNav) profileNav.click();
+            }
+
+            balancesSubtabBtn.click();
+            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
+
+            setTimeout(() => {
+                if (balancesSec) {
+                    balancesSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        } else {
+            sessionStorage.setItem('soundsphere_active_view', 'profile');
+            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
+            window.location.href = '/marketplace.html#balances';
         }
     };
 

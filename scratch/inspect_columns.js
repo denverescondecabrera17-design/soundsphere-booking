@@ -1,0 +1,15 @@
+const { connectDB } = require('../server/config/db');
+
+async function test() {
+    const pool = await connectDB();
+    const res = await pool.request().query(`
+        SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME IN ('Bookings', 'Payments', 'Notifications', 'Users') 
+        ORDER BY TABLE_NAME, ORDINAL_POSITION
+    `);
+    console.table(res.recordset);
+    process.exit(0);
+}
+
+test();

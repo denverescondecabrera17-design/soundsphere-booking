@@ -92,8 +92,33 @@ const markAllNotificationsRead = async (req, res) => {
     }
 };
 
+/**
+ * POST or GET /api/notifications/check-reminders
+ * Trigger automated check for upcoming balance due reminders (1 day before due date)
+ */
+const triggerBalanceReminders = async (req, res) => {
+    try {
+        const balanceReminderService = require('../services/balanceReminderService');
+        const result = await balanceReminderService.checkAndSendBalanceDueReminders();
+        return res.status(200).json({
+            success: true,
+            message: 'Balance reminder check completed.',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error triggering balance reminders:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to execute balance reminder scan.',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getUserNotifications,
     markNotificationRead,
-    markAllNotificationsRead
+    markAllNotificationsRead,
+    triggerBalanceReminders
 };
+

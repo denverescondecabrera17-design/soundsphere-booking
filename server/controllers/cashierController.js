@@ -88,7 +88,32 @@ const getCashierSummary = async (req, res) => {
             console.warn('Subscription revenue query notice:', subErr.message);
         }
 
-        // 4. Recent Cashier Transactions (Bookings, Withdrawals, Subscriptions)
+        // 4. Pending Client Refund Requests from dbo.RefundRequests
+        let pendingRefundsCount = 0;
+        let pendingRefundsAmount = 0;
+        try {
+            const refCheck = await pool.request().query(`
+                IF OBJECT_ID('dbo.RefundRequests', 'U') IS NOT NULL
+                BEGIN
+                    SELECT 
+                        COUNT(CASE WHEN Status = 'Pending' THEN 1 END) AS PendingCount,
+                        ISNULL(SUM(CASE WHEN Status = 'Pending' THEN Amount ELSE 0 END), 0) AS PendingAmount
+                    FROM dbo.RefundRequests;
+                END
+                ELSE
+                BEGIN
+                    SELECT 0 AS PendingCount, 0 AS PendingAmount;
+                END
+            `);
+            if (refCheck.recordset && refCheck.recordset[0]) {
+                pendingRefundsCount = parseInt(refCheck.recordset[0].PendingCount || 0, 10);
+                pendingRefundsAmount = parseFloat(refCheck.recordset[0].PendingAmount || 0);
+            }
+        } catch (rErr) {
+            console.warn('Refund requests summary query notice:', rErr.message);
+        }
+
+        // 5. Recent Cashier Transactions (Bookings, Withdrawals, Subscriptions, Client Refunds)
         const recentLedger = await pool.request().query(`
             SELECT TOP 10 * FROM (
                 SELECT
@@ -103,6 +128,18 @@ const getCashierSummary = async (req, res) => {
                     'Outflow' AS Flow
                 FROM dbo.Withdrawals w
                 LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
+                UNION ALL
+                SELECT
+                    'Client Refund' AS Type,
+                    rr.RefundRequestID AS ID,
+                    CONCAT('REF-', rr.RefundRequestID) AS Reference,
+                    rr.Amount AS Amount,
+                    rr.Status AS Status,
+                    COALESCE(rr.ProcessedAt, rr.RequestedAt) AS Date,
+                    rr.PayoutMethod AS Method,
+                    rr.ClientName AS Recipient,
+                    'Outflow' AS Flow
+                FROM dbo.RefundRequests rr
                 UNION ALL
                 SELECT
                     'Booking Payment' AS Type,
@@ -144,6 +181,8 @@ const getCashierSummary = async (req, res) => {
                 todayNetIncome: parseFloat(bStats.TodayCommission || 0) + todaySubscriptionIncome,
                 pendingWithdrawalsCount: parseInt(wStats.PendingCount || 0, 10),
                 pendingWithdrawalsAmount: parseFloat(wStats.PendingAmount || 0),
+                pendingRefundsCount,
+                pendingRefundsAmount,
                 approvedWithdrawalsCount: parseInt(wStats.ApprovedCount || 0, 10),
                 approvedWithdrawalsAmount: parseFloat(wStats.ApprovedAmount || 0),
                 totalGrossVolume: parseFloat(bStats.TotalGrossVolume || 0) + totalSubscriptionIncome,
@@ -191,7 +230,7 @@ const getCashierWithdrawals = async (req, res) => {
                 b.TotalAmount AS BookingTotalAmount,
                 b.AmountPaid AS BookingAmountPaid,
                 b.PaymentStatus AS BookingPaymentStatus,
-                ISNULL(cClient.FullName, uClient.Email) AS ClientName,
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
                 uClient.Email AS ClientEmail
             FROM dbo.Withdrawals w
             LEFT JOIN dbo.ServiceProviders sp ON (sp.ProviderID = w.ProviderID OR sp.UserID = w.ProviderID)
@@ -233,7 +272,7 @@ const getCashierWithdrawals = async (req, res) => {
                     .input('PID', w.ProviderID)
                     .query(`
                         SELECT TOP 5 p.PaymentID, p.BookingID, p.Amount, p.PaymentMethod, p.PaymentStatus, p.TransactionReference, p.PaidAt,
-                               b.BookingReference, ISNULL(c.FullName, u.Email) AS ClientName
+                               b.BookingReference, COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName
                         FROM dbo.Payments p
                         JOIN dbo.Bookings b ON p.BookingID = b.BookingID
                         LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
@@ -497,7 +536,7 @@ const getIncomeReport = async (req, res) => {
                     b.BookingStatus,
                     b.EventDate,
                     b.CreatedAt,
-                    COALESCE(cClient.FullName, CONCAT(cClient.FirstName, ' ', cClient.LastName), uClient.Email, 'Client') AS ClientName,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
                     uClient.Email AS ClientEmail,
                     ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName
                 FROM dbo.Bookings b
@@ -1102,7 +1141,7 @@ const verifyWithdrawalPayMongo = async (req, res) => {
                     b.PaymentStatus AS BookingPaymentStatus,
                     b.BookingStatus,
                     b.EventDate,
-                    ISNULL(cClient.FullName, uClient.Email) AS ClientName,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
                     uClient.Email AS ClientEmail,
                     uClient.Phone AS ClientPhone
                 FROM dbo.Withdrawals w
@@ -1138,7 +1177,7 @@ const verifyWithdrawalPayMongo = async (req, res) => {
                 .input('PID', withdrawal.ProviderID)
                 .query(`
                     SELECT TOP 10 p.PaymentID, p.BookingID, p.Amount, p.PaymentMethod, p.PaymentStatus, p.TransactionReference, p.PaidAt,
-                           b.BookingReference, ISNULL(c.FullName, u.Email) AS ClientName
+                           b.BookingReference, COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName
                     FROM dbo.Payments p
                     JOIN dbo.Bookings b ON p.BookingID = b.BookingID
                     LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
@@ -1342,6 +1381,78 @@ const getCashierRevenueSummary = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/cashier/refund-requests
+ * Retrieve all client refund payout requests
+ */
+const getClientRefundRequests = async (req, res) => {
+    try {
+        const walletService = require('../services/walletService');
+        const requests = await walletService.getAllRefundRequestsForCashier();
+        return res.status(200).json({ success: true, refundRequests: requests });
+    } catch (error) {
+        console.error('Get Client Refund Requests Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to retrieve refund requests.', error: error.message });
+    }
+};
+
+/**
+ * PUT /api/cashier/refund-requests/:id/approve
+ * Cashier approves & marks manual client refund as disbursed
+ */
+const approveClientRefundRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { referenceNumber, notes } = req.body || {};
+        const cashierUserId = req.user ? req.user.userId : 1;
+        const walletService = require('../services/walletService');
+
+        const result = await walletService.approveRefundPayout({
+            refundRequestId: id,
+            cashierUserId,
+            referenceNumber,
+            adminNotes: notes
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `🎉 Refund payout #${id} of ₱${parseFloat(result.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })} successfully marked as disbursed!`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Approve Client Refund Request Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * PUT /api/cashier/refund-requests/:id/reject
+ * Cashier rejects client refund payout request (refunds amount back to client wallet)
+ */
+const rejectClientRefundRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body || {};
+        const cashierUserId = req.user ? req.user.userId : 1;
+        const walletService = require('../services/walletService');
+
+        const result = await walletService.rejectRefundPayout({
+            refundRequestId: id,
+            cashierUserId,
+            rejectReason: reason
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Refund request #${id} rejected. ₱${parseFloat(result.refundedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} has been returned to the client's wallet.`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Reject Client Refund Request Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getCashierSummary,
     getCashierWithdrawals,
@@ -1351,7 +1462,10 @@ module.exports = {
     getCashierSubscriptionsOverview,
     recordCashierSubscriptionPayment,
     verifyWithdrawalPayMongo,
-    getCashierRevenueSummary
+    getCashierRevenueSummary,
+    getClientRefundRequests,
+    approveClientRefundRequest,
+    rejectClientRefundRequest
 };
 
 

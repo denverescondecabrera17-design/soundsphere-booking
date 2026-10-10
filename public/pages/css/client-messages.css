@@ -1,6 +1,7 @@
 /* ============================================================================
    SoundSphere - Facebook Messenger Style In-App Direct Messages UI
-   Theme: Messenger Blue (#0084ff), Clean Soft Gray (#f0f2f5), Modern Typography
+   Theme: Messenger Blue (#0084ff), Clean Soft Gray (#f0f2f5), Modern Proportions
+   Layout: Centered Responsive Desktop 1200px Grid (320px Sidebar + Chat Pane)
    ============================================================================ */
 
 :root {
@@ -8,19 +9,25 @@
     --navy-blue: #1e3e62;
     --messenger-blue: #0084ff;
     --messenger-blue-hover: #0073e6;
-    --messenger-blue-gradient: linear-gradient(135deg, #0084ff 0%, #00c6ff 100%);
+    --messenger-blue-gradient: linear-gradient(135deg, #0084ff 0%, #00a3ff 100%);
     --messenger-bg-light: #ffffff;
     --messenger-bg-gray: #f0f2f5;
-    --messenger-hover: #f2f2f2;
+    --messenger-hover: #f2f4f7;
     --messenger-active: #e7f3ff;
     --messenger-text-dark: #050505;
     --messenger-text-muted: #65676b;
     --messenger-border: #e4e6eb;
     --messenger-online: #31a24c;
-    --radius-lg: 16px;
-    --radius-pill: 24px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --radius-lg: 12px;
+    --radius-pill: 20px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 html {
@@ -46,11 +53,11 @@ body.client-messages-body {
 .notification-dropdown {
     position: absolute;
     right: 60px;
-    top: 54px;
-    width: 380px;
+    top: 50px;
+    width: 360px;
     background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     border: 1px solid var(--messenger-border);
     display: none;
     flex-direction: column;
@@ -63,7 +70,7 @@ body.client-messages-body {
 }
 
 .notif-header {
-    padding: 14px 18px;
+    padding: 12px 16px;
     background: #ffffff;
     border-bottom: 1px solid var(--messenger-border);
     color: var(--messenger-text-dark);
@@ -74,7 +81,7 @@ body.client-messages-body {
 
 .notif-header h4 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 0.9375rem;
     font-weight: 800;
     color: var(--messenger-text-dark);
 }
@@ -83,7 +90,7 @@ body.client-messages-body {
     background: none;
     border: none;
     color: var(--messenger-blue);
-    font-size: 0.82rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     cursor: pointer;
 }
@@ -93,17 +100,17 @@ body.client-messages-body {
 }
 
 .notif-list {
-    max-height: 340px;
+    max-height: 320px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
 
 .notif-item {
-    padding: 12px 18px;
+    padding: 10px 16px;
     border-bottom: 1px solid #f0f2f5;
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: flex-start;
     transition: background 0.15s ease;
     text-decoration: none;
@@ -119,20 +126,20 @@ body.client-messages-body {
 }
 
 .notif-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #e7f3ff;
     color: var(--messenger-blue);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     flex-shrink: 0;
 }
 
 .notif-title {
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     font-weight: 800;
     color: var(--messenger-text-dark);
     margin-bottom: 2px;
@@ -147,38 +154,41 @@ body.client-messages-body {
 .notif-time {
     font-size: 0.72rem;
     color: #8a8d91;
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
 /* ----------------------------------------------------------------------------
-   2. Main Chat Layout (Left Threads + Right Chat Window - Messenger Style)
+   2. Main Chat Layout (Left Threads + Right Chat Window)
    ---------------------------------------------------------------------------- */
 .messages-layout-container {
     width: 100%;
-    max-width: 100%;
-    margin: 0;
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 0;
-    height: calc(100vh - 72px);
+    height: calc(100vh - 84px);
     background: #ffffff;
-    border: none;
-    box-shadow: none;
+    border: 1px solid var(--messenger-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     display: grid;
-    grid-template-columns: 460px 1fr;
+    grid-template-columns: 320px 1fr;
     overflow: hidden;
     box-sizing: border-box;
 }
 
-/* Left Panel: Conversations List (Messenger Sidebar) */
+/* Left Panel: Conversations List (Sidebar) */
 .threads-left-panel {
     border-right: 1px solid var(--messenger-border);
     display: flex;
     flex-direction: column;
     background: #ffffff;
+    height: 100%;
+    overflow: hidden;
 }
 
 .threads-header {
-    padding: 24px 24px 16px 24px;
-    border-bottom: none;
+    padding: 16px 18px 12px 18px;
+    border-bottom: 1px solid var(--messenger-border);
     background: #ffffff;
 }
 
@@ -186,40 +196,15 @@ body.client-messages-body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .threads-header h2 {
-    font-size: 2.2rem;
-    font-weight: 900;
+    font-size: 1.35rem;
+    font-weight: 800;
     color: var(--messenger-text-dark);
     margin: 0;
-    letter-spacing: -0.5px;
-}
-
-.threads-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.threads-action-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--messenger-bg-gray);
-    color: var(--messenger-text-dark);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    cursor: pointer;
-    border: none;
-    transition: background 0.15s ease;
-}
-
-.threads-action-icon:hover {
-    background: #e4e6eb;
+    letter-spacing: -0.2px;
 }
 
 .threads-search-box {
@@ -228,32 +213,34 @@ body.client-messages-body {
 
 .threads-search-box input {
     width: 100%;
-    height: 54px;
-    padding: 0 20px 0 52px;
-    border: none;
+    height: 38px;
+    padding: 0 14px 0 38px;
+    border: 1px solid transparent;
     background: var(--messenger-bg-gray);
-    border-radius: 28px;
+    border-radius: var(--radius-pill);
     font-family: inherit;
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: var(--messenger-text-dark);
     outline: none;
     box-sizing: border-box;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .threads-search-box input:focus {
     background: #ffffff;
-    box-shadow: 0 0 0 3px var(--messenger-blue);
+    border-color: var(--messenger-blue);
+    box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.15);
 }
 
 .threads-search-box i {
     position: absolute;
-    left: 20px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--messenger-text-muted);
-    font-size: 1.25rem;
+    font-size: 0.875rem;
+    pointer-events: none;
 }
 
 .threads-list {
@@ -261,23 +248,22 @@ body.client-messages-body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 12px;
+    padding: 8px;
+    gap: 2px;
 }
 
 .thread-item {
-    padding: 16px 18px;
-    border-bottom: none;
-    border-radius: 16px;
+    padding: 10px 12px;
+    border-radius: 10px;
     display: flex;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease;
     background: transparent;
     width: 100%;
     box-sizing: border-box;
     overflow: hidden;
-    margin-bottom: 6px;
 }
 
 .thread-item:hover {
@@ -294,37 +280,38 @@ body.client-messages-body {
 
 .thread-avatar-wrap {
     position: relative;
-    width: 72px;
-    height: 72px;
-    min-width: 72px;
-    min-height: 72px;
-    max-width: 72px;
-    max-height: 72px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     flex-shrink: 0;
     border-radius: 50%;
 }
 
 .thread-avatar {
-    width: 72px !important;
-    height: 72px !important;
-    min-width: 72px !important;
-    min-height: 72px !important;
-    max-width: 72px !important;
-    max-height: 72px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     border-radius: 50% !important;
     background: var(--messenger-blue);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     object-fit: cover !important;
-    display: block;
 }
 
 .online-status-badge {
     position: absolute;
-    bottom: 3px;
-    right: 3px;
-    width: 18px;
-    height: 18px;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
     background: var(--messenger-online);
-    border: 3px solid #ffffff;
+    border: 2px solid #ffffff;
     border-radius: 50%;
 }
 
@@ -338,13 +325,13 @@ body.client-messages-body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
-    gap: 10px;
+    margin-bottom: 2px;
+    gap: 8px;
 }
 
 .thread-name {
-    font-size: 1.45rem;
-    font-weight: 900;
+    font-size: 0.9375rem;
+    font-weight: 700;
     color: var(--messenger-text-dark);
     white-space: nowrap;
     overflow: hidden;
@@ -353,41 +340,41 @@ body.client-messages-body {
 }
 
 .thread-time {
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--messenger-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .thread-booking-tag {
-    font-size: 1.15rem;
-    font-weight: 800;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--messenger-blue);
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     display: inline-block;
 }
 
 .thread-snippet {
-    font-size: 1.25rem;
+    font-size: 0.8125rem;
     color: var(--messenger-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .thread-item.unread .thread-snippet {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--messenger-text-dark);
 }
 
 .thread-unread-dot {
-    width: 14px;
-    height: 14px;
+    width: 8px;
+    height: 8px;
     background: var(--messenger-blue);
     border-radius: 50%;
-    margin-left: 10px;
+    margin-left: 6px;
     flex-shrink: 0;
 }
 
@@ -397,23 +384,25 @@ body.client-messages-body {
     flex-direction: column;
     background: #ffffff;
     height: 100%;
+    overflow: hidden;
 }
 
 .chat-header-bar {
-    padding: 20px 32px;
+    height: 60px;
+    padding: 0 20px;
     border-bottom: 1px solid var(--messenger-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: #ffffff;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .active-provider-meta {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 12px;
 }
 
 .active-chat-avatar-wrap {
@@ -421,90 +410,65 @@ body.client-messages-body {
 }
 
 .active-chat-avatar {
-    width: 64px !important;
-    height: 64px !important;
-    min-width: 64px !important;
-    min-height: 64px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
     border-radius: 50% !important;
     object-fit: cover !important;
     background: var(--messenger-blue);
-    font-size: 1.6rem !important;
-    font-weight: 900;
+    font-size: 1rem !important;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 132, 255, 0.25);
 }
 
 .active-provider-name {
-    font-size: 1.6rem;
-    font-weight: 900;
+    font-size: 1.05rem;
+    font-weight: 800;
     color: #0f172a;
-    margin: 0 0 4px 0;
+    margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
-    letter-spacing: -0.3px;
+    gap: 8px;
+    letter-spacing: -0.2px;
 }
 
 .active-status-subtitle {
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--messenger-text-muted);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
+    margin-top: 1px;
 }
 
 .green-dot-indicator {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     background: var(--messenger-online);
     border-radius: 50%;
     display: inline-block;
-    box-shadow: 0 0 0 3px rgba(49, 162, 76, 0.25);
-}
-
-.chat-header-actions {
-    display: none !important;
-}
-
-.btn-header-action {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: var(--messenger-blue);
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.btn-header-action:hover {
-    background: var(--messenger-bg-gray);
-    transform: scale(1.05);
 }
 
 /* Message History Stream */
 .messages-history-stream {
     flex: 1;
-    padding: 32px 36px;
+    padding: 20px 24px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     background: #ffffff;
 }
 
 .message-bubble-row {
     display: flex;
     flex-direction: column;
-    max-width: 78%;
+    max-width: 65%;
 }
 
 .message-bubble-row.client-side {
@@ -516,33 +480,33 @@ body.client-messages-body {
 }
 
 .message-bubble {
-    padding: 16px 24px;
-    font-size: 1.25rem;
-    line-height: 1.55;
+    padding: 10px 16px;
+    font-size: 0.9375rem;
+    line-height: 1.45;
     position: relative;
     word-wrap: break-word;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .message-bubble-row.client-side .message-bubble {
     background: var(--messenger-blue-gradient);
     color: #ffffff;
-    border-radius: 24px 24px 6px 24px;
-    box-shadow: 0 4px 12px rgba(0, 132, 255, 0.28);
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 1px 4px rgba(0, 132, 255, 0.2);
 }
 
 .message-bubble-row.provider-side .message-bubble {
     background: var(--messenger-bg-gray);
     color: var(--messenger-text-dark);
-    border-radius: 24px 24px 24px 6px;
+    border-radius: 18px 18px 18px 4px;
 }
 
 .message-time-stamp {
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--messenger-text-muted);
-    margin-top: 8px;
-    padding: 0 8px;
+    margin-top: 4px;
+    padding: 0 6px;
 }
 
 .message-bubble-row.client-side .message-time-stamp {
@@ -553,24 +517,28 @@ body.client-messages-body {
     align-self: flex-start;
 }
 
-/* Chat Photo Attachment & Clickable Image Styles */
+/* Chat Photo Attachment */
 .message-bubble img,
 .chat-photo-attachment {
+    max-width: 300px;
+    max-height: 220px;
+    border-radius: 12px;
+    object-fit: cover;
     cursor: pointer !important;
     pointer-events: auto !important;
     user-select: none;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .message-bubble img:hover,
 .chat-photo-attachment:hover {
-    transform: scale(1.025);
-    filter: brightness(1.04);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
 }
 
 .message-bubble.image-bubble {
-    padding: 4px !important;
+    padding: 2px !important;
     background: transparent !important;
     box-shadow: none !important;
 }
@@ -580,79 +548,80 @@ body.client-messages-body {
     align-self: center;
     background: var(--messenger-bg-gray);
     border: 1px solid var(--messenger-border);
-    border-left: 5px solid var(--messenger-blue);
-    border-radius: 16px;
-    padding: 16px 26px;
-    font-size: 1.1rem;
-    font-weight: 800;
+    border-left: 4px solid var(--messenger-blue);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
     color: var(--messenger-text-dark);
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin: 14px 0;
+    gap: 10px;
+    margin: 8px 0;
 }
 
 .system-event-card i {
     color: var(--messenger-blue);
-    font-size: 1.4rem;
+    font-size: 1rem;
 }
 
-/* Message Input Box Footer (Messenger Style Input Pill Bar) */
+/* Message Input Box Footer */
 .chat-input-footer {
-    padding: 26px 36px;
-    border-top: 1.5px solid var(--messenger-border);
+    height: 64px;
+    padding: 0 20px;
+    border-top: 1px solid var(--messenger-border);
     background: #ffffff;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .input-action-btn {
     background: none;
     border: none;
     color: var(--messenger-blue);
-    font-size: 2.0rem;
-    width: 60px;
-    height: 60px;
+    font-size: 1.35rem;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background 0.15s ease;
     flex-shrink: 0;
 }
 
 .input-action-btn:hover {
     background: var(--messenger-bg-gray);
-    transform: scale(1.1);
 }
 
 .chat-text-input {
     flex: 1;
-    height: 70px;
-    padding: 0 32px;
+    height: 40px;
+    padding: 0 16px;
     background: var(--messenger-bg-gray);
-    border: 2px solid transparent;
-    border-radius: 35px;
+    border: 1.5px solid transparent;
+    border-radius: 20px;
     font-family: inherit;
-    font-size: 1.45rem;
-    font-weight: 600;
+    font-size: 0.9375rem;
+    font-weight: 500;
     color: var(--messenger-text-dark);
     outline: none;
     box-sizing: border-box;
-    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .chat-text-input:focus {
     background: #ffffff;
     border-color: var(--messenger-blue);
-    box-shadow: 0 0 0 4px rgba(0, 132, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.15);
 }
 
 .btn-send-message {
-    width: 70px;
-    height: 70px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--messenger-blue);
     color: #ffffff;
@@ -660,16 +629,16 @@ body.client-messages-body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 6px 20px rgba(0, 132, 255, 0.45);
+    box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
     flex-shrink: 0;
 }
 
 .btn-send-message:hover {
     background: var(--messenger-blue-hover);
-    transform: scale(1.08);
+    transform: scale(1.05);
 }
 
 /* Empty Chat State Placeholder */
@@ -680,125 +649,88 @@ body.client-messages-body {
     justify-content: center;
     height: 100%;
     text-align: center;
-    padding: 40px;
+    padding: 32px 20px;
     color: var(--messenger-text-muted);
 }
 
 .messenger-empty-icon {
-    width: 90px;
-    height: 90px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: var(--messenger-active);
     color: var(--messenger-blue);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
-    margin-bottom: 18px;
-    box-shadow: 0 6px 20px rgba(0, 132, 255, 0.15);
+    font-size: 1.75rem;
+    margin-bottom: 12px;
 }
 
-.messenger-empty-state h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.3rem;
+.messenger-empty-state h3,
+.messenger-empty-state h4 {
+    margin: 0 0 6px 0;
+    font-size: 1.125rem;
     font-weight: 800;
     color: var(--messenger-text-dark);
 }
 
 .messenger-empty-state p {
     margin: 0;
-    font-size: 0.92rem;
-    max-width: 400px;
+    font-size: 0.875rem;
+    max-width: 360px;
     line-height: 1.45;
 }
 
-/* Comprehensive Responsive Media Queries for Messages */
-@media (max-width: 1024px) {
+/* Responsive Media Queries */
+@media (max-width: 900px) {
     .messages-layout-container {
-        grid-template-columns: 340px 1fr;
+        grid-template-columns: 280px 1fr;
+        height: calc(100vh - 70px);
     }
 }
 
-@media (max-width: 768px) {
-    body.client-messages-body {
-        height: 100vh;
-        overflow: hidden;
-    }
+@media (max-width: 640px) {
     .messages-layout-container {
         grid-template-columns: 1fr;
         height: calc(100vh - 60px);
-    }
-    .threads-header h2 {
-        font-size: 1.4rem;
-    }
-    .threads-header {
-        padding: 16px 16px 10px 16px;
-    }
-    .threads-search-box input {
-        height: 42px;
-        font-size: 0.95rem;
-        padding-left: 42px;
-    }
-    .thread-avatar-wrap,
-    .thread-avatar {
-        width: 52px !important;
-        height: 52px !important;
-        min-width: 52px !important;
-        min-height: 52px !important;
-    }
-    .thread-name {
-        font-size: 1.1rem;
-    }
-    .thread-snippet {
-        font-size: 0.9rem;
-    }
-    .chat-header-bar {
-        padding: 12px 16px;
-    }
-    .active-provider-name {
-        font-size: 1.1rem;
-    }
-    .active-chat-avatar {
-        width: 42px !important;
-        height: 42px !important;
-        min-width: 42px !important;
-        min-height: 42px !important;
-        font-size: 1rem !important;
-    }
-    .active-status-subtitle {
-        font-size: 0.85rem;
-    }
-    .messages-history-stream {
-        padding: 16px;
-        gap: 10px;
-    }
-    .message-bubble-row {
-        max-width: 88%;
-    }
-    .message-bubble {
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        border-radius: 18px;
-    }
-    .chat-input-footer {
-        padding: 12px 14px;
-        gap: 8px;
-    }
-    .chat-text-input {
-        height: 44px;
-        font-size: 0.95rem;
-        padding: 0 16px;
-        border-radius: 22px;
-    }
-    .btn-send-message,
-    .input-action-btn {
-        width: 44px;
-        height: 44px;
-        font-size: 1.1rem;
-    }
-    .notification-dropdown {
-        width: calc(100vw - 32px);
-        right: 16px;
-        top: 50px;
+        border-radius: 0;
+        border: none;
     }
 }
+
+/* ============================================================================
+   EMBEDDED IN-APP DASHBOARD MODE
+   ============================================================================ */
+html.embed-mode,
+html.embed-mode body,
+body.embed-mode {
+    background: #ffffff !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+html.embed-mode .marketplace-navbar,
+html.embed-mode .notification-dropdown,
+html.embed-mode #notification-dropdown,
+body.embed-mode .marketplace-navbar,
+body.embed-mode .notification-dropdown,
+body.embed-mode #notification-dropdown {
+    display: none !important;
+}
+
+html.embed-mode .messages-layout-container,
+body.embed-mode .messages-layout-container {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+

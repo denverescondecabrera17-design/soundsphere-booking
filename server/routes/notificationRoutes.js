@@ -11,5 +11,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 router.get('/', verifyToken, notificationController.getUserNotifications);
 router.put('/read-all', verifyToken, notificationController.markAllNotificationsRead);
 router.put('/:id/read', verifyToken, notificationController.markNotificationRead);
+router.get('/check-reminders', notificationController.triggerBalanceReminders);
+router.post('/check-reminders', notificationController.triggerBalanceReminders);
 
 module.exports = router;

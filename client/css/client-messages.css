@@ -697,3 +697,40 @@ body.client-messages-body {
         border: none;
     }
 }
+
+/* ============================================================================
+   EMBEDDED IN-APP DASHBOARD MODE
+   ============================================================================ */
+html.embed-mode,
+html.embed-mode body,
+body.embed-mode {
+    background: #ffffff !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+html.embed-mode .marketplace-navbar,
+html.embed-mode .notification-dropdown,
+html.embed-mode #notification-dropdown,
+body.embed-mode .marketplace-navbar,
+body.embed-mode .notification-dropdown,
+body.embed-mode #notification-dropdown {
+    display: none !important;
+}
+
+html.embed-mode .messages-layout-container,
+body.embed-mode .messages-layout-container {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+

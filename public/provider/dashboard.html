@@ -13,6 +13,9 @@
     <!-- Admin & Provider Design System CSS -->
     <link rel="stylesheet" href="../admin/css/admin.css?v=5.0">
     <link rel="stylesheet" href="/admin/css/admin.css?v=5.0">
+    <!-- Leaflet.js (OpenStreetMap Map Library) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body class="admin-body">
 
@@ -45,7 +48,7 @@
                     <i class="fa-solid fa-id-card"></i> Business Profile
                 </a>
                 <a href="#subscription-section" class="menu-item" id="nav-item-subscription">
-                    <i class="fa-solid fa-crown" style="color:#f59e0b;"></i> My Subscription
+                    <i class="fa-solid fa-credit-card"></i> My Subscription
                 </a>
 
                 <a href="#reviews-section" class="menu-item" id="nav-item-reviews">
@@ -88,6 +91,11 @@
                             </div>
                             <div style="max-height:360px; overflow-y:auto;" id="notification-list">
                                 <div style="padding:28px 16px; text-align:center; color:#64748b; font-size:0.88rem;">No notifications.</div>
+                            </div>
+                            <div style="padding:10px 16px; border-top:1px solid #f1f5f9; background:#f8fafc; text-align:center;">
+                                <a href="#notifications-section" id="btn-dropdown-view-all-notifs" style="color:#2563eb; font-size:0.86rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                                    View all notifications <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -142,7 +150,7 @@
                     <!-- Welcome Banner -->
                     <section class="welcome-banner" style="background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); padding:28px 32px; border-radius:16px; color:#fff; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
                         <div class="welcome-text">
-                            <h2 style="font-size:1.6rem; margin:0 0 6px 0; font-weight:800;" id="welcome-heading">Welcome back, Service Provider! 🎵</h2>
+                            <h2 style="font-size:1.6rem; margin:0 0 6px 0; font-weight:800;" id="welcome-heading">Welcome back, Service Provider!</h2>
                             <p style="color:#94a3b8; margin:0; font-size:0.92rem;">Manage your services, packages, event reservations, and client communications.</p>
                         </div>
                         <div class="welcome-date" style="background:rgba(255,255,255,0.08); padding:10px 16px; border-radius:10px; font-size:0.88rem; font-weight:600;">
@@ -273,14 +281,14 @@
                             <table class="data-table" style="width:100%;">
                                 <thead>
                                     <tr>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">BOOKING ID</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">CLIENT</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">PACKAGE / EVENT</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">EVENT DATE</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">LOCATION</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">AMOUNT</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">BOOKING STATUS</th>
-                                        <th style="padding:16px 22px; font-size:0.9rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1;">ACTIONS</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">BOOKING ID</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">CLIENT</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">PACKAGE / EVENT</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">EVENT DATE</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">LOCATION</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">AMOUNT</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">BOOKING STATUS</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-provider-bookings-list">
@@ -402,12 +410,29 @@
                                     <span style="font-size:0.75rem; font-weight:800; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">SELECTED DATE</span>
                                     <span id="prov-inspector-status-badge" style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:20px; background:#22c55e; color:#fff;">Available</span>
                                 </div>
-                                <h3 id="prov-inspector-date-title" style="font-size:1.3rem; margin:0 0 6px 0; font-weight:800; color:#fff;">Friday, Oct 23, 2026</h3>
+                                <h3 id="prov-inspector-date-title" style="font-size:1.3rem; margin:0 0 6px 0; font-weight:800; color:#ffffff !important;">Friday, Oct 23, 2026</h3>
                                 <div id="prov-inspector-summary-text" style="font-size:0.85rem; color:#bfdbfe;">0 active bookings &bull; Capacity: 1 booking allowed</div>
                             </div>
 
+                            <!-- Scheduled Bookings on this Date Card (Positioned Above Capacity for Immediate Visibility) -->
+                            <div style="margin-bottom:20px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <h4 style="margin:0; font-size:0.95rem; color:#0a192f; font-weight:800; display:flex; align-items:center; gap:8px;">
+                                        <i class="fa-solid fa-list-check" style="color:#2563eb;"></i> Bookings on this Date
+                                    </h4>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span id="prov-inspector-bookings-count-badge" style="font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:12px;">0 Bookings</span>
+                                    </div>
+                                </div>
+
+                                <!-- Bookings List Container -->
+                                <div id="prov-inspector-bookings-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+
                             <!-- Specific Date Custom Capacity Override Card -->
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
                                     <i class="fa-solid fa-sliders" style="color:#2563eb;"></i>
                                     <strong style="font-size:0.88rem; color:#0a192f;">Custom Capacity for this Specific Date</strong>
@@ -433,25 +458,11 @@
                                     </button>
                                 </div>
 
+                                <div id="prov-date-min-cap-notice" style="display:none; margin-top:10px; font-size:0.8rem; color:#b45309; background:#fffbeb; padding:8px 12px; border-radius:6px; border:1px solid #fef3c7; font-weight:700;">
+                                </div>
+
                                 <div id="prov-past-date-notice" style="display:none; margin-top:10px; font-size:0.78rem; color:#64748b; background:#e2e8f0; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
                                     <i class="fa-solid fa-lock" style="margin-right:4px; color:#475569;"></i> This is a past date. Capacity modifications and new bookings are closed.
-                                </div>
-                            </div>
-
-
-
-                            <!-- Scheduled Bookings on this Date Card -->
-                            <div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                    <h4 style="margin:0; font-size:0.95rem; color:#0a192f; font-weight:800; display:flex; align-items:center; gap:8px;">
-                                        <i class="fa-solid fa-list-check" style="color:#2563eb;"></i> Bookings on this Date
-                                    </h4>
-                                    <span id="prov-inspector-bookings-count-badge" style="font-size:0.75rem; font-weight:800; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:12px;">0 Bookings</span>
-                                </div>
-
-                                <!-- Bookings List Container -->
-                                <div id="prov-inspector-bookings-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
-                                    <!-- Injected dynamically -->
                                 </div>
                             </div>
 
@@ -764,28 +775,35 @@
                 </div>
 
                 <!-- VIEW 9: MESSAGES -->
-                <div class="provider-view-panel hidden" id="view-provider-messages">
-                    <div class="view-header" style="margin-bottom:20px;">
-                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-comments" style="color:#2563eb;"></i> Client Messages & Chat</h2>
-                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Direct real-time communication with clients regarding event bookings.</p>
+                <div class="provider-view-panel hidden" id="view-provider-messages" style="height:calc(100vh - 120px); display:flex; flex-direction:column;">
+                    <div class="view-header" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                        <div>
+                            <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-comments" style="color:#2563eb;"></i> Client Messages &amp; Chat</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.9rem;">Direct real-time communication with clients regarding event bookings.</p>
+                        </div>
                     </div>
 
-                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px; min-height:400px;">
-                        <a href="/client-messages.html" style="background:#2563eb; color:#fff; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:700; display:inline-block;">
-                            <i class="fa-solid fa-paper-plane"></i> Open Messaging Inbox
-                        </a>
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:0; flex:1; min-height:600px; height:calc(100vh - 180px); overflow:hidden; box-shadow:0 4px 16px rgba(15,23,42,0.06);">
+                        <iframe id="iframe-provider-messages" src="/client-messages.html?embed=true" style="width:100%; height:100%; border:none; display:block;" title="Client Messages Inbox"></iframe>
                     </div>
                 </div>
 
                 <!-- VIEW 10: NOTIFICATIONS -->
                 <div class="provider-view-panel hidden" id="view-provider-notifications">
-                    <div class="view-header" style="margin-bottom:20px;">
-                        <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-bell" style="color:#2563eb;"></i> Provider Notifications</h2>
-                        <p style="color:#64748b; margin:0; font-size:0.9rem;">Updates regarding bookings, payments, and system events.</p>
+                    <div class="view-header" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h2 style="font-size:1.6rem; font-weight:800; color:#0a192f; margin:0 0 4px 0;"><i class="fa-solid fa-bell" style="color:#2563eb;"></i> Provider Notifications</h2>
+                            <p style="color:#64748b; margin:0; font-size:0.92rem;">Updates regarding bookings, payments, and system events.</p>
+                        </div>
+                        <div>
+                            <button type="button" id="btn-page-mark-all-read" style="padding:9px 18px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#2563eb; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-check-double"></i> Mark all read
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px;">
-                        <div id="full-notifications-history-list">
+                    <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px; box-shadow:0 4px 16px rgba(15,23,42,0.04);">
+                        <div id="full-notifications-history-list" style="display:flex; flex-direction:column; gap:12px;">
                             <div style="padding:30px; text-align:center; color:#64748b;">No notifications yet.</div>
                         </div>
                     </div>
@@ -796,7 +814,7 @@
                     <div class="view-header" style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                         <div>
                             <h2 style="font-size:1.75rem; font-weight:800; color:#0a192f; margin:0 0 6px 0; display:flex; align-items:center; gap:10px;">
-                                <i class="fa-solid fa-crown" style="color:#f59e0b;"></i> Provider Membership &amp; Subscription
+                                <i class="fa-solid fa-credit-card" style="color:#2563eb;"></i> Provider Membership &amp; Subscription
                             </h2>
                             <p style="color:#475569; margin:0; font-size:1rem; font-weight:500;">
                                 Select your provider subscription plan. 1st month is 100% Free! Upgrade anytime with secure PayMongo checkout.
@@ -982,71 +1000,232 @@
         </div>
     </div>
 
-    <!-- MODAL: CREATE / EDIT SERVICE PACKAGE OFFER -->
-    <div class="admin-modal-overlay hidden" id="modal-provider-add-package" role="dialog">
-        <div class="admin-modal-card">
-            <input type="hidden" id="input-pkg-id" value="">
-            <h3 id="modal-pkg-title">Create Service Package Offer</h3>
-            <div style="display:flex; flex-direction:column; gap:18px;">
+    <!-- FULLSCREEN: CREATE / EDIT SERVICE PACKAGE OFFER -->
+    <div class="provider-package-fullscreen hidden" id="modal-provider-add-package" role="region" aria-label="Create / Edit Service Package Offer">
+        <!-- Fullscreen Sticky Header Bar -->
+        <header style="position:sticky; top:0; z-index:100; background:#ffffff; border-bottom:1px solid #e2e8f0; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button type="button" onclick="document.getElementById('modal-provider-add-package').classList.add('hidden')" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 16px; font-size:0.86rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <div style="height:28px; width:1px; background:#e2e8f0;"></div>
                 <div>
-                    <label>SERVICE / PACKAGE NAME *</label>
-                    <input type="text" id="input-pkg-name" placeholder="e.g. Wedding Concert Sound & Stage Light Setup">
+                    <h1 id="modal-pkg-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:10px;">
+                        Create Service Package Offer
+                    </h1>
+                    <p style="margin:2px 0 0 0; font-size:0.82rem; color:#64748b; line-height:1.3;">
+                        Configure package name, tier, pricing, equipment inclusions, and setup photos.
+                    </p>
                 </div>
-                <div>
-                    <label>CATEGORY *</label>
-                    <select id="input-pkg-category">
-                        <option value="Concert Audio & Stage Lights">Concert Audio & Stage Lights</option>
-                        <option value="Sound Systems">Sound Systems</option>
-                        <option value="Lighting Rigs">Lighting Rigs</option>
-                        <option value="LED Wall & Visuals">LED Wall & Visuals</option>
-                        <option value="DJ & Audio Engineering">DJ & Audio Engineering</option>
-                        <option value="Wedding & Debut Packages">Wedding & Debut Packages</option>
-                        <option value="Full Event Production">Full Event Production</option>
-                        <option value="Special Effects & Pyros">Special Effects & Pyros</option>
-                    </select>
-                </div>
-                <div>
-                    <label>PACKAGE PRICE (₱) *</label>
-                    <input type="number" id="input-pkg-price" placeholder="25000">
-                </div>
-                <div>
-                    <label>ADDITIONAL DAY RATE (%) *</label>
-                    <input type="number" id="input-pkg-additional-day-percentage" placeholder="20" value="20" min="0" max="100" step="0.5">
-                    <span style="font-size:0.86rem; color:#64748b; margin-top:4px; display:block;">Extra charge percentage per added event day (e.g. 20 for +20% per additional day).</span>
-                </div>
-                <div>
-                    <label>DESCRIPTION & OVERVIEW</label>
-                    <textarea id="input-pkg-description" rows="3" placeholder="Full professional audio-visual stage rig for events..."></textarea>
-                </div>
-                <div>
-                    <label>INCLUDED SERVICES & EQUIPMENT (Comma-separated)</label>
-                    <textarea id="input-pkg-inclusions" rows="3" placeholder="4x Line Array Speakers, 2x Subwoofers, 12x Stage Par Cans, 2x Wireless Microphones, DJ Services..."></textarea>
-                </div>
+            </div>
+        </header>
+
+        <!-- Fullscreen Content Canvas -->
+        <main style="flex:1; width:100%; display:flex; justify-content:center; padding:36px 20px 80px 20px; box-sizing:border-box; background:#f8fafc;">
+            <div style="max-width:920px; width:100%; background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 4px 20px rgba(15,23,42,0.05); padding:36px 42px; box-sizing:border-box;">
+                <input type="hidden" id="input-pkg-id" value="">
                 
-                <div style="border-top:1.5px solid #e2e8f0; padding-top:18px; margin-top:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <label style="margin-bottom:2px !important;">
-                                <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:6px;"></i> SETUP / INCLUSION PHOTOS
-                            </label>
-                            <span style="font-size:0.88rem; color:#475569; font-weight:500;">Upload photos of actual event setup, equipment, speakers, lights, or inclusions for this offer.</span>
-                        </div>
-                        <button type="button" id="btn-trigger-pkg-photo-upload" style="padding:10px 20px; background:#eff6ff; border:1.5px dashed #2563eb; color:#2563eb; font-weight:800; font-size:0.92rem; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-plus"></i> Add Photo
-                        </button>
+                <div style="display:flex; flex-direction:column; gap:22px;">
+                    <div>
+                        <label style="font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:6px;">SERVICE / PACKAGE NAME *</label>
+                        <input type="text" id="input-pkg-name" placeholder="e.g. Wedding Concert Sound & Stage Light Setup" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.92rem; box-sizing:border-box;">
                     </div>
-                    <input type="file" id="input-pkg-photos" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
-                    
-                    <div id="pkg-photos-preview-grid" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; max-height:220px; overflow-y:auto; padding:6px;">
-                        <span style="font-size:0.9rem; color:#94a3b8; font-style:italic;">No setup photos selected yet.</span>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                        <div>
+                            <label style="font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:6px;">CATEGORY *</label>
+                            <select id="input-pkg-category" style="width:100%; height:42px; padding:0 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.92rem; background:#fff; box-sizing:border-box;">
+                                <option value="Basic Package">Basic Package</option>
+                                <option value="Standard Package">Standard Package</option>
+                                <option value="Full Band Package">Full Band Package</option>
+                                <option value="Premium Package">Premium Package</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:6px;">PACKAGE PRICE (₱) *</label>
+                            <input type="number" id="input-pkg-price" placeholder="25000" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.92rem; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <input type="hidden" id="input-pkg-additional-day-percentage" value="20">
+
+                    <div>
+                        <label style="font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:6px;">DESCRIPTION & OVERVIEW</label>
+                        <textarea id="input-pkg-description" rows="3" placeholder="Full professional audio-visual stage rig for events..." style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.92rem; font-family:inherit; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:6px;">INCLUDED SERVICES & EQUIPMENT (COMMA-SEPARATED)</label>
+                        <textarea id="input-pkg-inclusions" rows="3" placeholder="4x Line Array Speakers, 2x Subwoofers, 12x Stage Par Cans, 2x Wireless Microphones, DJ Services..." style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.92rem; font-family:inherit; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <div style="border-top:1.5px solid #e2e8f0; padding-top:20px; margin-top:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div>
+                                <label style="margin-bottom:2px !important; font-size:0.84rem; font-weight:800; color:#0a192f; letter-spacing:0.5px; text-transform:uppercase; display:block;">
+                                    <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:6px;"></i> SETUP / INCLUSION PHOTOS
+                                </label>
+                                <span style="font-size:0.84rem; color:#475569; font-weight:500;">Upload photos of actual event setup, equipment, speakers, lights, or inclusions for this offer.</span>
+                            </div>
+                            <button type="button" id="btn-trigger-pkg-photo-upload" style="padding:10px 20px; background:#eff6ff; border:1.5px dashed #2563eb; color:#2563eb; font-weight:800; font-size:0.92rem; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-plus"></i> Add Photo
+                            </button>
+                        </div>
+                        <input type="file" id="input-pkg-photos" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        
+                        <div id="pkg-photos-preview-grid" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; max-height:260px; overflow-y:auto; padding:8px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                            <span style="font-size:0.9rem; color:#94a3b8; font-style:italic;">No setup photos selected yet.</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:14px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:20px;">
+                        <button type="button" onclick="document.getElementById('modal-provider-add-package').classList.add('hidden')" style="height:46px; padding:0 24px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; font-weight:700; font-size:0.95rem; cursor:pointer; color:#475569;">Cancel</button>
+                        <button type="button" id="btn-save-new-package" style="height:46px; padding:0 32px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:0.95rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.25);"><i class="fa-solid fa-floppy-disk"></i> Save Offer</button>
                     </div>
                 </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:14px; margin-top:28px;">
-                <button type="button" onclick="document.getElementById('modal-provider-add-package').classList.add('hidden')" style="height:50px; padding:12px 24px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-weight:700; font-size:1rem; cursor:pointer;">Cancel</button>
-                <button type="button" id="btn-save-new-package" style="height:50px; padding:12px 30px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:1rem; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Save Offer</button>
+        </main>
+    </div>
+
+    <!-- FULLSCREEN: BOOKING RESERVATION DETAILS (PROVIDER PORTAL) -->
+    <div class="provider-fullscreen-view hidden" id="view-booking-details-fullscreen" role="region" aria-label="Booking Reservation Details">
+        <!-- Fullscreen Sticky Top Header Bar -->
+        <header style="position:sticky; top:0; z-index:100; background:#ffffff; border-bottom:1px solid #e2e8f0; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button type="button" id="btn-back-from-booking-details" onclick="document.getElementById('view-booking-details-fullscreen').classList.add('hidden')" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 16px; font-size:0.86rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <div style="height:28px; width:1px; background:#e2e8f0;"></div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; border-radius:8px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#2563eb; font-size:1.15rem;">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                    <div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <h2 style="margin:0; font-size:1.25rem; color:#0a192f; font-weight:800;" id="pbd-ref-id">#BK-0</h2>
+                            <span id="pbd-status-badge" class="status-badge status-confirmed">Confirmed</span>
+                        </div>
+                        <span id="pbd-created-at" style="font-size:0.8rem; color:#64748b;">Placed on Date</span>
+                    </div>
+                </div>
             </div>
-        </div>
+
+        </header>
+
+        <!-- Fullscreen Content Canvas -->
+        <main style="flex:1; width:100%; display:flex; justify-content:center; padding:32px 24px 80px 24px; box-sizing:border-box; background:#f8fafc;">
+            <div style="max-width:960px; width:100%; display:flex; flex-direction:column; gap:22px;">
+                
+                <!-- Client Information Card -->
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <span style="font-size:0.82rem; font-weight:800; color:#475569; letter-spacing:0.5px; text-transform:uppercase;">
+                            <i class="fa-solid fa-user" style="color:#2563eb; margin-right:6px;"></i> Client Information
+                        </span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px;">
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Full Name</div>
+                            <strong id="pbd-client-name" style="font-size:1.15rem; color:#0a192f;">Client Name</strong>
+                        </div>
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Contact Phone</div>
+                            <div id="pbd-client-phone" style="font-size:1.02rem; font-weight:700; color:#0a192f;">—</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Email Address</div>
+                            <div id="pbd-client-email" style="font-size:0.96rem; font-weight:600; color:#334155;">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Service & Event Details Card -->
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <span style="font-size:0.82rem; font-weight:800; color:#475569; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:16px;">
+                        <i class="fa-solid fa-cube" style="color:#2563eb; margin-right:6px;"></i> Booked Service & Event Info
+                    </span>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:18px; margin-bottom:16px;">
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Package / Service</div>
+                            <strong id="pbd-package-name" style="font-size:1.1rem; color:#2563eb;">Package Name</strong>
+                        </div>
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Event Schedule Date</div>
+                            <div id="pbd-event-date" style="font-size:1.02rem; font-weight:700; color:#0a192f;">Date</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Start Time</div>
+                            <div id="pbd-event-time" style="font-size:1.02rem; font-weight:700; color:#0a192f;">—</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px dashed #e2e8f0; padding-top:16px; margin-top:8px;">
+                        <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Event Venue & Exact Address</div>
+                        <div id="pbd-event-venue" style="font-size:1.05rem; font-weight:700; color:#0a192f;">Venue Name</div>
+                        <div id="pbd-event-address" style="font-size:0.92rem; color:#475569; margin-top:3px;">Full address</div>
+                        <div id="pbd-location-notes-box" style="margin-top:8px; font-size:0.86rem; color:#64748b; font-style:italic; display:none;">
+                            Note: <span id="pbd-location-notes"></span>
+                        </div>
+
+                        <!-- Pinned Event Location Map -->
+                        <div id="pbd-map-wrapper" style="margin-top:16px; border-radius:12px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px 16px; border-bottom:1px solid #e2e8f0;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:0.82rem; font-weight:700; color:#1e293b; text-transform:uppercase; letter-spacing:0.4px;">Pinned Location on Map</span>
+                                    <span id="pbd-map-coordinates" style="font-size:0.75rem; color:#64748b; font-weight:500;"></span>
+                                </div>
+                                <a id="pbd-map-external-link" href="#" target="_blank" rel="noopener noreferrer" style="font-size:0.82rem; font-weight:700; color:#2563eb; text-decoration:none;">Open in Google Maps</a>
+                            </div>
+                            <div id="pbd-booking-map" style="width:100%; height:320px; background:#e2e8f0; position:relative; z-index:1;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Breakdown & Escrow -->
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <span style="font-size:0.82rem; font-weight:800; color:#1e40af; letter-spacing:0.5px; text-transform:uppercase; display:block; margin-bottom:16px;">
+                        <i class="fa-solid fa-coins" style="margin-right:6px;"></i> Payment & Earnings Breakdown
+                    </span>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.94rem; color:#1e3a8a;">
+                            <span>Package Base Price:</span>
+                            <strong id="pbd-package-price">₱0.00</strong>
+                        </div>
+                        <div id="pbd-additional-days-row" style="display:flex; justify-content:space-between; font-size:0.94rem; color:#1e3a8a;">
+                            <span>Additional Day Charges:</span>
+                            <strong id="pbd-additional-day-charges">₱0.00</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.94rem; color:#1e3a8a;">
+                            <span>Transportation Fee:</span>
+                            <strong id="pbd-transport-fee">₱0.00</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:1.15rem; color:#0a192f; font-weight:800; border-top:1.5px solid #bfdbfe; padding-top:12px; margin-top:4px;">
+                            <span>Total Client Booking Amount:</span>
+                            <strong id="pbd-total-amount" style="color:#059669;">₱0.00</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.92rem; color:#475569;">
+                            <span>Amount Paid by Client:</span>
+                            <strong id="pbd-amount-paid" style="color:#0a192f;">₱0.00</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.92rem; color:#b91c1c;">
+                            <span>Remaining Balance to Collect:</span>
+                            <strong id="pbd-remaining-balance">₱0.00</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:1.05rem; color:#15803d; font-weight:800; border-top:1px dashed #93c5fd; padding-top:12px; margin-top:4px;">
+                            <span>Provider Net Earnings (95% Escrow):</span>
+                            <strong id="pbd-provider-earnings">₱0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action Buttons Bar -->
+                <div id="pbd-footer-bar" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 24px; display:flex; justify-content:flex-end; align-items:center; gap:16px; flex-wrap:wrap;">
+                    <div id="pbd-modal-actions" style="display:flex; gap:12px;">
+                        <!-- Injected dynamically based on booking status -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
     </div>
 
     <!-- MODAL: REQUEST PAYOUT FROM ADMIN -->
@@ -1225,10 +1404,15 @@
             </div>
         </div>
     </div>
+    <style>
+        #prov-inspector-date-title {
+            color: #ffffff !important;
+        }
+    </style>
 
     <!-- Core SoundSphere API Helper -->
     <script src="../js/api.js?v=5.0"></script>
     <!-- Service Provider Controller JS -->
-    <script src="./js/provider-dashboard.js?v=5.0"></script>
+    <script src="./js/provider-dashboard.js?v=5.4"></script>
 </body>
 </html>

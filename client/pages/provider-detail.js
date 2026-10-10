@@ -255,11 +255,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     // PACKAGE DETAILS MODAL CONTROLLER
     // ========================================================================
+    const initialPkgUrlParams = new URLSearchParams(window.location.search);
+    const arrivedWithTargetPackage = !!(initialPkgUrlParams.get('pkgId') || initialPkgUrlParams.get('packageId'));
+
     window.closePackageDetailModal = () => {
         const modal = document.getElementById('modal-package-detail');
         if (modal) {
             modal.classList.add('hidden');
             document.body.style.overflow = '';
+        }
+
+        // If the user arrived here from marketplace or another interface with packageId in URL, return to that interface
+        if (arrivedWithTargetPackage) {
+            if (document.referrer && document.referrer.includes(window.location.host) && !document.referrer.includes('provider-detail')) {
+                window.location.href = document.referrer;
+                return;
+            } else if (window.history.length > 1) {
+                window.history.back();
+                return;
+            } else {
+                window.location.href = '/marketplace.html';
+                return;
+            }
         }
     };
 
@@ -305,8 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (inclusionsEl) {
             inclusionsEl.innerHTML = inclusions.map(inc => `
-                <li style="display:flex; align-items:center; gap:8px; font-size:0.86rem; font-weight:600; color:#334155; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0;">
-                    <i class="fa-solid fa-check" style="color:#10b981; font-weight:900; font-size:0.9rem;"></i>
+                <li style="display:flex; align-items:center; gap:10px; font-size:0.92rem; font-weight:600; color:#334155; background:#f8fafc; padding:12px 16px; border-radius:10px; border:1px solid #e2e8f0;">
+                    <i class="fa-solid fa-check" style="color:#10b981; font-weight:900; font-size:1rem;"></i>
                     <span>${inc}</span>
                 </li>
             `).join('');
@@ -325,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         thumbnailsEl.innerHTML = photos.map((pObj, pIdx) => {
                             const pUrl = pObj.url ? (pObj.url.startsWith('/') || pObj.url.startsWith('http') ? pObj.url : `/${pObj.url}`) : (typeof pObj === 'string' ? (pObj.startsWith('/') || pObj.startsWith('http') ? pObj : `/${pObj}`) : '');
                             if (!pUrl) return '';
-                            return `<img src="${pUrl}" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#e2e8f0'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); const m = document.getElementById('pkg-modal-main-img'); if(m) m.src='${pUrl}'; this.parentElement.querySelectorAll('img').forEach(i => i.style.borderColor='#e2e8f0'); this.style.borderColor='#2563eb';" title="Click to view photo">`;
+                            return `<img src="${pUrl}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:2.5px solid ${pIdx === 0 ? '#2563eb' : '#e2e8f0'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); const m = document.getElementById('pkg-modal-main-img'); if(m) m.src='${pUrl}'; this.parentElement.querySelectorAll('img').forEach(i => i.style.borderColor='#e2e8f0'); this.style.borderColor='#2563eb';" title="Click to view photo">`;
                         }).join('');
                     } else {
                         thumbnailsEl.style.display = 'none';
@@ -348,18 +365,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modal.classList.remove('hidden');
+        modal.scrollTop = 0;
         document.body.style.overflow = 'hidden';
     };
 
-    // Close on backdrop click & ESC
-    const pkgDetailModalEl = document.getElementById('modal-package-detail');
-    if (pkgDetailModalEl) {
-        pkgDetailModalEl.addEventListener('click', (e) => {
-            if (e.target === pkgDetailModalEl) {
+    // Keyboard ESC to close full-screen package view
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modal-package-detail');
+            if (modal && !modal.classList.contains('hidden')) {
                 window.closePackageDetailModal();
             }
-        });
-    }
+        }
+    });
 
     // Booking Checkout Trigger Helper
     const triggerBookingForPackage = (title, price, packageId = null) => {

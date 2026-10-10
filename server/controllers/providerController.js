@@ -477,13 +477,33 @@ const getDashboardStats = async (req, res) => {
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
-        // Total Services
+        let providerId = userId;
+        try {
+            const provRes = await pool.request().input('UID', userId).query(`SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID;`);
+            if (provRes.recordset && provRes.recordset[0]) {
+                providerId = provRes.recordset[0].ProviderID;
+            }
+        } catch (e) {}
+
+        // Total Services / Packages
         let totalServices = 0;
         try {
-            const svcRes = await pool.request().input('UID', userId).query(`SELECT COUNT(*) AS cnt FROM dbo.Services WHERE UserID = @UID OR ProviderUserID = @UID;`);
-            totalServices = svcRes.recordset[0].cnt || 0;
+            const svcRes = await pool.request()
+                .input('UID', userId)
+                .input('PID', providerId)
+                .query(`
+                    SELECT 
+                        (SELECT COUNT(*) FROM dbo.Packages WHERE (UserID = @UID OR UserID = @PID OR UserID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @PID)) AND (IsActive = 1 OR IsActive IS NULL)) +
+                        (SELECT COUNT(*) FROM dbo.Services WHERE (UserID = @UID OR UserID = @PID OR UserID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @PID)) AND (IsActive = 1 OR IsActive IS NULL)) AS totalCnt;
+                `);
+            totalServices = svcRes.recordset[0]?.totalCnt || 0;
         } catch (e) {
-            totalServices = 0;
+            try {
+                const pkgRes = await pool.request().input('UID', userId).query(`SELECT COUNT(*) AS totalCnt FROM dbo.Packages WHERE UserID = @UID;`);
+                totalServices = pkgRes.recordset[0]?.totalCnt || 0;
+            } catch (e2) {
+                totalServices = 0;
+            }
         }
 
         // Total Bookings & Earnings
@@ -499,17 +519,35 @@ const getDashboardStats = async (req, res) => {
                     b.EventName,
                     b.EventType,
                     b.EventDate,
+                    b.StartTime,
+                    b.EndTime,
                     b.ServiceStartDate,
                     b.ServiceEndDate,
                     b.ServiceHireDays,
+                    b.EventPlace,
+                    b.VenueName,
+                    b.EventAddress,
+                    b.EventLatitude,
+                    b.EventLongitude,
+                    b.LocationNotes,
                     ISNULL(b.Location, 'Batangas') AS Location,
+                    b.PackagePrice,
+                    b.AdditionalDayCharges,
+                    b.TransportationFee,
+                    b.DistanceKm,
                     b.TotalAmount,
+                    b.AmountPaid,
+                    b.RemainingBalance,
+                    b.CommissionRate,
+                    b.CommissionAmount,
+                    b.ProviderEarnings,
+                    b.PaymentType,
                     b.BookingStatus,
                     b.PaymentStatus,
                     b.CreatedAt,
-                    ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), ISNULL(u.Email, 'Client Account')) AS ClientName,
-                    u.Phone AS ClientPhone,
-                    u.Email AS ClientEmail,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client Account') AS ClientName,
+                    COALESCE(NULLIF(b.ClientPhone, ''), u.Phone) AS ClientPhone,
+                    COALESCE(NULLIF(b.ClientEmail, ''), u.Email) AS ClientEmail,
                     u.ProfilePicture AS ClientAvatar,
                     (
                         SELECT TOP 1 w.Status 
@@ -531,23 +569,88 @@ const getDashboardStats = async (req, res) => {
 
         const upcomingBookings = allBookings.filter(b => b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Pending');
         
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todaysEvents = upcomingBookings.filter(b => String(b.EventDate).startsWith(todayStr));
+        // Accurate Today's Schedule count
+        const now = new Date();
+        const localYear = now.getFullYear();
+        const localMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const localDay = String(now.getDate()).padStart(2, '0');
+        const localDateStr = `${localYear}-${localMonth}-${localDay}`;
+        const utcDateStr = now.toISOString().split('T')[0];
 
-        // Monthly Earnings
-        const monthlyEarnings = allBookings
-            .filter(b => b.BookingStatus === 'Completed' || b.BookingStatus === 'Confirmed')
-            .reduce((sum, b) => sum + parseFloat(b.TotalAmount || 0), 0);
+        const isToday = (dateVal) => {
+            if (!dateVal) return false;
+            const str = String(dateVal).trim();
+            if (str.startsWith(localDateStr) || str.startsWith(utcDateStr)) return true;
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) {
+                const dy = d.getFullYear();
+                const dm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dStr = `${dy}-${dm}-${dd}`;
+                return dStr === localDateStr || dStr === utcDateStr;
+            }
+            return false;
+        };
+
+        const todaysEvents = allBookings.filter(b => {
+            const st = (b.BookingStatus || '').toLowerCase();
+            if (st === 'cancelled' || st === 'rejected') return false;
+            return isToday(b.EventDate) || isToday(b.ServiceStartDate);
+        });
+
+        // Accurate Contract, Collected & Available Net Balance calculations
+        let totalContractEarnings = 0;
+        let totalCollectedEarnings = 0;
+
+        allBookings.forEach(b => {
+            const st = b.BookingStatus || '';
+            if (st === 'Confirmed' || st === 'Completed') {
+                const tot = parseFloat(b.TotalAmount || 0);
+                const paid = parseFloat(b.AmountPaid || 0);
+                const commRate = parseFloat(b.CommissionRate || 5) / 100;
+
+                const contractNet = tot * (1 - commRate);
+                const isFullPaid = (b.PaymentStatus === 'Paid' || st === 'Completed');
+                const collectedNet = (isFullPaid ? tot : paid) * (1 - commRate);
+
+                totalContractEarnings += contractNet;
+                totalCollectedEarnings += collectedNet;
+            }
+        });
+
+        let totalWithdrawn = 0;
+        let pendingWithdrawals = 0;
+        try {
+            const wRes = await pool.request()
+                .input('PID', providerId)
+                .input('UID', userId)
+                .query(`SELECT Amount, Status FROM dbo.Withdrawals WHERE ProviderID = @PID OR ProviderID = @UID;`);
+            const withdrawals = wRes.recordset || [];
+            totalWithdrawn = withdrawals
+                .filter(w => w.Status === 'Approved' || w.Status === 'Completed')
+                .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
+            pendingWithdrawals = withdrawals
+                .filter(w => w.Status === 'Pending')
+                .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
+        } catch (e) {
+            totalWithdrawn = 0;
+            pendingWithdrawals = 0;
+        }
+
+        const availableBalance = Math.max(0, totalCollectedEarnings - totalWithdrawn - pendingWithdrawals);
 
         // Client Reviews
         let reviewsList = [];
         try {
             const revRes = await pool.request().input('UID', userId).query(`
-                SELECT r.ReviewID, r.Rating, r.ReviewText AS Comment, r.SubmittedAt AS CreatedAt,
-                ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), ISNULL(u.Email, 'Client')) AS ClientName
+                SELECT r.ReviewID, r.BookingID, r.Rating, r.ReviewText AS Comment, r.SubmittedAt AS CreatedAt,
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS ClientName,
+                COALESCE(b.PackageName, 'Custom Package') AS PackageName,
+                b.EventDate
                 FROM dbo.Reviews r
                 LEFT JOIN dbo.Users u ON r.UserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+                LEFT JOIN dbo.Bookings b ON r.BookingID = b.BookingID
                 WHERE r.ProviderID = @UID 
                    OR r.ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID)
                    OR r.BookingID IN (SELECT BookingID FROM dbo.Bookings WHERE ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID))
@@ -564,7 +667,10 @@ const getDashboardStats = async (req, res) => {
                 totalServices,
                 upcomingBookingsCount: upcomingBookings.length,
                 todaysEventsCount: todaysEvents.length,
-                monthlyEarnings,
+                availableBalance: parseFloat(availableBalance.toFixed(2)),
+                totalEarnings: parseFloat(totalContractEarnings.toFixed(2)),
+                collectedEarnings: parseFloat(totalCollectedEarnings.toFixed(2)),
+                monthlyEarnings: parseFloat(availableBalance.toFixed(2)),
                 upcomingBookings,
                 allBookings,
                 reviewsList
@@ -608,17 +714,35 @@ const getProviderBookings = async (req, res) => {
                     b.EventName,
                     b.EventType,
                     b.EventDate,
+                    b.StartTime,
+                    b.EndTime,
                     b.ServiceStartDate,
                     b.ServiceEndDate,
                     b.ServiceHireDays,
+                    b.EventPlace,
+                    b.VenueName,
+                    b.EventAddress,
+                    b.EventLatitude,
+                    b.EventLongitude,
+                    b.LocationNotes,
                     ISNULL(b.Location, 'Batangas') AS Location,
+                    b.PackagePrice,
+                    b.AdditionalDayCharges,
+                    b.TransportationFee,
+                    b.DistanceKm,
                     b.TotalAmount,
+                    b.AmountPaid,
+                    b.RemainingBalance,
+                    b.CommissionRate,
+                    b.CommissionAmount,
+                    b.ProviderEarnings,
+                    b.PaymentType,
                     b.BookingStatus,
                     b.PaymentStatus,
                     b.CreatedAt,
-                    ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), ISNULL(u.Email, 'Client Account')) AS ClientName,
-                    u.Phone AS ClientPhone,
-                    u.Email AS ClientEmail,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client Account') AS ClientName,
+                    COALESCE(NULLIF(b.ClientPhone, ''), u.Phone) AS ClientPhone,
+                    COALESCE(NULLIF(b.ClientEmail, ''), u.Email) AS ClientEmail,
                     u.ProfilePicture AS ClientAvatar,
                     (
                         SELECT TOP 1 w.Status 
@@ -702,6 +826,16 @@ const cancelBooking = async (req, res) => {
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
+        // Fetch booking info before cancellation
+        const bkRes = await pool.request()
+            .input('BID', id)
+            .query(`SELECT BookingID, ClientUserID, AmountPaid, BookingReference, PackageName, BookingStatus FROM dbo.Bookings WHERE BookingID = @BID;`);
+        
+        const booking = bkRes.recordset[0];
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
         await pool.request()
             .input('BID', id)
             .input('UID', userId)
@@ -711,7 +845,27 @@ const cancelBooking = async (req, res) => {
                 WHERE BookingID = @BID AND (ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID));
             `);
 
-        return res.status(200).json({ success: true, message: `Booking #${id} cancelled successfully.` });
+        // Automatically credit refund to client wallet if booking had payment
+        const refundAmt = parseFloat(booking.AmountPaid || 0);
+        if (refundAmt > 0 && booking.ClientUserID && booking.BookingStatus !== 'Cancelled') {
+            try {
+                const walletService = require('../services/walletService');
+                await walletService.creditWalletForRefund({
+                    userId: booking.ClientUserID,
+                    amount: refundAmt,
+                    bookingId: booking.BookingID,
+                    bookingReference: booking.BookingReference,
+                    reason: `Automatic refund for booking cancelled by service provider (${booking.PackageName || 'Event Service'})`
+                });
+            } catch (wErr) {
+                console.error('Wallet refund on provider cancel notice:', wErr);
+            }
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: `Booking #${id} cancelled successfully.${refundAmt > 0 ? ` ₱${refundAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been automatically refunded to the client's wallet.` : ''}` 
+        });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
@@ -729,13 +883,17 @@ const getProviderReviewsList = async (req, res) => {
         const result = await pool.request().input('UID', userId).query(`
             SELECT 
                 r.ReviewID,
+                r.BookingID,
                 r.Rating,
                 r.ReviewText AS Comment,
                 r.SubmittedAt AS CreatedAt,
-                COALESCE(c.FirstName + ' ' + c.LastName, u.Email, 'Verified Client') AS ClientName
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Verified Client') AS ClientName,
+                COALESCE(b.PackageName, 'Custom Package') AS PackageName,
+                b.EventDate
             FROM dbo.Reviews r
             LEFT JOIN dbo.Users u ON r.UserID = u.UserID
             LEFT JOIN dbo.Clients c ON r.UserID = c.UserID
+            LEFT JOIN dbo.Bookings b ON r.BookingID = b.BookingID
             WHERE r.ProviderID = @UID 
                OR r.ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID)
                OR r.BookingID IN (SELECT BookingID FROM dbo.Bookings WHERE ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID))

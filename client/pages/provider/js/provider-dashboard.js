@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const covArea = data.profile.coverageArea || 'Batangas';
                 const avatarUrl = data.profile.profilePicture || data.profile.avatar || null;
 
-                if (welcomeHeading) welcomeHeading.textContent = `Welcome back, ${bName}! 🎵`;
+                if (welcomeHeading) welcomeHeading.textContent = `Welcome back, ${bName}!`;
                 if (headerProviderName) headerProviderName.textContent = bName;
                 if (dropdownEmail) dropdownEmail.textContent = data.profile.email;
                 if (dropdownStatus) dropdownStatus.textContent = `Approved Service Provider`;
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!token) return;
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('http://localhost:5000/api/notifications', { headers });
+            const res = await fetch('/api/notifications', { headers });
             if (res.ok) {
                 const data = await res.json();
                 const notifications = data.notifications || data.data || [];
@@ -380,13 +380,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (notificationBadge) {
                     if (unreadCount > 0) {
-                        notificationBadge.textContent = unreadCount;
+                        notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                         notificationBadge.classList.remove('hidden');
                     } else {
                         notificationBadge.classList.add('hidden');
                     }
                 }
 
+                // Helper to pick contextual icons, tags, and targets
+                const getNotifMeta = (n) => {
+                    const text = `${n.Title || ''} ${n.Message || ''} ${n.NotificationType || ''} ${n.RelatedType || ''}`.toLowerCase();
+                    if (text.includes('booking') || text.includes('booked') || text.includes('reservation')) {
+                        return { icon: 'fa-calendar-check', color: '#2563eb', bg: '#eff6ff', target: '#bookings-section', label: 'View Booking' };
+                    }
+                    if (text.includes('message') || text.includes('chat')) {
+                        return { icon: 'fa-comments', color: '#0284c7', bg: '#e0f2fe', target: '#messages-section', label: 'Open Chat' };
+                    }
+                    if (text.includes('payout') || text.includes('withdrawal') || text.includes('wallet') || text.includes('paid')) {
+                        return { icon: 'fa-wallet', color: '#10b981', bg: '#ecfdf5', target: '#withdrawals-section', label: 'View Payout' };
+                    }
+                    if (text.includes('review') || text.includes('rating') || text.includes('feedback')) {
+                        return { icon: 'fa-star', color: '#f59e0b', bg: '#fffbeb', target: '#reviews-section', label: 'View Review' };
+                    }
+                    if (text.includes('subscription') || text.includes('plan')) {
+                        return { icon: 'fa-crown', color: '#8b5cf6', bg: '#f5f3ff', target: '#subscription-section', label: 'View Plan' };
+                    }
+                    return { icon: 'fa-bell', color: '#64748b', bg: '#f1f5f9', target: '#dashboard-overview', label: 'View Details' };
+                };
+
+                const escapeJs = (str) => (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+
+                // 1. Render Dropdown List
                 if (notificationList) {
                     if (notifications.length === 0) {
                         notificationList.innerHTML = `<div style="padding:28px 16px; text-align:center; color:#64748b; font-size:0.88rem;">No notifications.</div>`;
@@ -394,13 +418,66 @@ document.addEventListener('DOMContentLoaded', async () => {
                         notificationList.innerHTML = notifications.map(n => {
                             const isUnread = !n.IsRead && n.IsRead !== 1;
                             const createdDate = new Date(n.CreatedAt || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            const meta = getNotifMeta(n);
                             return `
-                                <div class="notification-item ${isUnread ? 'unread' : ''}" style="padding:12px 16px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer;" onclick="markSingleRead(${n.NotificationID || n.id})">
-                                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                                        <strong style="font-size:0.86rem; color:#0a192f;">${n.Title || n.type || 'Notification'}</strong>
-                                        <span style="font-size:0.72rem; color:#94a3b8;">${createdDate}</span>
+                                <div class="notification-item ${isUnread ? 'unread' : ''}" 
+                                     style="padding:12px 16px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#f0f7ff' : '#ffffff'}; cursor:pointer; display:flex; gap:12px; align-items:flex-start; transition:background 0.15s ease;"
+                                     onmouseover="this.style.backgroundColor='#f8fafc';"
+                                     onmouseout="this.style.backgroundColor='${isUnread ? '#f0f7ff' : '#ffffff'}';"
+                                     onclick="window.handleNotificationClick(${n.NotificationID || n.id}, '${escapeJs(n.RelatedType || n.NotificationType || '')}', ${n.RelatedID || 'null'}, '${escapeJs(n.Title || '')}', '${escapeJs(n.Message || '')}')"
+                                     title="Click to view details">
+                                    <div style="width:34px; height:34px; border-radius:10px; background:${meta.bg}; color:${meta.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.95rem; margin-top:2px;">
+                                        <i class="fa-solid ${meta.icon}"></i>
                                     </div>
-                                    <p style="margin:0; font-size:0.82rem; color:#475569; line-height:1.4;">${n.Message || n.message || ''}</p>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:3px;">
+                                            <strong style="font-size:0.86rem; color:#0a192f; display:flex; align-items:center; gap:6px;">
+                                                ${isUnread ? '<span style="width:7px; height:7px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
+                                                ${n.Title || n.type || 'Notification'}
+                                            </strong>
+                                            <span style="font-size:0.7rem; color:#94a3b8; white-space:nowrap;">${createdDate}</span>
+                                        </div>
+                                        <p style="margin:0; font-size:0.8rem; color:#475569; line-height:1.35; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${n.Message || n.message || ''}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 2. Render Full Notifications History Page
+                const fullList = document.getElementById('full-notifications-history-list');
+                if (fullList) {
+                    if (notifications.length === 0) {
+                        fullList.innerHTML = `<div style="padding:40px 20px; text-align:center; color:#64748b; font-size:0.95rem;"><i class="fa-solid fa-bell-slash" style="font-size:2rem; color:#cbd5e1; margin-bottom:10px; display:block;"></i>No notifications yet.</div>`;
+                    } else {
+                        fullList.innerHTML = notifications.map(n => {
+                            const isUnread = !n.IsRead && n.IsRead !== 1;
+                            const createdDate = new Date(n.CreatedAt || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            const meta = getNotifMeta(n);
+                            return `
+                                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:18px 20px; border-radius:12px; border:1px solid ${isUnread ? '#bfdbfe' : '#e2e8f0'}; background:${isUnread ? '#f8faff' : '#ffffff'}; transition:all 0.2s ease; cursor:pointer;"
+                                     onmouseover="this.style.boxShadow='0 4px 12px rgba(15,23,42,0.06)'; this.style.borderColor='#93c5fd';"
+                                     onmouseout="this.style.boxShadow='none'; this.style.borderColor='${isUnread ? '#bfdbfe' : '#e2e8f0'}';"
+                                     onclick="window.handleNotificationClick(${n.NotificationID || n.id}, '${escapeJs(n.RelatedType || n.NotificationType || '')}', ${n.RelatedID || 'null'}, '${escapeJs(n.Title || '')}', '${escapeJs(n.Message || '')}')">
+                                    <div style="display:flex; gap:16px; align-items:flex-start; flex:1;">
+                                        <div style="width:44px; height:44px; border-radius:12px; background:${meta.bg}; color:${meta.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.15rem;">
+                                            <i class="fa-solid ${meta.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
+                                                <h4 style="margin:0; font-size:0.98rem; font-weight:800; color:#0a192f;">${n.Title || n.type || 'Notification'}</h4>
+                                                ${isUnread ? '<span style="font-size:0.72rem; font-weight:800; color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:12px; border:1px solid #dbeafe;">NEW</span>' : ''}
+                                                <span style="font-size:0.78rem; color:#94a3b8;">${createdDate}</span>
+                                            </div>
+                                            <p style="margin:0; font-size:0.88rem; color:#475569; line-height:1.45;">${n.Message || n.message || ''}</p>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                        <button type="button" style="padding:6px 14px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                            ${meta.label} <i class="fa-solid fa-arrow-right" style="font-size:0.72rem;"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             `;
                         }).join('');
@@ -415,12 +492,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.markSingleRead = async (id) => {
         if (!token || !id) return;
         try {
-            await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+            await fetch(`/api/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             fetchNotifications();
         } catch (e) {}
+    };
+
+    window.handleNotificationClick = async (notifId, relatedType, relatedId, title = '', message = '') => {
+        if (!token) return;
+
+        // 1. Mark as read in database
+        if (notifId) {
+            try {
+                await fetch(`/api/notifications/${notifId}/read`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) {}
+        }
+
+        // 2. Dismiss dropdown
+        if (notificationPanel) notificationPanel.classList.add('hidden');
+
+        // 3. Refresh list & badge
+        fetchNotifications();
+
+        // 4. Intelligent Navigation based on notification topic
+        const str = `${relatedType || ''} ${title || ''} ${message || ''}`.toLowerCase();
+        if (str.includes('booking') || str.includes('booked') || str.includes('reservation')) {
+            window.location.hash = '#bookings-section';
+            switchProviderView('#bookings-section');
+
+            // Scroll to and highlight booking row if ID matches
+            let targetBookingId = relatedId;
+            if (!targetBookingId) {
+                const match = (message || title).match(/#BK-(\d+)|booking\s*#?(\d+)/i);
+                if (match) targetBookingId = match[1] || match[2];
+            }
+            if (targetBookingId) {
+                setTimeout(() => {
+                    const row = document.getElementById(`booking-row-${targetBookingId}`) || document.querySelector(`tr[data-booking-id="${targetBookingId}"]`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.style.transition = 'background-color 0.4s ease';
+                        row.style.backgroundColor = '#fef08a';
+                        setTimeout(() => { row.style.backgroundColor = ''; }, 3000);
+                    }
+                }, 300);
+            }
+        } else if (str.includes('message') || str.includes('chat')) {
+            window.location.hash = '#messages-section';
+            switchProviderView('#messages-section');
+        } else if (str.includes('payout') || str.includes('withdrawal') || str.includes('wallet')) {
+            window.location.hash = '#withdrawals-section';
+            switchProviderView('#withdrawals-section');
+        } else if (str.includes('review') || str.includes('rating') || str.includes('feedback')) {
+            window.location.hash = '#reviews-section';
+            switchProviderView('#reviews-section');
+        } else if (str.includes('subscription') || str.includes('plan')) {
+            window.location.hash = '#subscription-section';
+            switchProviderView('#subscription-section');
+        } else {
+            window.location.hash = '#bookings-section';
+            switchProviderView('#bookings-section');
+        }
     };
 
     if (btnNotificationBell && notificationPanel) {
@@ -442,11 +579,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.stopPropagation();
             if (!token) return;
             try {
-                await fetch('http://localhost:5000/api/notifications/read-all', {
+                await fetch('/api/notifications/read-all', {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 fetchNotifications();
+                showToast('✓ All notifications marked as read', 'success');
+            } catch (e) {}
+        });
+    }
+
+    const btnDropdownViewAll = document.getElementById('btn-dropdown-view-all-notifs');
+    if (btnDropdownViewAll) {
+        btnDropdownViewAll.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (notificationPanel) notificationPanel.classList.add('hidden');
+            window.location.hash = '#notifications-section';
+            switchProviderView('#notifications-section');
+        });
+    }
+
+    const btnPageMarkAllRead = document.getElementById('btn-page-mark-all-read');
+    if (btnPageMarkAllRead) {
+        btnPageMarkAllRead.addEventListener('click', async () => {
+            if (!token) return;
+            try {
+                await fetch('/api/notifications/read-all', {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                fetchNotifications();
+                showToast('✓ All notifications marked as read', 'success');
             } catch (e) {}
         });
     }
@@ -490,8 +653,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         else if (cleanHash === 'profile-section' || cleanHash === 'view-provider-profile') targetViewId = 'view-provider-profile';
         else if (cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') targetViewId = 'view-provider-withdrawals';
         else if (cleanHash === 'reviews-section' || cleanHash === 'view-provider-reviews') targetViewId = 'view-provider-reviews';
-        else if (cleanHash === 'messages-section' || cleanHash === 'view-provider-messages') targetViewId = 'view-provider-messages';
-        else if (cleanHash === 'notifications-section' || cleanHash === 'view-provider-notifications') targetViewId = 'view-provider-notifications';
+        else if (cleanHash === 'messages-section' || cleanHash === 'view-provider-messages') {
+            targetViewId = 'view-provider-messages';
+            const msgIframe = document.getElementById('iframe-provider-messages');
+            if (msgIframe && (!msgIframe.src || msgIframe.src.endsWith('about:blank'))) {
+                msgIframe.src = '/client-messages.html?embed=true';
+            }
+        }
+        else if (cleanHash === 'notifications-section' || cleanHash === 'view-provider-notifications') {
+            targetViewId = 'view-provider-notifications';
+            fetchNotifications();
+        }
         else if (cleanHash === 'subscription-section' || cleanHash === 'view-provider-subscription' || cleanHash === 'plans-selection-grid') {
             targetViewId = 'view-provider-subscription';
             loadProviderSubscriptionData();
@@ -544,6 +716,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         switchProviderView(window.location.hash);
     });
 
+    // Unread Messages Badge Tracker
+    const updateProviderUnreadMessagesBadge = async () => {
+        try {
+            const currentUid = user?.id || user?.userId || user?.UserID;
+            if (!currentUid) return;
+            const res = await fetch(`/api/messages/conversations?userId=${currentUid}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.conversations)) {
+                const totalUnread = data.conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+                const badge = document.getElementById('unread-messages-badge');
+                if (badge) {
+                    if (totalUnread > 0) {
+                        badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            }
+        } catch (e) {}
+    };
+    updateProviderUnreadMessagesBadge();
+    setInterval(updateProviderUnreadMessagesBadge, 25000);
+
     // Modal Backdrop Overlay & Escape Key Click Dismissal
     document.querySelectorAll('.admin-modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
@@ -577,6 +775,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (elAvail) elAvail.textContent = `₱${parseFloat(data.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     if (elEarnings) elEarnings.textContent = `₱${parseFloat(data.totalEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     if (elWithdrawn) elWithdrawn.textContent = `₱${parseFloat(data.totalWithdrawn || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    const statMonthlyEarnings = document.getElementById('stat-monthly-earnings');
+                    if (statMonthlyEarnings && data.availableBalance !== undefined) {
+                        statMonthlyEarnings.textContent = `₱${parseFloat(data.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    }
 
                     if (tableBody) {
                         const withdrawals = data.withdrawals || [];
@@ -780,10 +982,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const statTodaysEvents = document.getElementById('stat-todays-events');
                     const statMonthlyEarnings = document.getElementById('stat-monthly-earnings');
 
-                    if (statTotalServices) statTotalServices.textContent = s.totalServices || 0;
-                    if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount || 0;
-                    if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount || 0;
-                    if (statMonthlyEarnings) statMonthlyEarnings.textContent = `₱${(s.monthlyEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (statTotalServices) statTotalServices.textContent = s.totalServices != null ? s.totalServices : 0;
+                    if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
+                    if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
+                    if (statMonthlyEarnings) {
+                        const bal = (s.availableBalance !== undefined && s.availableBalance !== null) ? s.availableBalance : (s.monthlyEarnings || 0);
+                        statMonthlyEarnings.textContent = `₱${parseFloat(bal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    }
 
                     // Render Upcoming Event Reservations Table
                     renderUpcomingReservations(s.upcomingBookings || []);
@@ -870,6 +1075,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    let currentLoadedBookings = [];
+    let pbdLeafletMap = null;
+    let pbdLeafletMarker = null;
+
+    // Helper to format date cleanly as "Oct 17, 2026"
+    const formatEventDisplayDate = (dStr) => {
+        if (!dStr || dStr === 'Scheduled') return 'Scheduled';
+        try {
+            const cleanStr = String(dStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) {
+                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            }
+            const d = new Date(dStr);
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+            return dStr;
+        } catch (e) {
+            return dStr;
+        }
+    };
+
     // Render Upcoming Reservations
     const renderUpcomingReservations = (bookings) => {
         const tableBody = document.getElementById('table-upcoming-reservations');
@@ -883,40 +1117,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         tableBody.innerHTML = bookings.map(b => {
             const clientNameStr = b.ClientName || b.clientName || b.ClientEmail || 'Client Account';
             const packageNameStr = b.PackageName || b.packageName || b.EventName || 'Event Service Package';
-            const dateStr = b.ServiceStartDate || b.EventDate || 'Scheduled';
+            const dateStr = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
 
             let actionButtonsHtml = '';
             if (statusLower === 'pending') {
                 actionButtonsHtml = `
                     <div style="display:flex; gap:6px;">
-                        <button type="button" onclick="window.acceptProviderBooking(${b.BookingID})" style="padding:5px 10px; font-size:0.78rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-check"></i> Accept</button>
-                        <button type="button" onclick="window.cancelProviderBooking(${b.BookingID})" style="padding:5px 10px; font-size:0.78rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-xmark"></i> Reject</button>
+                        <button type="button" onclick="event.stopPropagation(); window.acceptProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Accept</button>
+                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Reject</button>
                     </div>
                 `;
             } else if (statusLower === 'confirmed') {
                 actionButtonsHtml = `
                     <div style="display:flex; gap:6px;">
-                        <button type="button" onclick="window.completeProviderBooking(${b.BookingID})" style="padding:5px 10px; font-size:0.78rem; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Complete</button>
-                        <button type="button" onclick="window.cancelProviderBooking(${b.BookingID})" style="padding:5px 10px; font-size:0.78rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-ban"></i> Cancel</button>
+                        <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Complete</button>
+                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Cancel</button>
                     </div>
                 `;
             } else if (statusLower === 'completed') {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:800; color:#10b981;"><i class="fa-solid fa-circle-check"></i> Completed</span>`;
+                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#10b981;">Completed</span>`;
             } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:800; color:#94a3b8;"><i class="fa-solid fa-ban"></i> Cancelled</span>`;
+                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#94a3b8;">Cancelled</span>`;
             } else {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:800; color:#475569;">${b.BookingStatus}</span>`;
+                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#475569;">${b.BookingStatus}</span>`;
             }
 
             return `
-                <tr>
+                <tr style="cursor:pointer; transition:background 0.2s ease;" onclick="window.openProviderBookingDetails(${b.BookingID})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" title="Click to view full reservation details">
                     <td><strong style="color:#0a192f; font-size:0.9rem;">${clientNameStr}</strong></td>
                     <td><strong style="color:#2563eb; font-size:0.88rem;">${packageNameStr}</strong></td>
-                    <td><span style="font-size:0.82rem; color:#475569;"><i class="fa-solid fa-calendar-day" style="color:#2563eb;"></i> ${dateStr}</span></td>
-                    <td><strong style="font-size:0.92rem; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                    <td><span class="status-badge status-${statusLower}">${b.BookingStatus || 'Confirmed'}</span></td>
-                    <td>${actionButtonsHtml}</td>
+                    <td style="white-space:nowrap;"><span style="font-size:0.85rem; color:#334155; font-weight:600;">${dateStr}</span></td>
+                    <td style="white-space:nowrap;"><strong style="font-size:0.92rem; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td style="white-space:nowrap;"><span class="status-badge status-${statusLower}">${b.BookingStatus || 'Confirmed'}</span></td>
+                    <td onclick="event.stopPropagation();" style="white-space:nowrap;">${actionButtonsHtml}</td>
                 </tr>
             `;
         }).join('');
@@ -927,96 +1161,437 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tableBody = document.getElementById('table-provider-bookings-list');
         if (!tableBody) return;
 
+        if (Array.isArray(bookings)) {
+            currentLoadedBookings = bookings;
+        }
+
         if (!bookings || bookings.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">No bookings yet.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:1.02rem;">No bookings yet.</td></tr>`;
             return;
         }
 
         tableBody.innerHTML = bookings.map(b => {
             const clientNameStr = b.ClientName || b.clientName || b.ClientEmail || 'Client Account';
             const packageNameStr = b.PackageName || b.packageName || b.EventName || 'Event Service Package';
-            const dateStr = b.ServiceStartDate || b.EventDate || 'Scheduled';
+            const rawStartDate = b.ServiceStartDate || b.EventDate;
+            const rawEndDate = b.ServiceEndDate || rawStartDate;
+            const formattedStart = formatEventDisplayDate(rawStartDate);
+            const formattedEnd = formatEventDisplayDate(rawEndDate);
+            const dateDisplay = (formattedStart === formattedEnd || !rawEndDate) ? formattedStart : `${formattedStart} – ${formattedEnd}`;
             const locStr = b.Location || b.EventAddress || b.EventPlace || 'Batangas';
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
 
             let actionButtonsHtml = '';
             if (statusLower === 'pending') {
                 actionButtonsHtml = `
-                    <div style="display:flex; gap:10px; flex-wrap:nowrap;">
-                        <button type="button" onclick="window.acceptProviderBooking(${b.BookingID})" style="padding:9px 16px; font-size:0.88rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.25);"><i class="fa-solid fa-check"></i> Accept</button>
-                        <button type="button" onclick="window.cancelProviderBooking(${b.BookingID})" style="padding:9px 16px; font-size:0.88rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(239,68,68,0.25);"><i class="fa-solid fa-xmark"></i> Reject</button>
+                    <div style="display:flex; gap:8px; flex-wrap:nowrap;">
+                        <button type="button" onclick="event.stopPropagation(); window.acceptProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.2);">Accept</button>
+                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(239,68,68,0.2);">Reject</button>
                     </div>
                 `;
             } else if (statusLower === 'confirmed') {
                 actionButtonsHtml = `
-                    <div style="display:flex; gap:10px; flex-wrap:nowrap;">
-                        <button type="button" onclick="window.completeProviderBooking(${b.BookingID})" style="padding:9px 16px; font-size:0.88rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(37,99,235,0.25);"><i class="fa-solid fa-circle-check"></i> Complete</button>
-                        <button type="button" onclick="window.cancelProviderBooking(${b.BookingID})" style="padding:9px 16px; font-size:0.88rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(239,68,68,0.25);"><i class="fa-solid fa-ban"></i> Cancel</button>
+                    <div style="display:flex; gap:8px; flex-wrap:nowrap;">
+                        <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(37,99,235,0.2);">Complete</button>
+                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(239,68,68,0.2);">Cancel</button>
                     </div>
                 `;
             } else if (statusLower === 'completed') {
                 const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
                 let withdrawButtonHtml = '';
                 if (wdStatus === 'pending') {
-                    withdrawButtonHtml = `<span style="font-size:0.86rem; font-weight:800; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:7px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-clock"></i> Payout Requested</span>`;
+                    withdrawButtonHtml = `<span style="font-size:0.84rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:6px 12px; border-radius:8px; white-space:nowrap;">Payout Requested</span>`;
                 } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
-                    withdrawButtonHtml = `<span style="font-size:0.86rem; font-weight:800; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:7px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-check"></i> Paid &amp; Sent</span>`;
+                    withdrawButtonHtml = `<span style="font-size:0.84rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:6px 12px; border-radius:8px; white-space:nowrap;">Paid &amp; Sent</span>`;
                 } else {
-                    withdrawButtonHtml = `<button type="button" onclick="window.triggerRequestWithdrawFromBooking(${b.BookingID}, ${b.TotalAmount || 0})" style="padding:9px 16px; font-size:0.88rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.25);"><i class="fa-solid fa-paper-plane"></i> Request Withdraw</button>`;
+                    withdrawButtonHtml = `<button type="button" onclick="event.stopPropagation(); window.triggerRequestWithdrawFromBooking(${b.BookingID}, ${b.TotalAmount || 0})" style="padding:8px 14px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.2); white-space:nowrap;">Request Payout</button>`;
                 }
 
                 actionButtonsHtml = `
-                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:nowrap;">
-                        <span style="font-size:0.92rem; font-weight:800; color:#10b981; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-check"></i> Completed</span>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:nowrap;">
+                        <span style="font-size:0.88rem; font-weight:700; color:#10b981; white-space:nowrap;">Completed</span>
                         ${withdrawButtonHtml}
                     </div>
                 `;
             } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
-                actionButtonsHtml = `<span style="font-size:0.92rem; font-weight:800; color:#94a3b8; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-ban"></i> Cancelled</span>`;
+                actionButtonsHtml = `<span style="font-size:0.88rem; font-weight:700; color:#94a3b8; white-space:nowrap;">Cancelled</span>`;
             } else {
-                actionButtonsHtml = `<span style="font-size:0.92rem; font-weight:800; color:#475569;">${b.BookingStatus}</span>`;
+                actionButtonsHtml = `<span style="font-size:0.88rem; font-weight:700; color:#475569; white-space:nowrap;">${b.BookingStatus}</span>`;
             }
 
             return `
-                <tr style="transition:background 0.2s ease;">
-                    <td style="padding:20px 22px;"><strong style="color:#0a192f; font-size:1.02rem; font-weight:800;">#BK-${b.BookingID}</strong></td>
-                    <td style="padding:20px 22px;"><strong style="color:#0a192f; font-size:1.05rem; font-weight:700;">${clientNameStr}</strong></td>
-                    <td style="padding:20px 22px;"><strong style="color:#2563eb; font-size:1.02rem; font-weight:700;">${packageNameStr}</strong></td>
-                    <td style="padding:20px 22px;"><span style="font-size:0.95rem; color:#334155; font-weight:600;"><i class="fa-solid fa-calendar-day" style="color:#2563eb; margin-right:4px;"></i> ${dateStr}</span></td>
-                    <td style="padding:20px 22px;"><span style="font-size:0.95rem; color:#475569; font-weight:500;">${locStr}</span></td>
-                    <td style="padding:20px 22px;"><strong style="font-size:1.18rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                    <td style="padding:20px 22px;"><span class="status-badge status-${statusLower}" style="font-size:0.9rem; padding:8px 16px; border-radius:20px; font-weight:800;">${b.BookingStatus || 'Confirmed'}</span></td>
-                    <td style="padding:20px 22px;">${actionButtonsHtml}</td>
+                <tr id="booking-row-${b.BookingID}" data-booking-id="${b.BookingID}" style="transition:all 0.2s ease; cursor:pointer;" onclick="window.openProviderBookingDetails(${b.BookingID})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" title="Click row or ID to view full reservation details">
+                    <td style="padding:18px 20px; white-space:nowrap;">
+                        <span style="color:#2563eb; font-size:0.98rem; font-weight:800; background:#eff6ff; border:1px solid #bfdbfe; padding:5px 12px; border-radius:8px; display:inline-block; cursor:pointer;" title="Click to view full reservation details">
+                            #BK-${b.BookingID}
+                        </span>
+                    </td>
+                    <td style="padding:18px 20px;">
+                        <strong style="color:#0a192f; font-size:0.98rem; font-weight:700; display:block;">${clientNameStr}</strong>
+                        ${b.ClientPhone ? `<div style="font-size:0.82rem; color:#64748b; font-weight:500; margin-top:3px; white-space:nowrap;">${b.ClientPhone}</div>` : ''}
+                    </td>
+                    <td style="padding:18px 20px;"><strong style="color:#2563eb; font-size:0.98rem; font-weight:700;">${packageNameStr}</strong></td>
+                    <td style="padding:18px 20px; white-space:nowrap;"><span style="font-size:0.92rem; color:#334155; font-weight:600;">${dateDisplay}</span></td>
+                    <td style="padding:18px 20px;"><span style="font-size:0.92rem; color:#475569; font-weight:500;">${locStr}</span></td>
+                    <td style="padding:18px 20px; white-space:nowrap;"><strong style="font-size:1.05rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td style="padding:18px 20px; white-space:nowrap;"><span class="status-badge status-${statusLower}" style="font-size:0.86rem; padding:6px 14px; border-radius:20px; font-weight:700;">${b.BookingStatus || 'Confirmed'}</span></td>
+                    <td style="padding:18px 20px; white-space:nowrap;" onclick="event.stopPropagation();">${actionButtonsHtml}</td>
                 </tr>
             `;
         }).join('');
     };
 
+    // Global Handler to Open Booking Details Modal
+    window.openProviderBookingDetails = (bookingId) => {
+        const booking = (currentLoadedBookings || []).find(b => Number(b.BookingID) === Number(bookingId));
+        if (!booking) return;
+
+        const fullscreenView = document.getElementById('view-booking-details-fullscreen') || document.getElementById('modal-provider-booking-details');
+        if (!fullscreenView) return;
+
+        // Set Ref & Status
+        const refEl = document.getElementById('pbd-ref-id');
+        if (refEl) refEl.textContent = `#BK-${booking.BookingID}`;
+
+        const statusBadge = document.getElementById('pbd-status-badge');
+        const statusLower = (booking.BookingStatus || 'confirmed').toLowerCase();
+        if (statusBadge) {
+            statusBadge.textContent = booking.BookingStatus || 'Confirmed';
+            statusBadge.className = `status-badge status-${statusLower}`;
+        }
+
+        const createdEl = document.getElementById('pbd-created-at');
+        if (createdEl) {
+            const createdDate = booking.CreatedAt ? new Date(booking.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+            createdEl.innerHTML = `Placed on ${createdDate} &bull; Ref Code: <strong style="color:#2563eb;">${booking.BookingReference || ('SS-2026-000' + booking.BookingID)}</strong>`;
+        }
+
+        // Client Info
+        const clientNameEl = document.getElementById('pbd-client-name');
+        if (clientNameEl) clientNameEl.textContent = booking.ClientName || 'Client Account';
+
+        const clientPhoneEl = document.getElementById('pbd-client-phone');
+        if (clientPhoneEl) {
+            clientPhoneEl.innerHTML = booking.ClientPhone 
+                ? `<a href="tel:${booking.ClientPhone}" style="color:#2563eb; text-decoration:none; font-weight:700;">${booking.ClientPhone}</a>`
+                : '<span style="color:#94a3b8;">Not provided</span>';
+        }
+
+        const clientEmailEl = document.getElementById('pbd-client-email');
+        if (clientEmailEl) {
+            clientEmailEl.innerHTML = booking.ClientEmail 
+                ? `<a href="mailto:${booking.ClientEmail}" style="color:#475569; text-decoration:none;">${booking.ClientEmail}</a>`
+                : '<span style="color:#94a3b8;">Not provided</span>';
+        }
+
+        // Chat Button Handler
+        const chatBtn = document.getElementById('pbd-btn-chat-client');
+        if (chatBtn) {
+            chatBtn.onclick = () => {
+                fullscreenView.classList.add('hidden');
+                const messagesTab = document.querySelector('[data-view="view-provider-messages"]');
+                if (messagesTab) messagesTab.click();
+            };
+        }
+
+        // Service & Event
+        const pkgNameEl = document.getElementById('pbd-package-name');
+        if (pkgNameEl) pkgNameEl.textContent = booking.PackageName || 'Custom Event Service Package';
+
+        const eventNameEl = document.getElementById('pbd-event-name');
+        if (eventNameEl) eventNameEl.textContent = booking.EventName || `${booking.EventType || 'Event'} Celebration`;
+
+        const eventDateEl = document.getElementById('pbd-event-date');
+        if (eventDateEl) {
+            const sDate = booking.ServiceStartDate || booking.EventDate;
+            const eDate = booking.ServiceEndDate || sDate;
+            const formattedS = formatEventDisplayDate(sDate);
+            const formattedE = formatEventDisplayDate(eDate);
+            eventDateEl.innerHTML = `<span style="font-weight:700; color:#0a192f;">${(formattedS === formattedE || !eDate) ? formattedS : `${formattedS} to ${formattedE}`}</span>`;
+        }
+
+        const eventTimeEl = document.getElementById('pbd-event-time');
+        if (eventTimeEl) {
+            let sTime = booking.StartTime || booking.EventTime || '08:00';
+            if (sTime.includes('-')) sTime = sTime.split('-')[0].trim();
+            if (!sTime.toLowerCase().includes('am') && !sTime.toLowerCase().includes('pm')) {
+                const parts = sTime.split(':');
+                if (parts.length >= 2) {
+                    let hour = parseInt(parts[0], 10);
+                    const minutes = parts[1].padStart(2, '0');
+                    const period = hour >= 12 ? 'PM' : 'AM';
+                    hour = hour % 12;
+                    if (hour === 0) hour = 12;
+                    sTime = `${hour}:${minutes} ${period}`;
+                }
+            }
+            eventTimeEl.textContent = sTime;
+        }
+
+        const venueEl = document.getElementById('pbd-event-venue');
+        if (venueEl) venueEl.textContent = booking.VenueName || booking.EventPlace || 'Private Venue';
+
+        const addressEl = document.getElementById('pbd-event-address');
+        if (addressEl) addressEl.textContent = booking.EventAddress || booking.Location || 'Batangas';
+
+        const notesBox = document.getElementById('pbd-location-notes-box');
+        const notesEl = document.getElementById('pbd-location-notes');
+        if (notesBox && notesEl) {
+            if (booking.LocationNotes) {
+                notesEl.textContent = booking.LocationNotes;
+                notesBox.style.display = 'block';
+            } else {
+                notesBox.style.display = 'none';
+            }
+        }
+
+        // Render Pinned Event Location on Leaflet Map
+        const mapWrapper = document.getElementById('pbd-map-wrapper');
+        const mapContainer = document.getElementById('pbd-booking-map');
+        const mapCoordsEl = document.getElementById('pbd-map-coordinates');
+        const mapExtLink = document.getElementById('pbd-map-external-link');
+
+        const latVal = booking.EventLatitude != null ? parseFloat(booking.EventLatitude) : null;
+        const lngVal = booking.EventLongitude != null ? parseFloat(booking.EventLongitude) : null;
+        const hasValidCoords = latVal != null && lngVal != null && !isNaN(latVal) && !isNaN(lngVal) && (latVal !== 0 || lngVal !== 0);
+
+        if (mapWrapper && mapContainer) {
+            if (hasValidCoords) {
+                mapWrapper.style.display = 'block';
+                if (mapCoordsEl) {
+                    mapCoordsEl.textContent = `(${latVal.toFixed(5)}, ${lngVal.toFixed(5)})`;
+                }
+                if (mapExtLink) {
+                    mapExtLink.href = `https://www.google.com/maps?q=${latVal},${lngVal}`;
+                }
+
+                const venueLabel = booking.VenueName || 'Event Venue';
+                const addressLabel = booking.EventAddress || booking.Location || '';
+
+                if (typeof L !== 'undefined') {
+                    setTimeout(() => {
+                        try {
+                            if (!pbdLeafletMap) {
+                                pbdLeafletMap = L.map('pbd-booking-map', {
+                                    scrollWheelZoom: false
+                                }).setView([latVal, lngVal], 16);
+
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    attribution: '&copy; OpenStreetMap contributors',
+                                    maxZoom: 19
+                                }).addTo(pbdLeafletMap);
+
+                                pbdLeafletMarker = L.marker([latVal, lngVal]).addTo(pbdLeafletMap);
+                            } else {
+                                pbdLeafletMap.setView([latVal, lngVal], 16);
+                                if (pbdLeafletMarker) {
+                                    pbdLeafletMarker.setLatLng([latVal, lngVal]);
+                                } else {
+                                    pbdLeafletMarker = L.marker([latVal, lngVal]).addTo(pbdLeafletMap);
+                                }
+                            }
+
+                            pbdLeafletMarker.bindPopup(`
+                                <div style="font-family:'Inter',sans-serif; padding:4px;">
+                                    <strong style="font-size:0.95rem; color:#0a192f; display:block; margin-bottom:2px;">${venueLabel}</strong>
+                                    <span style="font-size:0.82rem; color:#475569;">${addressLabel}</span>
+                                </div>
+                            `).openPopup();
+
+                            pbdLeafletMap.invalidateSize();
+                        } catch (err) {
+                            console.warn('[Leaflet] Error updating booking map:', err);
+                        }
+                    }, 120);
+                }
+            } else {
+                if (booking.EventAddress || booking.Location) {
+                    const query = encodeURIComponent(`${booking.VenueName ? booking.VenueName + ', ' : ''}${booking.EventAddress || booking.Location}`);
+                    mapWrapper.style.display = 'block';
+                    if (mapCoordsEl) mapCoordsEl.textContent = 'Approximate venue';
+                    if (mapExtLink) mapExtLink.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    if (typeof L !== 'undefined') {
+                        const fallbackLat = 13.9419;
+                        const fallbackLng = 120.7326;
+                        setTimeout(() => {
+                            try {
+                                if (!pbdLeafletMap) {
+                                    pbdLeafletMap = L.map('pbd-booking-map', {
+                                        scrollWheelZoom: false
+                                    }).setView([fallbackLat, fallbackLng], 12);
+                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                        attribution: '&copy; OpenStreetMap contributors',
+                                        maxZoom: 19
+                                    }).addTo(pbdLeafletMap);
+                                    pbdLeafletMarker = L.marker([fallbackLat, fallbackLng]).addTo(pbdLeafletMap);
+                                } else {
+                                    pbdLeafletMap.setView([fallbackLat, fallbackLng], 12);
+                                    if (pbdLeafletMarker) pbdLeafletMarker.setLatLng([fallbackLat, fallbackLng]);
+                                }
+                                pbdLeafletMarker.bindPopup(`
+                                    <div style="font-family:'Inter',sans-serif; padding:4px;">
+                                        <strong style="font-size:0.95rem; color:#0a192f; display:block; margin-bottom:2px;">${booking.VenueName || 'Event Venue'}</strong>
+                                        <span style="font-size:0.82rem; color:#475569;">${booking.EventAddress || booking.Location || ''}</span>
+                                    </div>
+                                `).openPopup();
+                                pbdLeafletMap.invalidateSize();
+                            } catch (e) {}
+                        }, 120);
+                    }
+                } else {
+                    mapWrapper.style.display = 'none';
+                }
+            }
+        }
+
+        // Financial Breakdown
+        const pkgPrice = parseFloat(booking.PackagePrice || 0);
+        const addCharges = parseFloat(booking.AdditionalDayCharges || 0);
+        const transFee = parseFloat(booking.TransportationFee || 0);
+        const totalAmt = parseFloat(booking.TotalAmount || 0);
+        const amtPaid = parseFloat(booking.AmountPaid || 0);
+        const remBal = parseFloat(booking.RemainingBalance != null ? booking.RemainingBalance : (totalAmt - amtPaid));
+        const provEarn = parseFloat(booking.ProviderEarnings || (totalAmt * 0.95));
+
+        const pkgPriceEl = document.getElementById('pbd-package-price');
+        if (pkgPriceEl) pkgPriceEl.textContent = `₱${pkgPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const addChargesRow = document.getElementById('pbd-additional-days-row');
+        const addChargesEl = document.getElementById('pbd-additional-day-charges');
+        if (addChargesRow && addChargesEl) {
+            if (addCharges > 0) {
+                addChargesRow.style.display = 'flex';
+                addChargesEl.textContent = `₱${addCharges.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+            } else {
+                addChargesRow.style.display = 'none';
+            }
+        }
+
+        const transFeeEl = document.getElementById('pbd-transport-fee');
+        if (transFeeEl) transFeeEl.textContent = `₱${transFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const totalEl = document.getElementById('pbd-total-amount');
+        if (totalEl) totalEl.textContent = `₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const paidEl = document.getElementById('pbd-amount-paid');
+        if (paidEl) paidEl.textContent = `₱${amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const balEl = document.getElementById('pbd-remaining-balance');
+        if (balEl) balEl.textContent = `₱${Math.max(0, remBal).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const earnEl = document.getElementById('pbd-provider-earnings');
+        if (earnEl) earnEl.textContent = `₱${provEarn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        // Actions
+        const actionsContainer = document.getElementById('pbd-modal-actions');
+        const footerBar = document.getElementById('pbd-footer-bar');
+        if (actionsContainer) {
+            const hideFullscreen = "const v = document.getElementById('view-booking-details-fullscreen') || document.getElementById('modal-provider-booking-details'); if(v) v.classList.add('hidden');";
+            if (statusLower === 'pending') {
+                actionsContainer.innerHTML = `
+                    <button type="button" onclick="${hideFullscreen} window.acceptProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Accept Booking</button>
+                    <button type="button" onclick="${hideFullscreen} window.cancelProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Reject</button>
+                `;
+                if (footerBar) footerBar.style.display = 'flex';
+            } else if (statusLower === 'confirmed') {
+                actionsContainer.innerHTML = `
+                    <button type="button" onclick="${hideFullscreen} window.completeProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Complete Event</button>
+                    <button type="button" onclick="${hideFullscreen} window.cancelProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Cancel Booking</button>
+                `;
+                if (footerBar) footerBar.style.display = 'flex';
+            } else if (statusLower === 'completed') {
+                actionsContainer.innerHTML = `
+                    <button type="button" onclick="${hideFullscreen} window.triggerRequestWithdrawFromBooking(${booking.BookingID}, ${booking.TotalAmount || 0})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Request Payout</button>
+                `;
+                if (footerBar) footerBar.style.display = 'flex';
+            } else {
+                actionsContainer.innerHTML = '';
+                if (footerBar) footerBar.style.display = 'none';
+            }
+        }
+
+        fullscreenView.classList.remove('hidden');
+    };
+
+    // Close / Back Fullscreen Listeners
+    const backPbdBtn = document.getElementById('btn-back-from-booking-details');
+    const closePbdBtn = document.getElementById('btn-close-provider-booking-details');
+    const pbdFullscreen = document.getElementById('view-booking-details-fullscreen') || document.getElementById('modal-provider-booking-details');
+    if (backPbdBtn && pbdFullscreen) {
+        backPbdBtn.onclick = () => pbdFullscreen.classList.add('hidden');
+    }
+    if (closePbdBtn && pbdFullscreen) {
+        closePbdBtn.onclick = () => pbdFullscreen.classList.add('hidden');
+    }
+
     // Render Recent Reviews
     const renderRecentReviews = (reviews) => {
         const container = document.getElementById('dash-recent-reviews-list');
         const fullContainer = document.getElementById('full-provider-reviews-list');
-        if (!container) return;
+        if (!container && !fullContainer) return;
 
         if (!reviews || reviews.length === 0) {
-            const emptyHtml = `<div style="padding:20px; text-align:center; color:#64748b; font-size:0.88rem;">No reviews yet.</div>`;
-            container.innerHTML = emptyHtml;
+            const emptyHtml = `<div style="padding:30px; text-align:center; color:#64748b; font-size:0.9rem;"><i class="fa-regular fa-star" style="font-size:1.8rem; color:#cbd5e1; margin-bottom:8px; display:block;"></i>No client reviews yet. Reviews will appear here after completed events.</div>`;
+            if (container) container.innerHTML = emptyHtml;
             if (fullContainer) fullContainer.innerHTML = emptyHtml;
             return;
         }
 
-        const html = reviews.map(r => `
-            <div style="padding:12px 0; border-bottom:1px solid #f1f5f9;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong style="font-size:0.88rem; color:#0a192f;">${r.ClientName}</strong>
-                    <span style="font-size:0.8rem; color:#f59e0b; font-weight:700;"><i class="fa-solid fa-star"></i> ${r.Rating}.0</span>
-                </div>
-                <p style="font-size:0.8rem; color:#475569; margin:4px 0 0 0;">${r.Comment}</p>
-            </div>
-        `).join('');
+        const buildStars = (rating) => {
+            const r = Math.round(Number(rating) || 0);
+            return Array.from({ length: 5 }, (_, i) =>
+                `<i class="fa-${i < r ? 'solid' : 'regular'} fa-star" style="color:${i < r ? '#f59e0b' : '#cbd5e1'}; font-size:0.85rem;"></i>`
+            ).join('');
+        };
 
-        container.innerHTML = html;
-        if (fullContainer) fullContainer.innerHTML = html;
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            try {
+                return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch (e) {
+                return '';
+            }
+        };
+
+        // Compact list for dashboard widget
+        if (container) {
+            container.innerHTML = reviews.slice(0, 5).map(r => `
+                <div style="padding:12px 0; border-bottom:1px solid #f1f5f9;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:0.88rem; color:#0a192f;">${r.ClientName || 'Client'}</strong>
+                        <span style="font-size:0.8rem; color:#f59e0b; font-weight:700;"><i class="fa-solid fa-star"></i> ${(Number(r.Rating) || 0).toFixed(1)}</span>
+                    </div>
+                    ${r.PackageName ? `<div style="font-size:0.75rem; color:#64748b; margin-top:2px;"><i class="fa-solid fa-cube" style="font-size:0.7rem; color:#3b82f6;"></i> ${r.PackageName} ${r.BookingID ? `<span style="color:#94a3b8;">(#BK-${r.BookingID})</span>` : ''}</div>` : ''}
+                    <p style="font-size:0.8rem; color:#475569; margin:4px 0 0 0;">${r.Comment || 'No feedback text.'}</p>
+                </div>
+            `).join('');
+        }
+
+        // Full reviews view panel
+        if (fullContainer) {
+            fullContainer.innerHTML = reviews.map(r => {
+                const dateStr = formatDate(r.CreatedAt);
+                return `
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:#fff; border-radius:10px; margin-bottom:12px; border:1px solid #e2e8f0; transition:all 0.2s ease;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <strong style="font-size:0.95rem; color:#0a192f;">${r.ClientName || 'Client'}</strong>
+                                ${r.PackageName ? `<span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; background:#eff6ff; color:#2563eb; font-weight:600; padding:3px 9px; border-radius:12px; border:1px solid #bfdbfe;"><i class="fa-solid fa-box-open" style="font-size:0.7rem;"></i> ${r.PackageName}</span>` : ''}
+                                ${r.BookingID ? `<span style="font-size:0.75rem; color:#64748b; font-weight:600; background:#f8fafc; padding:3px 8px; border-radius:6px; border:1px solid #e2e8f0;">Booking #BK-${r.BookingID}</span>` : ''}
+                                ${dateStr ? `<span style="font-size:0.75rem; color:#94a3b8;"><i class="fa-regular fa-calendar" style="font-size:0.7rem;"></i> ${dateStr}</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; background:#fffbeb; padding:4px 10px; border-radius:20px; border:1px solid #fef3c7;">
+                            <div>${buildStars(r.Rating)}</div>
+                            <span style="font-size:0.85rem; color:#d97706; font-weight:700;">${(Number(r.Rating) || 0).toFixed(1)}</span>
+                        </div>
+                    </div>
+                    <p style="font-size:0.88rem; color:#334155; margin:8px 0 0 0; line-height:1.5;">"${r.Comment || 'No feedback text provided.'}"</p>
+                </div>
+                `;
+            }).join('');
+        }
     };
 
     // Load Services List
@@ -1345,7 +1920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const formData = new FormData();
                 formData.append('packageName', packageName);
                 formData.append('name', packageName);
-                formData.append('category', category || 'Concert Audio & Stage Lights');
+                formData.append('category', category || 'Basic Package');
                 formData.append('price', price);
                 formData.append('additionalDayPercentage', additionalDayPercentage);
                 formData.append('description', description || packageName);
@@ -1400,7 +1975,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (inputId) inputId.value = pkg.PackageID;
         if (modalTitle) modalTitle.textContent = 'Edit Service Package Offer';
         if (nameInput) nameInput.value = pkg.PackageName || '';
-        if (catInput) catInput.value = pkg.Category || 'Concert Audio & Stage Lights';
+        if (catInput) catInput.value = pkg.Category || 'Basic Package';
         if (priceInput) priceInput.value = pkg.Price || '';
         if (addDayPctInput) addDayPctInput.value = pkg.AdditionalDayPercentage != null ? pkg.AdditionalDayPercentage : 20;
         if (descInput) descInput.value = pkg.Description || '';
@@ -1809,6 +2384,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${DAY_NAMES_FULL[d.getDay()]}, ${MONTH_NAMES_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     };
 
+    const formatTime12Hour = (timeStr) => {
+        if (!timeStr) return '08:00 AM';
+        const str = String(timeStr).trim();
+        if (str.toLowerCase().includes('am') || str.toLowerCase().includes('pm')) return str;
+        const parts = str.split(':');
+        if (parts.length < 2) return str;
+        let hours = parseInt(parts[0], 10);
+        const minutes = parts[1].substring(0, 2);
+        if (isNaN(hours)) return str;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    };
+
     // Load Provider Calendar Schedule from backend
     const loadProviderCalendarSchedule = async () => {
         try {
@@ -1929,6 +2519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
+            cell.setAttribute('title', `Click to view bookings for ${formatPrettyDateLong(cellDateIso)}`);
+
             cell.addEventListener('click', () => {
                 provCalSelectedDate = cellDateIso;
                 document.querySelectorAll('.prov-calendar-grid .prov-day-cell').forEach(c => c.classList.remove('selected'));
@@ -1940,6 +2532,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         renderInspectorPanel();
+    };
+
+    // Jump to Booking in Management Tab
+    window.viewBookingInManagement = (bookingId) => {
+        // Switch active tab in sidebar
+        const navBookings = document.getElementById('nav-item-bookings');
+        if (navBookings) navBookings.click();
+
+        // Highlight table row after view panel switch
+        setTimeout(() => {
+            const rows = document.querySelectorAll('#table-provider-bookings-list tr');
+            rows.forEach(r => {
+                if (r.textContent.includes(`#BK-${bookingId}`)) {
+                    r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    r.style.background = '#eff6ff';
+                    r.style.transition = 'background 0.5s';
+                    setTimeout(() => { r.style.background = ''; }, 3500);
+                }
+            });
+        }, 250);
     };
 
     // Render Inspector Panel for Selected Date
@@ -1960,7 +2572,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const countBadge = document.getElementById('prov-inspector-bookings-count-badge');
         const customCapNotice = document.getElementById('prov-past-date-notice');
 
-        if (dateTitle) dateTitle.textContent = formatPrettyDateLong(provCalSelectedDate);
+        if (dateTitle) {
+            dateTitle.textContent = formatPrettyDateLong(provCalSelectedDate);
+            dateTitle.style.setProperty('color', '#ffffff', 'important');
+        }
 
         // Find capacity override for this date
         const override = (provCalData.capacities || []).find(c => c.SpecificDate === provCalSelectedDate);
@@ -1975,7 +2590,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
         });
 
-        if (capacityInput) capacityInput.value = maxAllowed;
+        const bookedCount = activeBookings.length;
+
+        // Custom capacity cannot be lower than existing bookings
+        if (capacityInput) {
+            capacityInput.min = bookedCount;
+            capacityInput.value = Math.max(bookedCount, maxAllowed);
+        }
+
+        // Show minimum capacity hint if there are active bookings
+        const minCapNotice = document.getElementById('prov-date-min-cap-notice');
+        if (minCapNotice) {
+            if (bookedCount > 0) {
+                minCapNotice.style.display = 'block';
+                minCapNotice.innerHTML = `📌 <strong>${bookedCount} booking${bookedCount === 1 ? '' : 's'} already scheduled.</strong> Capacity cannot be lower than ${bookedCount}.`;
+            } else {
+                minCapNotice.style.display = 'none';
+            }
+        }
 
         if (countBadge) countBadge.textContent = `${activeBookings.length} Booking${activeBookings.length === 1 ? '' : 's'}`;
 
@@ -2003,13 +2635,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Toggle Block / Unblock Button Text
+        // Toggle Block / Unblock Button
         if (toggleBlockBtn) {
-            if (isBlocked) {
+            if (bookedCount > 0) {
+                // Cannot block a date that already has active bookings
+                toggleBlockBtn.disabled = true;
+                toggleBlockBtn.style.opacity = '0.5';
+                toggleBlockBtn.style.cursor = 'not-allowed';
+                toggleBlockBtn.title = `Cannot block date: ${bookedCount} booking(s) already scheduled. Minimum capacity is ${bookedCount}.`;
+                toggleBlockBtn.innerHTML = `<i class="fa-solid fa-ban"></i> Block Date (${bookedCount} Booked)`;
+                toggleBlockBtn.style.color = '#94a3b8';
+                toggleBlockBtn.style.borderColor = '#cbd5e1';
+            } else if (isBlocked) {
+                toggleBlockBtn.disabled = isPast;
+                toggleBlockBtn.style.opacity = isPast ? '0.5' : '1';
+                toggleBlockBtn.style.cursor = isPast ? 'not-allowed' : 'pointer';
+                toggleBlockBtn.title = '';
                 toggleBlockBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Unblock Date (Set ${provCalData.defaultCapacity})`;
                 toggleBlockBtn.style.color = '#15803d';
                 toggleBlockBtn.style.borderColor = '#86efac';
             } else {
+                toggleBlockBtn.disabled = isPast;
+                toggleBlockBtn.style.opacity = isPast ? '0.5' : '1';
+                toggleBlockBtn.style.cursor = isPast ? 'not-allowed' : 'pointer';
+                toggleBlockBtn.title = '';
                 toggleBlockBtn.innerHTML = `<i class="fa-solid fa-ban"></i> Block Date (Set 0)`;
                 toggleBlockBtn.style.color = '#ef4444';
                 toggleBlockBtn.style.borderColor = '#fecaca';
@@ -2019,6 +2668,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reset to default button
         if (resetBtn) {
             resetBtn.style.display = override ? 'inline-flex' : 'none';
+            if (override && bookedCount > provCalData.defaultCapacity) {
+                resetBtn.title = `Default limit (${provCalData.defaultCapacity}) is lower than existing bookings (${bookedCount}).`;
+            } else {
+                resetBtn.title = '';
+            }
         }
 
         // Disable controls for past dates
@@ -2077,24 +2731,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 bookingsList.innerHTML = activeBookings.map(b => `
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,0.03); transition:0.2s;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
                             <div>
                                 <strong style="font-size:0.92rem; color:#0a192f; display:block;">${b.ClientName || 'SoundSphere Client'}</strong>
-                                <span style="font-size:0.74rem; font-weight:700; color:#2563eb;">${b.BookingReference}</span>
+                                <div style="display:flex; align-items:center; gap:6px; margin-top:2px; flex-wrap:wrap;">
+                                    <span style="font-size:0.72rem; font-weight:700; color:#2563eb; background:#eff6ff; padding:1px 6px; border-radius:4px; border:1px solid #bfdbfe;">${b.BookingReference || ('#BK-' + b.BookingID)}</span>
+                                    <span style="font-size:0.72rem; color:#64748b;">Booking #${b.BookingID}</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:#475569; margin-top:4px;">
+                                    ${b.ClientPhone ? `<div>Phone: <a href="tel:${b.ClientPhone}" style="color:#2563eb; text-decoration:none; font-weight:600;">${b.ClientPhone}</a></div>` : ''}
+                                    ${b.ClientEmail ? `<div>Email: <a href="mailto:${b.ClientEmail}" style="color:#64748b; text-decoration:none;">${b.ClientEmail}</a></div>` : ''}
+                                </div>
                             </div>
-                            <span class="status-badge status-${(b.BookingStatus || 'confirmed').toLowerCase()}" style="font-size:0.72rem; padding:2px 8px;">${b.BookingStatus || 'Confirmed'}</span>
+                            <span class="status-badge status-${(b.BookingStatus || 'confirmed').toLowerCase()}" style="font-size:0.72rem; padding:2px 8px; flex-shrink:0;">${b.BookingStatus || 'Confirmed'}</span>
                         </div>
-                        <div style="font-size:0.84rem; color:#1e293b; font-weight:600; margin-bottom:6px;">
-                            <i class="fa-solid fa-cubes" style="color:#2563eb; margin-right:4px;"></i> ${b.PackageName}
+                        <div style="font-size:0.82rem; color:#1e293b; margin-bottom:4px;">
+                            <span style="color:#64748b; font-weight:700; font-size:0.72rem; text-transform:uppercase; display:block;">Service Package</span>
+                            <span style="font-weight:700; color:#0a192f;">${b.PackageName || 'Event Package'}</span>
                         </div>
-                        <div style="font-size:0.78rem; color:#64748b; display:flex; flex-direction:column; gap:4px;">
-                            <div><i class="fa-regular fa-clock" style="color:#f59e0b; width:14px;"></i> ${b.StartTime || '08:00 AM'} - ${b.EndTime || '10:00 PM'}</div>
-                            <div><i class="fa-solid fa-location-dot" style="color:#ef4444; width:14px;"></i> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
-                            ${b.ClientPhone ? `<div><i class="fa-solid fa-phone" style="color:#10b981; width:14px;"></i> ${b.ClientPhone}</div>` : ''}
+                        <div style="font-size:0.78rem; color:#475569; display:flex; flex-direction:column; gap:3px; margin-top:6px;">
+                            <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Start Time:</strong> <span style="font-weight:700; color:#0a192f;">${formatTime12Hour(b.StartTime)}</span></div>
+                            <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Venue:</strong> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
                         </div>
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.82rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString()}</span>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600;">Payment: <strong style="color:#0a192f;">${b.PaymentStatus || 'Paid'}</strong></span>
+                        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.85rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString()}</span>
+                            <button type="button" onclick="window.viewBookingInManagement(${b.BookingID})" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.75rem; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:700;">
+                                View Booking
+                            </button>
                         </div>
                     </div>
                 `).join('');
@@ -2187,6 +2850,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Input Real-Time Validation: Prevent user from typing lower than active bookings count
+    const dateCapInput = document.getElementById('prov-date-capacity-input');
+    if (dateCapInput) {
+        dateCapInput.addEventListener('input', () => {
+            if (!provCalSelectedDate) return;
+            const activeBookings = (provCalData.bookings || []).filter(b => {
+                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
+            });
+            const bookedCount = activeBookings.length;
+            const val = parseInt(dateCapInput.value, 10);
+            if (!isNaN(val) && val < bookedCount) {
+                showToast(`Minimum capacity for this date is ${bookedCount} based on existing bookings.`, 'warning');
+                dateCapInput.value = bookedCount;
+            }
+        });
+    }
+
     // Save Specific Date Capacity Handler
     const saveDateCapBtn = document.getElementById('btn-save-date-capacity');
     if (saveDateCapBtn) {
@@ -2196,6 +2878,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const val = parseInt(input.value, 10);
             if (isNaN(val) || val < 0) {
                 showToast('Please enter a valid capacity (0 to block, or 1+).', 'error');
+                return;
+            }
+
+            const activeBookings = (provCalData.bookings || []).filter(b => {
+                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
+            });
+            const bookedCount = activeBookings.length;
+
+            if (val < bookedCount) {
+                showToast(`⚠️ Cannot lower capacity below ${bookedCount}. You already have ${bookedCount} booking(s) scheduled on this date.`, 'warning');
+                input.value = bookedCount;
                 return;
             }
 
@@ -2237,9 +2932,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (toggleBlockBtn) {
         toggleBlockBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
+            const activeBookings = (provCalData.bookings || []).filter(b => {
+                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
+            });
+            const bookedCount = activeBookings.length;
+
             const override = (provCalData.capacities || []).find(c => c.SpecificDate === provCalSelectedDate);
             const currentCap = override ? override.MaxBookings : provCalData.defaultCapacity;
-            const newCap = (currentCap === 0) ? provCalData.defaultCapacity : 0;
+            const newCap = (currentCap === 0) ? Math.max(provCalData.defaultCapacity, bookedCount) : 0;
+
+            if (newCap === 0 && bookedCount > 0) {
+                showToast(`⚠️ Cannot block this date: ${bookedCount} booking(s) are already scheduled. Minimum capacity is ${bookedCount}.`, 'warning');
+                return;
+            }
 
             const input = document.getElementById('prov-date-capacity-input');
             if (input) input.value = newCap;
@@ -2276,6 +2983,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (resetDateCapBtn) {
         resetDateCapBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
+            const activeBookings = (provCalData.bookings || []).filter(b => {
+                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
+                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
+            });
+            const bookedCount = activeBookings.length;
+
+            if (provCalData.defaultCapacity < bookedCount) {
+                showToast(`⚠️ Cannot reset to default limit (${provCalData.defaultCapacity}): ${bookedCount} booking(s) are already scheduled on this date. Minimum capacity is ${bookedCount}.`, 'warning');
+                return;
+            }
 
             try {
                 const headers = { 'Authorization': `Bearer ${token}` };
@@ -2297,8 +3015,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
-
 
     // Initial Data Fetch
     await loadDashboardData();

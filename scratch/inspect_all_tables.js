@@ -1,36 +1,29 @@
-const { connectDB } = require('../server/config/db');
+const { getOrConnectPool } = require('../server/config/db');
 
-async function inspectAllTables() {
-    console.log('=== SOUNDSPHEREDB COMPLETE TABLE INSPECTION ===\n');
-    let pool = await connectDB();
-    if (!pool) {
-        console.error('Failed to connect to DB');
-        return;
+(async () => {
+    const pool = await getOrConnectPool();
+    const tables = [
+        'Users', 'Roles', 'Clients', 'ServiceProviders', 'Admins', 
+        'ProviderApplications', 'Packages', 'PackageImages', 'Services', 
+        'Bookings', 'Payments', 'Reviews', 'Notifications', 'ActivityLogs', 
+        'Conversations', 'ConversationParticipants', 'Messages', 
+        'PasswordResetTokens', 'Withdrawals', 'ProviderReports', 
+        'ProviderDateCapacity', 'OTPVerifications', 'ProviderSubscriptions', 
+        'SubscriptionPayments', 'TransportationFees', 'ClientWallets', 
+        'WalletTransactions', 'RefundRequests'
+    ];
+    
+    for (const t of tables) {
+        const cols = await pool.request().query(`
+            SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = '${t}'
+            ORDER BY ORDINAL_POSITION
+        `);
+        console.log(`\n-- ==============================================`);
+        console.log(`-- Table: dbo.${t}`);
+        console.log(`-- ==============================================`);
+        console.log(cols.recordset.map(c => `  ${c.COLUMN_NAME} ${c.DATA_TYPE}${c.CHARACTER_MAXIMUM_LENGTH && c.CHARACTER_MAXIMUM_LENGTH > 0 ? `(${c.CHARACTER_MAXIMUM_LENGTH})` : ''} ${c.IS_NULLABLE === 'NO' ? 'NOT NULL' : 'NULL'}${c.COLUMN_DEFAULT ? ` DEFAULT ${c.COLUMN_DEFAULT}` : ''}`).join(',\n'));
     }
-
-    const tablesRes = await pool.request().query(`
-        SELECT TABLE_NAME 
-        FROM INFORMATION_SCHEMA.TABLES 
-        WHERE TABLE_TYPE = 'BASE TABLE'
-        ORDER BY TABLE_NAME;
-    `);
-
-    const tables = tablesRes.recordset.map(t => t.TABLE_NAME);
-    console.log(`Found ${tables.length} tables in SoundSphereDB:\n`);
-
-    const summary = [];
-    for (const table of tables) {
-        try {
-            const countRes = await pool.request().query(`SELECT COUNT(*) AS NumRows FROM dbo.[${table}]`);
-            const rowCount = countRes.recordset[0].NumRows;
-            summary.push({ TableName: `dbo.${table}`, RowsCount: rowCount });
-        } catch (err) {
-            summary.push({ TableName: `dbo.${table}`, RowsCount: 'Error: ' + err.message });
-        }
-    }
-
-    console.table(summary);
     process.exit(0);
-}
-
-inspectAllTables();
+})();
