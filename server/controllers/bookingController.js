@@ -793,7 +793,7 @@ const submitReview = async (req, res) => {
                 const bRes = await pool.request()
                     .input('UID', userId)
                     .input('PID', targetProviderId)
-                    .query(`SELECT TOP 1 BookingID FROM dbo.Bookings WHERE (ClientID = @UID) AND ProviderID = @PID ORDER BY BookingID DESC`);
+                    .query(`SELECT TOP 1 BookingID FROM dbo.Bookings WHERE (ClientUserID = @UID) AND ProviderID = @PID ORDER BY BookingID DESC`);
                 if (bRes.recordset && bRes.recordset.length > 0) {
                     targetBookingId = bRes.recordset[0].BookingID;
                 }
@@ -881,6 +881,40 @@ const cancelBooking = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/bookings/settle-balance
+ * POST /api/bookings/:id/settle-balance
+ * Settle outstanding remaining balance for a booking
+ */
+const settleBookingBalance = async (req, res) => {
+    try {
+        const bookingId = req.params.id ? parseInt(req.params.id, 10) : req.body.bookingId;
+        const bookingReference = req.body.bookingReference || req.body.bookingRef;
+        const { amount, paymentMethod, transactionReference, sessionId } = req.body;
+
+        if (!bookingId && !bookingReference) {
+            return res.status(400).json({ success: false, message: 'Booking ID or Reference is required.' });
+        }
+
+        const result = await bookingModel.settleRemainingBalance({
+            bookingId: bookingId ? parseInt(bookingId, 10) : null,
+            bookingReference,
+            amount: amount ? parseFloat(amount) : null,
+            paymentMethod: paymentMethod || 'PayMongo',
+            transactionReference: transactionReference || sessionId || null
+        });
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Settle Booking Balance Controller Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to settle booking balance.', error: error.message });
+    }
+};
+
 module.exports = {
     getPackageById,
     getTransportationFees,
@@ -900,5 +934,6 @@ module.exports = {
     getPaymentsByBookingId,
     submitReview,
     createPayMongoCheckout,
-    cancelBooking
+    cancelBooking,
+    settleBookingBalance
 };

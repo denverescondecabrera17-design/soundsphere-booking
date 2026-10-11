@@ -36,6 +36,7 @@ const dbConfig = {
 };
 
 let pool = null;
+let lastConnectError = null;
 
 /**
  * Auto-Migrate Database Schema & Seed Administrator
@@ -788,7 +789,12 @@ const autoSeedDatabase = async (activePool) => {
                 );
             END;
 
-            -- Auto-Migrate Extended Columns in dbo.Bookings
+            -- Auto-Migrate Booking Link Columns in dbo.RefundRequests
+            IF OBJECT_ID('dbo.RefundRequests', 'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.RefundRequests', 'BookingID') IS NULL ALTER TABLE dbo.RefundRequests ADD BookingID INT NULL;
+                IF COL_LENGTH('dbo.RefundRequests', 'BookingReference') IS NULL ALTER TABLE dbo.RefundRequests ADD BookingReference NVARCHAR(50) NULL;
+            END;
             IF OBJECT_ID('dbo.Bookings', 'U') IS NOT NULL
             BEGIN
                 IF COL_LENGTH('dbo.Bookings', 'BookingReference') IS NULL ALTER TABLE dbo.Bookings ADD BookingReference NVARCHAR(50) NULL;
@@ -1034,10 +1040,12 @@ const connectDB = async () => {
                 }
             }
             console.log(' Microsoft SQL Server connected successfully:', dbConfig.database);
+            lastConnectError = null;
             await autoSeedDatabase(pool);
         }
         return pool;
     } catch (error) {
+        lastConnectError = error.message;
         console.error(' Database connection error:', error.message);
         if (process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.RENDER_SERVICE_ID) {
             console.error(' ⚠️ RENDER PRODUCTION NOTICE: Make sure DB_SERVER, DB_USER, DB_PASSWORD, DB_NAME, and DB_ENCRYPT=true are configured under Environment Variables in your Render Dashboard.');
@@ -1064,5 +1072,6 @@ module.exports = {
     sql,
     connectDB,
     getPool,
-    getOrConnectPool
+    getOrConnectPool,
+    getLastConnectError: () => lastConnectError
 };

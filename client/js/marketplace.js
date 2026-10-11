@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dropRole) dropRole.textContent = 'Client Account';
         }
     } else {
-        // Unauthenticated Guest State
+        // Unauthenticated Guest State: Show Login & Sign Up buttons, hide authenticated menu
         if (guestAuthBtns) guestAuthBtns.classList.remove('hidden');
         if (authNotifWrapper) authNotifWrapper.classList.add('hidden');
         if (authUserMenu) authUserMenu.classList.add('hidden');

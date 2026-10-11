@@ -6,6 +6,7 @@
 
 const { connectDB, sql } = require('../config/db');
 const paymongoService = require('../services/paymongoService');
+const emailService = require('../services/emailService');
 
 // Helper to log activities
 const logActivity = async (pool, userId, action, details, entityType = null, entityId = null) => {
@@ -231,7 +232,7 @@ const getCashierWithdrawals = async (req, res) => {
                 b.AmountPaid AS BookingAmountPaid,
                 b.PaymentStatus AS BookingPaymentStatus,
                 COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
-                uClient.Email AS ClientEmail
+                COALESCE(NULLIF(LTRIM(RTRIM(b.ClientEmail)), ''), uClient.Email) AS ClientEmail
             FROM dbo.Withdrawals w
             LEFT JOIN dbo.ServiceProviders sp ON (sp.ProviderID = w.ProviderID OR sp.UserID = w.ProviderID)
             LEFT JOIN dbo.Users u ON sp.UserID = u.UserID
@@ -313,15 +314,27 @@ const approveWithdrawalRequest = async (req, res) => {
         const cashierUserId = req.user ? req.user.userId : 1;
         const pool = await connectDB();
 
-        // 1. Fetch withdrawal details
+        // 1. Fetch withdrawal details with provider, booking, and client info
         const wRes = await pool.request()
             .input('WID', id)
             .query(`
                 SELECT w.*, 
                     COALESCE(sp.UserID, w.ProviderID) AS TargetUserID,
-                    sp.BusinessName 
+                    ISNULL(sp.BusinessName, 'Service Provider') AS BusinessName,
+                    ISNULL(uProv.Email, uProv2.Email) AS ProviderEmail,
+                    b.BookingReference,
+                    b.PackageName,
+                    b.TotalAmount AS BookingTotalAmount,
+                    b.AmountPaid AS BookingAmountPaid,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientEmail)), ''), uClient.Email) AS ClientEmail
                 FROM dbo.Withdrawals w
                 LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
+                LEFT JOIN dbo.Users uProv ON sp.UserID = uProv.UserID
+                LEFT JOIN dbo.Users uProv2 ON w.ProviderID = uProv2.UserID
+                LEFT JOIN dbo.Bookings b ON w.BookingID = b.BookingID
+                LEFT JOIN dbo.Users uClient ON b.ClientUserID = uClient.UserID
+                LEFT JOIN dbo.Clients cClient ON uClient.UserID = cClient.UserID
                 WHERE w.WithdrawalID = @WID;
             `);
 
@@ -341,6 +354,16 @@ const approveWithdrawalRequest = async (req, res) => {
         const accNum = w.AccountReference || 'N/A';
         const finalRef = referenceNumber ? `Ref: ${referenceNumber}` : (w.AccountReference ? `Ref: ${w.AccountReference}` : '');
         const adminNotesCombined = [notes, finalRef].filter(Boolean).join(' | ') || 'Disbursed by Cashier';
+
+        // Calculate 5% Commission & Gross amounts
+        let grossAmount = parseFloat(w.BookingTotalAmount || 0);
+        if (!grossAmount || grossAmount <= 0) {
+            grossAmount = parseFloat((amt / 0.95).toFixed(2));
+        }
+        let commissionAmount = parseFloat((grossAmount * 0.05).toFixed(2));
+        if (Math.abs((grossAmount - commissionAmount) - amt) > 0.05) {
+            commissionAmount = parseFloat((grossAmount - amt).toFixed(2));
+        }
 
         // 2. Mark status as Approved / Processed
         await pool.request()
@@ -372,11 +395,43 @@ const approveWithdrawalRequest = async (req, res) => {
                 `);
         }
 
+        // 4. Send Official Email to Provider and Client
+        const targetClientEmail = w.ClientEmail || (w.ClientName && w.ClientName.includes('@') ? w.ClientName : null);
+        const recipients = [];
+        if (w.ProviderEmail && w.ProviderEmail.includes('@')) {
+            recipients.push({ email: w.ProviderEmail, name: w.BusinessName || 'Service Provider' });
+        }
+        if (targetClientEmail && targetClientEmail.includes('@') && targetClientEmail.toLowerCase() !== (w.ProviderEmail || '').toLowerCase()) {
+            recipients.push({ email: targetClientEmail, name: w.ClientName || 'Client' });
+        }
+
+        for (const r of recipients) {
+            try {
+                await emailService.sendPayoutDisbursedClientEmail({
+                    toEmail: r.email,
+                    clientName: r.name,
+                    providerName: w.BusinessName || 'Service Provider',
+                    bookingReference: w.BookingReference || `BK-${w.BookingID || w.WithdrawalID}`,
+                    packageName: w.PackageName || 'Lights & Sounds Service',
+                    grossAmount,
+                    commissionAmount,
+                    disbursedAmount: amt,
+                    payoutMethod: methodStr,
+                    referenceNumber: referenceNumber || w.AccountReference || `WDR-DISBURSED-${id}`,
+                    accountName: accName,
+                    accountNumber: accNum,
+                    withdrawalId: id
+                });
+            } catch (emailErr) {
+                console.warn('[Disburse Email Warning]: Failed sending to recipient:', emailErr.message);
+            }
+        }
+
         await logActivity(pool, cashierUserId, 'Withdrawal Disbursed by Cashier', `Cashier released ₱${amt.toFixed(2)} via ${methodStr} to ${accName} (${accNum}). ${adminNotesCombined}`, 'Withdrawal', id);
 
         return res.status(200).json({
             success: true,
-            message: `🎉 Payout #${id} of ₱${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} successfully disbursed to ${accName}!`
+            message: `🎉 Payout #${id} of ₱${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} successfully disbursed to ${accName}! Client has been notified via email.`
         });
     } catch (error) {
         console.error('Cashier Approve Withdrawal Error:', error);
@@ -1142,7 +1197,7 @@ const verifyWithdrawalPayMongo = async (req, res) => {
                     b.BookingStatus,
                     b.EventDate,
                     COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(cClient.FirstName, ' ', cClient.LastName))), ''), uClient.Email, 'Client') AS ClientName,
-                    uClient.Email AS ClientEmail,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientEmail)), ''), uClient.Email) AS ClientEmail,
                     uClient.Phone AS ClientPhone
                 FROM dbo.Withdrawals w
                 LEFT JOIN dbo.ServiceProviders sp ON (sp.ProviderID = w.ProviderID OR sp.UserID = w.ProviderID)

@@ -53,23 +53,26 @@ const createCheckoutSession = async ({
     if (clientEmail) billingObj.email = clientEmail;
     if (clientPhone) billingObj.phone = clientPhone;
 
+    const isBalance = (paymentType === 'balance');
+    const balanceQuery = isBalance ? `&action=settle_balance&amount=${encodeURIComponent(amount)}` : '';
+
     const payload = {
         data: {
             attributes: {
                 send_email_receipt: true,
                 show_description: true,
                 show_line_items: true,
-                description: `SoundSphere Booking (${bookingReference}) - ${paymentType === 'downpayment' ? '50% Down Payment' : '100% Full Payment'}`,
+                description: isBalance ? `SoundSphere Booking (${bookingReference}) - Balance Settlement` : `SoundSphere Booking (${bookingReference}) - ${paymentType === 'downpayment' ? '50% Down Payment' : '100% Full Payment'}`,
                 line_items: [
                     {
                         currency: 'PHP',
                         amount: amountInCents,
-                        name: `${packageName} (${paymentType === 'downpayment' ? '50% Down Payment' : '100% Full Payment'})`,
+                        name: isBalance ? `${packageName} (Remaining Balance Settlement)` : `${packageName} (${paymentType === 'downpayment' ? '50% Down Payment' : '100% Full Payment'})`,
                         quantity: 1
                     }
                 ],
                 payment_method_types: allowedPaymentTypes,
-                success_url: `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success`,
+                success_url: `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success${balanceQuery}`,
                 cancel_url: `${originHost}/booking.html?cancelled=1`,
                 ...(Object.keys(billingObj).length > 0 ? { billing: billingObj } : {}),
                 metadata: {
@@ -116,7 +119,7 @@ const createCheckoutSession = async ({
 
     // Fallback: Sandbox / Development Interactive Simulation Mode
     const simulatedSessionId = `cs_test_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    const simulatedCheckoutUrl = `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&session_id=${simulatedSessionId}&payment_status=success&simulated=1`;
+    const simulatedCheckoutUrl = `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&session_id=${simulatedSessionId}&payment_status=success${balanceQuery}&simulated=1`;
 
     return {
         success: true,

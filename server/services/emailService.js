@@ -354,10 +354,163 @@ const sendBalanceDueReminderEmail = async ({
     }
 };
 
+/**
+ * Send Payout Disbursement Confirmation Email to Client's Gmail
+ * @param {object} params
+ * @param {string} params.toEmail - Client email address
+ * @param {string} params.clientName - Full name of the client
+ * @param {string} params.providerName - Service provider / business name
+ * @param {string} params.bookingReference - Booking reference
+ * @param {string} params.packageName - Package name
+ * @param {number} params.grossAmount - Gross booking volume
+ * @param {number} params.commissionAmount - 5% platform commission
+ * @param {number} params.disbursedAmount - Net payout disbursed
+ * @param {string} params.payoutMethod - Channel disbursed via (e.g. GCash, Maya)
+ * @param {string} params.referenceNumber - Transaction reference number
+ * @param {string} params.accountName - Recipient account name
+ * @param {string} params.accountNumber - Recipient account number
+ * @param {string|number} params.withdrawalId - Withdrawal ID
+ * @returns {Promise<object>}
+ */
+const sendPayoutDisbursedClientEmail = async ({
+    toEmail,
+    clientName,
+    providerName,
+    bookingReference,
+    packageName,
+    grossAmount,
+    commissionAmount,
+    disbursedAmount,
+    payoutMethod,
+    referenceNumber,
+    accountName,
+    accountNumber,
+    withdrawalId
+}) => {
+    const formattedGross = parseFloat(grossAmount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedComm = parseFloat(commissionAmount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedNet = parseFloat(disbursedAmount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    console.log(`\n==================================================`);
+    console.log(` 📧 SENDING PAYOUT DISBURSEMENT NOTICE TO CLIENT GMAIL`);
+    console.log(` FROM: ${process.env.SMTP_USER}`);
+    console.log(` TO: ${toEmail} (${clientName || 'Client'})`);
+    console.log(` BOOKING REF: ${bookingReference} | WDR ID: #${withdrawalId}`);
+    console.log(` GROSS: ₱${formattedGross} | 5% COMM: -₱${formattedComm} | NET DISBURSED: ₱${formattedNet}`);
+    console.log(` METHOD: ${payoutMethod} | REF #: ${referenceNumber}`);
+    console.log(`==================================================\n`);
+
+    const mailOptions = {
+        from: {
+            name: 'SoundSphere Cashier Payments',
+            address: process.env.SMTP_USER
+        },
+        to: toEmail.trim().toLowerCase(),
+        replyTo: process.env.SMTP_USER,
+        subject: `✅ Payment Disbursed: Booking ${bookingReference || '#' + withdrawalId} - SoundSphere`,
+        text: `Hello ${clientName || 'Client'},\n\nWe would like to inform you that the provider payout for your booking (Reference: ${bookingReference || '#' + withdrawalId}) has been successfully disbursed by the SoundSphere Cashier.\n\nBooking Summary:\nService Provider: ${providerName || 'Service Provider'}\nPackage: ${packageName || 'Event Package'}\nGross Booking Volume: ₱${formattedGross}\nSoundSphere Platform Commission (5%): -₱${formattedComm}\nNet Disbursed Payout: ₱${formattedNet}\n\nDisbursement Details:\nPayment Method: ${payoutMethod || 'GCash / Bank Transfer'}\nAccount Name: ${accountName || 'Provider Account'}\nAccount Number: ${accountNumber || 'N/A'}\nTransaction Reference: ${referenceNumber || 'N/A'}\nDisbursed At: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}\n\nThank you for using SoundSphere for your event needs!\n\nRegards,\nSoundSphere Cashier & Finance Team`,
+        html: `
+            <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: #0a192f; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Sound<span style="color: #2563eb;">Sphere</span></h2>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 4px; font-weight: 500;">Official Cashier Disbursement Receipt & Notice</p>
+                </div>
+
+                <div style="border-top: 3px solid #10b981; padding-top: 24px;">
+                    <div style="display: inline-block; background: #ecfdf5; color: #047857; font-weight: 800; font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 1.5px solid #a7f3d0; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ✓ Payout Disbursed & Settled
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #0a192f; margin-top: 0;">Hello <strong>${clientName || 'Client'}</strong>,</p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                        This is an official confirmation from the <strong>SoundSphere Cashier</strong> that the provider earnings for your booking with <strong>${providerName || 'Service Provider'}</strong> have been successfully released and disbursed.
+                    </p>
+
+                    <!-- Financial & Commission Breakdown Card -->
+                    <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <h4 style="margin: 0 0 14px 0; color: #0a192f; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                            Financial & Commission Breakdown
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Booking Reference:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 800; font-family: monospace; text-align: right;">${bookingReference || ('#' + withdrawalId)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Service Package:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${packageName || 'Lights & Sounds Package'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Service Provider:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${providerName || 'Service Provider'}</td>
+                            </tr>
+                            <tr style="border-top: 1px solid #e2e8f0;">
+                                <td style="padding: 10px 0 6px 0; color: #475569; font-weight: 600;">Gross Booking Amount:</td>
+                                <td style="padding: 10px 0 6px 0; color: #0a192f; font-weight: 800; text-align: right;">₱${formattedGross}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; color: #d97706; font-weight: 700;">Platform Commission (5%):</td>
+                                <td style="padding: 6px 0; color: #d97706; font-weight: 800; text-align: right;">-₱${formattedComm}</td>
+                            </tr>
+                            <tr style="border-top: 1.5px dashed #cbd5e1;">
+                                <td style="padding: 12px 0 4px 0; color: #0a192f; font-weight: 800; font-size: 15px;">Net Disbursed to Provider:</td>
+                                <td style="padding: 12px 0 4px 0; color: #059669; font-weight: 900; font-size: 18px; text-align: right;">₱${formattedNet}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Payout Destination Details -->
+                    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 13px; font-weight: 800; text-transform: uppercase;">
+                            Disbursement Receipt Details
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Method / Channel:</td>
+                                <td style="padding: 4px 0; color: #0a192f; font-weight: 700; text-align: right;">${payoutMethod || 'GCash / Bank Transfer'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Recipient Account:</td>
+                                <td style="padding: 4px 0; color: #0a192f; font-weight: 700; text-align: right;">${accountName || '-'} (${accountNumber || '-'})</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Transaction Reference:</td>
+                                <td style="padding: 4px 0; color: #2563eb; font-weight: 800; font-family: monospace; text-align: right;">${referenceNumber || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Status:</td>
+                                <td style="padding: 4px 0; color: #059669; font-weight: 800; text-align: right;">COMPLETED</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p style="font-size: 13px; color: #64748b; line-height: 1.5; text-align: center; margin-top: 16px;">
+                        Thank you for coordinating through <strong>SoundSphere</strong>. Your reservation and provider compensation are fully completed.
+                    </p>
+                </div>
+
+                <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                    &copy; ${new Date().getFullYear()} SoundSphere Platform. All rights reserved.
+                </div>
+            </div>
+        `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(` REAL GMAIL PAYOUT DISBURSEMENT NOTICE SUCCESSFUL! Message ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error(' Gmail SMTP Payout Disbursement Notice Error:', error.message);
+        throw error;
+    }
+};
+
 module.exports = {
     sendOTPEmail,
     sendPasswordResetEmail,
     sendProviderAppOTPEmail,
-    sendBalanceDueReminderEmail
+    sendBalanceDueReminderEmail,
+    sendPayoutDisbursedClientEmail
 };
 

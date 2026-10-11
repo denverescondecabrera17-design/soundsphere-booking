@@ -519,60 +519,78 @@
             </div>
         </section>
 
-        <!-- Client Refund Payout Request Modal -->
-        <div id="modal-refund-request" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10,25,47,0.7); backdrop-filter:blur(4px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px;">
-            <div style="background:#ffffff; border-radius:18px; width:100%; max-width:480px; box-shadow:0 20px 40px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #e2e8f0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
-                    <h3 style="margin:0; font-size:1.15rem; font-weight:900; color:#0a192f; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-money-bill-transfer" style="color:#2563eb;"></i> Request Refund Payout
-                    </h3>
-                    <button type="button" id="close-refund-modal-btn" style="background:none; border:none; font-size:1.4rem; color:#64748b; cursor:pointer; line-height:1;">&times;</button>
-                </div>
-                <form id="form-refund-request" style="padding:22px 24px;">
-                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:0.84rem; color:#1e40af;">
-                        <i class="fa-solid fa-circle-info"></i> The Cashier will manually disburse your refund via your selected account and provide a payment reference number.
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <label style="font-size:0.84rem; font-weight:700; color:#334155;">Amount to Withdraw (₱)</label>
-                            <span style="font-size:0.78rem; font-weight:700; color:#2563eb; cursor:pointer;" id="btn-refund-max-amount">Max: <span id="lbl-refund-max-val">₱0.00</span></span>
-                        </div>
-                        <input type="number" step="0.01" id="refund-input-amount" class="form-control" style="height:44px; font-size:1.1rem; font-weight:800; color:#0a192f; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" required placeholder="0.00">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Payout Method</label>
-                        <select id="refund-select-method" class="form-select" style="height:42px; font-size:0.92rem; font-weight:600; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 12px; width:100%; box-sizing:border-box;" required>
-                            <option value="GCash">GCash E-Wallet</option>
-                            <option value="Maya">Maya Wallet</option>
-                            <option value="Bank Transfer">Bank Transfer (BDO / BPI / UnionBank / Landbank)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Account Holder Name</label>
-                        <input type="text" id="refund-input-name" class="form-control" style="height:42px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Denver Cabrera" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Account Number / Mobile Number</label>
-                        <input type="text" id="refund-input-number" class="form-control" style="height:42px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. 09516028992 or Bank Acc #" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:18px;">
-                        <label style="font-size:0.84rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Optional Notes to Cashier</label>
-                        <input type="text" id="refund-input-notes" class="form-control" style="height:40px; font-size:0.86rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Refund for cancelled booking">
-                    </div>
-
-                    <div style="display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" id="btn-cancel-refund-modal" style="height:42px; padding:0 18px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.88rem; cursor:pointer;">Cancel</button>
-                        <button type="submit" id="btn-submit-refund-req" style="height:42px; padding:0 22px; border-radius:8px; border:none; background:#2563eb; color:#ffffff; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                            <span>Submit to Cashier</span> <i class="fa-solid fa-paper-plane"></i>
+        <!-- Client Refund Payout Request Fullscreen View -->
+        <div id="modal-refund-request" class="refund-fullscreen-view hidden" role="region" aria-label="Request Refund Payout" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:99999; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; margin:0; padding:0;">
+            
+            <!-- Fullscreen Header Bar -->
+            <header style="position:sticky; top:0; z-index:100; background:#ffffff; border-bottom:1px solid #e2e8f0; padding:14px 28px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="max-width:860px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <button type="button" id="close-refund-modal-btn" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 16px; font-size:0.86rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                            <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
                         </button>
+                        <div style="height:28px; width:1px; background:#e2e8f0;"></div>
+                        <div>
+                            <h1 style="margin:0; font-size:1.22rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-money-bill-transfer" style="color:#2563eb;"></i> Request Refund Payout
+                            </h1>
+                            <p style="margin:2px 0 0 0; font-size:0.82rem; color:#64748b; line-height:1.3;">Withdraw available funds from your SoundSphere Refund Wallet.</p>
+                        </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </header>
+
+            <!-- Fullscreen Form Body -->
+            <main style="flex:1; max-width:640px; margin:32px auto 48px auto; width:100%; padding:0 20px; box-sizing:border-box;">
+                <div style="background:#ffffff; border-radius:18px; border:1px solid #e2e8f0; box-shadow:0 4px 20px rgba(0,0,0,0.05); overflow:hidden;">
+                    <form id="form-refund-request" style="padding:28px 28px;">
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px 16px; margin-bottom:20px; font-size:0.86rem; color:#1e40af; line-height:1.45;">
+                            <i class="fa-solid fa-circle-info"></i> The Cashier will manually disburse your refund via your selected account.
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-size:0.86rem; font-weight:700; color:#334155;">Amount to Withdraw (₱)</label>
+                                <span style="font-size:0.8rem; font-weight:700; color:#2563eb; cursor:pointer;" id="btn-refund-max-amount">Max: <span id="lbl-refund-max-val">₱0.00</span></span>
+                            </div>
+                            <input type="number" step="0.01" id="refund-input-amount" class="form-control" style="height:46px; font-size:1.15rem; font-weight:800; color:#0a192f; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" required placeholder="0.00">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:0.86rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Payout Method</label>
+                            <select id="refund-select-method" class="form-select" style="height:44px; font-size:0.95rem; font-weight:600; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 12px; width:100%; box-sizing:border-box;" required>
+                                <option value="GCash">GCash</option>
+                                <option value="Maya">Maya</option>
+                                <option value="BDO">BDO</option>
+                                <option value="BPI">BPI</option>
+                                <option value="PNB">PNB</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:0.86rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Account Holder Name *</label>
+                            <input type="text" id="refund-input-name" class="form-control" style="height:44px; font-size:0.95rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Denver Cabrera" required>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label id="refund-label-account-number" style="font-size:0.86rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">GCash Mobile Number *</label>
+                            <input type="text" id="refund-input-number" class="form-control" style="height:44px; font-size:0.95rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. 09516028992" required>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:24px;">
+                            <label style="font-size:0.86rem; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Optional Notes to Cashier</label>
+                            <input type="text" id="refund-input-notes" class="form-control" style="height:42px; font-size:0.9rem; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 14px; width:100%; box-sizing:border-box;" placeholder="e.g. Refund for cancelled booking">
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:14px; border-top:1px solid #f1f5f9;">
+                            <button type="button" id="btn-cancel-refund-modal" style="height:44px; padding:0 22px; border-radius:10px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.9rem; cursor:pointer;">Cancel</button>
+                            <button type="submit" id="btn-submit-refund-req" style="height:44px; padding:0 26px; border-radius:10px; border:none; background:#2563eb; color:#ffffff; font-weight:800; font-size:0.95rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(37,99,235,0.35);">
+                                <span>Submit to Cashier</span> <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </main>
         </div>
 
     </main>

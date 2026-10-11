@@ -857,6 +857,15 @@ const cancelBooking = async (req, res) => {
                     bookingReference: booking.BookingReference,
                     reason: `Automatic refund for booking cancelled by service provider (${booking.PackageName || 'Event Service'})`
                 });
+
+                // Update booking payment status to Refunded and clear remaining balance
+                await pool.request()
+                    .input('BID', id)
+                    .query(`
+                        UPDATE dbo.Bookings 
+                        SET PaymentStatus = 'Refunded', RemainingBalance = 0, UpdatedAt = GETDATE()
+                        WHERE BookingID = @BID;
+                    `);
             } catch (wErr) {
                 console.error('Wallet refund on provider cancel notice:', wErr);
             }

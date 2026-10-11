@@ -24,7 +24,7 @@
     <!-- Navigation Header -->
     <header class="marketplace-navbar">
         <div class="nav-container">
-            <a href="marketplace.html" class="nav-brand">
+            <a href="/index.html" class="nav-brand">
                 <i class="fa-solid fa-compact-disc"></i>
                 <div>
                     SoundSphere
@@ -33,13 +33,19 @@
             </a>
 
             <div class="nav-actions">
-                <a href="marketplace.html" class="nav-action-btn" title="Back to Marketplace">
+                <a href="/index.html" class="nav-action-btn" id="btn-back-marketplace" title="Back to Main Landing Page">
                     <i class="fa-solid fa-arrow-left"></i>
                     <span>Back</span>
                 </a>
 
-                <!-- User Avatar Menu with Logout Dropdown -->
-                <div class="user-avatar-menu">
+                <!-- Unauthenticated Guest Auth Buttons (Login & Sign Up) -->
+                <div id="guest-auth-buttons" class="header-actions" style="display:flex; align-items:center; gap:10px;">
+                    <a href="/login.html" class="btn-auth-outline" style="padding: 7px 16px; border: 1px solid #60a5fa; color: #60a5fa; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Login</a>
+                    <a href="/register.html" class="btn-auth-solid" style="padding: 7px 16px; background: #2563eb; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Sign Up</a>
+                </div>
+
+                <!-- User Avatar Menu with Logout Dropdown (Authenticated Users Only) -->
+                <div class="user-avatar-menu" id="auth-user-menu" style="display:none;">
                     <div class="avatar-btn" id="avatar-btn">
                         <div class="avatar-img" id="user-avatar-initials">UA</div>
                         <span class="avatar-name" id="user-display-name">User Account</span>
@@ -48,8 +54,8 @@
 
                     <div class="user-dropdown" id="user-dropdown">
                         <div class="dropdown-header">
-                            <div class="user-title">Event Client Account</div>
-                            <div class="user-role">Verified Client</div>
+                            <div class="user-title" id="dropdown-user-title">Event Client Account</div>
+                            <div class="user-role" id="dropdown-user-role">Verified Client</div>
                         </div>
                         <a href="#" id="logout-btn" class="dropdown-item logout-item">
                             <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
@@ -59,6 +65,28 @@
             </div>
         </div>
     </header>
+
+    <!-- Immediate Contextual Back/Brand Link Setup -->
+    <script>
+        (function() {
+            try {
+                var tok = localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || localStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token');
+                var raw = localStorage.getItem('soundsphere_user') || sessionStorage.getItem('soundsphere_user') || localStorage.getItem('soundsphere_user_info');
+                var usr = raw ? JSON.parse(raw) : null;
+                var target = '/index.html';
+                if (tok && usr) {
+                    var role = (usr.role || usr.RoleName || usr.roleName || '').toLowerCase();
+                    target = (role === 'provider' || role === 'serviceprovider') ? '/provider/dashboard.html' :
+                             (role === 'admin' || role === 'administrator') ? '/admin/dashboard.html' :
+                             (role === 'cashier') ? '/cashier/dashboard.html' : '/marketplace.html';
+                }
+                var backBtn = document.getElementById('btn-back-marketplace');
+                var brandLink = document.querySelector('.nav-brand');
+                if (backBtn) backBtn.setAttribute('href', target);
+                if (brandLink) brandLink.setAttribute('href', target);
+            } catch(e) {}
+        })();
+    </script>
 
     <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
     <section class="provider-profile-header-clean">

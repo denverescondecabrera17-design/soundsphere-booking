@@ -898,6 +898,15 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
                 bookingReference: booking.BookingReference,
                 reason: `Automatic refund for booking cancelled by client (${booking.PackageName || 'Event Service'})`
             });
+
+            // Update booking payment status to Refunded and clear remaining balance
+            await pool.request()
+                .input('BookingID', sql.Int, bookingId)
+                .query(`
+                    UPDATE dbo.Bookings 
+                    SET PaymentStatus = 'Refunded', RemainingBalance = 0, UpdatedAt = GETDATE()
+                    WHERE BookingID = @BookingID;
+                `);
         } catch (rfErr) {
             console.error('Wallet refund on client cancel notice:', rfErr);
         }
@@ -914,6 +923,96 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
         refundAmount,
         walletCredited: !!(refundResult && refundResult.credited)
     };
+};
+
+/**
+ * Settle the remaining balance of a booking
+ * Sets AmountPaid to TotalAmount, RemainingBalance to 0, PaymentStatus to 'Paid'
+ */
+const settleRemainingBalance = async ({ bookingId, bookingReference, amount, paymentMethod, transactionReference }) => {
+    const pool = getPool();
+    if (!pool) throw new Error('Database connection pool not available.');
+
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+        let req = transaction.request();
+        let queryStr = `SELECT BookingID, BookingReference, TotalAmount, AmountPaid, RemainingBalance, PaymentStatus FROM dbo.Bookings WHERE `;
+        if (bookingId) {
+            req.input('BookingID', sql.Int, bookingId);
+            queryStr += `BookingID = @BookingID;`;
+        } else if (bookingReference) {
+            req.input('BookingReference', sql.NVarChar(50), bookingReference);
+            queryStr += `BookingReference = @BookingReference;`;
+        } else {
+            throw new Error('BookingID or BookingReference is required.');
+        }
+
+        const bRes = await req.query(queryStr);
+        if (!bRes.recordset || bRes.recordset.length === 0) {
+            await transaction.rollback();
+            return { success: false, message: 'Booking not found.' };
+        }
+
+        const booking = bRes.recordset[0];
+        const total = parseFloat(booking.TotalAmount || 0);
+        const currentPaid = parseFloat(booking.AmountPaid || 0);
+        const currentRemaining = parseFloat(booking.RemainingBalance !== undefined && booking.RemainingBalance !== null ? booking.RemainingBalance : (total - currentPaid));
+        const paymentAmount = amount !== undefined && amount !== null && parseFloat(amount) > 0 ? parseFloat(amount) : currentRemaining;
+
+        const newAmountPaid = Math.min(total, currentPaid + paymentAmount);
+        const newRemaining = Math.max(0, total - newAmountPaid);
+        const newPaymentStatus = newRemaining <= 0 ? 'Paid' : 'Partial';
+
+        const updateReq = transaction.request()
+            .input('BID', sql.Int, booking.BookingID)
+            .input('AmountPaid', sql.Decimal(18, 2), newAmountPaid)
+            .input('RemainingBalance', sql.Decimal(18, 2), newRemaining)
+            .input('PaymentStatus', sql.NVarChar(30), newPaymentStatus)
+            .input('PaymentType', sql.NVarChar(30), newRemaining <= 0 ? 'full' : 'downpayment');
+
+        await updateReq.query(`
+            UPDATE dbo.Bookings
+            SET AmountPaid = @AmountPaid,
+                RemainingBalance = @RemainingBalance,
+                PaymentStatus = @PaymentStatus,
+                PaymentType = @PaymentType,
+                UpdatedAt = GETDATE()
+            WHERE BookingID = @BID;
+        `);
+
+        // Insert payment record into dbo.Payments
+        const payReq = transaction.request()
+            .input('BID', sql.Int, booking.BookingID)
+            .input('Amount', sql.Decimal(18, 2), paymentAmount)
+            .input('PaymentMethod', sql.NVarChar(50), paymentMethod || 'PayMongo')
+            .input('PaymentStatus', sql.NVarChar(20), 'Paid')
+            .input('TransactionReference', sql.NVarChar(100), transactionReference || `BAL-${booking.BookingReference}-${Date.now()}`);
+
+        await payReq.query(`
+            INSERT INTO dbo.Payments
+            (BookingID, Amount, PaymentMethod, PaymentStatus, TransactionReference, PaidAt, CreatedAt)
+            VALUES
+            (@BID, @Amount, @PaymentMethod, @PaymentStatus, @TransactionReference, GETDATE(), GETDATE());
+        `);
+
+        await transaction.commit();
+
+        return {
+            success: true,
+            message: 'Booking balance settled successfully. Status updated to Paid.',
+            bookingId: booking.BookingID,
+            bookingReference: booking.BookingReference,
+            totalAmount: total,
+            amountPaid: newAmountPaid,
+            remainingBalance: newRemaining,
+            paymentStatus: newPaymentStatus
+        };
+    } catch (err) {
+        await transaction.rollback();
+        throw err;
+    }
 };
 
 module.exports = {
@@ -934,5 +1033,6 @@ module.exports = {
     getBookingsByProviderUserId,
     createReview,
     getReviewsByUserId,
-    cancelBookingByClient
+    cancelBookingByClient,
+    settleRemainingBalance
 };

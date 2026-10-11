@@ -8,7 +8,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { connectDB } = require('./server/config/db');
+const { connectDB, getLastConnectError } = require('./server/config/db');
 const authRoutes = require('./server/routes/authRoutes');
 const providerAppRoutes = require('./server/routes/providerAppRoutes');
 const adminRoutes = require('./server/routes/adminRoutes');
@@ -34,6 +34,17 @@ app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serverless (Vercel): make sure the DB pool is connected before any API route runs.
+// On a cold start the pool is empty, and controllers using getPool() would get null.
+app.use('/api', async (req, res, next) => {
+    try {
+        await connectDB();
+    } catch (err) {
+        console.error('DB connect middleware error:', err.message);
+    }
+    next();
+});
 
 // Serve Client Static Frontend Assets
 app.use(express.static(path.join(__dirname, 'client'), { etag: false, maxAge: 0 }));
@@ -83,6 +94,8 @@ app.get('/api/health', async (req, res) => {
             dbStatus = 'Connected';
         } else if (pool) {
             dbStatus = 'Pool initialized (Connecting)';
+        } else {
+            dbError = getLastConnectError();
         }
     } catch (err) {
         dbError = err.message;
@@ -186,5 +199,10 @@ const startServer = async () => {
     });
 };
 
-startServer();
+// On Vercel the app is imported as a serverless function (no app.listen needed).
+if (!process.env.VERCEL) {
+    startServer();
+}
+
+module.exports = app;
 

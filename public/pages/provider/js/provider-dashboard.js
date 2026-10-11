@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return { icon: 'fa-comments', color: '#0284c7', bg: '#e0f2fe', target: '#messages-section', label: 'Open Chat' };
                     }
                     if (text.includes('payout') || text.includes('withdrawal') || text.includes('wallet') || text.includes('paid')) {
-                        return { icon: 'fa-wallet', color: '#10b981', bg: '#ecfdf5', target: '#withdrawals-section', label: 'View Payout' };
+                        return { icon: 'fa-calendar-check', color: '#10b981', bg: '#ecfdf5', target: '#bookings-section', label: 'View Bookings' };
                     }
                     if (text.includes('review') || text.includes('rating') || text.includes('feedback')) {
                         return { icon: 'fa-star', color: '#f59e0b', bg: '#fffbeb', target: '#reviews-section', label: 'View Review' };
@@ -546,8 +546,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.hash = '#messages-section';
             switchProviderView('#messages-section');
         } else if (str.includes('payout') || str.includes('withdrawal') || str.includes('wallet')) {
-            window.location.hash = '#withdrawals-section';
-            switchProviderView('#withdrawals-section');
+            window.location.hash = '#bookings-section';
+            switchProviderView('#bookings-section');
         } else if (str.includes('review') || str.includes('rating') || str.includes('feedback')) {
             window.location.hash = '#reviews-section';
             switchProviderView('#reviews-section');
@@ -651,7 +651,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadProviderCalendarSchedule();
         }
         else if (cleanHash === 'profile-section' || cleanHash === 'view-provider-profile') targetViewId = 'view-provider-profile';
-        else if (cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') targetViewId = 'view-provider-withdrawals';
+        else if (cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') {
+            targetViewId = 'view-provider-bookings';
+            window.location.hash = '#bookings-section';
+        }
         else if (cleanHash === 'reviews-section' || cleanHash === 'view-provider-reviews') targetViewId = 'view-provider-reviews';
         else if (cleanHash === 'messages-section' || cleanHash === 'view-provider-messages') {
             targetViewId = 'view-provider-messages';
@@ -761,6 +764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Withdrawal Data & Modal Submission Engine
     // ------------------------------------------------------------------------
     const loadWithdrawalsData = async () => {
+        if (!document.getElementById('table-provider-withdrawals-list')) return;
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch('/api/providers/withdrawals/list', { headers });
@@ -814,150 +818,104 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Open Request Withdrawal Modal
-    const btnRequestWithdrawalModal = document.getElementById('btn-request-withdrawal-modal');
-    const modalRequestWithdrawal = document.getElementById('modal-request-withdrawal');
-    const btnCloseRequestWithdrawal = document.getElementById('btn-close-request-withdrawal');
-    const btnCancelRequestWithdrawal = document.getElementById('btn-cancel-request-withdrawal');
-    const formRequestWithdrawal = document.getElementById('form-request-withdrawal');
+    // ------------------------------------------------------------------------
+    // Booking Withdrawal Request Modal Logic
+    // ------------------------------------------------------------------------
+    window.openBookingWithdrawalModal = (bookingId, totalAmount, bookingRef) => {
+        const modal = document.getElementById('modal-booking-withdrawal');
+        if (!modal) return;
 
-    // Payout Method Card Click Handlers
-    const payoutCards = document.querySelectorAll('#payout-method-cards-container .payout-card');
-    const inputWithdrawalMethod = document.getElementById('input-withdrawal-method');
-    const inputAccountRef = document.getElementById('input-withdrawal-account-ref');
-
-    payoutCards.forEach(card => {
-        card.addEventListener('click', () => {
-            payoutCards.forEach(c => {
-                c.style.border = '1.5px solid #cbd5e1';
-                c.style.background = '#ffffff';
-                c.classList.remove('active-payout-card');
-            });
-
-            card.style.border = '2.5px solid #2563eb';
-            card.style.background = '#f0f7ff';
-            card.classList.add('active-payout-card');
-
-            const selectedMethod = card.getAttribute('data-method');
-            if (inputWithdrawalMethod) inputWithdrawalMethod.value = selectedMethod;
-
-            if (inputAccountRef) {
-                if (selectedMethod.includes('E-Wallet')) {
-                    inputAccountRef.placeholder = 'e.g. 09171234567 (GCash / Maya Mobile No.)';
-                } else if (selectedMethod.includes('Card')) {
-                    inputAccountRef.placeholder = 'e.g. Card Account / Reference No.';
-                } else {
-                    inputAccountRef.placeholder = 'e.g. 10-digit Bank Account No. (BDO/BPI/UB)';
-                }
-            }
-        });
-    });
-
-    const openWithdrawalModal = async (targetAmount = null) => {
-        if (!modalRequestWithdrawal) return;
-        const availEl = document.getElementById('val-available-balance');
-        let availText = availEl?.textContent || '₱0.00';
-        if (targetAmount !== null && targetAmount > 0) {
-            availText = `₱${targetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
-        const modalAvail = document.getElementById('modal-withdrawal-avail-balance');
-        if (modalAvail) modalAvail.textContent = availText;
-
-        modalRequestWithdrawal.classList.remove('hidden');
-    };
-
-    if (btnRequestWithdrawalModal) {
-        btnRequestWithdrawalModal.addEventListener('click', () => {
-            const breakdownBox = document.getElementById('modal-withdrawal-breakdown-box');
-            if (breakdownBox) breakdownBox.style.display = 'none';
-            const inputBookingId = document.getElementById('input-withdrawal-booking-id');
-            if (inputBookingId) inputBookingId.value = '';
-            const inputAmount = document.getElementById('input-withdrawal-amount');
-            if (inputAmount) {
-                inputAmount.readOnly = false;
-                inputAmount.style.background = '#ffffff';
-                inputAmount.style.cursor = 'text';
-            }
-            openWithdrawalModal();
-        });
-    }
-
-    window.triggerRequestWithdrawFromBooking = (bookingId, rawTotalAmount) => {
-        const total = parseFloat(rawTotalAmount || 0);
+        const total = parseFloat(totalAmount || 0);
         const fee = total * 0.05;
         const net = total * 0.95;
 
-        openWithdrawalModal(net);
+        const idInput = document.getElementById('input-bw-booking-id');
+        const netInput = document.getElementById('input-bw-net-amount');
+        const refDisplay = document.getElementById('bw-booking-ref');
+        const totDisplay = document.getElementById('bw-total-amount');
+        const feeDisplay = document.getElementById('bw-commission-amount');
+        const netDisplay = document.getElementById('bw-net-display');
 
-        const breakdownBox = document.getElementById('modal-withdrawal-breakdown-box');
-        const inputBookingId = document.getElementById('input-withdrawal-booking-id');
-        const wbBookingId = document.getElementById('wb-booking-id');
-        const wbServiceAmount = document.getElementById('wb-service-amount');
-        const wbFeeAmount = document.getElementById('wb-fee-amount');
-        const wbNetAmount = document.getElementById('wb-net-amount');
-        const inputAmount = document.getElementById('input-withdrawal-amount');
+        if (idInput) idInput.value = bookingId || '';
+        if (netInput) netInput.value = net.toFixed(2);
+        if (refDisplay) refDisplay.textContent = bookingRef || `#BK-${bookingId}`;
+        if (totDisplay) totDisplay.textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (feeDisplay) feeDisplay.textContent = `-₱${fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (netDisplay) netDisplay.textContent = `₱${net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-        if (inputBookingId) inputBookingId.value = bookingId || '';
-        if (breakdownBox) breakdownBox.style.display = 'block';
-        if (wbBookingId) wbBookingId.textContent = `#BK-${bookingId}`;
-        if (wbServiceAmount) wbServiceAmount.textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (wbFeeAmount) wbFeeAmount.textContent = `-₱${fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (wbNetAmount) wbNetAmount.textContent = `₱${net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-        if (inputAmount) {
-            inputAmount.value = net.toFixed(2);
-            inputAmount.readOnly = true;
-            inputAmount.style.background = '#f8fafc';
-            inputAmount.style.color = '#0a192f';
-            inputAmount.style.cursor = 'not-allowed';
-            inputAmount.style.fontWeight = '800';
-        }
+        modal.classList.remove('hidden');
     };
 
-    if (btnCloseRequestWithdrawal && modalRequestWithdrawal) {
-        btnCloseRequestWithdrawal.addEventListener('click', () => modalRequestWithdrawal.classList.add('hidden'));
-    }
+    window.triggerRequestWithdrawFromBooking = window.openBookingWithdrawalModal;
 
-    if (btnCancelRequestWithdrawal && modalRequestWithdrawal) {
-        btnCancelRequestWithdrawal.addEventListener('click', () => modalRequestWithdrawal.classList.add('hidden'));
-    }
+    document.getElementById('btn-close-booking-withdrawal')?.addEventListener('click', () => {
+        document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-booking-withdrawal')?.addEventListener('click', () => {
+        document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
+    });
 
-    // Submit Request Withdrawal Form
-    if (formRequestWithdrawal) {
-        formRequestWithdrawal.addEventListener('submit', async (e) => {
+    const formBookingWithdrawal = document.getElementById('form-booking-withdrawal');
+    if (formBookingWithdrawal) {
+        formBookingWithdrawal.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const amount = document.getElementById('input-withdrawal-amount')?.value;
-            const bookingId = document.getElementById('input-withdrawal-booking-id')?.value;
-            const payoutMethod = document.getElementById('input-withdrawal-method')?.value;
-            const accountName = document.getElementById('input-withdrawal-account-name')?.value;
-            const accountReference = document.getElementById('input-withdrawal-account-ref')?.value;
+            const bookingId = document.getElementById('input-bw-booking-id')?.value;
+            const amount = document.getElementById('input-bw-net-amount')?.value;
+            const payoutMethod = document.getElementById('input-bw-method')?.value;
+            const accountName = document.getElementById('input-bw-account-name')?.value?.trim();
+            const accountReference = document.getElementById('input-bw-account-ref')?.value?.trim();
 
-            if (!amount || parseFloat(amount) <= 0) {
-                showToast('Please enter a valid withdrawal amount.', 'error');
+            if (!accountReference) {
+                alert('Please enter your account / mobile number.');
                 return;
             }
 
+            const submitBtn = document.getElementById('btn-submit-booking-withdrawal');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+            }
+
             try {
-                const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+                const authToken = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token') || localStorage.getItem('soundsphere_auth_token'));
+                const headers = { 'Content-Type': 'application/json' };
+                if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
                 const res = await fetch('/api/providers/withdrawals/create', {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify({ amount, bookingId, payoutMethod, accountName, accountReference })
+                    body: JSON.stringify({
+                        bookingId,
+                        amount,
+                        payoutMethod,
+                        accountName,
+                        accountReference
+                    })
                 });
-
                 const data = await res.json();
+
                 if (res.ok && data.success) {
-                    showToast(data.message || 'Withdrawal request submitted successfully!', 'success');
-                    modalRequestWithdrawal.classList.add('hidden');
-                    formRequestWithdrawal.reset();
-                    const inputBookingId = document.getElementById('input-withdrawal-booking-id');
-                    if (inputBookingId) inputBookingId.value = '';
-                    loadWithdrawalsData();
+                    if (typeof showToast === 'function') {
+                        showToast(data.message || 'Withdrawal request submitted! Sent to Cashier.', 'success');
+                    } else {
+                        alert(data.message || 'Withdrawal request submitted successfully! It has been routed to the Cashier for disbursement.');
+                    }
+                    document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
+                    formBookingWithdrawal.reset();
+                    if (typeof loadDashboardData === 'function') {
+                        await loadDashboardData();
+                    }
                 } else {
-                    showToast(data.message || 'Failed to submit withdrawal request.', 'error');
+                    alert(data.message || 'Failed to submit withdrawal request.');
                 }
             } catch (err) {
-                showToast('Network error submitting withdrawal request.', 'error');
+                console.error('Withdrawal error:', err);
+                alert('An error occurred while submitting the withdrawal request.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Request`;
+                }
             }
         });
     }
@@ -1136,7 +1094,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             } else if (statusLower === 'completed') {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#10b981;">Completed</span>`;
+                const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
+                if (wdStatus === 'pending') {
+                    actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:4px 8px; border-radius:6px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-clock"></i> Payout Requested</span>`;
+                } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
+                    actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:4px 8px; border-radius:6px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-circle-check"></i> Paid &amp; Sent</span>`;
+                } else {
+                    actionButtonsHtml = `<button type="button" onclick="event.stopPropagation(); window.openBookingWithdrawalModal(${b.BookingID}, ${b.TotalAmount || 0}, '${b.BookingReference || ('BK-' + b.BookingID)}')" style="padding:5px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-hand-holding-dollar"></i> Request Withdrawal</button>`;
+                }
             } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
                 actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#94a3b8;">Cancelled</span>`;
             } else {
@@ -1198,21 +1163,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             } else if (statusLower === 'completed') {
                 const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
-                let withdrawButtonHtml = '';
                 if (wdStatus === 'pending') {
-                    withdrawButtonHtml = `<span style="font-size:0.84rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:6px 12px; border-radius:8px; white-space:nowrap;">Payout Requested</span>`;
+                    actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:7px 14px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-clock"></i> Payout Requested</span>`;
                 } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
-                    withdrawButtonHtml = `<span style="font-size:0.84rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:6px 12px; border-radius:8px; white-space:nowrap;">Paid &amp; Sent</span>`;
+                    actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:7px 14px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-check"></i> Paid &amp; Sent</span>`;
                 } else {
-                    withdrawButtonHtml = `<button type="button" onclick="event.stopPropagation(); window.triggerRequestWithdrawFromBooking(${b.BookingID}, ${b.TotalAmount || 0})" style="padding:8px 14px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.2); white-space:nowrap;">Request Payout</button>`;
+                    actionButtonsHtml = `
+                        <button type="button" onclick="event.stopPropagation(); window.openBookingWithdrawalModal(${b.BookingID}, ${b.TotalAmount || 0}, '${b.BookingReference || ('BK-' + b.BookingID)}')" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.25); white-space:nowrap; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                            <i class="fa-solid fa-hand-holding-dollar"></i> Request Withdrawal
+                        </button>
+                    `;
                 }
-
-                actionButtonsHtml = `
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:nowrap;">
-                        <span style="font-size:0.88rem; font-weight:700; color:#10b981; white-space:nowrap;">Completed</span>
-                        ${withdrawButtonHtml}
-                    </div>
-                `;
             } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
                 actionButtonsHtml = `<span style="font-size:0.88rem; font-weight:700; color:#94a3b8; white-space:nowrap;">Cancelled</span>`;
             } else {
@@ -1500,8 +1461,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
             } else if (statusLower === 'completed') {
+                const wdStatus = (booking.WithdrawalStatus || '').toLowerCase();
+                let withdrawButtonHtml = '';
+                if (wdStatus === 'pending') {
+                    withdrawButtonHtml = `<span style="font-size:0.88rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-clock"></i> Payout Requested</span>`;
+                } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
+                    withdrawButtonHtml = `<span style="font-size:0.88rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-check"></i> Paid &amp; Sent</span>`;
+                } else {
+                    withdrawButtonHtml = `<button type="button" onclick="${hideFullscreen} window.openBookingWithdrawalModal(${booking.BookingID}, ${booking.TotalAmount || 0}, '${booking.BookingReference || ('BK-' + booking.BookingID)}')" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px;"><i class="fa-solid fa-hand-holding-dollar"></i> Request Withdrawal</button>`;
+                }
+
                 actionsContainer.innerHTML = `
-                    <button type="button" onclick="${hideFullscreen} window.triggerRequestWithdrawFromBooking(${booking.BookingID}, ${booking.TotalAmount || 0})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Request Payout</button>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:0.92rem; font-weight:700; color:#10b981; display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-circle-check"></i> Booking Completed
+                        </span>
+                        ${withdrawButtonHtml}
+                    </div>
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
             } else {

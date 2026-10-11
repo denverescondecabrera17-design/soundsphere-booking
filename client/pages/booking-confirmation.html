@@ -120,7 +120,7 @@
     <header class="platform-navbar" style="height: 64px; background: #0a192f; border-bottom: 1px solid rgba(255,255,255,0.08);">
         <div class="platform-nav-container" style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 100%; box-sizing: border-box;">
             <div class="brand-logo">
-                <a href="marketplace.html" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:#ffffff;">
+                <a href="/index.html" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:#ffffff;">
                     <i class="fa-solid fa-compact-disc" style="font-size: 1.6rem; color: #38bdf8;"></i>
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size: 1.2rem; font-weight: 800; letter-spacing:-0.02em; color:#ffffff; line-height:1.2;">SoundSphere</span>
@@ -130,7 +130,7 @@
             </div>
 
             <div class="nav-actions">
-                <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='marketplace.html'; }" class="topbar-back-btn" title="Go back to previous page">
+                <button type="button" onclick="sessionStorage.setItem('soundsphere_active_view', 'profile'); window.location.href='/marketplace.html#profile';" class="topbar-back-btn" title="Go to Me / Profile">
                     <i class="fa-solid fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -209,6 +209,15 @@
                 </tr>
             </table>
 
+            <div style="margin-top: 28px; display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+                <a href="/marketplace.html#balances" style="padding: 12px 24px; background: #2563eb; color: #ffffff; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 0.92rem; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                    <i class="fa-solid fa-wallet"></i> View Payment Balances
+                </a>
+                <a href="/marketplace.html#profile" style="padding: 12px 24px; border: 1.5px solid #cbd5e1; color: #0a192f; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 0.92rem; display:inline-flex; align-items:center; gap:8px; background:#ffffff;">
+                    <i class="fa-solid fa-calendar-check"></i> My Bookings
+                </a>
+            </div>
+
         </div>
     </main>
 
@@ -218,6 +227,31 @@
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref') || '';
             const bookingId = urlParams.get('id');
+
+            // Settle balance in DB ONLY IF returning from an explicit balance payment action
+            const paymentStatusParam = urlParams.get('payment_status');
+            const actionParam = urlParams.get('action');
+            if (paymentStatusParam === 'success' && actionParam === 'settle_balance' && (refCode || bookingId)) {
+                try {
+                    const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token'));
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                    await fetch('/api/bookings/settle-balance', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            bookingReference: refCode,
+                            bookingId: bookingId,
+                            amount: urlParams.get('amount') || null,
+                            sessionId: urlParams.get('session_id') || null,
+                            paymentMethod: 'PayMongo'
+                        })
+                    });
+                } catch (settleErr) {
+                    console.warn('Auto-settle balance notice:', settleErr);
+                }
+            }
 
             const confirmRefCode = document.getElementById('confirm-ref-code');
             const confirmProviderName = document.getElementById('confirm-provider-name');
@@ -290,14 +324,15 @@
                 }
                 if (confirmTotalPrice) confirmTotalPrice.textContent = formatMoney(totalPrice);
 
-                const isDownpayment = (b.PaymentType === 'downpayment' || b.paymentType === 'downpayment' || !b.PaymentType);
-                if (confirmPaymentType) confirmPaymentType.textContent = isDownpayment ? '50% Down Payment' : '100% Full Payment';
+                const remVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : 0);
+                const isFullyPaid = (remVal <= 0 || b.PaymentStatus === 'Paid' || b.PaymentType === 'full');
+                const isDownpayment = (!isFullyPaid && (b.PaymentType === 'downpayment' || b.paymentType === 'downpayment'));
+                if (confirmPaymentType) confirmPaymentType.textContent = isFullyPaid ? '100% Full Payment (Settled)' : (isDownpayment ? '50% Down Payment' : '100% Full Payment');
 
-                const paidVal = parseFloat(b.AmountPaid !== undefined ? b.AmountPaid : (isDownpayment ? totalPrice * 0.5 : totalPrice));
+                const paidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (isFullyPaid ? totalPrice : (isDownpayment ? totalPrice * 0.5 : totalPrice)));
                 if (confirmAmountPaid) confirmAmountPaid.textContent = formatMoney(paidVal);
 
                 if (confirmRemainingBalance) {
-                    const remVal = parseFloat(b.RemainingBalance !== undefined ? b.RemainingBalance : (totalPrice - paidVal));
                     let overdueText = '';
                     const sDate = b.ServiceStartDate || b.EventDate;
                     if (sDate && remVal > 0) {

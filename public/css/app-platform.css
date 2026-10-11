@@ -1145,15 +1145,19 @@ p {
 .provider-fullscreen-app.hidden,
 #modal-provider-application.hidden,
 .pkg-fullscreen-view.hidden,
-#modal-package-detail.hidden {
+#modal-package-detail.hidden,
+.refund-fullscreen-view.hidden,
+#modal-refund-request.hidden {
     display: none !important;
 }
 
 /* ==========================================================================
-   FULLSCREEN SERVICE PROVIDER APPLICATION VIEW
+   FULLSCREEN SERVICE PROVIDER & REFUND PAYOUT APPLICATION VIEWS
    ========================================================================== */
 .provider-fullscreen-app,
-#modal-provider-application {
+#modal-provider-application,
+.refund-fullscreen-view,
+#modal-refund-request {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;

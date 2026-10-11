@@ -48,7 +48,59 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    // User Session & Avatar Menu
+    // 0. Contextual Landing Page Detection
+    const getLandingPageUrl = () => {
+        const tok = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+            ? SoundSphereAPI.getAuthToken() 
+            : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || localStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token'));
+        const usr = (typeof SoundSphereAPI !== 'undefined' && (SoundSphereAPI.getAuthUser || SoundSphereAPI.getCurrentUser)) 
+            ? (SoundSphereAPI.getAuthUser ? SoundSphereAPI.getAuthUser() : SoundSphereAPI.getCurrentUser()) 
+            : (() => {
+                const u = localStorage.getItem('soundsphere_user') || sessionStorage.getItem('soundsphere_user') || localStorage.getItem('soundsphere_user_info');
+                try { return u ? JSON.parse(u) : null; } catch(e) { return null; }
+            })();
+
+        if (tok && usr) {
+            // User has an account and is logged in -> direct to the landing page when user logs in
+            const role = (usr.role || usr.RoleName || usr.roleName || '').toLowerCase();
+            if (role === 'provider' || role === 'serviceprovider') {
+                return '/provider/dashboard.html';
+            } else if (role === 'admin' || role === 'administrator') {
+                return '/admin/dashboard.html';
+            } else if (role === 'cashier') {
+                return '/cashier/dashboard.html';
+            }
+            // Standard client account landing page
+            return '/marketplace.html';
+        }
+        // Guest user without an account / not logged in -> main public landing page
+        return '/index.html';
+    };
+
+    const targetLandingUrl = getLandingPageUrl();
+
+    // Back Button Handler & Navigation Brand Link - Contextual Landing Page
+    const backBtn = document.getElementById('btn-back-marketplace') || document.querySelector('.nav-action-btn[title*="Back"]');
+    if (backBtn) {
+        backBtn.setAttribute('href', targetLandingUrl);
+        backBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = getLandingPageUrl();
+        });
+    }
+
+    const brandLink = document.querySelector('.nav-brand');
+    if (brandLink) {
+        brandLink.setAttribute('href', targetLandingUrl);
+        brandLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = getLandingPageUrl();
+        });
+    }
+
+    // 1. User Session & Navigation Auth State Recognition
+    const guestAuthBtns = document.getElementById('guest-auth-buttons');
+    const authUserMenu = document.getElementById('auth-user-menu') || document.querySelector('.user-avatar-menu');
     const avatarBtn = document.getElementById('avatar-btn');
     const userDropdown = document.getElementById('user-dropdown');
     const logoutBtn = document.getElementById('logout-btn');
@@ -57,11 +109,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const userAvatarImg = document.getElementById('user-avatar-initials');
 
     const currentUser = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getCurrentUser) ? SoundSphereAPI.getCurrentUser() : null;
-    const displayName = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getUserDisplayName) ? SoundSphereAPI.getUserDisplayName(currentUser) : (localStorage.getItem('soundsphere_user_name') || 'Client Account');
-    const initials = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getUserInitials) ? SoundSphereAPI.getUserInitials(currentUser) : 'CU';
+    const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || localStorage.getItem('token'));
 
-    if (userNameSpan) userNameSpan.textContent = displayName;
-    if (userAvatarImg) userAvatarImg.textContent = initials;
+    if (token && currentUser) {
+        // Authenticated User State: Hide Login/Sign Up, Show User Dropdown
+        if (guestAuthBtns) guestAuthBtns.style.display = 'none';
+        if (authUserMenu) authUserMenu.style.display = 'block';
+
+        const displayName = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getUserDisplayName) ? SoundSphereAPI.getUserDisplayName(currentUser) : (currentUser.name || currentUser.email || 'Client Account');
+        const initials = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getUserInitials) ? SoundSphereAPI.getUserInitials(currentUser) : 'CU';
+
+        if (userNameSpan) userNameSpan.textContent = displayName;
+        if (userAvatarImg) userAvatarImg.textContent = initials;
+    } else {
+        // Unauthenticated Guest State: Show Login & Sign Up, Hide User Dropdown
+        if (guestAuthBtns) guestAuthBtns.style.display = 'flex';
+        if (authUserMenu) authUserMenu.style.display = 'none';
+    }
 
     if (avatarBtn) {
         avatarBtn.addEventListener('click', (e) => {
@@ -274,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.history.back();
                 return;
             } else {
-                window.location.href = '/marketplace.html';
+                window.location.href = getLandingPageUrl();
                 return;
             }
         }

@@ -6,6 +6,10 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 0. Guest Session Detection
+    const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_auth_token') || localStorage.getItem('soundsphere_token') || localStorage.getItem('token') || sessionStorage.getItem('soundsphere_jwt_token') || sessionStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_token') || sessionStorage.getItem('token'));
+    const currentUser = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
+
     // 1. DOM VIEW PANELS & TOP NAV TABS
     const views = {
         home: document.getElementById('view-home'),
@@ -23,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Switch View Panel Handler with URL Hash & Session Persistence
     const switchView = (viewName) => {
+        if ((viewName === 'messages' || viewName === 'profile') && (!token || !currentUser)) {
+            window.location.href = `/login.html?returnUrl=${encodeURIComponent('/marketplace.html#' + viewName)}`;
+            return;
+        }
         const effectiveView = (viewName === 'search' && !document.getElementById('view-search')) ? 'home' : viewName;
         Object.keys(views).forEach(key => {
             if (views[key]) {
@@ -70,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+
+    window.switchView = switchView;
 
     // Attach Top Nav Tab Event Listeners
     Object.keys(navTabs).forEach(key => {
@@ -1052,6 +1062,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (typeof window.fetchUserBookings === 'function') {
                                         window.fetchUserBookings();
                                     }
+                                    if (typeof window.loadClientWalletData === 'function') {
+                                        window.loadClientWalletData();
+                                    }
                                 } else {
                                     showToast(`⚠️ ${data.message || 'Failed to cancel booking.'}`, 'error');
                                     if (data.expired) {
@@ -1510,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         amount: amount,
                         packageName: `Remaining Balance: ${pkgName} (${bookingRef})`,
                         bookingReference: bookingRef,
-                        paymentType: 'full',
+                        paymentType: 'balance',
                         paymentMethod: 'all',
                         clientEmail: clientEmail,
                         clientName: clientName,
@@ -1521,7 +1534,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (res.ok && data.success && data.checkoutUrl) {
-                    if (typeof showToast === 'function') showToast('✓ Directing to PayMongo test payment gateway...', 'success');
+                    // In simulation / test environment, automatically settle the balance in the database
+                    if (data.mode === 'paymongo_sandbox_simulated' || data.simulated) {
+                        try {
+                            await fetch('/api/bookings/settle-balance', {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify({
+                                    bookingId: bookingId,
+                                    bookingReference: bookingRef,
+                                    amount: amount,
+                                    paymentMethod: 'PayMongo',
+                                    transactionReference: data.sessionId || `SIM-PM-${Date.now()}`
+                                })
+                            });
+                        } catch (setErr) {
+                            console.warn('Pre-settle balance notice:', setErr);
+                        }
+                    }
+
+                    if (typeof showToast === 'function') showToast('✓ Directing to payment confirmation...', 'success');
                     setTimeout(() => {
                         window.location.href = data.checkoutUrl;
                     }, 400);
@@ -2830,11 +2862,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 7. INITIAL VIEW & BROWSER NAVIGATION BACK/FORWARD LOGIC
     const handleNavState = () => {
-        let activeView = window.location.hash.replace('#', '') || sessionStorage.getItem('soundsphere_active_view') || 'home';
+        let rawHash = window.location.hash.replace('#', '').trim();
+        let activeView = rawHash || 'home';
         if (activeView === 'balances') {
             activeView = 'profile';
             sessionStorage.setItem('soundsphere_active_subtab', 'balances');
         }
+        sessionStorage.setItem('soundsphere_active_view', activeView);
         if (views[activeView]) {
             switchView(activeView);
         } else {
@@ -2866,6 +2900,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 8-B. CLIENT WALLET & REFUND PAYOUT CONTROLLER
     let activeClientWalletBalance = 0;
+    let activeClientOriginalPaymentMethod = null;
 
     window.loadClientWalletData = async function() {
         const balEl = document.getElementById('wallet-display-balance');
@@ -2897,6 +2932,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = resData.data;
             activeClientWalletBalance = parseFloat(data.balance || 0);
+            activeClientOriginalPaymentMethod = data.originalPaymentMethod || null;
             const pendingAmt = parseFloat(data.pendingAmount || 0);
 
             balEl.textContent = `₱${activeClientWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -2947,7 +2983,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             badgeBg = '#d1fae5';
                                             badgeColor = '#059669';
                                             badgeIcon = 'fa-circle-check';
-                                            statusLabel = 'Disbursed (Paid)';
+                                            statusLabel = 'Refunded';
                                         } else if (r.Status === 'Rejected') {
                                             badgeBg = '#fee2e2';
                                             badgeColor = '#dc2626';
@@ -3058,6 +3094,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxValLbl = document.getElementById('lbl-refund-max-val');
         const nameInput = document.getElementById('refund-input-name');
         const numInput = document.getElementById('refund-input-number');
+        const methodSelect = document.getElementById('refund-select-method');
 
         if (amtInput) amtInput.value = activeClientWalletBalance.toFixed(2);
         if (maxValLbl) maxValLbl.textContent = `₱${activeClientWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -3069,7 +3106,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nameInput && !nameInput.value && clientName) nameInput.value = clientName;
             if (numInput && !numInput.value && clientPhone) numInput.value = clientPhone;
         }
+
+        updateSpecificRefundFields();
     };
+
+    const updateSpecificRefundFields = () => {
+        const methodSelect = document.getElementById('refund-select-method');
+        const labelAccountNum = document.getElementById('refund-label-account-number');
+        const numInput = document.getElementById('refund-input-number');
+
+        if (!methodSelect) return;
+        const val = methodSelect.value;
+
+        if (labelAccountNum && numInput) {
+            if (val === 'GCash') {
+                labelAccountNum.textContent = 'GCash Mobile Number *';
+                numInput.placeholder = 'e.g. 09516028992 (11-digit mobile #)';
+            } else if (val === 'Maya') {
+                labelAccountNum.textContent = 'Maya Mobile Number *';
+                numInput.placeholder = 'e.g. 09XXXXXXXXX (11-digit mobile #)';
+            } else if (val === 'BDO') {
+                labelAccountNum.textContent = 'BDO Account Number *';
+                numInput.placeholder = 'e.g. 10 to 12-digit BDO Account #';
+            } else if (val === 'BPI') {
+                labelAccountNum.textContent = 'BPI Account Number *';
+                numInput.placeholder = 'e.g. 10-digit BPI Account #';
+            } else if (val === 'PNB') {
+                labelAccountNum.textContent = 'PNB Account Number *';
+                numInput.placeholder = 'e.g. 12 to 16-digit PNB Account #';
+            } else {
+                labelAccountNum.textContent = `${val} Account Number *`;
+                numInput.placeholder = `e.g. ${val} Account #`;
+            }
+        }
+    };
+
+    const methodSelectEl = document.getElementById('refund-select-method');
+    if (methodSelectEl) {
+        methodSelectEl.addEventListener('change', updateSpecificRefundFields);
+    }
 
     const closeRefundModal = () => {
         if (!modalRefund) return;
@@ -3134,7 +3209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const method = methodSelect?.value || 'GCash';
+            const selectedMethod = methodSelect?.value || 'GCash';
+
             const accountName = nameInput?.value.trim() || '';
             const accountNumber = numInput?.value.trim() || '';
             const notes = notesInput?.value.trim() || '';
@@ -3163,7 +3239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         userId: authUser ? (authUser.userId || authUser.id || authUser.UserID) : undefined,
                         amount: reqAmt,
-                        payoutMethod: method,
+                        payoutMethod: selectedMethod,
                         accountName,
                         accountNumber,
                         notes,
@@ -3178,7 +3254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.message || 'Failed to submit refund request.');
                 }
 
-                alert(`🎉 Refund Request Submitted to Cashier!\n\nAmount: ₱${reqAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nChannel: ${method}\nAccount: ${accountName} (${accountNumber})\n\nOur Cashier will manually verify and send the funds to your account.`);
+                alert(`🎉 Refund Request Submitted to Cashier!\n\nAmount: ₱${reqAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nSpecific Method: ${selectedMethod}\nAccount: ${accountName} (${accountNumber})\n\nOur Cashier will manually verify and send the funds to your account.`);
 
                 closeRefundModal();
                 formRefund.reset();
@@ -3860,23 +3936,33 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(dismiss, 6000);
     };
 
+    const getClientAuthToken = () => {
+        return (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+            ? SoundSphereAPI.getAuthToken() 
+            : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || localStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token') || '');
+    };
+
+    const isNotificationUnread = (n) => {
+        if (!n) return false;
+        return n.IsRead === false || n.IsRead === 0 || n.IsRead === '0' || n.IsRead === 'false' || n.IsRead === null || n.IsRead === undefined;
+    };
+
     const fetchNotifications = async () => {
-        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+        const token = getClientAuthToken();
         if (!token) return;
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('http://localhost:5000/api/notifications', { headers });
+            const res = await fetch('/api/notifications', { headers });
             if (res.ok) {
                 const data = await res.json();
                 currentNotificationsCache = data.notifications || data.data || [];
-                const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
+                const unreadCount = currentNotificationsCache.filter(isNotificationUnread).length;
 
                 // Fire In-App Push Alerts for newly arrived unread notifications
                 if (!isInitialNotifFetch) {
                     currentNotificationsCache.forEach(n => {
                         const id = n.NotificationID || n.id;
-                        const isUnread = !n.IsRead && n.IsRead !== 1;
-                        if (isUnread && !knownNotifIds.has(id)) {
+                        if (isNotificationUnread(n) && !knownNotifIds.has(id)) {
                             window.triggerInAppPushAlert(n.Title || 'New Notification', n.Message || '', { notificationId: id });
                         }
                     });
@@ -3892,8 +3978,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (unreadCount > 0) {
                         notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                         notificationBadge.classList.remove('hidden');
+                        notificationBadge.style.display = 'inline-block';
                     } else {
                         notificationBadge.classList.add('hidden');
+                        notificationBadge.style.display = 'none';
                     }
                 }
 
@@ -3923,52 +4011,171 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!notificationList) return;
         let filtered = currentNotificationsCache;
         if (currentNotifFilter === 'unread') {
-            filtered = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1);
+            filtered = currentNotificationsCache.filter(isNotificationUnread);
         }
 
         if (filtered.length === 0) {
-            notificationList.innerHTML = `<div style="padding:32px 20px; text-align:center; color:#64748b; font-size:0.95rem;"><i class="fa-solid fa-bell-slash" style="font-size:1.8rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>No notifications found.</div>`;
+            const emptyMsg = currentNotifFilter === 'unread' ? 'No unread notifications' : 'No notifications found';
+            notificationList.innerHTML = `<div style="padding:32px 20px; text-align:center; color:#64748b; font-size:0.95rem;"><i class="fa-solid fa-bell-slash" style="font-size:1.8rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>${emptyMsg}</div>`;
             return;
         }
 
         notificationList.innerHTML = filtered.map(n => {
-            const isUnread = !n.IsRead && n.IsRead !== 1;
+            const isUnread = isNotificationUnread(n);
             const createdDate = formatNotifDate(n.CreatedAt);
             const id = n.NotificationID || n.id;
             return `
-                <div class="notification-item ${isUnread ? 'unread' : ''}" style="padding:14px 20px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer; transition:background 0.2s ease;" onclick="window.viewSingleNotification(${id})">
+                <div class="notification-item ${isUnread ? 'unread' : ''}" style="padding:14px 20px; border-bottom:1px solid #f1f5f9; background:${isUnread ? '#eff6ff' : '#ffffff'}; cursor:pointer; transition:all 0.2s ease; border-left:${isUnread ? '4px solid #2563eb' : '4px solid transparent'};" onclick="window.viewSingleNotification(${id})">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                        <strong style="font-size:0.95rem; color:#0a192f; font-weight:800;">${n.Title || n.type || 'Notification'}</strong>
-                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">${createdDate}</span>
+                        <strong style="font-size:0.93rem; color:#0a192f; font-weight:800; display:flex; align-items:center; gap:6px;">
+                            ${isUnread ? '<span style="width:7px; height:7px; border-radius:50%; background:#2563eb; display:inline-block; flex-shrink:0;"></span>' : ''}
+                            ${n.Title || n.type || 'Notification'}
+                        </strong>
+                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:600; flex-shrink:0; margin-left:8px;">${createdDate}</span>
                     </div>
-                    <p style="margin:0; font-size:0.86rem; color:#475569; line-height:1.4;">${n.Message || n.message || ''}</p>
+                    <p style="margin:0; font-size:0.84rem; color:#475569; line-height:1.45; word-break:break-word;">${n.Message || n.message || ''}</p>
                 </div>
             `;
         }).join('');
     };
 
     window.markSingleNotificationRead = async (id) => {
-        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+        const token = getClientAuthToken();
         if (!token || !id) return;
         try {
-            await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+            await fetch(`/api/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            // Update local item
             const item = currentNotificationsCache.find(n => (n.NotificationID || n.id) == id);
             if (item) item.IsRead = 1;
-            const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
+            const unreadCount = currentNotificationsCache.filter(isNotificationUnread).length;
             if (notificationBadge) {
                 if (unreadCount > 0) {
                     notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                     notificationBadge.classList.remove('hidden');
+                    notificationBadge.style.display = 'inline-block';
                 } else {
                     notificationBadge.classList.add('hidden');
+                    notificationBadge.style.display = 'none';
                 }
             }
             renderNotificationList();
         } catch (e) {}
+    };
+
+    // Global Direct Navigation Handlers from Notifications
+    window.goToMyBookingsTab = (bookingRef) => {
+        if (typeof window.closeNotificationDetailModal === 'function') {
+            window.closeNotificationDetailModal();
+        }
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+        if (notificationPanel) {
+            notificationPanel.classList.add('hidden');
+        }
+        if (typeof switchView === 'function') {
+            switchView('profile');
+        } else {
+            const profileTab = document.getElementById('nav-profile-tab');
+            if (profileTab) profileTab.click();
+        }
+        const bookingsSubtab = document.getElementById('subtab-btn-bookings');
+        if (bookingsSubtab) bookingsSubtab.click();
+        sessionStorage.setItem('soundsphere_active_subtab', 'bookings');
+        if (typeof window.fetchUserBookings === 'function') {
+            window.fetchUserBookings();
+        }
+        if (bookingRef) {
+            setTimeout(() => {
+                const card = document.querySelector(`[data-booking-ref="${bookingRef}"]`) || Array.from(document.querySelectorAll('.booking-item-card')).find(el => el.textContent.includes(bookingRef));
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.outline = '2px solid #2563eb';
+                    setTimeout(() => { if (card) card.style.outline = ''; }, 3000);
+                }
+            }, 300);
+        }
+    };
+
+    window.goToWalletTab = () => {
+        if (typeof window.closeNotificationDetailModal === 'function') {
+            window.closeNotificationDetailModal();
+        }
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+        if (notificationPanel) {
+            notificationPanel.classList.add('hidden');
+        }
+        if (typeof switchView === 'function') {
+            switchView('profile');
+        } else {
+            const profileTab = document.getElementById('nav-profile-tab');
+            if (profileTab) profileTab.click();
+        }
+        const walletSubtab = document.getElementById('subtab-btn-wallet');
+        if (walletSubtab) walletSubtab.click();
+        sessionStorage.setItem('soundsphere_active_subtab', 'wallet');
+        if (typeof window.loadClientWalletData === 'function') {
+            window.loadClientWalletData();
+        }
+        const walletSec = document.getElementById('profile-sec-wallet');
+        if (walletSec) {
+            walletSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    window.goToPaymentBalancesTab = (bookingRef) => {
+        if (typeof window.closeNotificationDetailModal === 'function') {
+            window.closeNotificationDetailModal();
+        }
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+        if (notificationPanel) {
+            notificationPanel.classList.add('hidden');
+        }
+        if (typeof switchView === 'function') {
+            switchView('profile');
+        } else {
+            const profileTab = document.getElementById('nav-profile-tab');
+            if (profileTab) profileTab.click();
+        }
+        const balancesSubtabBtn = document.getElementById('subtab-btn-balances');
+        const balancesSec = document.getElementById('profile-sec-balances');
+        if (balancesSubtabBtn) {
+            balancesSubtabBtn.click();
+            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
+            setTimeout(() => {
+                if (balancesSec) {
+                    balancesSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+    };
+
+    window.goToMessagesTab = () => {
+        if (typeof window.closeNotificationDetailModal === 'function') {
+            window.closeNotificationDetailModal();
+        }
+        if (modalAllNotifs) {
+            modalAllNotifs.classList.add('hidden');
+            modalAllNotifs.style.display = 'none';
+        }
+        if (notificationPanel) {
+            notificationPanel.classList.add('hidden');
+        }
+        if (typeof switchView === 'function') {
+            switchView('messages');
+        } else {
+            const messagesTab = document.getElementById('nav-messages-tab');
+            if (messagesTab) messagesTab.click();
+        }
     };
 
     // Open Single Notification Details in Modal
@@ -3978,13 +4185,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Mark as read immediately in UI
         notif.IsRead = 1;
-        const unreadCount = currentNotificationsCache.filter(n => !n.IsRead && n.IsRead !== 1).length;
+        const unreadCount = currentNotificationsCache.filter(isNotificationUnread).length;
         if (notificationBadge) {
             if (unreadCount > 0) {
                 notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                 notificationBadge.classList.remove('hidden');
+                notificationBadge.style.display = 'inline-block';
             } else {
                 notificationBadge.classList.add('hidden');
+                notificationBadge.style.display = 'none';
             }
         }
         renderNotificationList();
@@ -4026,13 +4235,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let boxBg = 'rgba(245, 158, 11, 0.2)';
 
         const isBalanceNotif = /balance|due date|outstanding|remaining balance/i.test(fullText) || notif.NotificationType === 'BalanceDueReminder';
+        const isWalletOrRefund = /wallet|refund|credited|payout|withdrawal|cashier/i.test(fullText);
 
-        if (isBalanceNotif) {
-            catName = 'Payment Balance';
+        if (isWalletOrRefund) {
+            catName = 'Wallet & Refund';
             iconClass = 'fa-wallet';
+            iconColor = '#10b981';
+            boxBg = 'rgba(16, 185, 129, 0.2)';
+        } else if (isBalanceNotif) {
+            catName = 'Payment Balance';
+            iconClass = 'fa-file-invoice-dollar';
             iconColor = '#e11d48';
             boxBg = 'rgba(225, 29, 72, 0.15)';
-        } else if (/payment|paid|receipt|invoice|gcash|cashier|payout/i.test(fullText)) {
+        } else if (/payment|paid|receipt|invoice|gcash/i.test(fullText)) {
             catName = 'Payment Update';
             iconClass = 'fa-receipt';
             iconColor = '#2563eb';
@@ -4040,8 +4255,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (/booking|reservation|event/i.test(fullText)) {
             catName = 'Booking Confirmation';
             iconClass = 'fa-calendar-check';
-            iconColor = '#10b981';
-            boxBg = 'rgba(16, 185, 129, 0.2)';
+            iconColor = '#2563eb';
+            boxBg = 'rgba(37, 99, 235, 0.2)';
         } else if (/message|chat|inquiry/i.test(fullText)) {
             catName = 'Message Alert';
             iconClass = 'fa-comments';
@@ -4061,22 +4276,52 @@ document.addEventListener('DOMContentLoaded', () => {
             iconBox.style.color = iconColor;
         }
 
-        // Check for Booking Reference (e.g. SS-2026-00012)
+        // Check for Booking Reference (e.g. SS-2026-00025)
         let actionsHtml = '';
         const refMatch = message.match(/SS-\d{4}-\d+/i) || message.match(/SS-[A-Z0-9-]+/i);
         const bookingRef = refMatch ? refMatch[0] : '';
 
-        if (isBalanceNotif) {
+        if (isWalletOrRefund) {
             actionsHtml = `
-                <button type="button" class="btn-notif-view-balance" onclick="window.goToPaymentBalancesTab('${bookingRef}')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
-                    <i class="fa-solid fa-wallet"></i> View Payment Balance${bookingRef ? ` (${bookingRef})` : ''}
-                </button>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button type="button" class="btn-notif-action" onclick="window.goToWalletTab()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#10b981; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(16,185,129,0.3); transition:all 0.2s ease;">
+                        <i class="fa-solid fa-wallet"></i> Open My Wallet & Balances
+                    </button>
+                    ${bookingRef ? `
+                    <button type="button" class="btn-notif-action-sec" onclick="window.goToMyBookingsTab('${bookingRef}')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1; border-radius:10px; font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s ease;">
+                        <i class="fa-solid fa-calendar-check"></i> View Booking Record (${bookingRef})
+                    </button>` : ''}
+                </div>
             `;
-        } else if (bookingRef) {
+        } else if (isBalanceNotif) {
             actionsHtml = `
-                <a href="/booking-confirmation.html?ref=${encodeURIComponent(bookingRef)}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.92rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:background 0.2s ease;">
-                    <i class="fa-solid fa-file-invoice"></i> View Official Booking Receipt (${bookingRef})
-                </a>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button type="button" class="btn-notif-view-balance" onclick="window.goToPaymentBalancesTab('${bookingRef}')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> View Payment Balance${bookingRef ? ` (${bookingRef})` : ''}
+                    </button>
+                    ${bookingRef ? `
+                    <a href="/booking-confirmation.html?ref=${encodeURIComponent(bookingRef)}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.9rem; transition:all 0.2s ease;">
+                        <i class="fa-solid fa-file-invoice"></i> View Official Receipt (${bookingRef})
+                    </a>` : ''}
+                </div>
+            `;
+        } else if (/booking|reservation|event/i.test(fullText) || bookingRef) {
+            actionsHtml = `
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button type="button" onclick="window.goToMyBookingsTab('${bookingRef}')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#2563eb; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+                        <i class="fa-solid fa-calendar-check"></i> View in My Bookings
+                    </button>
+                    ${bookingRef ? `
+                    <a href="/booking-confirmation.html?ref=${encodeURIComponent(bookingRef)}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.9rem; transition:all 0.2s ease;">
+                        <i class="fa-solid fa-file-invoice"></i> View Official Booking Receipt (${bookingRef})
+                    </a>` : ''}
+                </div>
+            `;
+        } else if (/message|chat|inquiry/i.test(fullText)) {
+            actionsHtml = `
+                <button type="button" onclick="window.goToMessagesTab()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; background:#8b5cf6; color:#ffffff; border-radius:10px; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 14px rgba(139,92,246,0.3); transition:all 0.2s ease;">
+                    <i class="fa-solid fa-comments"></i> Open Messages
+                </button>
             `;
         }
 
@@ -4094,45 +4339,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalNotifDetail) {
             modalNotifDetail.classList.add('hidden');
             modalNotifDetail.style.display = 'none';
-        }
-    };
-
-    // Navigate directly to Payment Balances tab from Notification Modal
-    window.goToPaymentBalancesTab = (bookingRef) => {
-        if (typeof window.closeNotificationDetailModal === 'function') {
-            window.closeNotificationDetailModal();
-        }
-        if (modalAllNotifs) {
-            modalAllNotifs.classList.add('hidden');
-            modalAllNotifs.style.display = 'none';
-        }
-        if (notificationPanel) {
-            notificationPanel.classList.add('hidden');
-        }
-
-        const balancesSubtabBtn = document.getElementById('subtab-btn-balances');
-        const balancesSec = document.getElementById('profile-sec-balances');
-
-        if (balancesSubtabBtn) {
-            if (typeof switchView === 'function') {
-                switchView('profile');
-            } else {
-                const profileNav = document.getElementById('nav-profile-tab');
-                if (profileNav) profileNav.click();
-            }
-
-            balancesSubtabBtn.click();
-            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
-
-            setTimeout(() => {
-                if (balancesSec) {
-                    balancesSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 100);
-        } else {
-            sessionStorage.setItem('soundsphere_active_view', 'profile');
-            sessionStorage.setItem('soundsphere_active_subtab', 'balances');
-            window.location.href = '/marketplace.html#balances';
         }
     };
 
@@ -4175,7 +4381,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Apply Filter
         if (currentModalNotifFilter === 'unread') {
-            list = list.filter(n => !n.IsRead && n.IsRead !== 1);
+            list = list.filter(isNotificationUnread);
         } else if (currentModalNotifFilter === 'booking') {
             list = list.filter(n => /booking|reservation|event/i.test((n.Title || '') + ' ' + (n.Message || '')));
         } else if (currentModalNotifFilter === 'payment') {
@@ -4204,7 +4410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         allNotifsListContainer.innerHTML = list.map(n => {
-            const isUnread = !n.IsRead && n.IsRead !== 1;
+            const isUnread = isNotificationUnread(n);
             const createdDate = formatNotifDate(n.CreatedAt);
             const id = n.NotificationID || n.id;
             const fullText = (n.Title || '') + ' ' + (n.Message || '');
@@ -4271,16 +4477,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnModalMarkAllRead) {
         btnModalMarkAllRead.addEventListener('click', async () => {
-            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+            const token = getClientAuthToken();
             if (!token) return;
             try {
-                await fetch('http://localhost:5000/api/notifications/read-all', {
+                // Optimistically update local cache immediately
+                currentNotificationsCache.forEach(n => { n.IsRead = 1; });
+                if (notificationBadge) {
+                    notificationBadge.classList.add('hidden');
+                    notificationBadge.style.display = 'none';
+                    notificationBadge.textContent = '0';
+                }
+                if (allNotifTotalBadge) {
+                    allNotifTotalBadge.textContent = `${currentNotificationsCache.length} Total`;
+                }
+                renderNotificationList();
+                renderAllNotificationsModalList();
+
+                await fetch('/api/notifications/read-all', {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                currentNotificationsCache.forEach(n => n.IsRead = 1);
                 fetchNotifications();
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Failed to mark all notifications as read:', e);
+            }
         });
     }
 
@@ -4319,16 +4539,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnMarkAllRead) {
         btnMarkAllRead.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+            const token = getClientAuthToken();
             if (!token) return;
             try {
-                await fetch('http://localhost:5000/api/notifications/read-all', {
+                // Optimistically mark all read immediately
+                currentNotificationsCache.forEach(n => { n.IsRead = 1; });
+                if (notificationBadge) {
+                    notificationBadge.classList.add('hidden');
+                    notificationBadge.style.display = 'none';
+                    notificationBadge.textContent = '0';
+                }
+                if (allNotifTotalBadge) {
+                    allNotifTotalBadge.textContent = `${currentNotificationsCache.length} Total`;
+                }
+                renderNotificationList();
+                if (modalAllNotifs && modalAllNotifs.style.display === 'flex') {
+                    renderAllNotificationsModalList();
+                }
+
+                await fetch('/api/notifications/read-all', {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                currentNotificationsCache.forEach(n => n.IsRead = 1);
                 fetchNotifications();
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Failed to mark all notifications as read:', e);
+            }
         });
     }
 

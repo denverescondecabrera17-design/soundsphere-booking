@@ -37,108 +37,126 @@
         <div class="cal-modal-overlay hidden" id="modal-booking-calendar" role="dialog" aria-modal="true">
             <div class="cal-modal-card">
                 
-                <!-- Modal Header -->
+                <!-- Fullscreen Header -->
                 <div class="cal-modal-header">
-                    <div class="cal-modal-header-titles">
-                        <h2>Select Date & Time</h2>
-                        <p>Choose your preferred appointment date and available hourly slot.</p>
+                    <div class="cal-modal-header-left">
+                        <button type="button" class="cal-btn-back-nav" id="cal-modal-back-btn" title="Back">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>Back</span>
+                        </button>
+                        <div class="cal-modal-header-titles">
+                            <h2>Select Date & Time</h2>
+                            <p>Choose your preferred appointment date and available hourly slot.</p>
+                        </div>
                     </div>
-                    <button type="button" class="cal-btn-close" id="cal-modal-close-btn" title="Close">&times;</button>
+                    <div class="cal-modal-header-right">
+                        <div class="cal-step-indicator">
+                            <span class="cal-step-badge"><i class="fa-solid fa-calendar-check"></i> Step 1 of 2</span>
+                            <span class="cal-step-label">Select Date & Time</span>
+                        </div>
+                        <button type="button" class="cal-btn-close" id="cal-modal-close-btn" title="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Modal Body 2-Columns Grid -->
-                <div class="cal-modal-body">
-                    
-                    <!-- Left: Interactive Monthly Calendar -->
-                    <div class="cal-left-box">
-                        <div class="cal-month-nav-row">
-                            <button type="button" class="cal-nav-btn" id="cal-btn-prev" title="Previous Month">
-                                <i class="fa-solid fa-chevron-left"></i>
-                            </button>
-                            <div class="cal-month-title-wrap">
-                                <h3 class="cal-month-title" id="cal-month-year-display">October 2026</h3>
-                                <div class="cal-month-subtitle">Select an available date</div>
+                <!-- Main Content Container -->
+                <div class="cal-modal-body-container">
+                    <div class="cal-modal-body">
+                        
+                        <!-- Left: Interactive Monthly Calendar -->
+                        <div class="cal-left-box">
+                            <div class="cal-month-nav-row">
+                                <button type="button" class="cal-nav-btn" id="cal-btn-prev" title="Previous Month">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <div class="cal-month-title-wrap">
+                                    <h3 class="cal-month-title" id="cal-month-year-display">October 2026</h3>
+                                    <div class="cal-month-subtitle">Select an available date</div>
+                                </div>
+                                <button type="button" class="cal-nav-btn" id="cal-btn-next" title="Next Month">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
                             </div>
-                            <button type="button" class="cal-nav-btn" id="cal-btn-next" title="Next Month">
-                                <i class="fa-solid fa-chevron-right"></i>
-                            </button>
+
+                            <!-- Days of Week Header -->
+                            <div class="cal-days-header">
+                                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                            </div>
+
+                            <!-- 7-Column Dates Grid -->
+                            <div class="cal-grid" id="cal-grid-cells">
+                                <!-- Injected dynamically -->
+                            </div>
+
+                            <!-- Legend -->
+                            <div class="cal-legend-row">
+                                <div class="cal-legend-items">
+                                    <div class="cal-legend-item">
+                                        <span class="cal-legend-dot available"></span> Available
+                                    </div>
+                                    <div class="cal-legend-item">
+                                        <span class="cal-legend-dot unavailable"></span> Unavailable
+                                    </div>
+                                    <div class="cal-legend-item">
+                                        <span class="cal-legend-dot blocked"></span> Blocked
+                                    </div>
+                                    <div class="cal-legend-item">
+                                        <span class="cal-legend-dot selected"></span> Selected
+                                    </div>
+                                </div>
+                                <div class="cal-today-text" id="cal-today-label">Today: Fri, October 9, 2026</div>
+                            </div>
                         </div>
 
-                        <!-- Days of Week Header -->
-                        <div class="cal-days-header">
-                            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                        </div>
-
-                        <!-- 7-Column Dates Grid -->
-                        <div class="cal-grid" id="cal-grid-cells">
-                            <!-- Injected dynamically -->
-                        </div>
-
-                        <!-- Legend -->
-                        <div class="cal-legend-row">
-                            <div class="cal-legend-items">
-                                <div class="cal-legend-item">
-                                    <span class="cal-legend-dot available"></span> Available
-                                </div>
-                                <div class="cal-legend-item">
-                                    <span class="cal-legend-dot unavailable"></span> Unavailable
-                                </div>
-                                <div class="cal-legend-item">
-                                    <span class="cal-legend-dot blocked"></span> Blocked
-                                </div>
-                                <div class="cal-legend-item">
-                                    <span class="cal-legend-dot selected"></span> Selected
+                        <!-- Right: Select Time & Summary -->
+                        <div class="cal-right-box">
+                            <div>
+                                <h3 class="cal-selected-day-header" id="cal-selected-header-date">Fri, October 23, 2026</h3>
+                                
+                                <!-- Custom Time Picker Controls (Select Time - Start Time Only) -->
+                                <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time</div>
+                                <div class="cal-time-pickers-container">
+                                    <div class="cal-time-field">
+                                        <label for="cal-start-time-input"><i class="fa-regular fa-clock"></i> Start Time</label>
+                                        <input type="time" id="cal-start-time-input" class="cal-time-input" value="08:00">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="cal-today-text" id="cal-today-label">Today: Fri, October 9, 2026</div>
+
+                            <!-- Summary Box -->
+                            <div class="cal-appointment-card">
+                                <div class="cal-app-header-badge-wrap">
+                                    <span class="cal-app-header-badge">SUMMARY</span>
+                                </div>
+                                <div class="cal-app-details">
+                                    <div class="cal-app-detail-item">
+                                        <i class="fa-regular fa-calendar"></i>
+                                        <span id="cal-summary-date-text">Fri, October 23, 2026</span>
+                                    </div>
+                                    <div class="cal-app-detail-item">
+                                        <i class="fa-regular fa-clock"></i>
+                                        <span id="cal-summary-time-text">08:00 AM</span>
+                                    </div>
+                                    <div class="cal-app-detail-item" style="border-top: 1px dashed #bfdbfe; padding-top: 8px;">
+                                        <i class="fa-solid fa-box-archive"></i>
+                                        <div class="cal-app-note" id="cal-summary-package-note">Reserves package with service provider for the selected date.</div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
+
                     </div>
-
-                    <!-- Right: Select Time & Summary -->
-                    <div class="cal-right-box">
-                        <div>
-                            <h3 class="cal-selected-day-header" id="cal-selected-header-date">Fri, October 23, 2026</h3>
-                            
-                            <!-- Custom Time Picker Controls (Select Time - Start Time Only) -->
-                            <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time</div>
-                            <div class="cal-time-pickers-container">
-                                <div class="cal-time-field">
-                                    <label for="cal-start-time-input"><i class="fa-regular fa-clock"></i> Start Time</label>
-                                    <input type="time" id="cal-start-time-input" class="cal-time-input" value="08:00">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Summary Box -->
-                        <div class="cal-appointment-card">
-                            <div class="cal-app-header-badge-wrap">
-                                <span class="cal-app-header-badge">SUMMARY</span>
-                            </div>
-                            <div class="cal-app-details">
-                                <div class="cal-app-detail-item">
-                                    <i class="fa-regular fa-calendar"></i>
-                                    <span id="cal-summary-date-text">Fri, October 23, 2026</span>
-                                </div>
-                                <div class="cal-app-detail-item">
-                                    <i class="fa-regular fa-clock"></i>
-                                    <span id="cal-summary-time-text">08:00 AM</span>
-                                </div>
-                                <div class="cal-app-detail-item" style="border-top: 1px dashed #bfdbfe; padding-top: 8px;">
-                                    <i class="fa-solid fa-box-archive"></i>
-                                    <div class="cal-app-note" id="cal-summary-package-note">Reserves package with service provider for the selected date.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
                 </div>
 
-                <!-- Modal Footer -->
+                <!-- Fullscreen Footer -->
                 <div class="cal-modal-footer">
-                    <button type="button" class="cal-btn-cancel" id="cal-btn-cancel-action">Cancel</button>
+                    <button type="button" class="cal-btn-cancel" id="cal-btn-cancel-action">
+                        <i class="fa-solid fa-arrow-left"></i> Cancel
+                    </button>
                     <button type="button" class="cal-btn-confirm" id="cal-btn-confirm-action">
-                        Confirm Booking <i class="fa-solid fa-arrow-right"></i>
+                        Next <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
 
@@ -150,6 +168,8 @@
 
         // Bind events
         document.getElementById('cal-modal-close-btn').onclick = window.closeBookingCalendarModal;
+        const headerBackBtn = document.getElementById('cal-modal-back-btn');
+        if (headerBackBtn) headerBackBtn.onclick = window.closeBookingCalendarModal;
         document.getElementById('cal-btn-cancel-action').onclick = window.closeBookingCalendarModal;
         document.getElementById('modal-booking-calendar').onclick = (e) => {
             if (e.target === document.getElementById('modal-booking-calendar')) {

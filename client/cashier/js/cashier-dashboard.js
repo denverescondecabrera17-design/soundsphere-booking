@@ -334,11 +334,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const flowClass = isOutflow ? 'flow-outflow' : 'flow-inflow';
                         const flowSign = isOutflow ? '-' : '+';
                         const statusBadge = item.Status === 'Approved' || item.Status === 'Paid' ? 'badge-approved' : (item.Status === 'Pending' ? 'badge-pending' : 'badge-rejected');
+                        const isWdr = item.Type === 'Withdrawal';
+                        const isRef = item.Type === 'Client Refund';
 
                         return `
-                            <tr>
+                            <tr class="${isWdr ? 'withdrawal-row-item' : (isRef ? 'refund-row-item' : '')}" ${isWdr ? `data-wid="${item.ID}"` : (isRef ? `data-id="${item.ID}"` : '')} style="${(isWdr || isRef) ? 'cursor:pointer;' : ''}" title="${isWdr ? 'Click to view withdrawal details' : (isRef ? 'Click to view refund booking details' : '')}">
                                 <td>${formatDateTime(item.Date)}</td>
-                                <td><strong>${item.Reference}</strong></td>
+                                <td><strong style="${(isWdr || isRef) ? 'color:#2563eb;' : ''}">${item.Reference}</strong></td>
                                 <td><span class="badge ${item.Type === 'Withdrawal' ? 'badge-pending' : 'badge-approved'}">${item.Type}</span></td>
                                 <td>${item.Recipient || 'N/A'}</td>
                                 <td>${item.Method || 'Online'}</td>
@@ -348,6 +350,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             </tr>
                         `;
                     }).join('');
+
+                    tbody.querySelectorAll('.withdrawal-row-item').forEach(row => {
+                        row.addEventListener('click', () => {
+                            const wid = row.getAttribute('data-wid');
+                            if (wid && window.openPayMongoVerifyModal) {
+                                window.openPayMongoVerifyModal(wid);
+                            }
+                        });
+                    });
+
+                    tbody.querySelectorAll('.refund-row-item').forEach(row => {
+                        row.addEventListener('click', () => {
+                            const reqId = row.getAttribute('data-id');
+                            if (reqId && window.openClientBookingDetailsFullScreen) {
+                                window.openClientBookingDetailsFullScreen(reqId);
+                            }
+                        });
+                    });
                 }
             }
         } catch (err) {
@@ -443,8 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isRejected) badgeClass = 'badge-rejected';
 
             return `
-                <tr>
-                    <td><strong>#WDR-${item.WithdrawalID}</strong></td>
+                <tr class="withdrawal-row-item" data-wid="${item.WithdrawalID}" title="Click anywhere to view full withdrawal and payment details">
+                    <td><strong class="wdr-code" style="color:#0a192f; cursor:pointer;">#WDR-${item.WithdrawalID}</strong></td>
                     <td>
                         <div style="font-weight:700; color:#0a192f;">${item.ProviderName || 'Provider'}</div>
                         <div style="font-size:0.75rem; color:#64748b;">${item.ProviderEmail || ''}</div>
@@ -479,23 +499,37 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        // Attach action handlers
+        // Row click opens the full withdrawal details
+        tbody.querySelectorAll('.withdrawal-row-item').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-disburse-action') || e.target.closest('.btn-reject-action')) {
+                    return;
+                }
+                const wid = row.getAttribute('data-wid');
+                if (wid) openPayMongoVerifyModal(wid);
+            });
+        });
+
+        // Attach action handlers with event.stopPropagation
         tbody.querySelectorAll('.btn-disburse-action').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const wid = btn.getAttribute('data-wid');
-                openDisburseModal(wid);
+                executeDisbursePayout(wid, btn);
             });
         });
 
         tbody.querySelectorAll('.btn-reject-action').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const wid = btn.getAttribute('data-wid');
                 openRejectModal(wid);
             });
         });
 
         tbody.querySelectorAll('.btn-open-pm-proof').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const wid = btn.getAttribute('data-wid');
                 openPayMongoVerifyModal(wid);
             });
@@ -526,20 +560,191 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------------------
-    // PayMongo Verification Modal Logic
+    // Fullscreen View: Withdrawal Request & 5% Commission Payout Details
     // ----------------------------------------------------
-    const modalPmVerify = document.getElementById('modal-paymongo-verify');
+    const viewWdrDetails = document.getElementById('view-cashier-withdrawal-details');
     let currentVerifyWid = null;
 
-    async function openPayMongoVerifyModal(wid) {
-        currentVerifyWid = wid;
-        if (!modalPmVerify) return;
+    function populateWithdrawalFullScreenData(w, v) {
+        if (!w) return;
+        const status = w.WithdrawalStatus || w.Status || 'Pending';
+        const isPending = status === 'Pending';
+        const isApproved = status === 'Approved';
+        const isRejected = status === 'Rejected';
 
-        modalPmVerify.classList.add('active');
-        const loadingEl = document.getElementById('pm-verify-loading');
-        const contentEl = document.getElementById('pm-verify-content');
-        if (loadingEl) loadingEl.style.display = 'block';
-        if (contentEl) contentEl.style.display = 'none';
+        // 1. Amount & 5% Commission Calculation
+        const netAmount = parseFloat(v?.requestedPayout ?? w.Amount ?? w.RequestedAmount ?? 0);
+        let grossAmount = parseFloat(w.BookingTotalAmount || 0);
+        if (!grossAmount || grossAmount <= 0) {
+            grossAmount = parseFloat((netAmount / 0.95).toFixed(2));
+        }
+        let commissionAmount = parseFloat((grossAmount * 0.05).toFixed(2));
+        if (Math.abs((grossAmount - commissionAmount) - netAmount) > 0.05) {
+            commissionAmount = parseFloat((grossAmount - netAmount).toFixed(2));
+        }
+
+        // Header and IDs
+        const idEl = document.getElementById('cwd-wdr-id');
+        if (idEl) idEl.textContent = `#WDR-${w.WithdrawalID}`;
+
+        const reqDateEl = document.getElementById('cwd-requested-date');
+        if (reqDateEl) reqDateEl.textContent = formatDateTime(w.RequestedAt);
+
+        const statusBadgeEl = document.getElementById('cwd-wdr-status-badge');
+        if (statusBadgeEl) {
+            statusBadgeEl.className = `badge ${isApproved ? 'badge-approved' : (isRejected ? 'badge-rejected' : 'badge-pending')}`;
+            statusBadgeEl.innerHTML = isApproved ? '<i class="fa-solid fa-circle-check"></i> Disbursed' : (isRejected ? '<i class="fa-solid fa-circle-xmark"></i> Rejected' : '<i class="fa-solid fa-clock"></i> Pending Approval');
+        }
+
+        // Provider & Booking Banner
+        const provNameEl = document.getElementById('cwd-provider-name');
+        if (provNameEl) provNameEl.textContent = w.ProviderName || w.BusinessName || 'Service Provider';
+
+        const bRefEl = document.getElementById('cwd-booking-ref');
+        if (bRefEl) {
+            if (w.BookingReference) {
+                bRefEl.textContent = `#${w.BookingReference}${w.PackageName ? ' (' + w.PackageName + ')' : ''}`;
+            } else if (w.BookingID) {
+                bRefEl.textContent = `#BK-${w.BookingID}${w.PackageName ? ' (' + w.PackageName + ')' : ''}`;
+            } else {
+                bRefEl.textContent = 'Wallet Inflow Balance';
+            }
+        }
+
+        // Financial Breakdown (Gross, 5% Commission, Net)
+        const grossEl = document.getElementById('cwd-gross-amount');
+        if (grossEl) grossEl.textContent = formatPHP(grossAmount);
+
+        const commEl = document.getElementById('cwd-commission-amount');
+        if (commEl) commEl.textContent = `-${formatPHP(commissionAmount)}`;
+
+        const netEl = document.getElementById('cwd-net-amount');
+        if (netEl) netEl.textContent = formatPHP(netAmount);
+
+        const formulaTextEl = document.getElementById('cwd-formula-text');
+        if (formulaTextEl) {
+            formulaTextEl.innerHTML = `<strong>Payout Breakdown:</strong> ${formatPHP(grossAmount)} Gross Client Inflow − 5% SoundSphere Platform Commission (${formatPHP(commissionAmount)}) = <strong style="color:#059669;">${formatPHP(netAmount)} Net Provider Payout</strong>`;
+        }
+
+        // Provider & Client Parties
+        const provBizEl = document.getElementById('cwd-provider-business');
+        if (provBizEl) provBizEl.textContent = w.ProviderName || w.BusinessName || 'Service Provider';
+
+        const provContactEl = document.getElementById('cwd-provider-contact');
+        if (provContactEl) {
+            const parts = [w.ProviderEmail, w.ProviderPhone].filter(Boolean);
+            provContactEl.textContent = parts.length ? parts.join(' • ') : 'N/A';
+        }
+
+        const clientNameEl = document.getElementById('cwd-client-name');
+        if (clientNameEl) clientNameEl.textContent = w.ClientName || 'SoundSphere Client';
+
+        const clientEmailEl = document.getElementById('cwd-client-email');
+        const targetClientEmail = w.ClientEmail || (w.ClientName && w.ClientName.includes('@') ? w.ClientName : 'client@gmail.com');
+        if (clientEmailEl) clientEmailEl.textContent = targetClientEmail;
+
+        const bottomEmailEl = document.getElementById('cwd-bottom-client-email');
+        if (bottomEmailEl) bottomEmailEl.textContent = targetClientEmail;
+
+        // Payout Destination
+        const methodEl = document.getElementById('cwd-payout-method');
+        if (methodEl) methodEl.textContent = w.PayoutMethod || 'GCash';
+
+        const accNameEl = document.getElementById('cwd-account-name');
+        if (accNameEl) accNameEl.textContent = w.AccountName || 'N/A';
+
+        const accNumEl = document.getElementById('cwd-account-number');
+        if (accNumEl) accNumEl.textContent = w.AccountNumber || w.AccountReference || 'N/A';
+
+        // Gateway verification
+        const gwStatusEl = document.getElementById('cwd-gateway-status');
+        if (gwStatusEl) {
+            const isVer = v?.isVerified ?? (w.isPayMongoVerified !== false);
+            gwStatusEl.innerHTML = isVer
+                ? `<i class="fa-solid fa-circle-check" style="color:#059669;"></i> PayMongo Verified Inflow (${formatPHP(v?.totalClientPaid || grossAmount)})`
+                : `<i class="fa-solid fa-shield-check" style="color:#2563eb;"></i> Secured Platform Inflow Recorded`;
+        }
+
+        // Admin audit record
+        const adminBox = document.getElementById('cwd-admin-record-container');
+        const adminText = document.getElementById('cwd-admin-record-text');
+        if (adminBox && adminText) {
+            if (w.AdminNotes || w.PayMongoPayoutID || w.ProcessedAt) {
+                adminBox.style.display = 'block';
+                let notesHtml = '';
+                if (w.PayMongoPayoutID) notesHtml += `<div><strong>Transaction Ref:</strong> ${w.PayMongoPayoutID}</div>`;
+                if (w.ProcessedAt) notesHtml += `<div><strong>Processed At:</strong> ${formatDateTime(w.ProcessedAt)}</div>`;
+                if (w.AdminNotes) notesHtml += `<div><strong>Remarks:</strong> ${w.AdminNotes}</div>`;
+                adminText.innerHTML = notesHtml || '-';
+            } else {
+                adminBox.style.display = 'none';
+            }
+        }
+
+        // Actions in Bottom Bar
+        const actionsContainer = document.getElementById('cwd-actions-container');
+        if (actionsContainer) {
+            if (isPending) {
+                actionsContainer.innerHTML = `
+                    <button type="button" class="btn btn-outline" id="btn-cwd-close-bottom">Close</button>
+                    <button type="button" class="btn btn-outline" id="btn-cwd-reject" style="color:#ef4444; border-color:#fca5a5; font-weight:700;">
+                        <i class="fa-solid fa-ban"></i> Reject Request
+                    </button>
+                    <button type="button" class="btn btn-success" id="btn-cwd-disburse" style="font-weight:800; padding:10px 24px;">
+                        <i class="fa-solid fa-money-bill-wave"></i> Disburse Payout
+                    </button>
+                `;
+                document.getElementById('btn-cwd-close-bottom')?.addEventListener('click', closeWithdrawalDetailsFullScreen);
+                document.getElementById('btn-cwd-reject')?.addEventListener('click', () => {
+                    openRejectModal(w.WithdrawalID);
+                });
+                document.getElementById('btn-cwd-disburse')?.addEventListener('click', (e) => {
+                    executeDisbursePayout(w.WithdrawalID, e.currentTarget);
+                });
+            } else if (isApproved) {
+                actionsContainer.innerHTML = `
+                    <button type="button" class="btn btn-outline" id="btn-cwd-close-bottom">Close</button>
+                    <span class="badge badge-approved" style="font-size:0.88rem; padding:8px 16px;">
+                        <i class="fa-solid fa-circle-check"></i> Disbursed & Client Notified via Email
+                    </span>
+                `;
+                document.getElementById('btn-cwd-close-bottom')?.addEventListener('click', closeWithdrawalDetailsFullScreen);
+            } else {
+                actionsContainer.innerHTML = `
+                    <button type="button" class="btn btn-outline" id="btn-cwd-close-bottom">Close</button>
+                    <span class="badge badge-rejected" style="font-size:0.88rem; padding:8px 16px;">
+                        <i class="fa-solid fa-circle-xmark"></i> Rejected
+                    </span>
+                `;
+                document.getElementById('btn-cwd-close-bottom')?.addEventListener('click', closeWithdrawalDetailsFullScreen);
+            }
+        }
+    }
+
+    async function openWithdrawalDetailsFullScreen(wid) {
+        currentVerifyWid = wid;
+        const view = document.getElementById('view-cashier-withdrawal-details');
+        if (!view) return;
+
+        view.classList.remove('hidden');
+        view.style.setProperty('display', 'flex', 'important');
+        view.style.setProperty('visibility', 'visible', 'important');
+        view.style.setProperty('opacity', '1', 'important');
+        document.body.style.overflow = 'hidden';
+
+        const loadingEl = document.getElementById('cwd-loading');
+        const contentEl = document.getElementById('cwd-content');
+
+        // Render cached item immediately so UI response is instant
+        const localItem = currentWithdrawalsList.find(w => String(w.WithdrawalID) === String(wid));
+        if (localItem) {
+            populateWithdrawalFullScreenData(localItem, null);
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) contentEl.style.display = 'block';
+        } else {
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (contentEl) contentEl.style.display = 'none';
+        }
 
         try {
             const res = await fetch(`/api/cashier/withdrawals/${wid}/paymongo-verify`, {
@@ -551,8 +756,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (!data.success) {
-                alert(data.message || 'Failed to verify PayMongo payment.');
-                closePayMongoVerifyModal();
+                if (!localItem) {
+                    alert(data.message || 'Failed to verify payout details.');
+                    closeWithdrawalDetailsFullScreen();
+                }
                 return;
             }
 
@@ -562,155 +769,106 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingEl) loadingEl.style.display = 'none';
             if (contentEl) contentEl.style.display = 'block';
 
-            // Summary fields
-            document.getElementById('pm-wdr-id').textContent = `#WDR-${w.WithdrawalID}`;
-            document.getElementById('pm-wdr-provider').textContent = w.ProviderName || 'Provider';
-            document.getElementById('pm-wdr-amount').textContent = formatPHP(v.requestedPayout);
-            document.getElementById('pm-wdr-destination').textContent = `${w.PayoutMethod || 'GCash'} (${w.AccountReference || 'N/A'})`;
-
-            document.getElementById('pm-total-client-paid').textContent = formatPHP(v.totalClientPaid);
-            document.getElementById('pm-gateway-channel').textContent = v.paymentMethods?.length ? v.paymentMethods.join(', ') : (w.PayoutMethod || 'PayMongo Gateway');
-            document.getElementById('pm-gateway-live-status').textContent = `${(v.liveGatewayCheck?.status || 'PAID').toUpperCase()} (Verified)`;
-            document.getElementById('pm-booking-reference').textContent = w.BookingReference ? `${w.BookingReference} (${w.ClientName || 'Client'})` : 'Account Inflow Balance';
-
-            // Table of itemized client source payments
-            const tbody = document.getElementById('pm-verify-payments-body');
-            const payments = v.payments || [];
-
-            if (payments.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:#64748b;">No client payment transactions linked to this booking yet.</td></tr>`;
-            } else {
-                tbody.innerHTML = payments.map(p => `
-                    <tr>
-                        <td><strong>${p.TransactionReference || 'PM-TXN-' + p.PaymentID}</strong></td>
-                        <td><span class="badge" style="background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1;">${p.PaymentMethod || 'PayMongo'}</span></td>
-                        <td><strong class="flow-inflow">+${formatPHP(p.Amount)}</strong></td>
-                        <td><span style="font-size:0.8rem; color:#475569;">${formatDateTime(p.PaidAt)}</span></td>
-                        <td><span class="badge badge-approved">${p.PaymentStatus || 'Paid'}</span></td>
-                    </tr>
-                `).join('');
-            }
-
-            // Proceed to disburse button state
-            const proceedBtn = document.getElementById('btn-pm-verify-proceed-disburse');
-            if (proceedBtn) {
-                if (w.WithdrawalStatus === 'Approved') {
-                    proceedBtn.style.display = 'none';
-                } else {
-                    proceedBtn.style.display = 'inline-flex';
-                }
-            }
+            populateWithdrawalFullScreenData(w, v);
 
         } catch (err) {
-            console.error('PayMongo verify fetch error:', err);
-            alert('Failed to connect to verification service.');
-            closePayMongoVerifyModal();
+            console.error('Withdrawal details fetch error:', err);
+            if (!localItem) {
+                alert('Failed to connect to verification service.');
+                closeWithdrawalDetailsFullScreen();
+            }
         }
     }
 
-    function closePayMongoVerifyModal() {
-        if (!modalPmVerify) return;
-        modalPmVerify.classList.remove('active');
+    function closeWithdrawalDetailsFullScreen() {
+        const view = document.getElementById('view-cashier-withdrawal-details');
+        if (view) {
+            view.classList.add('hidden');
+            view.style.setProperty('display', 'none', 'important');
+            view.style.setProperty('visibility', 'hidden', 'important');
+            view.style.setProperty('opacity', '0', 'important');
+        }
+        document.body.style.overflow = '';
     }
 
-    document.getElementById('btn-close-pm-verify-modal')?.addEventListener('click', closePayMongoVerifyModal);
-    document.getElementById('btn-close-pm-verify')?.addEventListener('click', closePayMongoVerifyModal);
-    
-    document.getElementById('btn-pm-verify-proceed-disburse')?.addEventListener('click', () => {
-        closePayMongoVerifyModal();
-        if (currentVerifyWid) {
-            openDisburseModal(currentVerifyWid);
-        }
-    });
+    // Backwards-compatible aliases & global exposures
+    window.openWithdrawalDetailsFullScreen = openWithdrawalDetailsFullScreen;
+    window.closeWithdrawalDetailsFullScreen = closeWithdrawalDetailsFullScreen;
+    window.openPayMongoVerifyModal = openWithdrawalDetailsFullScreen;
+    window.closePayMongoVerifyModal = closeWithdrawalDetailsFullScreen;
+
+    document.getElementById('btn-close-cashier-withdrawal-details')?.addEventListener('click', closeWithdrawalDetailsFullScreen);
 
     // ----------------------------------------------------
-    // Disburse Modal Logic
+    // Direct Disburse Payout Logic (No modal popup needed)
     // ----------------------------------------------------
-    const modalDisburse = document.getElementById('modal-disburse');
-    const formDisburse = document.getElementById('form-disburse-payout');
-
-    function openDisburseModal(wid) {
+    async function executeDisbursePayout(wid, btnElement) {
         const item = currentWithdrawalsList.find(w => String(w.WithdrawalID) === String(wid));
-        if (!item) return;
+        const providerName = item ? (item.ProviderName || 'Service Provider') : 'Service Provider';
+        const amountStr = item ? formatPHP(item.Amount) : '';
+        const methodStr = item?.PayoutMethod || 'GCash';
+        const accDetails = item ? `${item.AccountName || ''} (${item.AccountNumber || item.AccountReference || ''})` : '';
 
-        document.getElementById('disburse-withdrawal-id').value = item.WithdrawalID;
-        document.getElementById('disburse-provider-name').textContent = item.ProviderName || 'Provider';
-        document.getElementById('disburse-amount').textContent = formatPHP(item.Amount);
-        document.getElementById('disburse-destination').textContent = item.PayoutMethod || 'GCash';
-        document.getElementById('disburse-acc-details').textContent = `${item.AccountName || ''} (${item.AccountNumber || item.AccountReference || 'N/A'})`;
-        
-        // Populate PayMongo proof in Disburse modal
-        const pmSummaryText = document.getElementById('disburse-pm-summary-text');
-        const pmBadge = document.getElementById('disburse-pm-status-badge');
-        if (pmSummaryText) {
-            pmSummaryText.innerHTML = `Verified Client Inflow: <strong>${formatPHP(item.totalPayMongoPaid || item.Amount)}</strong> via ${item.primaryPaymentMethod || 'PayMongo'} (Ref: ${item.primaryPayMongoRef || 'Verified'})`;
+        const confirmed = confirm(
+            `Confirm Manual Payout Sent:\n\n` +
+            `• Service Provider: ${providerName}\n` +
+            `• Amount: ${amountStr}\n` +
+            `• Sent Via: ${methodStr}\n` +
+            `• Account: ${accDetails}\n\n` +
+            `Mark this payout request as Disbursed & Completed?`
+        );
+        if (!confirmed) return;
+
+        let originalBtnHtml = '';
+        if (btnElement) {
+            originalBtnHtml = btnElement.innerHTML;
+            btnElement.disabled = true;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Disbursing...`;
         }
-        if (pmBadge) {
-            pmBadge.textContent = item.isPayMongoVerified !== false ? 'Verified Paid' : 'Secured Inflow';
-        }
 
-        document.getElementById('disburse-reference-number').value = '';
-        document.getElementById('disburse-notes').value = '';
+        try {
+            const res = await fetch(`/api/cashier/withdrawals/${wid}/approve`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    paymentMethod: item?.PayoutMethod || 'GCash',
+                    referenceNumber: item?.AccountReference || `MANUAL-${wid}`,
+                    notes: 'Cashier confirmed manual payout sent'
+                })
+            });
+            const data = await res.json();
 
-        modalDisburse.classList.add('active');
-    }
-
-    function closeDisburseModal() {
-        modalDisburse.classList.remove('active');
-    }
-
-    document.getElementById('btn-close-disburse-modal')?.addEventListener('click', closeDisburseModal);
-    document.getElementById('btn-cancel-disburse')?.addEventListener('click', closeDisburseModal);
-
-    if (formDisburse) {
-        formDisburse.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const wid = document.getElementById('disburse-withdrawal-id').value;
-            const refNo = document.getElementById('disburse-reference-number').value.trim();
-            const method = document.getElementById('disburse-payment-method').value;
-            const notes = document.getElementById('disburse-notes').value.trim();
-
-            if (!refNo) {
-                alert('Please enter the transaction / receipt reference number.');
-                return;
-            }
-
-            const submitBtn = document.getElementById('btn-submit-disburse');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
-
-            try {
-                const res = await fetch(`/api/cashier/withdrawals/${wid}/approve`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        referenceNumber: refNo,
-                        paymentMethod: method,
-                        notes: notes
-                    })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    alert(data.message || 'Payout disbursed successfully!');
-                    closeDisburseModal();
-                    loadWithdrawalsList();
-                    loadCashierSummary();
-                } else {
-                    alert(data.message || 'Failed to disburse payout.');
+            if (data.success) {
+                alert(data.message || 'Payout marked as disbursed successfully!');
+                await loadWithdrawalsList();
+                loadCashierSummary();
+                const wdrView = document.getElementById('view-cashier-withdrawal-details');
+                if (wdrView && !wdrView.classList.contains('hidden') && wdrView.style.display !== 'none') {
+                    openWithdrawalDetailsFullScreen(wid);
                 }
-            } catch (err) {
-                console.error('Disburse error:', err);
-                alert('An error occurred while disbursing the payout.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Confirm & Mark Disbursed`;
+            } else {
+                alert(data.message || 'Failed to disburse payout.');
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = originalBtnHtml || `<i class="fa-solid fa-money-bill-wave"></i> Disburse Payout`;
+                }
             }
-        });
+        } catch (err) {
+            console.error('Disburse error:', err);
+            alert('An error occurred while disbursing the payout.');
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalBtnHtml || `<i class="fa-solid fa-money-bill-wave"></i> Disburse Payout`;
+            }
+        }
     }
+
+    // Backwards-compatible aliases
+    window.openDisburseModal = executeDisbursePayout;
+    window.executeDisbursePayout = executeDisbursePayout;
 
     // ----------------------------------------------------
     // Reject Modal Logic
@@ -877,32 +1035,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isPending = (r.Status || 'Pending') === 'Pending';
             const actionHtml = isPending ? `
-                <div style="display:flex; gap:6px; justify-content:flex-end;">
-                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" title="Manually Disburse Payment">
-                        <i class="fa-solid fa-money-bill-transfer"></i> Disburse
+                <div style="display:flex; gap:6px; justify-content:flex-end;" onclick="event.stopPropagation();">
+                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation();" title="Manually Send Refund & Mark as Refunded">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation();" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
                         <i class="fa-solid fa-xmark"></i> Reject
                     </button>
                 </div>
             ` : (r.Status === 'Approved' ? `
-                <div style="text-align:right;">
+                <div style="text-align:right;" onclick="event.stopPropagation();">
                     <strong style="color:#059669; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Ref: ${r.ReferenceNumber || 'Manual'}</strong>
                     ${r.AdminNotes ? `<div style="font-size:0.75rem; color:#64748b;">${r.AdminNotes}</div>` : ''}
                 </div>
             ` : `
-                <div style="text-align:right;">
+                <div style="text-align:right;" onclick="event.stopPropagation();">
                     <span style="color:#dc2626; font-size:0.82rem;"><i class="fa-solid fa-xmark"></i> ${r.AdminNotes || 'Rejected'}</span>
                 </div>
             `);
 
             return `
-                <tr>
+                <tr class="refund-row-item" data-id="${r.RefundRequestID}" onclick="window.openClientBookingDetailsFullScreen && window.openClientBookingDetailsFullScreen('${r.RefundRequestID}')" title="Click this line to view client booking information">
                     <td><strong>#REF-${r.RefundRequestID}</strong></td>
                     <td>
-                        <div style="font-weight:700; color:#0a192f;">${r.ClientName || 'Client'}</div>
-                        <div style="font-size:0.8rem; color:#64748b;">${r.ClientEmail || r.UserEmail || 'No Email'}</div>
-                        ${r.ClientPhone ? `<div style="font-size:0.78rem; color:#64748b;">📞 ${r.ClientPhone}</div>` : ''}
+                        <div>
+                            <button type="button" class="btn-view-client-booking" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.openClientBookingDetailsFullScreen && window.openClientBookingDetailsFullScreen('${r.RefundRequestID}');" style="background:none; border:none; padding:0; text-align:left; cursor:pointer; font-weight:800; font-size:0.95rem; color:#2563eb; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s;" onmouseover="this.style.color='#1d4ed8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2563eb'; this.style.textDecoration='none';" title="Click to view client booking information">
+                                <span>${r.ClientName || 'Denver Cabrera'}</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem;"></i>
+                            </button>
+                        </div>
+                        <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${r.ClientEmail || r.UserEmail || 'No Email'}</div>
                     </td>
                     <td><strong class="flow-outflow" style="font-size:1.05rem; color:#ef4444;">-${formatPHP(r.Amount)}</strong></td>
                     <td><span class="badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-weight:700;">${r.PayoutMethod || 'GCash'}</span></td>
@@ -911,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-family:monospace; font-weight:800; font-size:0.95rem; color:#0a192f;">${r.AccountNumber || '-'}</div>
                     </td>
                     <td><span style="font-size:0.85rem; color:#475569;">${formatDateTime(r.RequestedAt)}</span></td>
-                    <td><span class="badge ${statusBadge}">${r.Status || 'Pending'}</span></td>
+                    <td><span class="badge ${statusBadge}">${r.Status === 'Approved' ? 'Refunded' : (r.Status || 'Pending')}</span></td>
                     <td style="text-align:right;">${actionHtml}</td>
                 </tr>
             `;
@@ -932,10 +1094,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refund-search-input')?.addEventListener('input', renderRefundsTable);
     document.getElementById('btn-refresh-refunds')?.addEventListener('click', loadClientRefundsList);
 
-    // Table click delegation for Disburse & Reject
+    // Table click delegation for View Booking, Disburse & Reject
     document.getElementById('refunds-table-body')?.addEventListener('click', (e) => {
         const disburseBtn = e.target.closest('.btn-disburse-refund');
         if (disburseBtn) {
+            e.stopPropagation();
             const reqId = disburseBtn.getAttribute('data-id');
             openCashierDisburseModal(reqId);
             return;
@@ -943,9 +1106,169 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const rejectBtn = e.target.closest('.btn-reject-refund');
         if (rejectBtn) {
+            e.stopPropagation();
             const reqId = rejectBtn.getAttribute('data-id');
             openCashierRejectModal(reqId);
             return;
+        }
+
+        // When you click this line (table row or client button)
+        const row = e.target.closest('.refund-row-item');
+        if (row) {
+            const reqId = row.getAttribute('data-id');
+            openClientBookingDetailsFullScreen(reqId);
+            return;
+        }
+    });
+
+    // Fullscreen View: Client Booking & Refund Information
+    function openClientBookingDetailsFullScreen(reqId) {
+        const item = currentRefundsList.find(r => String(r.RefundRequestID) === String(reqId));
+        if (!item) return;
+
+        const view = document.getElementById('view-cashier-booking-details');
+        if (!view) return;
+
+        const bRefEl = document.getElementById('cbd-booking-ref');
+        const bStatusEl = document.getElementById('cbd-booking-status');
+        const pStatusEl = document.getElementById('cbd-payment-status');
+        const pkgNameEl = document.getElementById('cbd-package-name');
+        const provNameEl = document.getElementById('cbd-provider-name');
+
+        const cNameEl = document.getElementById('cbd-client-name');
+        const cPhoneEl = document.getElementById('cbd-client-phone');
+        const cEmailEl = document.getElementById('cbd-client-email');
+        const cGuestNameEl = document.getElementById('cbd-booking-guest-name');
+        const cGuestContainer = document.getElementById('cbd-guest-container');
+
+        const schedEl = document.getElementById('cbd-event-schedule');
+        const venueEl = document.getElementById('cbd-event-venue');
+        const addrEl = document.getElementById('cbd-event-address');
+
+        const totalEl = document.getElementById('cbd-total-amount');
+        const paidEl = document.getElementById('cbd-amount-paid');
+        const refAmtEl = document.getElementById('cbd-refund-amount');
+
+        const pMethodEl = document.getElementById('cbd-payout-method');
+        const destNameEl = document.getElementById('cbd-destination-name');
+        const destNumEl = document.getElementById('cbd-destination-number');
+        const actionsContainer = document.getElementById('cbd-actions-container');
+
+        if (bRefEl) bRefEl.textContent = item.BookingReference ? `#${item.BookingReference}` : (item.BookingID ? `#BK-${item.BookingID}` : `Ref #${item.RefundRequestID}`);
+        if (bStatusEl) {
+            bStatusEl.textContent = item.BookingStatus || 'Cancelled';
+            bStatusEl.style.background = (item.BookingStatus === 'Cancelled') ? '#fee2e2' : '#f1f5f9';
+            bStatusEl.style.color = (item.BookingStatus === 'Cancelled') ? '#dc2626' : '#334155';
+        }
+        if (pStatusEl) {
+            pStatusEl.textContent = (item.Status === 'Approved') ? 'Refunded' : (item.Status || 'Pending');
+            pStatusEl.style.background = (item.Status === 'Approved') ? '#dcfce7' : ((item.Status === 'Rejected') ? '#fee2e2' : '#eff6ff');
+            pStatusEl.style.color = (item.Status === 'Approved') ? '#15803d' : ((item.Status === 'Rejected') ? '#991b1b' : '#1e40af');
+        }
+        if (pkgNameEl) pkgNameEl.textContent = item.PackageName || item.EventName || 'Lights & Sounds Event Package';
+        if (provNameEl) provNameEl.innerHTML = `<i class="fa-solid fa-store" style="color:#64748b;"></i> ${item.ProviderName || 'Service Provider'}`;
+
+        if (cNameEl) cNameEl.textContent = item.ClientName || 'Denver Cabrera';
+        if (cPhoneEl) cPhoneEl.textContent = item.ClientPhone || item.BookingClientPhone || 'No Phone';
+        if (cEmailEl) cEmailEl.textContent = item.ClientEmail || item.UserEmail || item.BookingClientEmail || 'No Email';
+
+        if (cGuestNameEl && cGuestContainer) {
+            if (item.BookingClientName && item.BookingClientName.toLowerCase() !== (item.ClientName || '').toLowerCase()) {
+                cGuestNameEl.textContent = item.BookingClientName;
+                cGuestContainer.style.display = 'block';
+            } else {
+                cGuestContainer.style.display = 'none';
+            }
+        }
+
+        let dateStr = item.EventDate || item.ServiceStartDate || 'N/A';
+        let timeStr = (item.StartTime && item.EndTime) ? ` (${item.StartTime} - ${item.EndTime})` : '';
+        if (schedEl) schedEl.textContent = `${dateStr}${timeStr}`;
+
+        if (venueEl) venueEl.textContent = item.VenueName || item.EventPlace || 'Venue Provided Upon Request';
+        if (addrEl) addrEl.textContent = item.EventAddress || item.EventPlace || item.Location || 'Batangas';
+
+        const totalVal = parseFloat(item.BookingTotalAmount || item.Amount || 0);
+        const paidVal = parseFloat(item.BookingAmountPaid || item.Amount || 0);
+        const refVal = parseFloat(item.Amount || 0);
+
+        if (totalEl) totalEl.textContent = formatPHP(totalVal);
+        if (paidEl) paidEl.textContent = formatPHP(paidVal);
+        if (refAmtEl) refAmtEl.textContent = formatPHP(refVal);
+
+        if (pMethodEl) pMethodEl.textContent = item.PayoutMethod || 'GCash';
+        if (destNameEl) destNameEl.textContent = item.AccountName || item.ClientName || '-';
+        if (destNumEl) destNumEl.textContent = item.AccountNumber || '-';
+
+        // Action buttons inside the fullscreen view
+        if (actionsContainer) {
+            if (item.Status === 'Pending') {
+                actionsContainer.innerHTML = `
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btn-fullscreen-reject" style="color:#dc2626; border-color:#fca5a5; padding:8px 16px; font-weight:700;">
+                        <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" id="btn-fullscreen-disburse" style="padding:8px 20px; font-weight:800;">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
+                    </button>
+                `;
+                document.getElementById('btn-fullscreen-disburse')?.addEventListener('click', () => {
+                    closeClientBookingDetailsFullScreen();
+                    openCashierDisburseModal(item.RefundRequestID);
+                });
+                document.getElementById('btn-fullscreen-reject')?.addEventListener('click', () => {
+                    closeClientBookingDetailsFullScreen();
+                    openCashierRejectModal(item.RefundRequestID);
+                });
+            } else if (item.Status === 'Approved') {
+                actionsContainer.innerHTML = `
+                    <span style="color:#059669; font-weight:800; font-size:0.92rem;">
+                        <i class="fa-solid fa-circle-check"></i> Ref: ${item.ReferenceNumber || 'Manual'}
+                    </span>
+                `;
+            } else {
+                actionsContainer.innerHTML = `
+                    <span style="color:#dc2626; font-weight:700; font-size:0.88rem;">
+                        <i class="fa-solid fa-circle-xmark"></i> ${item.AdminNotes || 'Rejected'}
+                    </span>
+                `;
+            }
+        }
+
+        view.classList.remove('hidden');
+        view.style.setProperty('display', 'flex', 'important');
+        view.style.setProperty('visibility', 'visible', 'important');
+        view.style.setProperty('opacity', '1', 'important');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeClientBookingDetailsFullScreen() {
+        const view = document.getElementById('view-cashier-booking-details');
+        if (view) {
+            view.classList.add('hidden');
+            view.style.setProperty('display', 'none', 'important');
+            view.style.setProperty('visibility', 'hidden', 'important');
+            view.style.setProperty('opacity', '0', 'important');
+        }
+        document.body.style.overflow = '';
+    }
+
+    // Expose globally so inline onclick on table rows always work
+    window.openClientBookingDetailsFullScreen = openClientBookingDetailsFullScreen;
+    window.closeClientBookingDetailsFullScreen = closeClientBookingDetailsFullScreen;
+
+    document.getElementById('btn-close-cashier-booking-details')?.addEventListener('click', closeClientBookingDetailsFullScreen);
+
+    // Keyboard ESC listener to close fullscreen view or modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const bView = document.getElementById('view-cashier-booking-details');
+            if (bView && !bView.classList.contains('hidden') && bView.style.display !== 'none') {
+                closeClientBookingDetailsFullScreen();
+            }
+            const wView = document.getElementById('view-cashier-withdrawal-details');
+            if (wView && !wView.classList.contains('hidden') && wView.style.display !== 'none') {
+                closeWithdrawalDetailsFullScreen();
+            }
         }
     });
 
@@ -1012,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.message || 'Failed to approve refund.');
                 }
 
-                alert(`🎉 Refund Successfully Marked as Disbursed!\n\nReference: ${refNo}\nThe client has been notified in-app.`);
+                alert(`🎉 Refund Successfully Sent & Marked as Refunded!\n\nReference: ${refNo}\nThe payment has been marked as refunded and reflected to the client.`);
                 closeCashierDisburseModal();
                 loadClientRefundsList();
                 loadCashierSummary();
@@ -1756,7 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     tablePayouts.querySelectorAll('.btn-revenue-disburse').forEach(btn => {
                         btn.addEventListener('click', () => {
                             const wid = btn.getAttribute('data-wid');
-                            openDisburseModal(wid);
+                            executeDisbursePayout(wid, btn);
                         });
                     });
                 }

@@ -107,14 +107,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnSubmit = document.getElementById('btn-submit-booking');
 
     // Back to Select Date & Time / Open Calendar Handler
-    const handleBackToCalendarSelection = () => {
-        const pkgId = (packageData && (packageData.PackageID || packageData.id)) ? (packageData.PackageID || packageData.id) : targetPackageId;
-        const provId = (packageData && (packageData.ProviderID || packageData.providerId)) ? (packageData.ProviderID || packageData.providerId) : targetProviderId;
-        const pkgTitle = (packageData && (packageData.PackageName || packageData.title || packageData.name)) ? (packageData.PackageName || packageData.title || packageData.name) : 'Event Service Package';
-        const pkgPrice = (packageData && packageData.Price) ? packageData.Price : basePackagePrice;
-        const provName = (summaryProviderName && summaryProviderName.textContent && summaryProviderName.textContent !== 'Service Provider') ? summaryProviderName.textContent : 'SoundSphere Provider';
-        const curDate = (startDateInput && startDateInput.value) ? startDateInput.value : (prefilledDate || tomorrowStr);
-        const curTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : (prefilledStartTime || '08:00');
+    const handleBackToCalendarSelection = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionSelected = (() => {
+            try {
+                const raw = sessionStorage.getItem('soundsphere_selected_package') || sessionStorage.getItem('soundsphere_pending_booking');
+                return raw ? JSON.parse(raw) : null;
+            } catch(err) { return null; }
+        })();
+
+        const pkgId = (packageData && (packageData.PackageID || packageData.id)) 
+            || urlParams.get('package_id') || urlParams.get('packageId') || urlParams.get('pkgId') 
+            || (sessionSelected && (sessionSelected.packageId || sessionSelected.PackageID)) || 1;
+
+        const provId = (packageData && (packageData.ProviderID || packageData.providerId)) 
+            || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') 
+            || (sessionSelected && (sessionSelected.providerId || sessionSelected.ProviderID)) || 13;
+
+        const pkgTitle = (packageData && (packageData.PackageName || packageData.title || packageData.name)) 
+            || (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName || sessionSelected.PackageName))
+            || (summaryPkgName && summaryPkgName.textContent) || 'Event Service Package';
+
+        const pkgPrice = (packageData && packageData.Price) 
+            || (sessionSelected && (sessionSelected.packagePrice || sessionSelected.price || sessionSelected.Price))
+            || (basePackagePrice || 15000);
+
+        const provName = (packageData && (packageData.ProviderName || packageData.BusinessName))
+            || (sessionSelected && (sessionSelected.providerName || sessionSelected.ProviderName))
+            || (summaryProviderName && summaryProviderName.textContent && summaryProviderName.textContent !== 'Service Provider' ? summaryProviderName.textContent : 'SoundSphere Provider');
+
+        const curDate = (startDateInput && startDateInput.value) 
+            || urlParams.get('date') || urlParams.get('eventDate') 
+            || (sessionSelected && (sessionSelected.eventDate || sessionSelected.date || sessionSelected.serviceStartDate))
+            || new Date().toISOString().split('T')[0];
+
+        const curTime = (startTimeInput && startTimeInput.value) 
+            || urlParams.get('startTime') || urlParams.get('start_time') 
+            || (sessionSelected && (sessionSelected.startTime || sessionSelected.start_time)) 
+            || '08:00';
 
         if (typeof window.openBookingCalendarModal === 'function') {
             window.openBookingCalendarModal({
@@ -130,12 +162,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } else if (provId) {
             window.location.href = `provider-detail.html?id=${provId}&packageId=${pkgId}`;
-        } else if (document.referrer && document.referrer.includes(window.location.host)) {
-            window.history.back();
         } else {
             window.location.href = 'marketplace.html';
         }
     };
+
+    window.handleBackToCalendarSelection = handleBackToCalendarSelection;
 
     const btnHeaderBack = document.getElementById('btn-header-back-to-calendar');
     const btnPageBack = document.getElementById('btn-page-back-to-calendar');

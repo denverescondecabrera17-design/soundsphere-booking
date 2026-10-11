@@ -126,9 +126,29 @@ const getWalletDetails = async (userId) => {
     const pendingRequests = reqRes.recordset.filter(r => r.Status === 'Pending');
     const pendingAmount = pendingRequests.reduce((sum, r) => sum + parseFloat(r.Amount || 0), 0);
 
+    // Retrieve client's original payment method from recent cancelled booking if available
+    let originalPaymentMethod = null;
+    try {
+        const lastBkRes = await pool.request()
+            .input('UID', sql.Int, uid)
+            .query(`
+                SELECT TOP 1 p.PaymentMethod
+                FROM dbo.Bookings b
+                LEFT JOIN dbo.Payments p ON p.BookingID = b.BookingID
+                WHERE b.ClientUserID = @UID AND b.BookingStatus = 'Cancelled' AND p.PaymentMethod IS NOT NULL
+                ORDER BY b.UpdatedAt DESC;
+            `);
+        if (lastBkRes.recordset.length > 0 && lastBkRes.recordset[0].PaymentMethod) {
+            originalPaymentMethod = lastBkRes.recordset[0].PaymentMethod;
+        }
+    } catch (bkErr) {
+        // Fallback silently if Payments table query not found
+    }
+
     return {
         balance,
         pendingAmount,
+        originalPaymentMethod,
         transactions: txRes.recordset || [],
         refundRequests: reqRes.recordset || []
     };
@@ -167,21 +187,62 @@ const requestRefundPayout = async ({ userId, amount, payoutMethod, accountName, 
             WHERE UserID = @UID;
         `);
 
+    // Find the user's account name and latest cancelled booking for link
+    let bookingId = null;
+    let bookingRef = null;
+    let userAccountName = clientName || 'Verified Client';
+    let userAccountEmail = clientEmail || null;
+    let userAccountPhone = clientPhone || null;
+
+    try {
+        const uRes = await pool.request()
+            .input('UID', sql.Int, uid)
+            .query(`
+                SELECT u.Email, u.Phone, COALESCE(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'User') AS AccountName
+                FROM dbo.Users u
+                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+                WHERE u.UserID = @UID;
+            `);
+        if (uRes.recordset && uRes.recordset.length > 0) {
+            userAccountName = uRes.recordset[0].AccountName || userAccountName;
+            userAccountEmail = uRes.recordset[0].Email || userAccountEmail;
+            userAccountPhone = uRes.recordset[0].Phone || userAccountPhone;
+        }
+
+        const bkQuery = await pool.request()
+            .input('UID', sql.Int, uid)
+            .query(`
+                SELECT TOP 1 bk.BookingID, bk.BookingReference
+                FROM dbo.Bookings bk
+                WHERE bk.ClientUserID = @UID AND bk.BookingStatus = 'Cancelled'
+                ORDER BY bk.UpdatedAt DESC, bk.BookingID DESC;
+            `);
+
+        if (bkQuery.recordset && bkQuery.recordset.length > 0) {
+            bookingId = bkQuery.recordset[0].BookingID;
+            bookingRef = bkQuery.recordset[0].BookingReference;
+        }
+    } catch (bkErr) {
+        console.warn('Booking lookup for refund notice:', bkErr.message);
+    }
+
     // 2. Insert into dbo.RefundRequests
     const insertReq = await pool.request()
         .input('UID', sql.Int, uid)
-        .input('CName', sql.NVarChar(200), clientName || 'Verified Client')
-        .input('CEmail', sql.NVarChar(150), clientEmail || null)
-        .input('CPhone', sql.NVarChar(50), clientPhone || null)
+        .input('CName', sql.NVarChar(200), userAccountName || 'Verified Client')
+        .input('CEmail', sql.NVarChar(150), userAccountEmail || null)
+        .input('CPhone', sql.NVarChar(50), userAccountPhone || null)
+        .input('BID', sql.Int, bookingId)
+        .input('BRef', sql.NVarChar(50), bookingRef)
         .input('Amt', sql.Decimal(18, 2), reqAmount)
         .input('PMethod', sql.NVarChar(50), payoutMethod || 'GCash')
         .input('AName', sql.NVarChar(150), accountName)
         .input('ANum', sql.NVarChar(100), accountNumber)
         .input('Notes', sql.NVarChar(500), notes || null)
         .query(`
-            INSERT INTO dbo.RefundRequests (UserID, ClientName, ClientEmail, ClientPhone, Amount, PayoutMethod, AccountName, AccountNumber, Status, AdminNotes, RequestedAt)
+            INSERT INTO dbo.RefundRequests (UserID, ClientName, ClientEmail, ClientPhone, BookingID, BookingReference, Amount, PayoutMethod, AccountName, AccountNumber, Status, AdminNotes, RequestedAt)
             OUTPUT INSERTED.RefundRequestID
-            VALUES (@UID, @CName, @CEmail, @CPhone, @Amt, @PMethod, @AName, @ANum, 'Pending', @Notes, GETDATE());
+            VALUES (@UID, @CName, @CEmail, @CPhone, @BID, @BRef, @Amt, @PMethod, @AName, @ANum, 'Pending', @Notes, GETDATE());
         `);
 
     const reqId = insertReq.recordset[0].RefundRequestID;
@@ -262,8 +323,8 @@ const approveRefundPayout = async ({ refundRequestId, cashierUserId, referenceNu
     const amtStr = parseFloat(reqData.Amount).toLocaleString('en-US', { minimumFractionDigits: 2 });
     await pool.request()
         .input('UID', sql.Int, reqData.UserID)
-        .input('Title', sql.NVarChar(150), '💸 Refund Disbursed by Cashier')
-        .input('Msg', sql.NVarChar(500), `Your refund payout of ₱${amtStr} has been manually sent via ${reqData.PayoutMethod} to ${reqData.AccountName} (${reqData.AccountNumber}). Reference: ${refNo}.`)
+        .input('Title', sql.NVarChar(150), '💸 Refund Sent & Marked as Refunded')
+        .input('Msg', sql.NVarChar(500), `Your refund payout of ₱${amtStr} has been manually sent via ${reqData.PayoutMethod} to ${reqData.AccountName} (${reqData.AccountNumber}) and marked as Refunded. Payment Reference: ${refNo}.`)
         .input('RID', sql.Int, rId)
         .query(`
             IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
@@ -375,9 +436,9 @@ const getAllRefundRequestsForCashier = async () => {
         SELECT 
             rr.RefundRequestID,
             rr.UserID,
-            rr.ClientName,
-            rr.ClientEmail,
-            rr.ClientPhone,
+            COALESCE(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), NULLIF(LTRIM(RTRIM(rr.ClientName)), ''), u.Email, 'User') AS ClientName,
+            COALESCE(u.Email, rr.ClientEmail, 'No Email') AS ClientEmail,
+            COALESCE(u.Phone, rr.ClientPhone) AS ClientPhone,
             rr.Amount,
             rr.PayoutMethod,
             rr.AccountName,
@@ -387,9 +448,39 @@ const getAllRefundRequestsForCashier = async () => {
             rr.AdminNotes,
             rr.RequestedAt,
             rr.ProcessedAt,
-            u.Email AS UserEmail
+            u.Email AS UserEmail,
+            b.BookingID,
+            ISNULL(b.BookingReference, rr.BookingReference) AS BookingReference,
+            b.PackageName,
+            b.EventName,
+            b.EventType,
+            b.EventDate,
+            b.ServiceStartDate,
+            b.ServiceEndDate,
+            b.StartTime,
+            b.EndTime,
+            b.EventPlace,
+            b.VenueName,
+            b.EventAddress,
+            b.Location,
+            b.TotalAmount AS BookingTotalAmount,
+            b.AmountPaid AS BookingAmountPaid,
+            b.BookingStatus,
+            b.PaymentStatus AS BookingPaymentStatus,
+            b.ClientName AS BookingClientName,
+            b.ClientPhone AS BookingClientPhone,
+            b.ClientEmail AS BookingClientEmail,
+            ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName
         FROM dbo.RefundRequests rr
         LEFT JOIN dbo.Users u ON rr.UserID = u.UserID
+        LEFT JOIN dbo.Clients c ON rr.UserID = c.UserID
+        OUTER APPLY (
+            SELECT TOP 1 bk.*
+            FROM dbo.Bookings bk
+            WHERE (bk.BookingID = rr.BookingID OR (rr.BookingID IS NULL AND bk.ClientUserID = rr.UserID AND bk.BookingStatus = 'Cancelled'))
+            ORDER BY bk.UpdatedAt DESC, bk.BookingID DESC
+        ) b
+        LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
         ORDER BY 
             CASE WHEN rr.Status = 'Pending' THEN 0 ELSE 1 END,
             rr.RequestedAt DESC;

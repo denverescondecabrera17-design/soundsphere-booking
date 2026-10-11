@@ -752,7 +752,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 100001;
     padding: 16px;
     opacity: 0;
     visibility: hidden;
@@ -1130,3 +1130,62 @@ body {
         justify-content: space-between;
     }
 }
+
+/* ==========================================================================
+   FULLSCREEN CLIENT BOOKING & REFUND VIEW
+   ========================================================================== */
+.cashier-fullscreen-view.hidden,
+#view-cashier-booking-details.hidden,
+#view-cashier-withdrawal-details.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.cashier-fullscreen-view,
+#view-cashier-booking-details,
+#view-cashier-withdrawal-details {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #f8fafc !important;
+    z-index: 99999 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.refund-row-item {
+    cursor: pointer !important;
+    transition: background-color 0.15s ease;
+}
+
+.refund-row-item:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.withdrawal-row-item {
+    cursor: pointer !important;
+    transition: all 0.15s ease;
+}
+
+.withdrawal-row-item:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.withdrawal-row-item:hover td:first-child strong {
+    color: #2563eb !important;
+    text-decoration: underline;
+}
+

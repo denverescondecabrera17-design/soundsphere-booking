@@ -23,7 +23,7 @@
     <!-- Navigation Header -->
     <header class="marketplace-navbar">
         <div class="nav-container">
-            <a href="marketplace.html" class="nav-brand">
+            <a href="/index.html" class="nav-brand">
                 <i class="fa-solid fa-compact-disc"></i>
                 <div>
                     SoundSphere
@@ -32,18 +32,19 @@
             </a>
 
             <div class="nav-actions">
-                <a href="marketplace.html" class="nav-action-btn">
+                <a href="/index.html" class="nav-action-btn" id="btn-back-marketplace" title="Back to Main Landing Page">
                     <i class="fa-solid fa-arrow-left"></i>
-                    <span>Back to Marketplace</span>
+                    <span>Back</span>
                 </a>
 
-                <a href="client-bookings.html" class="nav-action-btn">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    <span>My Bookings</span>
-                </a>
+                <!-- Unauthenticated Guest Auth Buttons (Login & Sign Up) -->
+                <div id="guest-auth-buttons" class="header-actions" style="display:flex; align-items:center; gap:10px;">
+                    <a href="/login.html" class="btn-auth-outline" style="padding: 7px 16px; border: 1px solid #60a5fa; color: #60a5fa; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Login</a>
+                    <a href="/register.html" class="btn-auth-solid" style="padding: 7px 16px; background: #2563eb; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.86rem; transition: all 0.2s ease;">Sign Up</a>
+                </div>
 
-                <!-- User Avatar Menu with Logout Dropdown -->
-                <div class="user-avatar-menu">
+                <!-- User Avatar Menu with Logout Dropdown (Authenticated Users Only) -->
+                <div class="user-avatar-menu" id="auth-user-menu" style="display:none;">
                     <div class="avatar-btn" id="avatar-btn">
                         <div class="avatar-img" id="user-avatar-initials">UA</div>
                         <span class="avatar-name" id="user-display-name">User Account</span>
@@ -52,8 +53,8 @@
 
                     <div class="user-dropdown" id="user-dropdown">
                         <div class="dropdown-header">
-                            <div class="user-title">Event Client Account</div>
-                            <div class="user-role">Verified Client</div>
+                            <div class="user-title" id="dropdown-user-title">Event Client Account</div>
+                            <div class="user-role" id="dropdown-user-role">Verified Client</div>
                         </div>
                         <a href="#" id="logout-btn" class="dropdown-item logout-item">
                             <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
@@ -63,6 +64,28 @@
             </div>
         </div>
     </header>
+
+    <!-- Immediate Contextual Back/Brand Link Setup -->
+    <script>
+        (function() {
+            try {
+                var tok = localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || localStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token');
+                var raw = localStorage.getItem('soundsphere_user') || sessionStorage.getItem('soundsphere_user') || localStorage.getItem('soundsphere_user_info');
+                var usr = raw ? JSON.parse(raw) : null;
+                var target = '/index.html';
+                if (tok && usr) {
+                    var role = (usr.role || usr.RoleName || usr.roleName || '').toLowerCase();
+                    target = (role === 'provider' || role === 'serviceprovider') ? '/provider/dashboard.html' :
+                             (role === 'admin' || role === 'administrator') ? '/admin/dashboard.html' :
+                             (role === 'cashier') ? '/cashier/dashboard.html' : '/marketplace.html';
+                }
+                var backBtn = document.getElementById('btn-back-marketplace');
+                var brandLink = document.querySelector('.nav-brand');
+                if (backBtn) backBtn.setAttribute('href', target);
+                if (brandLink) brandLink.setAttribute('href', target);
+            } catch(e) {}
+        })();
+    </script>
 
     <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
     <section class="provider-profile-header-clean">
@@ -534,6 +557,88 @@
             <p>&copy; 2026 SoundSphere E-Platform. All rights reserved. Professional Lights & Sounds Booking System.</p>
         </div>
     </footer>
+
+    <!-- ==================== PACKAGE DETAILS WHOLE-SCREEN VIEW ==================== -->
+    <div id="modal-package-detail" class="pkg-fullscreen-view hidden" role="dialog" aria-modal="true">
+        <!-- Top Sticky Navigation Bar -->
+        <header class="pkg-fullscreen-nav">
+            <div class="pkg-fullscreen-nav-inner">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span id="pkg-modal-badge" style="display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 800; padding: 2px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Package Specification
+                    </span>
+                    <h2 id="pkg-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 900; color: #0f172a; line-height: 1.25;">
+                        Package Details
+                    </h2>
+                </div>
+                <button type="button" class="pkg-fullscreen-close-btn" onclick="window.closePackageDetailModal()" aria-label="Close" title="Close">&times;</button>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Content Area -->
+        <main class="pkg-fullscreen-body">
+            <!-- Price & Verified Badge Card -->
+            <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.05);">
+                <div>
+                    <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Rental Rate</div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span id="pkg-modal-price" style="font-size: 2.2rem; font-weight: 900; color: #2563eb; letter-spacing: -0.5px;">₱0</span>
+                        <span id="pkg-modal-duration" style="font-size: 0.95rem; color: #64748b; font-weight: 700;">/ Event Rental</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; background: #ffffff; padding: 10px 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-size: 0.9rem; font-weight: 700; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                    <i class="fa-solid fa-shield-check" style="color: #10b981; font-size: 1.25rem;"></i> SoundSphere Verified Rig
+                </div>
+            </div>
+
+            <!-- Photo Gallery Showcase -->
+            <section id="pkg-modal-photo-section" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-camera" style="color: #2563eb; font-size: 1rem;"></i> Equipment & Setup Photos
+                </div>
+                <div id="pkg-modal-main-img-wrap" style="width: 100%; height: 420px; max-height: 55vh; border-radius: 14px; overflow: hidden; border: 1px solid #cbd5e1; background: #0f172a; position: relative; cursor: pointer;" onclick="const img = document.getElementById('pkg-modal-main-img'); if (img && window.openMarketplaceLightbox) window.openMarketplaceLightbox(img.src);" title="Click to enlarge">
+                    <img id="pkg-modal-main-img" src="" alt="Package Setup" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(10, 25, 47, 0.85); color: #ffffff; backdrop-filter: blur(6px); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                        <i class="fa-solid fa-magnifying-glass-plus" style="color: #60a5fa;"></i> Click to enlarge
+                    </div>
+                </div>
+                <div id="pkg-modal-thumbnails" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px;"></div>
+            </section>
+
+            <!-- Package Overview / Description -->
+            <section id="pkg-modal-desc-wrap" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-circle-info" style="color: #2563eb; font-size: 1rem;"></i> Overview & Capabilities
+                </div>
+                <p id="pkg-modal-desc" style="font-size: 0.95rem; color: #334155; line-height: 1.65; margin: 0; background: #f8fafc; padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0;"></p>
+            </section>
+
+            <!-- Inclusions Checklist -->
+            <section style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-list-check" style="color: #2563eb; font-size: 1rem;"></i> Included Equipment & Services
+                </div>
+                <ul id="pkg-modal-inclusions" style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;"></ul>
+            </section>
+
+            <!-- Service Protection Highlights -->
+            <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 18px 24px; display: flex; align-items: flex-start; gap: 14px;">
+                <i class="fa-solid fa-circle-check" style="color: #16a34a; font-size: 1.35rem; margin-top: 2px; flex-shrink: 0;"></i>
+                <div style="font-size: 0.9rem; color: #166534; line-height: 1.55; font-weight: 600;">
+                    <strong style="color: #14532d;">Includes On-Site Technicians & Setup:</strong> Equipment is transported, configured, sound-checked, and operated on-site by certified sound and light technicians throughout the event.
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Fixed Action Bar -->
+        <footer class="pkg-fullscreen-footer">
+            <div class="pkg-fullscreen-footer-inner" style="justify-content: flex-end;">
+                <button type="button" id="pkg-modal-btn-book" style="padding: 12px 36px; border: none; border-radius: 10px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; font-weight: 800; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(37, 99, 235, 0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(37, 99, 235, 0.35)';">
+                    <i class="fa-solid fa-calendar-check"></i> Book Package Now
+                </button>
+            </div>
+        </footer>
+    </div>
 
     <!-- Scripts -->
     <script src="js/api.js?v=5.0"></script>

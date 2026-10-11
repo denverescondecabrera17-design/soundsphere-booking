@@ -1,8 +1,9 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { getPool, connectDB } = require('../server/config/db');
 
 async function seedApprovedProviders() {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    let pool = await connectDB();
 
     console.log("=== Seeding Approved Service Providers & Packages into MSSQL DB ===");
 

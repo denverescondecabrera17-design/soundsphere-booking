@@ -75,17 +75,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Render Dynamic Real Provider Cards
-            packagesGrid.innerHTML = providers.map((p, index) => {
-                const pkg = (p.packages && p.packages[0]) ? p.packages[0] : { name: p.name, price: p.startingPrice || 15000 };
+            // Collect all packages across all approved providers
+            const packageItems = [];
+            providers.forEach(p => {
+                if (p.packages && p.packages.length > 0) {
+                    p.packages.forEach(pkg => {
+                        packageItems.push({
+                            provider: p,
+                            pkg: pkg
+                        });
+                    });
+                } else {
+                    packageItems.push({
+                        provider: p,
+                        pkg: { id: null, name: p.name, price: p.startingPrice || 15000, images: [] }
+                    });
+                }
+            });
+
+            // Render Dynamic Real Package Cards
+            packagesGrid.innerHTML = packageItems.map((item, index) => {
+                const p = item.provider;
+                const pkg = item.pkg;
                 const priceFormatted = (pkg.price || p.startingPrice || 15000).toLocaleString();
-                const bannerImg = p.banner || (index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
+                const bannerImg = (pkg.images && pkg.images[0] && pkg.images[0].url) || p.banner || (index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
 
                 return `
-                    <div class="product-card" data-provider-id="${p.id}">
+                    <div class="product-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" onclick="window.location.href='/provider-detail.html?id=${p.id}'" style="cursor:pointer;">
                         <span class="product-badge-mall">SoundSphere Verified</span>
                         <div class="product-img-wrapper">
-                            <img src="${bannerImg}" alt="${p.name}" onerror="this.src='assets/images/banner.png'">
+                            <img src="${bannerImg}" alt="${pkg.name}" onerror="this.src='assets/images/banner.png'">
                         </div>
                         <div class="product-info">
                             <h4 class="product-title">${pkg.name}</h4>
@@ -94,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="tag-pill"><i class="fa-solid fa-location-dot"></i> ${p.coverageArea || 'Batangas'}</span>
                             </div>
                             <div class="product-rating-row">
-                                <span class="rating-stars">5.0 ★</span>
+                                <span class="rating-stars">${p.rating ? p.rating.toFixed(1) : '5.0'} ★</span>
                                 <span>Verified Provider</span>
                             </div>
                             <div class="product-price-row">
                                 <span class="product-price">₱${priceFormatted}</span>
-                                <button type="button" class="btn-book-sm btn-action-book" data-provider-id="${p.id}" data-pkg-title="${pkg.name}" data-pkg-price="${pkg.price || p.startingPrice || 15000}" style="border:none; cursor:pointer;">Book Now</button>
+                                <button type="button" class="btn-book-sm btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${pkg.name}" data-pkg-price="${pkg.price || p.startingPrice || 15000}" style="border:none; cursor:pointer;">Book Now</button>
                             </div>
                         </div>
                     </div>
@@ -112,17 +131,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const providerId = btn.getAttribute('data-provider-id');
+                    const pkgId = btn.getAttribute('data-pkg-id');
                     const pkgTitle = btn.getAttribute('data-pkg-title');
                     const pkgPrice = parseInt(btn.getAttribute('data-pkg-price'), 10) || 15000;
 
+                    const pendingBooking = {
+                        packageId: pkgId,
+                        packageTitle: pkgTitle,
+                        packagePrice: pkgPrice,
+                        providerId: providerId,
+                        returnUrl: `/provider-detail.html?id=${providerId}`
+                    };
+
                     if (!token || !user) {
                         e.preventDefault();
-                        const pendingBooking = {
-                            packageTitle: pkgTitle,
-                            packagePrice: pkgPrice,
-                            providerId: providerId,
-                            returnUrl: `/provider-detail.html?id=${providerId}`
-                        };
                         if (typeof window.openAuthModal === 'function') {
                             window.openAuthModal('login', pendingBooking);
                         } else {
@@ -130,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             window.location.href = `/login.html?returnUrl=${encodeURIComponent(`/provider-detail.html?id=${providerId}`)}`;
                         }
                     } else {
-                        window.location.href = `/provider-detail.html?id=${providerId}`;
+                        sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(pendingBooking));
+                        window.location.href = `/booking.html?package_id=${pkgId || ''}&provider_id=${providerId}`;
                     }
                 });
             });

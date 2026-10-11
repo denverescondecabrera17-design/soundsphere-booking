@@ -81,7 +81,10 @@ const syncFilesList = [
     { src: '../client/js/client-bookings.js', targets: ['../public/js/client-bookings.js', '../client/pages/js/client-bookings.js', '../public/pages/js/client-bookings.js'] },
     { src: '../client/css/booking-calendar-modal.css', targets: ['../public/css/booking-calendar-modal.css', '../client/pages/css/booking-calendar-modal.css', '../client/client/css/booking-calendar-modal.css', '../public/client/css/booking-calendar-modal.css'] },
     { src: '../client/js/booking-calendar-modal.js', targets: ['../public/js/booking-calendar-modal.js', '../client/pages/js/booking-calendar-modal.js'] },
-    { src: '../client/client/dashboard.html', targets: ['../public/client/dashboard.html'] }
+    { src: '../client/client/dashboard.html', targets: ['../public/client/dashboard.html'] },
+    { src: '../client/provider-profile.html', targets: ['../public/provider-profile.html', '../client/pages/provider-profile.html', '../public/pages/provider-profile.html'] },
+    { src: '../client/index.html', targets: ['../public/index.html', '../client/pages/index.html', '../public/pages/index.html'] },
+    { src: '../client/js/main.js', targets: ['../public/js/main.js', '../client/pages/js/main.js', '../public/pages/js/main.js'] }
 ];
 
 syncFilesList.forEach(item => {
@@ -250,19 +253,95 @@ if (fs.existsSync(srcClientDashHtml)) {
 }
 
 // 15. Sync CSS files to client/client/css and public/client/css
-['marketplace.css', 'styles.css', 'app-platform.css', 'profile-modal.css'].forEach(file => {
+['marketplace.css', 'styles.css', 'app-platform.css', 'profile-modal.css', 'booking-calendar-modal.css'].forEach(file => {
     const src = path.join(__dirname, `../client/css/${file}`);
     if (fs.existsSync(src)) {
         const content = fs.readFileSync(src, 'utf8');
         [
             path.join(__dirname, `../client/client/css/${file}`),
-            path.join(__dirname, `../public/client/css/${file}`)
+            path.join(__dirname, `../public/client/css/${file}`),
+            path.join(__dirname, `../client/pages/css/${file}`),
+            path.join(__dirname, `../public/css/${file}`)
         ].forEach(target => {
             safeWriteFileSync(target, content);
             console.log(`Synced ${file} -> ${target}`);
         });
     }
 });
+
+// 15b. Sync booking-calendar-modal.js
+const srcCalModalJs = path.join(__dirname, '../client/js/booking-calendar-modal.js');
+const calModalJsTargets = [
+    path.join(__dirname, '../client/pages/js/booking-calendar-modal.js'),
+    path.join(__dirname, '../public/js/booking-calendar-modal.js')
+];
+if (fs.existsSync(srcCalModalJs)) {
+    const calJsContent = fs.readFileSync(srcCalModalJs, 'utf8');
+    calModalJsTargets.forEach(target => {
+        safeWriteFileSync(target, calJsContent);
+        console.log(`Synced booking-calendar-modal.js -> ${target}`);
+    });
+}
+
+// 15c. Sync booking.html and booking.js
+const srcBookingHtml = path.join(__dirname, '../client/booking.html');
+const bookingHtmlTargets = [
+    path.join(__dirname, '../client/pages/booking.html'),
+    path.join(__dirname, '../public/booking.html'),
+    path.join(__dirname, '../public/pages/booking.html')
+];
+if (fs.existsSync(srcBookingHtml)) {
+    const bHtmlContent = fs.readFileSync(srcBookingHtml, 'utf8');
+    bookingHtmlTargets.forEach(target => {
+        safeWriteFileSync(target, bHtmlContent);
+        console.log(`Synced booking.html -> ${target}`);
+    });
+}
+
+const srcBookingJs = path.join(__dirname, '../client/js/booking.js');
+const bookingJsTargets = [
+    path.join(__dirname, '../client/pages/js/booking.js'),
+    path.join(__dirname, '../public/js/booking.js'),
+    path.join(__dirname, '../public/pages/js/booking.js')
+];
+if (fs.existsSync(srcBookingJs)) {
+    const bJsContent = fs.readFileSync(srcBookingJs, 'utf8');
+    bookingJsTargets.forEach(target => {
+        safeWriteFileSync(target, bJsContent);
+        console.log(`Synced booking.js -> ${target}`);
+    });
+}
+
+// 15d. Sync other pages (index, login, register, marketplace, provider-profile, etc.)
+['index.html', 'login.html', 'register.html', 'marketplace.html', 'provider-profile.html', 'forgot-password.html', 'reset-password.html', 'verify-otp.html', 'booking-confirmation.html'].forEach(page => {
+    const srcPage = path.join(__dirname, `../client/${page}`);
+    if (fs.existsSync(srcPage)) {
+        const pContent = fs.readFileSync(srcPage, 'utf8');
+        [
+            path.join(__dirname, `../client/pages/${page}`),
+            path.join(__dirname, `../public/${page}`),
+            path.join(__dirname, `../public/pages/${page}`)
+        ].forEach(target => {
+            safeWriteFileSync(target, pContent);
+            console.log(`Synced ${page} -> ${target}`);
+        });
+    }
+});
+
+// 15e. Sync marketplace.js
+const srcMarketplaceJs = path.join(__dirname, '../client/js/marketplace.js');
+const marketplaceJsTargets = [
+    path.join(__dirname, '../client/pages/js/marketplace.js'),
+    path.join(__dirname, '../public/js/marketplace.js'),
+    path.join(__dirname, '../public/pages/js/marketplace.js')
+];
+if (fs.existsSync(srcMarketplaceJs)) {
+    const mJsContent = fs.readFileSync(srcMarketplaceJs, 'utf8');
+    marketplaceJsTargets.forEach(target => {
+        safeWriteFileSync(target, mJsContent);
+        console.log(`Synced marketplace.js -> ${target}`);
+    });
+}
 
 // 16. Sync Cashier Portal Files
 const cashierSyncList = [
