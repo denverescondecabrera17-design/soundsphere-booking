@@ -928,7 +928,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('http://localhost:5000/api/providers/dashboard-stats', { headers });
+            const res = await fetch('/api/providers/dashboard-stats', { headers });
 
             if (res.ok) {
                 const data = await res.json();
@@ -1577,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch('http://localhost:5000/api/providers/services/list', { headers });
+            const res = await fetch('/api/providers/services/list', { headers });
 
             if (res.ok) {
                 const data = await res.json();

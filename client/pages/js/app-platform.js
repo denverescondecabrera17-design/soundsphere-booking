@@ -4831,7 +4831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
                     }
 
-                    const res = await fetch('http://localhost:5000/api/reviews', {
+                    const res = await fetch('/api/reviews', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

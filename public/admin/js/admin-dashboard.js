@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fetchAdminProfile = async () => {
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('http://localhost:5000/api/admin/profile', { headers });
+            const res = await fetch('/api/admin/profile', { headers });
             if (handleAdminAuthError(res)) return;
 
             if (res.ok) {
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const headers = getAdminHeaders();
-                const res = await fetch('http://localhost:5000/api/admin/profile', {
+                const res = await fetch('/api/admin/profile', {
                     method: 'PUT',
                     headers,
                     body: JSON.stringify({ fullName, phone })
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetchAdminProfile();
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('http://localhost:5000/api/admin/stats', { headers });
+            const res = await fetch('/api/admin/stats', { headers });
             if (handleAdminAuthError(res)) return;
 
             if (res.ok) {
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadPendingApplications = async () => {
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('http://localhost:5000/api/admin/applications', { headers });
+            const res = await fetch('/api/admin/applications', { headers });
             if (handleAdminAuthError(res)) return;
 
             if (res.ok) {
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('http://localhost:5000/api/admin/applications', { headers });
+            const res = await fetch('/api/admin/applications', { headers });
             const data = await res.json();
             const apps = data.applications || [];
             const app = apps.find(a => String(a.ApplicationID) === String(applicationId));
@@ -1193,7 +1193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const appId = pendingAppIdToApprove;
             try {
                 const headers = getAdminHeaders();
-                const res = await fetch(`http://localhost:5000/api/admin/applications/${appId}/approve`, {
+                const res = await fetch(`/api/admin/applications/${appId}/approve`, {
                     method: 'POST',
                     headers
                 });
@@ -1238,7 +1238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const headers = getAdminHeaders();
-                const res = await fetch(`http://localhost:5000/api/admin/applications/${pendingAppIdToReject}/reject`, {
+                const res = await fetch(`/api/admin/applications/${pendingAppIdToReject}/reject`, {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({ reason })
@@ -1263,7 +1263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.suspendProvider = async (providerId) => {
         try {
             const headers = getAdminHeaders();
-            const res = await fetch(`http://localhost:5000/api/admin/providers/${providerId}/suspend`, { method: 'POST', headers });
+            const res = await fetch(`/api/admin/providers/${providerId}/suspend`, { method: 'POST', headers });
             const data = await res.json();
 
             if (res.ok && data.success) {
@@ -1281,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.reactivateProvider = async (providerId) => {
         try {
             const headers = getAdminHeaders();
-            const res = await fetch(`http://localhost:5000/api/admin/providers/${providerId}/reactivate`, { method: 'POST', headers });
+            const res = await fetch(`/api/admin/providers/${providerId}/reactivate`, { method: 'POST', headers });
             const data = await res.json();
 
             if (res.ok && data.success) {
@@ -1307,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchDebounceTimer = setTimeout(async () => {
                 try {
                     const headers = getAdminHeaders();
-                    const res = await fetch(`http://localhost:5000/api/admin/search?q=${encodeURIComponent(query)}`, { headers });
+                    const res = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, { headers });
                     const data = await res.json();
 
                     if (res.ok && data.success) {
@@ -1429,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('http://localhost:5000/api/notifications', { headers });
+            const res = await fetch('/api/notifications', { headers });
 
             if (res.ok) {
                 const data = await res.json();
@@ -1506,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Mark Notification as Read in SQL Server
                 try {
                     const headers = getAdminHeaders();
-                    await fetch(`http://localhost:5000/api/notifications/${notifId}/read`, { method: 'PUT', headers });
+                    await fetch(`/api/notifications/${notifId}/read`, { method: 'PUT', headers });
                 } catch (e) {
                     console.warn('Error marking notification read:', e.message);
                 }
@@ -1538,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const headers = getAdminHeaders();
-                const res = await fetch('http://localhost:5000/api/notifications/read-all', { method: 'PUT', headers });
+                const res = await fetch('/api/notifications/read-all', { method: 'PUT', headers });
 
                 if (res.ok) {
                     showToast('✓ All notifications marked as read.', 'success');
@@ -2252,7 +2252,7 @@ async function loadAdminSubscriptionsPage() {
     try {
         const headers = getAdminHeaders();
         
-        const res = await fetch('http://localhost:5000/api/subscriptions/admin/overview', {
+        const res = await fetch('/api/subscriptions/admin/overview', {
             headers
         });
         if (handleAdminAuthError(res)) return;

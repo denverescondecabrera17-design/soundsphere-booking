@@ -12,7 +12,7 @@ window.updateAllProfileAvatars = (avatarUrl, name) => {
 
     let fullAvatarUrl = avatarUrl;
     if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('data:')) {
-        fullAvatarUrl = `http://localhost:5000/${avatarUrl.replace(/^\//, '')}`;
+        fullAvatarUrl = `/${avatarUrl.replace(/^\//, '')}`;
     }
 
     // 1. Profile Page Main Header Avatar (#profile-page-avatar)

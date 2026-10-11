@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            const url = 'http://localhost:5000/api/providers';
+            const url = '/api/providers';
             const response = await fetch(url);
 
             if (!response.ok) {
