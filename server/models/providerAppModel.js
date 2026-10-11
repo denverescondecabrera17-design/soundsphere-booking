@@ -3,7 +3,7 @@
  * Manages SQL Server operations for provider applications and approval promotion
  */
 
-const { getPool, sql } = require('../config/db');
+const { getPool, getOrConnectPool, sql } = require('../config/db');
 
 /**
  * Find existing active application (Pending or Approved) submitted by a specific UserID
@@ -11,36 +11,49 @@ const { getPool, sql } = require('../config/db');
  * @returns {Promise<object|null>}
  */
 const findActiveApplicationByUserId = async (userId) => {
-    const pool = getPool();
-    if (!pool) return null;
+    try {
+        let pool = getPool();
+        if (!pool) {
+            pool = await getOrConnectPool();
+        }
+        if (!pool) return null;
 
-    const result = await pool.request()
-        .input('UserID', sql.Int, userId)
-        .query(`
-            SELECT TOP 1 
-                ApplicationID,
-                UserID,
-                BusinessName,
-                OwnerName,
-                BusinessAddress,
-                CoverageArea,
-                ContactNumber,
-                GovtID_Url,
-                GovtID_Back_Url,
-                BusinessPermit_Url,
-                PermitIssuedDate,
-                PermitExpiryDate,
-                OtherDocs_Url,
-                Status,
-                RejectionReason,
-                SubmittedAt,
-                ReviewedAt
-            FROM dbo.ProviderApplications
-            WHERE UserID = @UserID AND Status IN ('Pending', 'Approved')
-            ORDER BY ApplicationID DESC;
-        `);
+        const numericUserId = parseInt(userId, 10);
+        if (!numericUserId || isNaN(numericUserId) || numericUserId > 2147483647) {
+            return null;
+        }
 
-    return result.recordset[0] || null;
+        const result = await pool.request()
+            .input('UserID', sql.Int, numericUserId)
+            .query(`
+                SELECT TOP 1 
+                    ApplicationID,
+                    UserID,
+                    BusinessName,
+                    OwnerName,
+                    BusinessAddress,
+                    CoverageArea,
+                    ContactNumber,
+                    GovtID_Url,
+                    GovtID_Back_Url,
+                    BusinessPermit_Url,
+                    PermitIssuedDate,
+                    PermitExpiryDate,
+                    OtherDocs_Url,
+                    Status,
+                    RejectionReason,
+                    SubmittedAt,
+                    ReviewedAt
+                FROM dbo.ProviderApplications
+                WHERE UserID = @UserID AND Status IN ('Pending', 'Approved')
+                ORDER BY ApplicationID DESC;
+            `);
+
+        return result.recordset[0] || null;
+    } catch (err) {
+        console.warn('findActiveApplicationByUserId notice:', err.message);
+        return null;
+    }
 };
 
 /**
@@ -49,36 +62,49 @@ const findActiveApplicationByUserId = async (userId) => {
  * @returns {Promise<object|null>}
  */
 const findApplicationByUserId = async (userId) => {
-    const pool = getPool();
-    if (!pool) return null;
+    try {
+        let pool = getPool();
+        if (!pool) {
+            pool = await getOrConnectPool();
+        }
+        if (!pool) return null;
 
-    const result = await pool.request()
-        .input('UserID', sql.Int, userId)
-        .query(`
-            SELECT TOP 1 
-                ApplicationID,
-                UserID,
-                BusinessName,
-                OwnerName,
-                BusinessAddress,
-                CoverageArea,
-                ContactNumber,
-                GovtID_Url,
-                GovtID_Back_Url,
-                BusinessPermit_Url,
-                PermitIssuedDate,
-                PermitExpiryDate,
-                OtherDocs_Url,
-                Status,
-                RejectionReason,
-                SubmittedAt,
-                ReviewedAt
-            FROM dbo.ProviderApplications
-            WHERE UserID = @UserID
-            ORDER BY ApplicationID DESC;
-        `);
+        const numericUserId = parseInt(userId, 10);
+        if (!numericUserId || isNaN(numericUserId) || numericUserId > 2147483647) {
+            return null;
+        }
 
-    return result.recordset[0] || null;
+        const result = await pool.request()
+            .input('UserID', sql.Int, numericUserId)
+            .query(`
+                SELECT TOP 1 
+                    ApplicationID,
+                    UserID,
+                    BusinessName,
+                    OwnerName,
+                    BusinessAddress,
+                    CoverageArea,
+                    ContactNumber,
+                    GovtID_Url,
+                    GovtID_Back_Url,
+                    BusinessPermit_Url,
+                    PermitIssuedDate,
+                    PermitExpiryDate,
+                    OtherDocs_Url,
+                    Status,
+                    RejectionReason,
+                    SubmittedAt,
+                    ReviewedAt
+                FROM dbo.ProviderApplications
+                WHERE UserID = @UserID
+                ORDER BY ApplicationID DESC;
+            `);
+
+        return result.recordset[0] || null;
+    } catch (err) {
+        console.warn('findApplicationByUserId notice:', err.message);
+        return null;
+    }
 };
 
 /**

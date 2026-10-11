@@ -150,6 +150,49 @@ const autoSeedDatabase = async (activePool) => {
                     RejectionReason NVARCHAR(500) NULL
                 );
             END;
+
+            IF OBJECT_ID('dbo.Withdrawals', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Withdrawals (
+                    WithdrawalID INT IDENTITY(1,1) PRIMARY KEY,
+                    ProviderID INT NOT NULL,
+                    Amount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                    PayoutMethod NVARCHAR(100) NULL DEFAULT 'GCash',
+                    PayoutChannel NVARCHAR(100) NULL DEFAULT 'GCash',
+                    AccountName NVARCHAR(150) NULL,
+                    AccountReference NVARCHAR(100) NULL,
+                    AccountNumber NVARCHAR(100) NULL,
+                    Status NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+                    RequestedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    ProcessedAt DATETIME2 NULL,
+                    AdminNotes NVARCHAR(MAX) NULL,
+                    Notes NVARCHAR(MAX) NULL,
+                    BookingID INT NULL,
+                    PayMongoPayoutID NVARCHAR(100) NULL,
+                    ProcessedByAdminID INT NULL
+                );
+            END;
+
+            IF OBJECT_ID('dbo.RefundRequests', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.RefundRequests (
+                    RefundRequestID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL,
+                    ClientName NVARCHAR(200) NOT NULL,
+                    ClientEmail NVARCHAR(150) NULL,
+                    ClientPhone NVARCHAR(50) NULL,
+                    Amount DECIMAL(18,2) NOT NULL,
+                    PayoutMethod NVARCHAR(50) NOT NULL DEFAULT 'GCash',
+                    AccountName NVARCHAR(150) NOT NULL,
+                    AccountNumber NVARCHAR(100) NOT NULL,
+                    Status NVARCHAR(30) NOT NULL DEFAULT 'Pending',
+                    ReferenceNumber NVARCHAR(100) NULL,
+                    AdminNotes NVARCHAR(500) NULL,
+                    RequestedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+                    ProcessedAt DATETIME2 NULL,
+                    ProcessedBy INT NULL
+                );
+            END;
         `);
 
         // 1. Ensure Roles exist

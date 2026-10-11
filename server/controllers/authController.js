@@ -754,11 +754,18 @@ const socialAuth = async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
         let user = await userModel.findUserByEmail(normalizedEmail);
 
+        // Derive clean name if placeholder or empty
+        let cleanName = (name && name.trim() && name.trim().toLowerCase() !== 'google user' && name.trim().toLowerCase() !== 'social user') ? name.trim() : '';
+        if (!cleanName) {
+            const prefix = normalizedEmail.split('@')[0];
+            cleanName = prefix.replace(/[._0-9]+/g, ' ').trim().split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ').trim() || 'Google User';
+        }
+
         // If account does NOT exist, create new Client account automatically via Social Auth
         if (!user) {
             const randomPassword = 'SocialAuth_' + Math.random().toString(36).slice(-10) + '123';
             const passwordHash = await bcrypt.hash(randomPassword, 10);
-            const nameParts = (name || 'Social User').trim().split(' ');
+            const nameParts = cleanName.split(' ');
             const firstName = nameParts[0] || 'Social';
             const lastName = nameParts.slice(1).join(' ') || 'User';
 
@@ -773,6 +780,22 @@ const socialAuth = async (req, res) => {
             });
 
             user = await userModel.findUserByEmail(normalizedEmail);
+        } else {
+            // Update existing user if name in DB is placeholder 'Google User' or 'Social User'
+            const currentDbFull = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim();
+            const isPlaceholder = !currentDbFull || currentDbFull.toLowerCase() === 'google user' || currentDbFull.toLowerCase() === 'social user';
+            if (isPlaceholder && cleanName && cleanName.toLowerCase() !== 'google user') {
+                const parts = cleanName.split(' ');
+                const newFirst = parts[0] || '';
+                const newLast = parts.slice(1).join(' ') || '';
+                try {
+                    await userModel.updateUserProfile(user.UserID, { firstName: newFirst, lastName: newLast });
+                    user.ClientFirstName = newFirst;
+                    user.ClientLastName = newLast;
+                } catch (e) {
+                    console.warn('Failed to update placeholder name in socialAuth:', e.message);
+                }
+            }
         }
 
         // Generate JWT Token
@@ -794,6 +817,8 @@ const socialAuth = async (req, res) => {
             redirectUrl = 'marketplace.html';
         }
 
+        const resolvedUserName = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim() || cleanName || user.Email;
+
         return res.status(200).json({
             success: true,
             message: `Successfully authenticated via ${provider || 'Social Account'}!`,
@@ -803,7 +828,7 @@ const socialAuth = async (req, res) => {
                 userId: user.UserID,
                 email: user.Email,
                 role: user.RoleName,
-                name: `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim() || user.Email
+                name: resolvedUserName
             }
         });
 
@@ -919,15 +944,25 @@ const handleGoogleCallback = async (req, res) => {
         const normalizedEmail = googleUser.email.trim().toLowerCase();
         const googleSub = googleUser.sub;
 
-        // 1. Check if user already exists by Google Subject ID
-        let user = await userModel.findUserByGoogleId(googleSub);
+        // 1. Parse Google user's real name and avatar photo
+        let googleFirstName = (googleUser.given_name || '').trim();
+        let googleLastName = (googleUser.family_name || '').trim();
+        if (!googleFirstName && googleUser.name) {
+            const parts = googleUser.name.trim().split(' ');
+            googleFirstName = parts[0] || '';
+            googleLastName = parts.slice(1).join(' ') || '';
+        }
+        if (!googleFirstName) googleFirstName = 'Google';
+        if (!googleLastName) googleLastName = 'User';
+        const googleFullName = (googleUser.name || `${googleFirstName} ${googleLastName}`).trim();
 
-        // 2. If not found by Google ID, check if user exists by verified email address
+        // 2. Check if user already exists by Google Subject ID or email
+        let user = await userModel.findUserByGoogleId(googleSub);
         if (!user) {
             user = await userModel.findUserByEmail(normalizedEmail);
         }
 
-        // 3. If account does not exist, create new verified Client user
+        // 3. If account does not exist, create new verified Client user with real Google Name
         if (!user) {
             const randomPassword = 'GoogleAuth_' + Math.random().toString(36).slice(-10) + '123!';
             const passwordHash = await bcrypt.hash(randomPassword, 10);
@@ -935,12 +970,43 @@ const handleGoogleCallback = async (req, res) => {
                 email: normalizedEmail,
                 passwordHash,
                 phone: '+63 9170000000',
-                firstName: googleUser.given_name || googleUser.name || 'Google',
+                firstName: googleFirstName,
                 middleName: '',
-                lastName: googleUser.family_name || '',
+                lastName: googleLastName,
                 address: 'Google OAuth Verified'
             });
             user = await userModel.findUserByEmail(normalizedEmail);
+        } else {
+            // Existing user: check if their name in DB is placeholder 'Google User', 'Social User', or empty.
+            // If so, automatically update their profile in DB with real name & avatar from Google!
+            const currentDbFirst = (user.ClientFirstName || '').trim();
+            const currentDbLast = (user.ClientLastName || '').trim();
+            const currentDbFullName = `${currentDbFirst} ${currentDbLast}`.trim();
+            const isPlaceholderName = !currentDbFullName ||
+                currentDbFullName.toLowerCase() === 'google user' ||
+                currentDbFullName.toLowerCase() === 'social user' ||
+                currentDbFullName.toLowerCase() === 'client user' ||
+                currentDbFullName.toLowerCase() === 'user';
+
+            const updateData = {};
+            if (isPlaceholderName && googleFullName && googleFullName.toLowerCase() !== 'google user') {
+                updateData.firstName = googleFirstName;
+                updateData.lastName = googleLastName;
+                user.ClientFirstName = googleFirstName;
+                user.ClientLastName = googleLastName;
+            }
+            if (googleUser.picture && (!user.ProfilePicture || user.ProfilePicture.includes('default'))) {
+                updateData.profilePicture = googleUser.picture;
+                user.ProfilePicture = googleUser.picture;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+                try {
+                    await userModel.updateUserProfile(user.UserID, updateData);
+                } catch (updateErr) {
+                    console.warn('Could not auto-sync Google user profile details:', updateErr.message);
+                }
+            }
         }
 
         // 4. Safely link Google Subject ID to the account
@@ -955,7 +1021,11 @@ const handleGoogleCallback = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
-        const fullName = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim() || googleUser.name || user.Email;
+        const currentFullName = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim();
+        const isPlaceholder = !currentFullName ||
+            currentFullName.toLowerCase() === 'google user' ||
+            currentFullName.toLowerCase() === 'social user';
+        const fullName = (!isPlaceholder) ? currentFullName : (googleFullName || user.Email);
 
         const userObj = encodeURIComponent(JSON.stringify({
             userId: user.UserID,

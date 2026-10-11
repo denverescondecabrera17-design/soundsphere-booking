@@ -180,7 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const userEmail = prompt('Google OAuth callback mismatch detected on live domain.\n\nEnter your Gmail address to sign in immediately via Google Authentication:', 'dendenescondecabrera17@gmail.com');
                 if (userEmail && userEmail.trim()) {
-                    triggerGoogleSocialAuth(userEmail.trim(), 'Google User');
+                    const cleanEmail = userEmail.trim();
+                    const suggestedName = cleanEmail.split('@')[0].replace(/[._0-9]+/g, ' ').split(' ').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Account User';
+                    const userName = prompt('Enter your Account Full Name (or leave as suggested):', suggestedName) || suggestedName;
+                    triggerGoogleSocialAuth(cleanEmail, userName.trim());
                 }
             }, 400);
         }
