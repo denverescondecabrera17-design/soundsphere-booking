@@ -7,14 +7,18 @@ const sql = require('mssql');
 require('dotenv').config();
 
 const isAzure = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('.database.windows.net'));
+const isMonsterAsp = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('monsterasp'));
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Explicit DB_ENCRYPT takes precedence; defaults to true only on Azure, and false for MonsterASP/others
 const shouldEncrypt = process.env.DB_ENCRYPT !== undefined 
     ? process.env.DB_ENCRYPT === 'true' 
-    : (isAzure || isProduction);
+    : (isAzure && !isMonsterAsp);
 
+// DB_TRUST_CERT defaults to true for MonsterASP, localhost, and non-Azure hosts unless explicitly set to false
 const trustCert = process.env.DB_TRUST_CERT !== undefined 
     ? process.env.DB_TRUST_CERT === 'true' 
-    : (!isAzure);
+    : true;
 
 const dbConfig = {
     user: process.env.DB_USER || 'sa',
