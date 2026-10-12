@@ -13,6 +13,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Immediate Auth Redirect for Logged-In Users -->
+    <script>
+        (function() {
+            try {
+                var token = localStorage.getItem('soundsphere_auth_token') || localStorage.getItem('soundsphere_jwt_token');
+                var userRaw = localStorage.getItem('soundsphere_user');
+                if (token && userRaw) {
+                    var user = JSON.parse(userRaw);
+                    var role = ((user && (user.role || user.RoleName || user.roleName)) || '').toLowerCase();
+                    var target = (role === 'admin' || role === 'administrator') ? '/admin/dashboard.html' :
+                                 (role === 'cashier') ? '/cashier/dashboard.html' :
+                                 (role === 'serviceprovider' || role === 'provider') ? '/provider/dashboard.html' :
+                                 '/marketplace.html';
+                    window.location.replace(target);
+                }
+            } catch(e) {}
+        })();
+    </script>
 </head>
 <body>
 

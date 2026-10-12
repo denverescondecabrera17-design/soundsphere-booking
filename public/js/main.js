@@ -4,39 +4,20 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Dynamic Public Navbar Auth Recognition
-    const token = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthToken() : localStorage.getItem('soundsphere_jwt_token');
-    const user = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthUser() : null;
+    // 1. Logged-in Auth Check: Automatically redirect authenticated users to their dashboard / marketplace
+    const token = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_auth_token') || localStorage.getItem('soundsphere_jwt_token'));
+    const user = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthUser() : (() => {
+        try { return JSON.parse(localStorage.getItem('soundsphere_user')); } catch (e) { return null; }
+    })();
 
-    const headerActions = document.querySelector('.header-actions');
-    if (headerActions) {
-        if (token && user) {
-            const displayName = user.personalName || user.name || user.email || 'Account';
-            const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            
-            headerActions.innerHTML = `
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <a href="${user.role === 'ServiceProvider' ? '/provider/dashboard.html' : '/marketplace.html'}" style="display:flex; align-items:center; gap:8px; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.9rem; background:rgba(255,255,255,0.1); padding:6px 14px; border-radius:20px;">
-                        <div style="width:28px; height:28px; border-radius:50%; background:#2563eb; color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">${initials}</div>
-                        <span>${displayName}</span>
-                    </a>
-                    <button type="button" id="btn-public-logout" style="background:none; border:1px solid #64748b; color:#cbd5e1; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.8rem;">Logout</button>
-                </div>
-            `;
-
-            const btnLogout = document.getElementById('btn-public-logout');
-            if (btnLogout) {
-                btnLogout.addEventListener('click', async () => {
-                    if (typeof SoundSphereAPI !== 'undefined') {
-                        await SoundSphereAPI.logoutAPI();
-                    } else {
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        window.location.href = '/login.html';
-                    }
-                });
-            }
-        }
+    if (token && user) {
+        const role = ((user && (user.role || user.RoleName || user.roleName)) || '').toLowerCase();
+        const target = (role === 'admin' || role === 'administrator') ? '/admin/dashboard.html' :
+                       (role === 'cashier') ? '/cashier/dashboard.html' :
+                       (role === 'serviceprovider' || role === 'provider') ? '/provider/dashboard.html' :
+                       '/marketplace.html';
+        window.location.replace(target);
+        return;
     }
 
     // 2. Dynamic Fetching & Rendering of Real Service Providers from SQL Server DB
