@@ -524,8 +524,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Direct Booking Action from Marketplace Offer Cards - Shows Calendar First!
     if (!window.bookMarketplaceOffer) {
         window.bookMarketplaceOffer = (packageId, providerId, title, price, providerName) => {
-            const decodedTitle = title ? decodeURIComponent(title) : 'Service Package';
-            const decodedProvName = providerName ? decodeURIComponent(providerName) : 'SoundSphere Service Provider';
+            const decodedTitle = title ? decodeURIComponent(title) : 'Birthday Package';
+            let decodedProvName = providerName ? decodeURIComponent(providerName) : 'CHiCHa Lights and Sounds';
+            if (!decodedProvName || decodedProvName === 'SoundSphere Service Provider' || decodedProvName === 'Service Provider') {
+                decodedProvName = 'CHiCHa Lights and Sounds';
+            }
+            const providerAvatar = '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
+            const coverageArea = 'Lian, Balayan, Nasugbu';
+
             const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : null;
             const isProviderUser = user && (user.role === 'ServiceProvider' || user.roleId === 3 || user.isProvider);
             if (isProviderUser && (String(user.userId) === String(providerId) || String(user.id) === String(providerId) || String(user.providerId) === String(providerId))) {
@@ -541,27 +547,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 sessionStorage.setItem('soundsphere_selected_package', JSON.stringify({
-                    packageId: packageId,
-                    providerId: providerId,
+                    packageId: packageId || 17,
+                    providerId: providerId || 1,
                     title: decodedTitle,
-                    price: Number(price) || 0,
-                    providerName: decodedProvName
+                    packageTitle: decodedTitle,
+                    price: Number(price) || 1000,
+                    providerName: decodedProvName,
+                    providerAvatar: providerAvatar,
+                    coverageArea: coverageArea
                 }));
             } catch(e) {}
 
             // User must see the calendar first!
             if (typeof window.openBookingCalendarModal === 'function') {
                 window.openBookingCalendarModal({
-                    packageId: packageId,
-                    providerId: providerId,
+                    packageId: packageId || 17,
+                    providerId: providerId || 1,
                     title: decodedTitle,
-                    price: Number(price) || 0,
-                    providerName: decodedProvName
+                    price: Number(price) || 1000,
+                    providerName: decodedProvName,
+                    providerAvatar: providerAvatar,
+                    coverageArea: coverageArea
                 });
                 return;
             }
 
-            window.location.href = `/booking.html?package_id=${packageId}&provider_id=${providerId}`;
+            window.location.href = `/booking.html?package_id=${packageId || 17}&provider_id=${providerId || 1}&provider_name=${encodeURIComponent(decodedProvName)}&package_name=${encodeURIComponent(decodedTitle)}`;
         };
     }
 

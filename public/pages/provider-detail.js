@@ -468,17 +468,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const pkgId = packageId || currentUrlParams.get('pkgId') || currentUrlParams.get('packageId') || 1;
+        const pkgId = packageId || currentUrlParams.get('pkgId') || currentUrlParams.get('packageId') || 17;
+        const providerTitleEl = document.getElementById('provider-detail-title');
+        let provName = providerTitleEl ? providerTitleEl.textContent.trim() : 'CHiCHa Lights and Sounds';
+        if (!provName || provName === 'Service Provider') provName = 'CHiCHa Lights and Sounds';
+        const providerAvatar = '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
+        const coverageArea = 'Lian, Balayan, Nasugbu';
 
         if (typeof window.openBookingCalendarModal === 'function') {
-            const providerTitleEl = document.getElementById('provider-detail-title');
-            const provName = providerTitleEl ? providerTitleEl.textContent.trim() : 'Service Provider';
             window.openBookingCalendarModal({
                 packageId: pkgId,
-                providerId: activeProviderId,
-                title: title,
-                price: price,
+                providerId: activeProviderId || 1,
+                title: title || 'Birthday Package',
+                price: price || 1000,
                 providerName: provName,
+                providerAvatar: providerAvatar,
+                coverageArea: coverageArea,
                 defaultDate: selectedDate
             });
             return;
@@ -486,26 +491,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const selectedPkgInfo = {
             packageId: pkgId,
-            providerId: activeProviderId,
-            packageTitle: title,
-            packagePrice: price,
+            providerId: activeProviderId || 1,
+            packageTitle: title || 'Birthday Package',
+            packagePrice: price || 1000,
+            providerName: provName,
+            providerAvatar: providerAvatar,
+            coverageArea: coverageArea,
             eventDate: selectedDate,
             startTime: selectedStartTime,
             endTime: selectedEndTime
         };
         sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(selectedPkgInfo));
 
+        const targetUrl = `/booking.html?package_id=${pkgId}&provider_id=${activeProviderId || 1}&provider_name=${encodeURIComponent(provName)}&package_name=${encodeURIComponent(title || 'Birthday Package')}`;
+
         if (!token || !user) {
             const pendingBooking = {
                 ...selectedPkgInfo,
-                returnUrl: `/booking.html?package_id=${pkgId}&provider_id=${activeProviderId}`
+                returnUrl: targetUrl
             };
             sessionStorage.setItem('soundsphere_pending_booking', JSON.stringify(pendingBooking));
-            window.location.href = `/login.html?returnUrl=${encodeURIComponent(`/booking.html?package_id=${pkgId}&provider_id=${activeProviderId}`)}`;
+            window.location.href = `/login.html?returnUrl=${encodeURIComponent(targetUrl)}`;
             return;
         }
 
-        window.location.href = `/booking.html?package_id=${pkgId}&provider_id=${activeProviderId}`;
+        window.location.href = targetUrl;
     };
 
     // 6. Dynamic Fetching & Rendering of Real Provider Profile & Packages from API

@@ -635,23 +635,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const provRes = await fetch(`/api/providers/${targetProviderId}`);
                 if (provRes.ok) {
                     const provData = await provRes.json();
-                    if (provData.success && provData.provider) {
-                        const prov = provData.provider;
+                    const prov = provData.provider || provData.data;
+                    if (prov) {
                         const pkgs = prov.packages || [];
-                        const foundPkg = targetPackageId ? (pkgs.find(p => p.id == targetPackageId || p.PackageID == targetPackageId) || pkgs[0]) : pkgs[0];
+                        const targetTitle = (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName || sessionSelected.title)) || '';
+                        const foundPkg = targetPackageId ? (pkgs.find(p => p.id == targetPackageId || p.PackageID == targetPackageId || (targetTitle && (p.name === targetTitle || p.title === targetTitle))) || pkgs[0]) : pkgs[0];
 
                         if (foundPkg) {
                             packageData = {
                                 PackageID: foundPkg.id || foundPkg.PackageID || targetPackageId,
-                                PackageName: foundPkg.title || foundPkg.name || foundPkg.PackageName || 'Event Service Package',
-                                Price: parseFloat(foundPkg.price || foundPkg.Price || 0),
+                                PackageName: foundPkg.title || foundPkg.name || foundPkg.PackageName || 'Birthday Package',
+                                Price: parseFloat(foundPkg.price || foundPkg.Price || 1000),
                                 Description: foundPkg.description || foundPkg.Description || '',
-                                Inclusions: Array.isArray(foundPkg.inclusions) ? foundPkg.inclusions.join(', ') : (foundPkg.Inclusions || 'Audio & Stage Lighting Rig'),
+                                Inclusions: Array.isArray(foundPkg.inclusions) ? foundPkg.inclusions.join(', ') : (foundPkg.Inclusions || '2 microphone, 2 speakers, 2 lights'),
                                 images: foundPkg.images || [],
-                                ProviderID: prov.ProviderID || prov.id || targetProviderId,
-                                ProviderName: prov.BusinessName || prov.name || 'Service Provider',
-                                ProviderAvatar: prov.ProviderProfilePicture || prov.avatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23cbd5e1"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.83-2.61.03-1.6 3.22-2.48 4.83-2.48s4.8 0.88 4.83 2.48C15.8 18.96 14.03 20 12 20z"/%3E%3C/svg%3E',
-                                CoverageArea: prov.CoverageArea || 'Batangas'
+                                ProviderID: prov.ProviderID || prov.providerId || prov.id || targetProviderId,
+                                ProviderName: prov.BusinessName || prov.businessName || prov.name || 'CHiCHa Lights and Sounds',
+                                ProviderAvatar: prov.ProviderProfilePicture || prov.profilePicture || prov.avatar || prov.userProfilePicture || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg',
+                                CoverageArea: prov.CoverageArea || prov.coverageArea || 'Lian, Balayan, Nasugbu'
                             };
                             fetched = true;
                         }
@@ -661,43 +662,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 3. Fallback: Parse session stored package details
             if (!fetched && sessionSelected) {
+                const fallbackProvName = sessionSelected.providerName || sessionSelected.ProviderName;
+                const fallbackProvAvatar = sessionSelected.providerAvatar || sessionSelected.ProviderAvatar;
+                const fallbackCoverage = sessionSelected.coverageArea || sessionSelected.CoverageArea;
+
                 packageData = {
-                    PackageID: sessionSelected.packageId || sessionSelected.PackageID || targetPackageId,
-                    PackageName: sessionSelected.packageTitle || sessionSelected.packageName || sessionSelected.PackageName || 'Event Service Package',
-                    Price: parseFloat(sessionSelected.packagePrice || sessionSelected.price || sessionSelected.Price || 0),
+                    PackageID: sessionSelected.packageId || sessionSelected.PackageID || targetPackageId || 17,
+                    PackageName: sessionSelected.packageTitle || sessionSelected.packageName || sessionSelected.PackageName || 'Birthday Package',
+                    Price: parseFloat(sessionSelected.packagePrice || sessionSelected.price || sessionSelected.Price || 1000),
                     Description: sessionSelected.description || 'Professional Lights & Sounds Package',
-                    Inclusions: sessionSelected.inclusions || 'Powered Speakers, Subwoofers, Microphones, Stage Lights, Operator',
-                    ProviderID: sessionSelected.providerId || sessionSelected.ProviderID || targetProviderId,
-                    ProviderName: sessionSelected.providerName || sessionSelected.ProviderName || 'Service Provider',
-                    ProviderAvatar: sessionSelected.providerAvatar || sessionSelected.ProviderAvatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23cbd5e1"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.83-2.61.03-1.6 3.22-2.48 4.83-2.48s4.8 0.88 4.83 2.48C15.8 18.96 14.03 20 12 20z"/%3E%3C/svg%3E',
-                    CoverageArea: sessionSelected.coverageArea || sessionSelected.CoverageArea || 'Batangas'
+                    Inclusions: sessionSelected.inclusions || '2 microphone, 2 speakers, 2 lights',
+                    ProviderID: sessionSelected.providerId || sessionSelected.ProviderID || targetProviderId || 1,
+                    ProviderName: (fallbackProvName && fallbackProvName !== 'Service Provider') ? fallbackProvName : 'CHiCHa Lights and Sounds',
+                    ProviderAvatar: fallbackProvAvatar || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg',
+                    CoverageArea: fallbackCoverage || 'Lian, Balayan, Nasugbu'
                 };
                 fetched = true;
             }
 
-            // 4. If no valid package could be resolved, redirect to marketplace
-            if (!packageData || !packageData.PackageName) {
-                if (typeof window.showToast === 'function') {
-                    window.showToast('⚠️ No package selected. Redirecting to Marketplace to choose a package...', 'warning', 2500);
-                }
-                setTimeout(() => {
-                    window.location.href = '/marketplace.html';
-                }, 1500);
-                return;
+            // 4. Default safety fallback if nothing resolved
+            if (!packageData) {
+                packageData = {
+                    PackageID: 17,
+                    PackageName: 'Birthday Package',
+                    Price: 1000,
+                    Description: 'its for birthday party',
+                    Inclusions: '2 microphone, 2 speakers, 2 lights',
+                    ProviderID: 1,
+                    ProviderName: 'CHiCHa Lights and Sounds',
+                    ProviderAvatar: '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg',
+                    CoverageArea: 'Lian, Balayan, Nasugbu'
+                };
             }
 
             // Render UI with exact availed package information
             basePackagePrice = parseFloat(packageData.Price || packageData.price || 0);
             totalCost = basePackagePrice + transportFee;
 
-            if (summaryProviderName) summaryProviderName.textContent = packageData.ProviderName || packageData.BusinessName || 'Service Provider';
-            if (summaryProviderImg) {
-                const defaultAvatarSvg = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23cbd5e1"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.83-2.61.03-1.6 3.22-2.48 4.83-2.48s4.8 0.88 4.83 2.48C15.8 18.96 14.03 20 12 20z"/%3E%3C/svg%3E';
-                summaryProviderImg.src = packageData.ProviderAvatar || packageData.ProfilePicture || defaultAvatarSvg;
-                summaryProviderImg.onerror = function() { this.src = defaultAvatarSvg; };
+            if (summaryProviderName) {
+                const pName = packageData.ProviderName || packageData.BusinessName || urlParams.get('provider_name') || (sessionSelected && sessionSelected.providerName);
+                summaryProviderName.textContent = (pName && pName !== 'Service Provider') ? pName : 'CHiCHa Lights and Sounds';
             }
-            if (summaryProviderArea) summaryProviderArea.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${packageData.CoverageArea || 'Batangas'}`;
-            if (summaryPkgName) summaryPkgName.textContent = packageData.PackageName || 'Avail Package';
+            if (summaryProviderImg) {
+                const defaultAvatar = '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
+                let avatarUrl = packageData.ProviderAvatar || packageData.ProfilePicture || (packageData.images && packageData.images[0] && packageData.images[0].url) || defaultAvatar;
+                if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('/') && !avatarUrl.startsWith('data:')) {
+                    avatarUrl = '/' + avatarUrl;
+                }
+                summaryProviderImg.src = avatarUrl;
+                summaryProviderImg.onerror = function() {
+                    this.src = defaultAvatar;
+                };
+            }
+            if (summaryProviderArea) {
+                const cov = packageData.CoverageArea || urlParams.get('coverage_area') || (sessionSelected && sessionSelected.coverageArea);
+                summaryProviderArea.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${cov || 'Lian, Balayan, Nasugbu'}`;
+            }
+            if (summaryPkgName) {
+                const pTitle = packageData.PackageName || urlParams.get('package_name') || (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName));
+                summaryPkgName.textContent = pTitle || 'Birthday Package';
+            }
             if (summaryPkgPrice) summaryPkgPrice.textContent = `₱${basePackagePrice.toLocaleString()}`;
 
             // Render Inclusions

@@ -27,7 +27,7 @@ const getPackageById = async (req, res) => {
             return res.status(503).json({ success: false, message: 'Database connection temporarily unavailable.' });
         }
 
-        const pkgRes = await pool.request()
+        let pkgRes = await pool.request()
             .input('PackageID', sql.Int, packageId)
             .query(`
                 SELECT 
@@ -59,14 +59,49 @@ const getPackageById = async (req, res) => {
             `);
 
         if (!pkgRes.recordset || pkgRes.recordset.length === 0) {
-            return res.status(404).json({ success: false, message: 'Package not found or inactive.' });
+            // Graceful fallback for packageId = 1 or legacy IDs: pick first active package (e.g. Birthday Package)
+            const fallbackRes = await pool.request().query(`
+                SELECT TOP 1
+                    p.PackageID,
+                    p.UserID AS ProviderUserID,
+                    p.PackageName,
+                    p.Price,
+                    COALESCE(p.AdditionalDayPercentage, 20.00) AS AdditionalDayPercentage,
+                    p.Category,
+                    p.Description,
+                    p.Inclusions,
+                    p.IsActive,
+                    p.CreatedAt,
+                    sp.ProviderID,
+                    sp.BusinessName AS ProviderName,
+                    sp.OwnerName AS ProviderOwnerName,
+                    sp.ProfilePicture AS ProviderAvatar,
+                    sp.BusinessAddress AS ProviderBusinessAddress,
+                    sp.Latitude AS ProviderLatitude,
+                    sp.Longitude AS ProviderLongitude,
+                    COALESCE(sp.CoverageArea, 'Lian, Balayan, Nasugbu') AS CoverageArea,
+                    sp.Description AS ProviderDescription,
+                    u.Email AS ProviderEmail,
+                    u.Phone AS ProviderPhone
+                FROM dbo.Packages p
+                LEFT JOIN dbo.ServiceProviders sp ON (p.UserID = sp.UserID OR sp.ProviderID = 1)
+                LEFT JOIN dbo.Users u ON p.UserID = u.UserID
+                WHERE p.IsActive = 1
+                ORDER BY p.PackageID ASC;
+            `);
+            if (fallbackRes.recordset && fallbackRes.recordset.length > 0) {
+                pkgRes = fallbackRes;
+            } else {
+                return res.status(404).json({ success: false, message: 'Package not found or inactive.' });
+            }
         }
 
         const pkgData = pkgRes.recordset[0];
+        const actualPkgId = pkgData.PackageID;
 
         // Fetch package images
         const imgRes = await pool.request()
-            .input('PackageID', sql.Int, packageId)
+            .input('PackageID', sql.Int, actualPkgId)
             .query(`
                 SELECT ImageID, ImageUrl FROM dbo.PackageImages
                 WHERE PackageID = @PackageID

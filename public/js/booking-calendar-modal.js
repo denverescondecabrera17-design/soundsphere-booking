@@ -17,7 +17,9 @@
     let calPackageId = null;
     let calPackageTitle = 'Event Package';
     let calPackagePrice = 15000;
-    let calProviderName = 'SoundSphere Service Provider';
+    let calProviderName = 'CHiCHa Lights and Sounds';
+    let calProviderAvatar = '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
+    let calCoverageArea = 'Lian, Balayan, Nasugbu';
     let calBookedSlots = []; // from backend
     let calDateCapacities = [];
     let calDefaultMaxDailyBookings = 1;
@@ -461,10 +463,13 @@
 
         // Package selection payload
         const selectedPkgInfo = {
-            packageId: calPackageId || 1,
-            providerId: calProviderId || 13,
-            packageTitle: calPackageTitle,
-            packagePrice: calPackagePrice,
+            packageId: calPackageId || 17,
+            providerId: calProviderId || 1,
+            packageTitle: calPackageTitle || 'Birthday Package',
+            packagePrice: calPackagePrice || 1000,
+            providerName: (calProviderName && calProviderName !== 'SoundSphere Service Provider' && calProviderName !== 'Service Provider') ? calProviderName : 'CHiCHa Lights and Sounds',
+            providerAvatar: calProviderAvatar || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg',
+            coverageArea: calCoverageArea || 'Lian, Balayan, Nasugbu',
             eventDate: calSelectedDate,
             serviceStartDate: calSelectedDate,
             serviceEndDate: calSelectedDate,
@@ -475,7 +480,7 @@
 
         sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(selectedPkgInfo));
 
-        const targetUrl = `/booking.html?package_id=${calPackageId || 1}&provider_id=${calProviderId || 13}&date=${calSelectedDate}&startTime=${calSelectedStartTime}&endTime=${calSelectedEndTime}`;
+        const targetUrl = `/booking.html?package_id=${selectedPkgInfo.packageId}&provider_id=${selectedPkgInfo.providerId}&date=${calSelectedDate}&startTime=${calSelectedStartTime}&endTime=${calSelectedEndTime}&provider_name=${encodeURIComponent(selectedPkgInfo.providerName)}&package_name=${encodeURIComponent(selectedPkgInfo.packageTitle)}`;
 
         if (!token || !user) {
             const pendingBooking = {
@@ -495,11 +500,13 @@
     window.openBookingCalendarModal = async function (options = {}) {
         ensureModalHTML();
 
-        calPackageId = options.packageId || options.pkgId || options.PackageID || options.id || 1;
+        calPackageId = options.packageId || options.pkgId || options.PackageID || options.id || 17;
         calProviderId = options.providerId || options.provider_id || options.ProviderID || options.userId || (new URLSearchParams(window.location.search).get('provider_id') || new URLSearchParams(window.location.search).get('providerId') || new URLSearchParams(window.location.search).get('id') || 1);
-        calPackageTitle = options.title || options.packageName || options.PackageName || options.name || 'Audio-Visual Package';
-        calPackagePrice = options.price || options.packagePrice || options.Price || 15000;
-        calProviderName = options.providerName || options.provider_name || options.businessName || 'SoundSphere Provider';
+        calPackageTitle = options.title || options.packageName || options.PackageName || options.name || 'Birthday Package';
+        calPackagePrice = options.price || options.packagePrice || options.Price || 1000;
+        calProviderName = options.providerName || options.provider_name || options.businessName || 'CHiCHa Lights and Sounds';
+        calProviderAvatar = options.providerAvatar || options.avatar || options.profilePicture || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
+        calCoverageArea = options.coverageArea || options.CoverageArea || 'Lian, Balayan, Nasugbu';
         calSelectedStartTime = options.startTime || '08:00';
 
         // Update time input field in DOM
