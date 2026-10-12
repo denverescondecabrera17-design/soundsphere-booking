@@ -181,6 +181,15 @@ app.use((req, res) => {
     });
 });
 
+// Global Error Handler (Guarantees all errors return valid JSON instead of HTML)
+app.use((err, req, res, next) => {
+    console.error('Unhandled server error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Internal server error'
+    });
+});
+
 // Initialize DB, Background Schedulers and Start Express Server
 const { startBalanceReminderScheduler } = require('./server/services/balanceReminderService');
 

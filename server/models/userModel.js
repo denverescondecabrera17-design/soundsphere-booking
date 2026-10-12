@@ -17,7 +17,19 @@ const ensureSchemaUpToDate = async (pool) => {
             END;
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = 'ProfilePicture')
             BEGIN
-                ALTER TABLE dbo.Users ADD ProfilePicture NVARCHAR(500) NULL;
+                ALTER TABLE dbo.Users ADD ProfilePicture NVARCHAR(MAX) NULL;
+            END
+            ELSE
+            BEGIN
+                ALTER TABLE dbo.Users ALTER COLUMN ProfilePicture NVARCHAR(MAX) NULL;
+            END;
+            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ServiceProviders]') AND name = 'ProfilePicture')
+            BEGIN
+                ALTER TABLE dbo.ServiceProviders ALTER COLUMN ProfilePicture NVARCHAR(MAX) NULL;
+            END;
+            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ProviderApplications]') AND name = 'ProfilePicture')
+            BEGIN
+                ALTER TABLE dbo.ProviderApplications ALTER COLUMN ProfilePicture NVARCHAR(MAX) NULL;
             END;
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = 'GoogleID')
             BEGIN
@@ -56,7 +68,7 @@ const findUserByEmail = async (email) => {
             SELECT 
                 u.UserID,
                 u.RoleID,
-                r.RoleName,
+                COALESCE(r.RoleName, CASE WHEN u.RoleID = 1 THEN 'Admin' WHEN u.RoleID = 3 THEN 'ServiceProvider' WHEN u.RoleID = 4 THEN 'Cashier' ELSE 'Client' END) AS RoleName,
                 u.Email,
                 u.PasswordHash,
                 u.Phone,
@@ -72,7 +84,7 @@ const findUserByEmail = async (email) => {
                 sp.BusinessName,
                 a.FullName AS AdminFullName
             FROM dbo.Users u
-            INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
+            LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
             LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
             LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
             LEFT JOIN dbo.Admins a ON u.UserID = a.UserID
@@ -104,7 +116,7 @@ const getUserProfileByUserId = async (userId) => {
         SELECT 
             u.UserID,
             u.RoleID,
-            r.RoleName,
+            COALESCE(r.RoleName, CASE WHEN u.RoleID = 1 THEN 'Admin' WHEN u.RoleID = 3 THEN 'ServiceProvider' WHEN u.RoleID = 4 THEN 'Cashier' ELSE 'Client' END) AS RoleName,
             u.Email,
             u.Phone,
             u.ProfilePicture,
@@ -121,7 +133,7 @@ const getUserProfileByUserId = async (userId) => {
             sp.OwnerName,
             a.FullName AS AdminFullName
         FROM dbo.Users u
-        INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
+        LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
         LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
         LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
         LEFT JOIN dbo.Admins a ON u.UserID = a.UserID
@@ -182,7 +194,7 @@ const updateUserProfile = async (userId, { email, firstName, middleName, lastNam
         userUpdateFields.push("Phone = @Phone");
     }
     if (profilePicture !== undefined && profilePicture !== null) {
-        reqUser.input('ProfilePicture', sql.NVarChar(500), profilePicture);
+        reqUser.input('ProfilePicture', sql.NVarChar(sql.MAX), profilePicture);
         userUpdateFields.push("ProfilePicture = @ProfilePicture");
     }
 

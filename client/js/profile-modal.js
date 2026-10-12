@@ -387,7 +387,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: formData
                 });
 
-                const resData = await response.json();
+                let resData;
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    resData = await response.json();
+                } else {
+                    const text = await response.text();
+                    try {
+                        resData = JSON.parse(text);
+                    } catch (parseErr) {
+                        console.error('Non-JSON server response:', text);
+                        showToast(`✕ Server returned an unexpected error (${response.status}). Please try again.`, 'error');
+                        return;
+                    }
+                }
 
                 if (!response.ok || !resData.success) {
                     showToast(`✕ ${resData.message || 'Failed to update profile settings.'}`, 'error');

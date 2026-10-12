@@ -8,28 +8,23 @@ const path = require('path');
 const multer = require('multer');
 const userModel = require('../models/userModel');
 
-// Ensure Upload Directories Exist
+// Ensure Upload Directories Exist (Graceful for serverless / read-only filesystem environments)
 const uploadDirPublic = path.join(__dirname, '../../public/uploads/avatars');
 const uploadDirClient = path.join(__dirname, '../../client/uploads/avatars');
-[uploadDirPublic, uploadDirClient].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-});
+try {
+    [uploadDirPublic, uploadDirClient].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    });
+} catch (e) {
+    // Read-only filesystem notice on serverless (e.g., Vercel)
+}
 
-// Multer Storage Configuration
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDirPublic);
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-        const uniqueName = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-        cb(null, uniqueName);
-    }
-});
+// Multer Memory Storage Configuration (Compatible with Vercel and serverless)
+const storage = multer.memoryStorage();
 
-// File Filter (Max 2 MB, .jpeg, .jpg, .png, .webp)
+// File Filter (Max 5 MB, .jpeg, .jpg, .png, .webp)
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -41,7 +36,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
     storage,
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB safety limit
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB safety limit
     fileFilter
 });
 
@@ -135,14 +130,21 @@ const updateProfile = async (req, res) => {
         }
 
         let profilePicture = undefined;
-        if (req.file) {
-            profilePicture = `uploads/avatars/${req.file.filename}`;
+        if (req.file && req.file.buffer) {
+            const mimeType = req.file.mimetype || 'image/jpeg';
+            profilePicture = `data:${mimeType};base64,${req.file.buffer.toString('base64')}`;
             try {
-                const clientDest = path.join(uploadDirClient, req.file.filename);
-                fs.copyFileSync(req.file.path, clientDest);
+                const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+                const uniqueName = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+                if (!fs.existsSync(uploadDirPublic)) fs.mkdirSync(uploadDirPublic, { recursive: true });
+                if (!fs.existsSync(uploadDirClient)) fs.mkdirSync(uploadDirClient, { recursive: true });
+                fs.writeFileSync(path.join(uploadDirPublic, uniqueName), req.file.buffer);
+                fs.writeFileSync(path.join(uploadDirClient, uniqueName), req.file.buffer);
             } catch (e) {
-                console.warn('Copy avatar to client uploads notice:', e.message);
+                // Read-only filesystem on serverless (e.g. Vercel) - safely ignored as base64 data is stored in DB
             }
+        } else if (req.body.profilePicture || req.body.avatar) {
+            profilePicture = req.body.profilePicture || req.body.avatar;
         }
 
         const updatedProfile = await userModel.updateUserProfile(targetUserId, {
@@ -263,8 +265,21 @@ const changePassword = async (req, res) => {
     }
 };
 
+const uploadMiddleware = (req, res, next) => {
+    upload.single('avatarFile')(req, res, (err) => {
+        if (err) {
+            console.warn('Multer avatar upload error:', err.message);
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Error processing uploaded avatar file.'
+            });
+        }
+        next();
+    });
+};
+
 module.exports = {
-    uploadMiddleware: upload.single('avatarFile'),
+    uploadMiddleware,
     getProfile,
     updateProfile,
     changePassword

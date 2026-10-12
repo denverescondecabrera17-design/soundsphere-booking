@@ -4,23 +4,20 @@ const multer = require('multer');
 const providerModel = require('../models/providerModel');
 const { getPool, connectDB, sql } = require('../config/db');
 
-// Ensure Upload Directories Exist for Service Provider Photos
+// Ensure Upload Directories Exist for Service Provider Photos (Safe for serverless / Vercel)
 const uploadDirPublic = path.join(__dirname, '../../public/uploads/avatars');
 const uploadDirClient = path.join(__dirname, '../../client/uploads/avatars');
-[uploadDirPublic, uploadDirClient].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-});
+try {
+    [uploadDirPublic, uploadDirClient].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    });
+} catch (e) {
+    // Read-only filesystem notice on serverless
+}
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDirPublic),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-        const uniqueName = `provider-avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-        cb(null, uniqueName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -33,27 +30,24 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
     storage,
-    limits: { fileSize: 2 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter
 });
 
 // Ensure Upload Directories Exist for Package Photos
 const uploadPackageDirPublic = path.join(__dirname, '../../public/uploads/packages');
 const uploadPackageDirClient = path.join(__dirname, '../../client/uploads/packages');
-[uploadPackageDirPublic, uploadPackageDirClient].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-});
+try {
+    [uploadPackageDirPublic, uploadPackageDirClient].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    });
+} catch (e) {
+    // Read-only filesystem notice on serverless
+}
 
-const packageStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadPackageDirPublic),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-        const uniqueName = `package-photo-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-        cb(null, uniqueName);
-    }
-});
+const packageStorage = multer.memoryStorage();
 
 const uploadPackagePhotos = multer({
     storage: packageStorage,
@@ -187,14 +181,18 @@ const createProviderPackage = async (req, res) => {
         // Save Uploaded Setup / Inclusion Photos
         if (req.files && req.files.length > 0) {
             const imageUrls = req.files.map(file => {
-                const urlPath = `uploads/packages/${file.filename}`;
+                const dataUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
                 try {
-                    const clientDest = path.join(uploadPackageDirClient, file.filename);
-                    fs.copyFileSync(file.path, clientDest);
+                    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+                    const uniqueName = `package-photo-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+                    if (!fs.existsSync(uploadPackageDirPublic)) fs.mkdirSync(uploadPackageDirPublic, { recursive: true });
+                    if (!fs.existsSync(uploadPackageDirClient)) fs.mkdirSync(uploadPackageDirClient, { recursive: true });
+                    fs.writeFileSync(path.join(uploadPackageDirPublic, uniqueName), file.buffer);
+                    fs.writeFileSync(path.join(uploadPackageDirClient, uniqueName), file.buffer);
                 } catch (e) {
-                    console.warn('Copy package photo notice:', e.message);
+                    // Safe for read-only filesystem
                 }
-                return urlPath;
+                return dataUrl;
             });
             await providerModel.addPackageImages(packageData.PackageID, imageUrls);
         }
@@ -215,14 +213,18 @@ const updateProviderPackage = async (req, res) => {
         // Save Uploaded Setup / Inclusion Photos
         if (req.files && req.files.length > 0) {
             const imageUrls = req.files.map(file => {
-                const urlPath = `uploads/packages/${file.filename}`;
+                const dataUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
                 try {
-                    const clientDest = path.join(uploadPackageDirClient, file.filename);
-                    fs.copyFileSync(file.path, clientDest);
+                    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+                    const uniqueName = `package-photo-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+                    if (!fs.existsSync(uploadPackageDirPublic)) fs.mkdirSync(uploadPackageDirPublic, { recursive: true });
+                    if (!fs.existsSync(uploadPackageDirClient)) fs.mkdirSync(uploadPackageDirClient, { recursive: true });
+                    fs.writeFileSync(path.join(uploadPackageDirPublic, uniqueName), file.buffer);
+                    fs.writeFileSync(path.join(uploadPackageDirClient, uniqueName), file.buffer);
                 } catch (e) {
-                    console.warn('Copy package photo notice:', e.message);
+                    // Safe for read-only filesystem
                 }
-                return urlPath;
+                return dataUrl;
             });
             await providerModel.addPackageImages(id, imageUrls);
         }
@@ -366,13 +368,17 @@ const updateProviderProfile = async (req, res) => {
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
         let providerProfilePicture = undefined;
-        if (req.file) {
-            providerProfilePicture = `uploads/avatars/${req.file.filename}`;
+        if (req.file && req.file.buffer) {
+            providerProfilePicture = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`;
             try {
-                const clientDest = path.join(uploadDirClient, req.file.filename);
-                fs.copyFileSync(req.file.path, clientDest);
+                const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+                const uniqueName = `provider-avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+                if (!fs.existsSync(uploadDirPublic)) fs.mkdirSync(uploadDirPublic, { recursive: true });
+                if (!fs.existsSync(uploadDirClient)) fs.mkdirSync(uploadDirClient, { recursive: true });
+                fs.writeFileSync(path.join(uploadDirPublic, uniqueName), req.file.buffer);
+                fs.writeFileSync(path.join(uploadDirClient, uniqueName), req.file.buffer);
             } catch (e) {
-                console.warn('Copy provider avatar notice:', e.message);
+                // Safe for read-only filesystem
             }
         }
 
