@@ -148,25 +148,7 @@
 }
 
 .cal-btn-close {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 1.15rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-.cal-btn-close:hover {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #fca5a5;
+    display: none !important;
 }
 
 /* Fullscreen Content Body Container */

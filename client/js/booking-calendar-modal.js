@@ -54,9 +54,6 @@
                             <span class="cal-step-badge"><i class="fa-solid fa-calendar-check"></i> Step 1 of 2</span>
                             <span class="cal-step-label">Select Date & Time</span>
                         </div>
-                        <button type="button" class="cal-btn-close" id="cal-modal-close-btn" title="Close">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
                     </div>
                 </div>
 
@@ -167,7 +164,8 @@
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
         // Bind events
-        document.getElementById('cal-modal-close-btn').onclick = window.closeBookingCalendarModal;
+        const closeBtn = document.getElementById('cal-modal-close-btn');
+        if (closeBtn) closeBtn.onclick = window.closeBookingCalendarModal;
         const headerBackBtn = document.getElementById('cal-modal-back-btn');
         if (headerBackBtn) headerBackBtn.onclick = window.closeBookingCalendarModal;
         document.getElementById('cal-btn-cancel-action').onclick = window.closeBookingCalendarModal;
