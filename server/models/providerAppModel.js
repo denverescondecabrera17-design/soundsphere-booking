@@ -6,6 +6,26 @@
 const { getPool, getOrConnectPool, sql } = require('../config/db');
 
 /**
+ * Ensure ProviderApplications and ServiceProviders schema columns exist
+ */
+const ensureProviderAppSchema = async (pool) => {
+    try {
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ProviderApplications]') AND name = 'OtherDocs_Url')
+            BEGIN
+                ALTER TABLE dbo.ProviderApplications ADD OtherDocs_Url NVARCHAR(MAX) NULL;
+            END;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ServiceProviders]') AND name = 'ApplicationID')
+            BEGIN
+                ALTER TABLE dbo.ServiceProviders ADD ApplicationID INT NULL;
+            END;
+        `);
+    } catch (err) {
+        console.warn('ensureProviderAppSchema notice:', err.message);
+    }
+};
+
+/**
  * Find existing active application (Pending or Approved) submitted by a specific UserID
  * @param {number} userId
  * @returns {Promise<object|null>}
@@ -17,6 +37,8 @@ const findActiveApplicationByUserId = async (userId) => {
             pool = await getOrConnectPool();
         }
         if (!pool) return null;
+
+        await ensureProviderAppSchema(pool);
 
         const numericUserId = parseInt(userId, 10);
         if (!numericUserId || isNaN(numericUserId) || numericUserId > 2147483647) {
@@ -115,6 +137,8 @@ const findApplicationByUserId = async (userId) => {
 const createApplication = async ({ userId, businessName, ownerName, businessAddress, coverageArea, contactNumber, govtIdUrl, govtIdBackUrl, businessPermitUrl, permitIssuedDate, permitExpiryDate, otherDocsUrl }) => {
     const pool = getPool();
     if (!pool) throw new Error('Database connection pool not available.');
+
+    await ensureProviderAppSchema(pool);
 
     const result = await pool.request()
         .input('UserID', sql.Int, userId)

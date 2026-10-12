@@ -47,6 +47,14 @@ const ensureSchemaUpToDate = async (pool) => {
             BEGIN
                 ALTER TABLE dbo.Users ADD UpdatedAt DATETIME2 NULL;
             END;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ProviderApplications]') AND name = 'OtherDocs_Url')
+            BEGIN
+                ALTER TABLE dbo.ProviderApplications ADD OtherDocs_Url NVARCHAR(MAX) NULL;
+            END;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[ServiceProviders]') AND name = 'ApplicationID')
+            BEGIN
+                ALTER TABLE dbo.ServiceProviders ADD ApplicationID INT NULL;
+            END;
         `);
     } catch (err) {
         console.warn('Schema check warning:', err.message);
