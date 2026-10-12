@@ -43,6 +43,10 @@ const ensureSchemaUpToDate = async (pool) => {
             BEGIN
                 ALTER TABLE dbo.Users ADD AuthProvider NVARCHAR(50) NULL;
             END;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = 'UpdatedAt')
+            BEGIN
+                ALTER TABLE dbo.Users ADD UpdatedAt DATETIME2 NULL;
+            END;
         `);
     } catch (err) {
         console.warn('Schema check warning:', err.message);

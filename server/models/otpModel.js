@@ -186,26 +186,29 @@ const verifyOTPAndActivateAccount = async ({ email, inputOtp }) => {
         const profileRes = await profileReq
             .input('UserID', sql.Int, otpRecord.UserID)
             .query(`
-                SELECT u.UserID, u.Email, u.Phone, r.RoleName, c.FirstName, c.LastName
+                SELECT u.UserID, u.Email, u.Phone, 
+                       COALESCE(r.RoleName, CASE WHEN u.RoleID = 1 THEN 'Admin' WHEN u.RoleID = 3 THEN 'ServiceProvider' WHEN u.RoleID = 4 THEN 'Cashier' ELSE 'Client' END) AS RoleName,
+                       c.FirstName, c.LastName
                 FROM dbo.Users u
-                INNER JOIN dbo.Roles r ON u.RoleID = r.RoleID
+                LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
                 WHERE u.UserID = @UserID;
             `);
 
         await transaction.commit();
 
-        const userProfile = profileRes.recordset[0];
+        const userProfile = profileRes.recordset[0] || {};
+        const clientFullName = `${userProfile.FirstName || ''} ${userProfile.LastName || ''}`.trim() || userProfile.Email || email;
 
         return {
             success: true,
             message: 'Email verified successfully! Welcome to SoundSphere.',
             user: {
-                userId: userProfile.UserID,
-                email: userProfile.Email,
-                phone: userProfile.Phone,
-                role: userProfile.RoleName,
-                name: `${userProfile.FirstName} ${userProfile.LastName}`.trim()
+                userId: userProfile.UserID || otpRecord.UserID,
+                email: userProfile.Email || email,
+                phone: userProfile.Phone || '',
+                role: userProfile.RoleName || 'Client',
+                name: clientFullName
             }
         };
     } catch (error) {
