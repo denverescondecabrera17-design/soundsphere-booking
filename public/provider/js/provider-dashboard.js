@@ -2486,11 +2486,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             cell.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="day-num" style="font-weight:800; font-size:0.95rem; color:#0a192f;">${d}</span>
-                    ${override ? `<i class="fa-solid fa-sliders" style="font-size:0.65rem; color:#2563eb;" title="Custom limit: ${override.MaxBookings}"></i>` : ''}
+                <div style="display:flex; justify-content:space-between; align-items:center; line-height:1;">
+                    <span class="day-num" style="font-weight:700; font-size:0.78rem; color:#0a192f;">${d}</span>
+                    ${override ? `<i class="fa-solid fa-sliders" style="font-size:0.6rem; color:#2563eb;" title="Custom limit: ${override.MaxBookings}"></i>` : ''}
                 </div>
-                <div style="margin-top:4px;">
+                <div style="margin-top:2px;">
                     ${badgeHtml}
                 </div>
             `;
