@@ -2460,8 +2460,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Count bookings overlapping with this date
             const activeBookings = (provCalData.bookings || []).filter(b => {
-                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
-                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
+                const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];
                 return (cellDateIso >= sDate && cellDateIso <= eDate);
             });
             const bookingCount = activeBookings.length;
@@ -2561,8 +2561,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Filter bookings for this date
         const activeBookings = (provCalData.bookings || []).filter(b => {
-            const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
-            const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+            const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
+            const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];
             return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
         });
 
@@ -2960,8 +2960,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         resetDateCapBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
             const activeBookings = (provCalData.bookings || []).filter(b => {
-                const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
-                const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
+                const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
+                const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];
                 return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
             });
             const bookedCount = activeBookings.length;
@@ -2991,6 +2991,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Auto-refresh calendar on window focus and background poll when active
+    window.addEventListener('focus', () => {
+        const calView = document.getElementById('view-provider-calendar');
+        if (calView && !calView.classList.contains('hidden')) {
+            loadProviderCalendarSchedule();
+        }
+    });
+
+    setInterval(() => {
+        const calView = document.getElementById('view-provider-calendar');
+        if (calView && !calView.classList.contains('hidden') && document.visibilityState === 'visible') {
+            loadProviderCalendarSchedule();
+        }
+    }, 20000);
 
     // Initial Data Fetch
     await loadDashboardData();

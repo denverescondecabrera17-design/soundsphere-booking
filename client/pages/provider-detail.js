@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data.success || !data.data) return;
 
             const provider = data.data;
-            currentLoadedProviderId = provider.id || provider.userId || providerId;
+            currentLoadedProviderId = provider.providerId || provider.ProviderID || provider.id || provider.userId || providerId;
 
             // Update Clean Header Information
             const titleEl = document.getElementById('provider-detail-title');

@@ -282,8 +282,8 @@
 
         // Count overlapping active bookings on this date
         const activeCount = calBookedSlots.filter(slot => {
-            const startDate = slot.ServiceStartDate ? slot.ServiceStartDate.split('T')[0] : (slot.EventDate ? slot.EventDate.split('T')[0] : '');
-            const endDate = slot.ServiceEndDate ? slot.ServiceEndDate.split('T')[0] : startDate;
+            const startDate = String(slot.ServiceStartDate || slot.EventDate || '').trim().split('T')[0];
+            const endDate = String(slot.ServiceEndDate || startDate).trim().split('T')[0];
             return (dateIso >= startDate && dateIso <= endDate);
         }).length;
 

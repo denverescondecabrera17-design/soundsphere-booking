@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const offerObj = {
                             ...pkg,
-                            providerId: p.id || p.userId,
+                            providerId: p.providerId || p.ProviderID || p.id || p.userId,
                             providerName: p.name || p.businessName,
                             providerAvatar: p.profilePicture || p.avatar || p.userProfilePicture,
                             providerRating: p.rating || 5.0,

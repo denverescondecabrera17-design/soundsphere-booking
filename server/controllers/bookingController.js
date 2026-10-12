@@ -479,15 +479,10 @@ const createBooking = async (req, res) => {
 
         let actualPackagePrice = targetPkg ? parseFloat(targetPkg.Price || 0) : parseFloat(req.body.totalAmount || req.body.packagePrice || 15000);
         let actualPackageName = targetPkg ? targetPkg.PackageName : (req.body.packageName || 'Audio & Light Package');
-        let actualProviderId = providerId || (targetPkg ? targetPkg.ProviderID : 13);
-
-        if (!actualProviderId && targetPkg?.UserID) {
-            const provRes = await pool.request().input('UserID', sql.Int, targetPkg.UserID).query(`
-                SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UserID;
-            `);
-            if (provRes.recordset && provRes.recordset[0]) {
-                actualProviderId = provRes.recordset[0].ProviderID;
-            }
+        let actualProviderId = providerId || (targetPkg ? (targetPkg.ProviderID || targetPkg.UserID) : 1);
+        if (actualProviderId) {
+            const resolved = await bookingModel.resolveProviderId(pool, actualProviderId);
+            actualProviderId = resolved.providerId;
         }
 
         // Prevent Self-Booking Guard

@@ -76,7 +76,7 @@ const checkProviderAvailability = async ({ providerId, serviceStartDate, service
             b.EndTime,
             b.BookingStatus
         FROM dbo.Bookings b
-        WHERE b.ProviderID = @ProviderID
+        WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
           AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
           AND (
               ISNULL(b.ServiceStartDate, b.EventDate) <= @EndDate 
@@ -128,7 +128,7 @@ const getProviderAvailabilitySlots = async (providerId) => {
                     b.EndTime,
                     b.BookingStatus
                 FROM dbo.Bookings b
-                WHERE b.ProviderID = @ProviderID
+                WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
                   AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
                 ORDER BY ISNULL(b.ServiceStartDate, b.EventDate) ASC;
             `),
@@ -137,7 +137,7 @@ const getProviderAvailabilitySlots = async (providerId) => {
             .query(`
                 SELECT CapacityID, ProviderID, SpecificDate, MaxBookings, Notes
                 FROM dbo.ProviderDateCapacity
-                WHERE ProviderID = @ProviderID;
+                WHERE ProviderID = @ProviderID OR ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID);
             `)
     ]);
 
@@ -233,7 +233,7 @@ const getProviderCalendarSchedule = async (providerUserIdOrProviderId) => {
                 FROM dbo.Bookings b
                 LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-                WHERE b.ProviderID = @ProviderID
+                WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
                   AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
                 ORDER BY ISNULL(b.ServiceStartDate, b.EventDate) ASC, b.StartTime ASC;
             `),
@@ -242,7 +242,7 @@ const getProviderCalendarSchedule = async (providerUserIdOrProviderId) => {
             .query(`
                 SELECT CapacityID, ProviderID, SpecificDate, MaxBookings, Notes, UpdatedAt
                 FROM dbo.ProviderDateCapacity
-                WHERE ProviderID = @ProviderID
+                WHERE ProviderID = @ProviderID OR ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID)
                 ORDER BY SpecificDate ASC;
             `)
     ]);

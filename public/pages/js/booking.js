@@ -1760,42 +1760,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         pmConfirmBtn.disabled = true;
                         pmConfirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
 
-                        // Execute Booking Creation in Database
-                        const payload = {
-                            clientName: clientFullname,
-                            clientPhone,
-                            clientEmail,
-                            clientAltPhone,
-                            packageId: packageData ? packageData.PackageID : targetPackageId,
-                            providerId: packageData ? packageData.ProviderID : targetProviderId,
-                            packageName: packageData ? packageData.PackageName : 'Audio & Light Package',
-                            eventName,
-                            eventType,
-                            customEventType,
-                            serviceStartDate,
-                            serviceEndDate,
-                            serviceHireDays,
-                            eventDate: serviceStartDate,
-                            numberOfDays: serviceHireDays,
-                            startTime,
-                            endTime,
-                            numberOfHours: 0,
-                            eventPlace,
-                            venueName,
-                            eventAddress,
-                            eventLatitude: currentLat,
-                            eventLongitude: currentLng,
-                            locationNotes,
-                            packagePrice: basePackagePrice,
-                            additionalDayCharges: additionalDayCharges,
-                            transportationFee: transportFee,
-                            distanceKm: calculatedDistanceKm,
-                            totalAmount: totalCost,
-                            paymentType: selectedPaymentPlan,
-                            paymentMethod: selectedPayMongoMethod,
-                            transactionReference: sessionData.sessionId || `TXN-PM-${Date.now()}`
-                        };
+                        // If booking was already registered in database during checkout setup, finalize immediately
+                        if (bkData && bkData.success && bkData.booking) {
+                            const bk = bkData.booking || {};
+                            const refCode = bk.BookingReference || `SS-${new Date().getFullYear()}-00001`;
 
+                            if (typeof window.showToast === 'function') {
+                                window.showToast(`🎉 Payment Authorized & Booking Confirmed! (${refCode})`, 'success');
+                            }
+
+                            setTimeout(() => {
+                                window.location.href = `/booking-confirmation.html?ref=${encodeURIComponent(refCode)}&id=${bk.BookingID || ''}`;
+                            }, 800);
+                            return;
+                        }
+
+                        // Fallback: If booking was not pre-created, execute booking creation now
                         try {
                             const res = await fetch('/api/bookings', {
                                 method: 'POST',
@@ -1803,7 +1783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${token}`
                                 },
-                                body: JSON.stringify(payload)
+                                body: JSON.stringify(bookingPayload)
                             });
 
                             const data = await res.json();
