@@ -2470,27 +2470,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isPast) {
                 cell.classList.add('is-past');
                 const bookedTxt = bookingCount > 0 ? ` (${bookingCount})` : '';
-                badgeHtml = `<span class="prov-day-badge badge-status-past"><i class="fa-solid fa-lock"></i> Closed${bookedTxt}</span>`;
+                badgeHtml = `<span class="prov-day-badge badge-status-past" title="Closed${bookedTxt}"><i class="fa-solid fa-lock"></i> Closed${bookedTxt}</span>`;
             } else if (isBlocked) {
                 cell.classList.add('is-blocked');
-                badgeHtml = `<span class="prov-day-badge badge-status-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>`;
+                badgeHtml = `<span class="prov-day-badge badge-status-blocked" title="Blocked"><i class="fa-solid fa-ban"></i> Blocked</span>`;
             } else if (bookingCount >= maxAllowed) {
                 cell.classList.add('is-full');
-                badgeHtml = `<span class="prov-day-badge badge-status-full"><i class="fa-solid fa-lock"></i> Full (${bookingCount}/${maxAllowed})</span>`;
+                badgeHtml = `<span class="prov-day-badge badge-status-full" title="Full (${bookingCount}/${maxAllowed})"><i class="fa-solid fa-lock"></i> Full (${bookingCount}/${maxAllowed})</span>`;
             } else if (bookingCount > 0) {
                 cell.classList.add('is-partial');
-                badgeHtml = `<span class="prov-day-badge badge-status-partial"><i class="fa-solid fa-user-check"></i> ${bookingCount}/${maxAllowed} Booked</span>`;
+                badgeHtml = `<span class="prov-day-badge badge-status-partial" title="${bookingCount}/${maxAllowed} Booked"><i class="fa-solid fa-user-check"></i> ${bookingCount}/${maxAllowed} Booked</span>`;
             } else {
                 cell.classList.add('is-available');
-                badgeHtml = `<span class="prov-day-badge badge-status-avail"><i class="fa-regular fa-circle-check"></i> ${maxAllowed} Avail</span>`;
+                badgeHtml = `<span class="prov-day-badge badge-status-avail" title="${maxAllowed} Available"><i class="fa-regular fa-circle-check"></i> ${maxAllowed} Avail</span>`;
             }
 
             cell.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="day-num" style="font-weight:800; font-size:0.95rem; color:#0a192f;">${d}</span>
-                    ${override ? `<i class="fa-solid fa-sliders" style="font-size:0.65rem; color:#2563eb;" title="Custom limit: ${override.MaxBookings}"></i>` : ''}
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; min-width:0;">
+                    <span class="day-num" style="font-weight:800; font-size:0.92rem; color:#0a192f; line-height:1;">${d}</span>
+                    ${override ? `<i class="fa-solid fa-sliders" style="font-size:0.6rem; color:#2563eb;" title="Custom limit: ${override.MaxBookings}"></i>` : ''}
                 </div>
-                <div style="margin-top:4px;">
+                <div style="margin-top:3px; width:100%; min-width:0; overflow:hidden;">
                     ${badgeHtml}
                 </div>
             `;
