@@ -224,7 +224,7 @@ BEGIN
     CREATE TABLE dbo.PackageImages (
         ImageID INT IDENTITY(1,1) PRIMARY KEY,
         PackageID INT NOT NULL FOREIGN KEY REFERENCES dbo.Packages(PackageID) ON DELETE CASCADE,
-        ImageUrl NVARCHAR(500) NOT NULL,
+        ImageUrl NVARCHAR(MAX) NOT NULL,
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
     );
     PRINT 'Created table: dbo.PackageImages';

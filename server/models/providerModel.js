@@ -4,6 +4,7 @@
  * Handles provider queries, filtering, and marketplace data retrieval
  */
 
+const sql = require('mssql');
 const { getPool, connectDB, getOrConnectPool } = require('../config/db');
 
 /**
@@ -477,9 +478,10 @@ const getPackagesByProviderId = async (userId) => {
                 };
             }
             if (row.ImageID && row.ImageUrl) {
+                const cleanImgUrl = typeof row.ImageUrl === 'string' && row.ImageUrl.startsWith('/data:') ? row.ImageUrl.substring(1) : row.ImageUrl;
                 pkgsMap[pid].images.push({
                     id: row.ImageID,
-                    url: row.ImageUrl
+                    url: cleanImgUrl
                 });
             }
         });
@@ -528,9 +530,10 @@ const getPackageById = async (packageId, userId) => {
 
         result.recordset.forEach(row => {
             if (row.ImageID && row.ImageUrl) {
+                const cleanImgUrl = typeof row.ImageUrl === 'string' && row.ImageUrl.startsWith('/data:') ? row.ImageUrl.substring(1) : row.ImageUrl;
                 pkgObj.images.push({
                     id: row.ImageID,
-                    url: row.ImageUrl
+                    url: cleanImgUrl
                 });
             }
         });
@@ -547,9 +550,10 @@ const addPackageImages = async (packageId, imageUrls = []) => {
     if (!pool) return;
 
     for (const url of imageUrls) {
+        if (!url || typeof url !== 'string') continue;
         await pool.request()
-            .input('PackageID', parseInt(packageId, 10))
-            .input('ImageUrl', url)
+            .input('PackageID', sql.Int, parseInt(packageId, 10))
+            .input('ImageUrl', sql.NVarChar(sql.MAX), url)
             .query(`INSERT INTO dbo.PackageImages (PackageID, ImageUrl) VALUES (@PackageID, @ImageUrl);`);
     }
 };

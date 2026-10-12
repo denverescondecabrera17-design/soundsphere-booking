@@ -127,7 +127,7 @@ const getPackageById = async (req, res) => {
 
             pkgData.images = (imgRes.recordset || []).map(img => ({
                 id: img.ImageID,
-                url: img.ImageUrl
+                url: typeof img.ImageUrl === 'string' && img.ImageUrl.startsWith('/data:') ? img.ImageUrl.substring(1) : img.ImageUrl
             }));
         } catch (imgErr) {
             console.warn('Package images query notice:', imgErr.message);

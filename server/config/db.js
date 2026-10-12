@@ -350,9 +350,21 @@ const autoSeedDatabase = async (activePool) => {
                 CREATE TABLE dbo.PackageImages (
                     ImageID INT IDENTITY(1,1) PRIMARY KEY,
                     PackageID INT NOT NULL,
-                    ImageUrl NVARCHAR(500) NOT NULL,
+                    ImageUrl NVARCHAR(MAX) NOT NULL,
                     CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
                 );
+            END
+            ELSE
+            BEGIN
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PackageImages' AND COLUMN_NAME = 'ImageUrl' AND CHARACTER_MAXIMUM_LENGTH <> -1)
+                BEGIN
+                    ALTER TABLE dbo.PackageImages ALTER COLUMN ImageUrl NVARCHAR(MAX) NOT NULL;
+                END;
+            END;
+
+            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Packages' AND COLUMN_NAME = 'BannerUrl' AND CHARACTER_MAXIMUM_LENGTH <> -1)
+            BEGIN
+                ALTER TABLE dbo.Packages ALTER COLUMN BannerUrl NVARCHAR(MAX) NULL;
             END;
         `);
 
@@ -660,7 +672,7 @@ const autoSeedDatabase = async (activePool) => {
                 CREATE TABLE dbo.PackageImages (
                     ImageID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
                     PackageID INT NOT NULL,
-                    ImageUrl NVARCHAR(500) NOT NULL,
+                    ImageUrl NVARCHAR(MAX) NOT NULL,
                     CreatedAt DATETIME2 DEFAULT GETDATE() NOT NULL,
                     CONSTRAINT FK_PackageImages_Packages FOREIGN KEY (PackageID) REFERENCES dbo.Packages(PackageID) ON DELETE CASCADE
                 );
