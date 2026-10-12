@@ -11,8 +11,15 @@ window.updateAllProfileAvatars = (avatarUrl, name) => {
     const initials = displayName.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'UA';
 
     let fullAvatarUrl = avatarUrl;
-    if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('data:')) {
-        fullAvatarUrl = `/${avatarUrl.replace(/^\//, '')}`;
+    if (avatarUrl && typeof avatarUrl === 'string') {
+        const trimmed = avatarUrl.trim();
+        if (trimmed.startsWith('/data:')) {
+            fullAvatarUrl = trimmed.substring(1);
+        } else if (!trimmed.startsWith('http') && !trimmed.startsWith('data:')) {
+            fullAvatarUrl = `/${trimmed.replace(/^\//, '')}`;
+        } else {
+            fullAvatarUrl = trimmed;
+        }
     }
 
     // 1. Profile Page Main Header Avatar (#profile-page-avatar)

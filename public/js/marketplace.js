@@ -328,8 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rawOfferPhotos = Array.isArray(offer.images) ? offer.images : (offer.images ? [offer.images] : []);
             const photoUrls = rawOfferPhotos.map(img => {
-                const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
-                if (!raw) return '';
+                let raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
+                if (!raw || typeof raw !== 'string') return '';
+                raw = raw.trim();
+                if (raw.startsWith('/data:')) return raw.substring(1);
                 return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
             }).filter(Boolean);
 
@@ -339,9 +341,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!window.packagePhotosMap) window.packagePhotosMap = {};
             window.packagePhotosMap[offer.PackageID] = photoUrls;
 
-            const avatarSrc = offer.providerAvatar;
+            let avatarSrc = offer.providerAvatar;
+            if (avatarSrc && typeof avatarSrc === 'string') {
+                avatarSrc = avatarSrc.trim();
+                if (avatarSrc.startsWith('/data:')) avatarSrc = avatarSrc.substring(1);
+                else if (!avatarSrc.startsWith('/') && !avatarSrc.startsWith('http') && !avatarSrc.startsWith('data:')) avatarSrc = '/' + avatarSrc;
+            }
             const avatarHTML = avatarSrc ?
-                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
+                `<img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
                 `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
                 return `
@@ -713,8 +720,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const images = Array.isArray(targetOffer.images) ? targetOffer.images : (targetOffer.images ? [targetOffer.images] : []);
         const modalPhotoUrls = images.map(img => {
-            const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
-            if (!raw) return '';
+            let raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
+            if (!raw || typeof raw !== 'string') return '';
+            raw = raw.trim();
+            if (raw.startsWith('/data:')) return raw.substring(1);
             return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
         }).filter(Boolean);
 
@@ -725,9 +734,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainImgUrl = modalPhotoUrls.length > 0 ? modalPhotoUrls[0] : null;
         const hasMultipleModalPhotos = modalPhotoUrls.length > 1;
 
-        const avatarSrc = targetOffer.providerAvatar;
+        let avatarSrc = targetOffer.providerAvatar;
+        if (avatarSrc && typeof avatarSrc === 'string') {
+            avatarSrc = avatarSrc.trim();
+            if (avatarSrc.startsWith('/data:')) avatarSrc = avatarSrc.substring(1);
+            else if (!avatarSrc.startsWith('/') && !avatarSrc.startsWith('http') && !avatarSrc.startsWith('data:')) avatarSrc = '/' + avatarSrc;
+        }
         const avatarHTML = avatarSrc ?
-            `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" class="enlargeable-photo">` :
+            `<img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" class="enlargeable-photo">` :
             `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
         modalBody.innerHTML = `

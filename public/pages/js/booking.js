@@ -706,8 +706,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (summaryProviderImg) {
                 const defaultAvatar = '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
                 let avatarUrl = packageData.ProviderAvatar || packageData.ProfilePicture || (packageData.images && packageData.images[0] && packageData.images[0].url) || defaultAvatar;
-                if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('/') && !avatarUrl.startsWith('data:')) {
-                    avatarUrl = '/' + avatarUrl;
+                if (avatarUrl && typeof avatarUrl === 'string') {
+                    avatarUrl = avatarUrl.trim();
+                    if (avatarUrl.startsWith('/data:')) {
+                        avatarUrl = avatarUrl.substring(1);
+                    } else if (!avatarUrl.startsWith('http') && !avatarUrl.startsWith('/') && !avatarUrl.startsWith('data:')) {
+                        avatarUrl = '/' + avatarUrl;
+                    }
                 }
                 summaryProviderImg.src = avatarUrl;
                 summaryProviderImg.onerror = function() {

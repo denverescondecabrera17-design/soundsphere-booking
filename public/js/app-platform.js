@@ -368,8 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rawOfferPhotos = Array.isArray(offer.images) ? offer.images : (offer.images ? [offer.images] : []);
             const photoUrls = rawOfferPhotos.map(img => {
-                const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
-                if (!raw) return '';
+                let raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
+                if (!raw || typeof raw !== 'string') return '';
+                raw = raw.trim();
+                if (raw.startsWith('/data:')) return raw.substring(1);
                 return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
             }).filter(Boolean);
 
@@ -379,9 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!window.packagePhotosMap) window.packagePhotosMap = {};
             window.packagePhotosMap[offer.PackageID] = photoUrls;
 
-            const avatarSrc = offer.providerAvatar;
+            let avatarSrc = offer.providerAvatar;
+            if (avatarSrc && typeof avatarSrc === 'string') {
+                avatarSrc = avatarSrc.trim();
+                if (avatarSrc.startsWith('/data:')) avatarSrc = avatarSrc.substring(1);
+                else if (!avatarSrc.startsWith('/') && !avatarSrc.startsWith('http') && !avatarSrc.startsWith('data:')) avatarSrc = '/' + avatarSrc;
+            }
             const avatarHTML = avatarSrc ?
-                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
+                `<img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
                 `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
                 return `
@@ -912,8 +919,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         let safeProviderAvatar = b.ProviderAvatar;
-                        if (safeProviderAvatar && !safeProviderAvatar.startsWith('http') && !safeProviderAvatar.startsWith('/') && !safeProviderAvatar.startsWith('data:')) {
-                            safeProviderAvatar = `/${safeProviderAvatar}`;
+                        if (safeProviderAvatar && typeof safeProviderAvatar === 'string') {
+                            safeProviderAvatar = safeProviderAvatar.trim();
+                            if (safeProviderAvatar.startsWith('/data:')) {
+                                safeProviderAvatar = safeProviderAvatar.substring(1);
+                            } else if (!safeProviderAvatar.startsWith('http') && !safeProviderAvatar.startsWith('/') && !safeProviderAvatar.startsWith('data:')) {
+                                safeProviderAvatar = `/${safeProviderAvatar}`;
+                            }
                         }
 
                         return `
@@ -1190,7 +1202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                 <!-- Main Booking Info -->
                                 <div style="display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
-                                    <img src="${b.ProviderAvatar || 'assets/images/banner.png'}" alt="${providerName}" style="width:80px; height:80px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='assets/images/banner.png';">
+                                    <img src="${(b.ProviderAvatar && typeof b.ProviderAvatar === 'string' && b.ProviderAvatar.startsWith('/data:')) ? b.ProviderAvatar.substring(1) : (b.ProviderAvatar || 'assets/images/banner.png')}" alt="${providerName}" style="width:80px; height:80px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='assets/images/banner.png';">
                                     <div style="flex:1; min-width:260px;">
                                         <h4 style="margin:0 0 6px 0; font-size:1.35rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
                                         <div style="font-size:1.05rem; font-weight:700; color:#2563eb; margin-bottom:8px;">
@@ -1457,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
 
                                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
-                                    <img src="${b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
+                                    <img src="${(b.ProviderAvatar && typeof b.ProviderAvatar === 'string' && b.ProviderAvatar.startsWith('/data:')) ? b.ProviderAvatar.substring(1) : (b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff')}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
                                     <div style="flex:1; min-width:260px;">
                                         <h4 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
                                         <div style="font-size:1rem; font-weight:700; color:#2563eb; margin-bottom:10px;">${b.ProviderName || 'Sound & Lights Provider'}</div>

@@ -116,7 +116,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const dropdownAvatarImg = document.getElementById('dropdown-provider-avatar-img');
                 const dropdownAvatarIcon = document.getElementById('dropdown-provider-avatar-icon');
 
-                const formattedAvatarUrl = avatarUrl ? (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`) : null;
+                const formattedAvatarUrl = avatarUrl ? (
+                    typeof avatarUrl === 'string' && avatarUrl.startsWith('/data:') ? avatarUrl.substring(1) :
+                    (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`)
+                ) : null;
 
                 if (formattedAvatarUrl) {
                     if (profAvatarImg) { profAvatarImg.src = formattedAvatarUrl; profAvatarImg.style.display = 'block'; }
@@ -205,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const avatarUrl = p.profilePicture || p.avatar || null;
         if (avatarUrl && editProviderAvatarPreview && editProviderAvatarIcon) {
-            editProviderAvatarPreview.src = avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`;
+            editProviderAvatarPreview.src = typeof avatarUrl === 'string' && avatarUrl.startsWith('/data:') ? avatarUrl.substring(1) : (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`);
             editProviderAvatarPreview.style.display = 'block';
             editProviderAvatarIcon.style.display = 'none';
         } else if (editProviderAvatarPreview && editProviderAvatarIcon) {
