@@ -491,26 +491,7 @@ const getDashboardStats = async (req, res) => {
             }
         } catch (e) {}
 
-        // Total Services / Packages
-        let totalServices = 0;
-        try {
-            const svcRes = await pool.request()
-                .input('UID', userId)
-                .input('PID', providerId)
-                .query(`
-                    SELECT 
-                        (SELECT COUNT(*) FROM dbo.Packages WHERE (UserID = @UID OR UserID = @PID OR UserID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @PID)) AND (IsActive = 1 OR IsActive IS NULL)) +
-                        (SELECT COUNT(*) FROM dbo.Services WHERE (UserID = @UID OR UserID = @PID OR UserID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @PID)) AND (IsActive = 1 OR IsActive IS NULL)) AS totalCnt;
-                `);
-            totalServices = svcRes.recordset[0]?.totalCnt || 0;
-        } catch (e) {
-            try {
-                const pkgRes = await pool.request().input('UID', userId).query(`SELECT COUNT(*) AS totalCnt FROM dbo.Packages WHERE UserID = @UID;`);
-                totalServices = pkgRes.recordset[0]?.totalCnt || 0;
-            } catch (e2) {
-                totalServices = 0;
-            }
-        }
+
 
         // Total Bookings & Earnings
         let allBookings = [];
@@ -687,7 +668,6 @@ const getDashboardStats = async (req, res) => {
         return res.status(200).json({
             success: true,
             stats: {
-                totalServices,
                 upcomingBookingsCount: upcomingBookings.length,
                 todaysEventsCount: todaysEvents.length,
                 availableBalance: parseFloat(availableBalance.toFixed(2)),
@@ -705,7 +685,6 @@ const getDashboardStats = async (req, res) => {
         return res.status(200).json({
             success: true,
             stats: {
-                totalServices: 0,
                 upcomingBookingsCount: 0,
                 todaysEventsCount: 0,
                 monthlyEarnings: 0,

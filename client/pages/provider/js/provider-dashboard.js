@@ -935,12 +935,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.success && data.stats) {
                     const s = data.stats;
 
-                    const statTotalServices = document.getElementById('stat-total-services');
+                    // Force-remove Total Services card if still lingering from browser cache
+                    const leftoverTotalServicesCard = document.getElementById('stat-total-services')?.closest('.stat-card');
+                    if (leftoverTotalServicesCard) {
+                        leftoverTotalServicesCard.remove();
+                    }
+
                     const statUpcomingBookings = document.getElementById('stat-upcoming-bookings');
                     const statTodaysEvents = document.getElementById('stat-todays-events');
                     const statMonthlyEarnings = document.getElementById('stat-monthly-earnings');
 
-                    if (statTotalServices) statTotalServices.textContent = s.totalServices != null ? s.totalServices : 0;
                     if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
                     if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
                     if (statMonthlyEarnings) {
