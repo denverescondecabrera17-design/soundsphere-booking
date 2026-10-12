@@ -163,11 +163,34 @@
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+        // Handle back button navigation in calendar header
+        const handleCalendarBackNavigation = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            const path = (window.location.pathname || '').toLowerCase();
+            const isBookingPage = path.includes('booking.html') || path.endsWith('/booking');
+
+            if (isBookingPage) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const pId = calProviderId || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') || 13;
+                const pkgId = calPackageId || urlParams.get('package_id') || urlParams.get('packageId') || urlParams.get('pkgId') || 1;
+
+                if (window.history.length > 1 && document.referrer && !document.referrer.includes('booking.html')) {
+                    window.history.back();
+                } else if (pId) {
+                    window.location.href = `/provider-detail.html?id=${pId}&packageId=${pkgId}`;
+                } else {
+                    window.location.href = '/marketplace.html';
+                }
+            } else {
+                window.closeBookingCalendarModal();
+            }
+        };
+
         // Bind events
         const closeBtn = document.getElementById('cal-modal-close-btn');
         if (closeBtn) closeBtn.onclick = window.closeBookingCalendarModal;
         const headerBackBtn = document.getElementById('cal-modal-back-btn');
-        if (headerBackBtn) headerBackBtn.onclick = window.closeBookingCalendarModal;
+        if (headerBackBtn) headerBackBtn.onclick = handleCalendarBackNavigation;
         document.getElementById('cal-btn-cancel-action').onclick = window.closeBookingCalendarModal;
         document.getElementById('modal-booking-calendar').onclick = (e) => {
             if (e.target === document.getElementById('modal-booking-calendar')) {
