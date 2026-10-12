@@ -204,8 +204,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-active-providers';
         } else if (cleanHash === 'clients-section' || cleanHash === 'registered-clients' || cleanHash === 'view-registered-clients') {
             targetViewId = 'view-registered-clients';
-        } else if (cleanHash === 'revenue-section' || cleanHash === 'revenue-reports' || cleanHash === 'view-revenue-reports') {
-            targetViewId = 'view-revenue-reports';
         } else if (cleanHash === 'subscriptions-section' || cleanHash === 'provider-subscriptions' || cleanHash === 'view-admin-subscriptions') {
             targetViewId = 'view-admin-subscriptions';
         } else if (cleanHash === 'withdrawal-section' || cleanHash === 'withdrawals' || cleanHash === 'view-withdrawal') {
@@ -224,7 +222,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (targetViewId === 'view-pending-applications' && (href === '#applications-section' || href === '#pending-applications')) ||
                 (targetViewId === 'view-active-providers' && (href === '#providers-section' || href === '#active-providers')) ||
                 (targetViewId === 'view-registered-clients' && (href === '#clients-section' || href === '#registered-clients')) ||
-                (targetViewId === 'view-revenue-reports' && (href === '#revenue-section' || href === '#revenue-reports')) ||
                 (targetViewId === 'view-admin-subscriptions' && (href === '#subscriptions-section' || href === '#provider-subscriptions')) ||
                 (targetViewId === 'view-withdrawal' && (href === '#withdrawal-section' || href === '#withdrawals')) ||
                 (targetViewId === 'view-client-reports' && (href === '#reports-section' || href === '#client-reports')) ||
@@ -412,7 +409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         await loadPendingApplications();
-        await loadProviderRevenueSummary();
     };
 
     // Load Pending Applications List
@@ -578,6 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadProviderRevenueSummary = async () => {
         const tableSummary = document.getElementById('table-provider-revenue-summary');
         const revenueCommissionValFull = document.getElementById('revenue-commission-val-full');
+        if (!tableSummary && !revenueCommissionValFull) return;
 
         try {
             const headers = getAdminHeaders();
@@ -1152,10 +1149,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div style="font-size:0.88rem; color:#475569;">Address: <strong style="color:#0a192f;">${app.BusinessAddress}</strong></div>
                     </div>
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                        <h4 style="margin:0 0 6px 0; color:#0a192f; font-size:1.05rem;">Submitted Credentials & Permits</h4>
-                        <div style="display:flex; gap:10px; margin-top:8px;">
-                            <span style="font-size:0.8rem; background:#eff6ff; color:#2563eb; padding:6px 12px; border-radius:6px; font-weight:700;"><i class="fa-solid fa-id-card"></i> Govt ID (Verified)</span>
-                            <span style="font-size:0.8rem; background:#ecfdf5; color:#059669; padding:6px 12px; border-radius:6px; font-weight:700;"><i class="fa-solid fa-file-contract"></i> Business Permit</span>
+                        <h4 style="margin:0 0 8px 0; color:#0a192f; font-size:1.05rem;">Submitted Credentials & Permits</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:8px;">
+                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Valid ID (Front)</div>
+                                ${app.GovtID_Url && app.GovtID_Url.startsWith('data:image') 
+                                    ? `<a href="${app.GovtID_Url}" target="_blank"><img src="${app.GovtID_Url}" alt="Govt ID Front" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
+                                    : `<span style="font-size:0.78rem; background:#eff6ff; color:#2563eb; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-id-card"></i> Front Attached</span>`}
+                            </div>
+                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> Valid ID (Back)</div>
+                                ${app.GovtID_Back_Url && app.GovtID_Back_Url.startsWith('data:image') 
+                                    ? `<a href="${app.GovtID_Back_Url}" target="_blank"><img src="${app.GovtID_Back_Url}" alt="Govt ID Back" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
+                                    : `<span style="font-size:0.78rem; background:#eff6ff; color:#2563eb; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-id-card-clip"></i> Back Attached</span>`}
+                            </div>
+                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
+                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-file-contract" style="color:#059669;"></i> Business Permit</div>
+                                ${app.BusinessPermit_Url && app.BusinessPermit_Url.startsWith('data:image') 
+                                    ? `<a href="${app.BusinessPermit_Url}" target="_blank"><img src="${app.BusinessPermit_Url}" alt="Business Permit" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
+                                    : `<span style="font-size:0.78rem; background:#ecfdf5; color:#059669; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-file-contract"></i> Permit Attached</span>`}
+                            </div>
+                        </div>
+                        <div style="margin-top:10px; font-size:0.86rem; color:#475569; display:flex; gap:16px; flex-wrap:wrap;">
+                            <div><i class="fa-solid fa-calendar-plus" style="color:#10b981;"></i> Date Issued: <strong style="color:#0a192f;">${app.PermitIssuedDate ? new Date(app.PermitIssuedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}</strong></div>
+                            <div><i class="fa-solid fa-calendar-check" style="color:#f59e0b;"></i> Expiration Date: <strong style="color:#0a192f;">${app.PermitExpiryDate ? new Date(app.PermitExpiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}</strong></div>
                         </div>
                     </div>
                 `;

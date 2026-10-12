@@ -204,8 +204,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-active-providers';
         } else if (cleanHash === 'clients-section' || cleanHash === 'registered-clients' || cleanHash === 'view-registered-clients') {
             targetViewId = 'view-registered-clients';
-        } else if (cleanHash === 'revenue-section' || cleanHash === 'revenue-reports' || cleanHash === 'view-revenue-reports') {
-            targetViewId = 'view-revenue-reports';
         } else if (cleanHash === 'subscriptions-section' || cleanHash === 'provider-subscriptions' || cleanHash === 'view-admin-subscriptions') {
             targetViewId = 'view-admin-subscriptions';
         } else if (cleanHash === 'withdrawal-section' || cleanHash === 'withdrawals' || cleanHash === 'view-withdrawal') {
@@ -224,7 +222,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (targetViewId === 'view-pending-applications' && (href === '#applications-section' || href === '#pending-applications')) ||
                 (targetViewId === 'view-active-providers' && (href === '#providers-section' || href === '#active-providers')) ||
                 (targetViewId === 'view-registered-clients' && (href === '#clients-section' || href === '#registered-clients')) ||
-                (targetViewId === 'view-revenue-reports' && (href === '#revenue-section' || href === '#revenue-reports')) ||
                 (targetViewId === 'view-admin-subscriptions' && (href === '#subscriptions-section' || href === '#provider-subscriptions')) ||
                 (targetViewId === 'view-withdrawal' && (href === '#withdrawal-section' || href === '#withdrawals')) ||
                 (targetViewId === 'view-client-reports' && (href === '#reports-section' || href === '#client-reports')) ||
@@ -412,7 +409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         await loadPendingApplications();
-        await loadProviderRevenueSummary();
     };
 
     // Load Pending Applications List
@@ -578,6 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadProviderRevenueSummary = async () => {
         const tableSummary = document.getElementById('table-provider-revenue-summary');
         const revenueCommissionValFull = document.getElementById('revenue-commission-val-full');
+        if (!tableSummary && !revenueCommissionValFull) return;
 
         try {
             const headers = getAdminHeaders();
