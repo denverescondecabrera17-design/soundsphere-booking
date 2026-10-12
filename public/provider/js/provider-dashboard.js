@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const dropdownAvatarImg = document.getElementById('dropdown-provider-avatar-img');
                 const dropdownAvatarIcon = document.getElementById('dropdown-provider-avatar-icon');
 
-                const formattedAvatarUrl = avatarUrl ? (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`) : null;
+                const formattedAvatarUrl = avatarUrl ? (avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`) : null;
 
                 if (formattedAvatarUrl) {
                     if (profAvatarImg) { profAvatarImg.src = formattedAvatarUrl; profAvatarImg.style.display = 'block'; }
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const avatarUrl = p.profilePicture || p.avatar || null;
         if (avatarUrl && editProviderAvatarPreview && editProviderAvatarIcon) {
-            editProviderAvatarPreview.src = avatarUrl.startsWith('http') || avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`;
+            editProviderAvatarPreview.src = avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`;
             editProviderAvatarPreview.style.display = 'block';
             editProviderAvatarIcon.style.display = 'none';
         } else if (editProviderAvatarPreview && editProviderAvatarIcon) {
@@ -1713,7 +1713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const lightboxModal = document.getElementById('modal-package-photo-lightbox');
         const lightboxImg = document.getElementById('lightbox-full-image');
         if (lightboxModal && lightboxImg && imageUrl) {
-            lightboxImg.src = imageUrl.startsWith('/') || imageUrl.startsWith('http') ? imageUrl : `/${imageUrl}`;
+            lightboxImg.src = imageUrl.startsWith('/') || imageUrl.startsWith('http') || imageUrl.startsWith('data:') ? imageUrl : `/${imageUrl}`;
             lightboxModal.classList.remove('hidden');
         }
     };
@@ -1752,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Existing Photos from DB
         existingPkgPhotoObjects.forEach(img => {
-            const fullUrl = img.url.startsWith('/') || img.url.startsWith('http') ? img.url : `/${img.url}`;
+            const fullUrl = img.url.startsWith('/') || img.url.startsWith('http') || img.url.startsWith('data:') ? img.url : `/${img.url}`;
             html += `
                 <div style="position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; background:#000;">
                     <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.openImageLightbox('${fullUrl}')" title="Click to view">
@@ -1819,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     const remainingCount = photos.length - 3;
 
                                     photosHTML = visiblePhotos.map(img => {
-                                        const src = img.url.startsWith('/') || img.url.startsWith('http') ? img.url : `/${img.url}`;
+                                        const src = img.url.startsWith('/') || img.url.startsWith('http') || img.url.startsWith('data:') ? img.url : `/${img.url}`;
                                         return `
                                             <div style="position:relative; width:80px; height:80px; border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; flex-shrink:0;">
                                                 <img src="${src}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.openImageLightbox('${src}')" title="Click to view setup photo">
@@ -1828,7 +1828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     }).join('');
 
                                     if (remainingCount > 0) {
-                                        const fourthSrc = photos[3].url.startsWith('/') || photos[3].url.startsWith('http') ? photos[3].url : `/${photos[3].url}`;
+                                        const fourthSrc = photos[3].url.startsWith('/') || photos[3].url.startsWith('http') || photos[3].url.startsWith('data:') ? photos[3].url : `/${photos[3].url}`;
                                         photosHTML += `
                                             <div onclick="window.openImageLightbox('${fourthSrc}')" style="width:80px; height:80px; border-radius:10px; background:#0a192f; color:#ffffff; font-size:0.82rem; font-weight:800; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; border:1px solid #cbd5e1;" title="View all setup photos">
                                                 +${remainingCount} more

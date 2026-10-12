@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const photoUrls = rawOfferPhotos.map(img => {
                 const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
                 if (!raw) return '';
-                return (raw.startsWith('/') || raw.startsWith('http')) ? raw : `/${raw}`;
+                return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
             }).filter(Boolean);
 
             const hasMultiplePhotos = photoUrls.length > 1;
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const avatarSrc = offer.providerAvatar;
             const avatarHTML = avatarSrc ?
-                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
+                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
                 `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
                 return `
@@ -764,7 +764,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const queryParam = user?.userId ? `?userId=${user.userId}` : '';
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-            const res = await fetch(`/api/bookings/my-bookings${queryParam}`, { headers });
+            const res = await fetch(`/api/bookings/my-bookings${queryParam ? queryParam + '&' : '?'}_t=${Date.now()}`, { 
+                headers,
+                cache: 'no-store'
+            });
             if (!res.ok) return;
 
             const data = await res.json();
@@ -791,17 +794,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const counts = { all: bookings.length, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
             bookings.forEach(b => {
                 const st = (b.BookingStatus || 'Confirmed').toLowerCase().trim();
-                if (counts[st] !== undefined) {
-                    counts[st]++;
-                } else if (st === 'approved' || st === 'paid') {
+                if (st === 'confirmed' || st === 'approved' || st === 'paid') {
                     counts.confirmed++;
+                } else if (st === 'completed') {
+                    counts.completed++;
+                } else if (st === 'pending') {
+                    counts.pending++;
+                } else if (st === 'cancelled' || st === 'rejected') {
+                    counts.cancelled++;
                 }
             });
 
             // Update subtab count badges in DOM (All (N), Confirmed (N), Pending (N), Completed (N), Cancelled (N))
             document.querySelectorAll('.booking-status-filter-btn[data-status]').forEach(btn => {
                 const statusKey = (btn.getAttribute('data-status') || '').toLowerCase().trim();
-                const count = counts[statusKey] !== undefined ? counts[statusKey] : (statusKey === 'all' ? bookings.length : 0);
+                const count = statusKey === 'all' ? counts.all : (counts[statusKey] !== undefined ? counts[statusKey] : 0);
                 const capitalized = statusKey.charAt(0).toUpperCase() + statusKey.slice(1);
                 btn.textContent = `${capitalized} (${count})`;
             });
@@ -897,8 +904,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         const formattedStart = formatDisplayTime(b.StartTime);
                         const formattedEnd = formatDisplayTime(b.EndTime);
 
+                        let filterStatus = statusLower;
+                        if (['confirmed', 'approved', 'paid'].includes(statusLower)) {
+                            filterStatus = 'confirmed';
+                        } else if (['cancelled', 'rejected'].includes(statusLower)) {
+                            filterStatus = 'cancelled';
+                        }
+
+                        let safeProviderAvatar = b.ProviderAvatar;
+                        if (safeProviderAvatar && !safeProviderAvatar.startsWith('http') && !safeProviderAvatar.startsWith('/') && !safeProviderAvatar.startsWith('data:')) {
+                            safeProviderAvatar = `/${safeProviderAvatar}`;
+                        }
+
                         return `
-                            <div class="booking-item-card" data-booking-status="${statusLower}" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:24px 28px; margin-bottom:20px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;">
+                            <div class="booking-item-card" data-booking-status="${filterStatus}" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:18px; padding:24px 28px; margin-bottom:20px; box-shadow:0 6px 20px rgba(10,25,47,0.06); display:flex; flex-direction:column; gap:16px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:14px;">
                                     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                         <span style="font-size:1.1rem; font-weight:900; color:#0a192f;">Ref: ${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}</span>
@@ -910,7 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
 
                                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
-                                    <img src="${b.ProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
+                                    <img src="${safeProviderAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.ProviderName || 'Provider') + '&background=0084ff&color=fff'}" alt="${b.ProviderName || 'Provider'}" style="width:75px; height:75px; border-radius:14px; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
                                     <div style="flex:1; min-width:260px;">
                                         <h4 style="margin:0 0 6px 0; font-size:1.25rem; font-weight:900; color:#0a192f;">${b.PackageName || 'Event Service Package'}</h4>
                                         <div style="font-size:1rem; font-weight:700; color:#2563eb; margin-bottom:10px;">${b.ProviderName || 'Sound & Lights Provider'}</div>
@@ -1103,7 +1122,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     let matchCount = 0;
                     document.querySelectorAll('#my-bookings-cards-container .booking-item-card[data-booking-status]').forEach(card => {
                         const st = card.getAttribute('data-booking-status');
-                        if (targetSt === 'all' || st === targetSt) {
+                        const isMatch = (targetSt === 'all') || 
+                                        (st === targetSt) ||
+                                        (targetSt === 'confirmed' && ['confirmed', 'paid', 'approved'].includes(st)) ||
+                                        (targetSt === 'cancelled' && ['cancelled', 'rejected'].includes(st));
+                        if (isMatch) {
                             card.style.display = 'flex';
                             matchCount++;
                         } else {
@@ -1653,7 +1676,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let countVisible = 0;
             document.querySelectorAll('#my-bookings-cards-container .booking-item-card[data-booking-status]').forEach(card => {
                 const cardStatus = card.getAttribute('data-booking-status');
-                if (cardStatus === targetStatus) {
+                const isMatch = (targetStatus === 'all') || 
+                                (cardStatus === targetStatus) ||
+                                (targetStatus === 'confirmed' && ['confirmed', 'paid', 'approved'].includes(cardStatus)) ||
+                                (targetStatus === 'cancelled' && ['cancelled', 'rejected'].includes(cardStatus));
+                if (isMatch) {
                     card.style.display = 'flex';
                     countVisible++;
                 } else {

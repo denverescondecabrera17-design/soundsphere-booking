@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Photos gallery setup
         if (photos.length > 0) {
-            const firstPhotoUrl = photos[0].url ? (photos[0].url.startsWith('/') || photos[0].url.startsWith('http') ? photos[0].url : `/${photos[0].url}`) : (typeof photos[0] === 'string' ? (photos[0].startsWith('/') || photos[0].startsWith('http') ? photos[0] : `/${photos[0]}`) : '');
+            const firstPhotoUrl = photos[0].url ? (photos[0].url.startsWith('/') || photos[0].url.startsWith('http') || photos[0].url.startsWith('data:') ? photos[0].url : `/${photos[0].url}`) : (typeof photos[0] === 'string' ? (photos[0].startsWith('/') || photos[0].startsWith('http') || photos[0].startsWith('data:') ? photos[0] : `/${photos[0]}`) : '');
             if (firstPhotoUrl && mainImg) {
                 mainImg.src = firstPhotoUrl;
                 if (photoSection) photoSection.style.display = 'flex';
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (photos.length > 1) {
                         thumbnailsEl.style.display = 'flex';
                         thumbnailsEl.innerHTML = photos.map((pObj, pIdx) => {
-                            const pUrl = pObj.url ? (pObj.url.startsWith('/') || pObj.url.startsWith('http') ? pObj.url : `/${pObj.url}`) : (typeof pObj === 'string' ? (pObj.startsWith('/') || pObj.startsWith('http') ? pObj : `/${pObj}`) : '');
+                            const pUrl = pObj.url ? (pObj.url.startsWith('/') || pObj.url.startsWith('http') || pObj.url.startsWith('data:') ? pObj.url : `/${pObj.url}`) : (typeof pObj === 'string' ? (pObj.startsWith('/') || pObj.startsWith('http') || pObj.startsWith('data:') ? pObj : `/${pObj}`) : '');
                             if (!pUrl) return '';
                             return `<img src="${pUrl}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:2.5px solid ${pIdx === 0 ? '#2563eb' : '#e2e8f0'}; cursor:pointer; flex-shrink:0; transition:all 0.2s;" onclick="event.stopPropagation(); const m = document.getElementById('pkg-modal-main-img'); if(m) m.src='${pUrl}'; this.parentElement.querySelectorAll('img').forEach(i => i.style.borderColor='#e2e8f0'); this.style.borderColor='#2563eb';" title="Click to view photo">`;
                         }).join('');
@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const avatarUrl = provider.profilePicture || provider.avatar || null;
             if (avatarEl) {
                 if (avatarUrl) {
-                    const formattedUrl = avatarUrl.startsWith('http') || avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`;
+                    const formattedUrl = avatarUrl.startsWith('http') || avatarUrl.startsWith('/') || avatarUrl.startsWith('data:') ? avatarUrl : `/${avatarUrl}`;
                     avatarEl.innerHTML = `<img src="${formattedUrl}" alt="${provider.name}" style="width:100%; height:100%; object-fit:cover;">`;
                 } else {
                     avatarEl.innerHTML = `<i class="fa-solid fa-store" style="font-size:2rem; color:#2563eb;"></i>`;
@@ -693,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const pkgPhotoUrls = rawPhotos.map(pObj => {
                             const pUrl = typeof pObj === 'string' ? pObj : (pObj && pObj.url ? pObj.url : '');
                             if (!pUrl) return '';
-                            return (pUrl.startsWith('/') || pUrl.startsWith('http')) ? pUrl : `/${pUrl}`;
+                            return (pUrl.startsWith('/') || pUrl.startsWith('http') || pUrl.startsWith('data:')) ? pUrl : `/${pUrl}`;
                         }).filter(Boolean);
 
                         const pdetailKey = `pdetail-${idx}`;

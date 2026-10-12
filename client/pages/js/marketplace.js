@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const photoUrls = rawOfferPhotos.map(img => {
                 const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
                 if (!raw) return '';
-                return (raw.startsWith('/') || raw.startsWith('http')) ? raw : `/${raw}`;
+                return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
             }).filter(Boolean);
 
             const hasMultiplePhotos = photoUrls.length > 1;
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const avatarSrc = offer.providerAvatar;
             const avatarHTML = avatarSrc ?
-                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
+                `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` :
                 `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
                 return `
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalPhotoUrls = images.map(img => {
             const raw = typeof img === 'string' ? img : (img && img.url ? img.url : '');
             if (!raw) return '';
-            return (raw.startsWith('/') || raw.startsWith('http')) ? raw : `/${raw}`;
+            return (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:')) ? raw : `/${raw}`;
         }).filter(Boolean);
 
         const modalKey = `modal-${targetOffer.PackageID}`;
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const avatarSrc = targetOffer.providerAvatar;
         const avatarHTML = avatarSrc ?
-            `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" class="enlargeable-photo">` :
+            `<img src="${avatarSrc.startsWith('/') || avatarSrc.startsWith('http') || avatarSrc.startsWith('data:') ? avatarSrc : '/' + avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" class="enlargeable-photo">` :
             `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
 
         modalBody.innerHTML = `

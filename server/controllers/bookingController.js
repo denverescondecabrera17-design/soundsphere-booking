@@ -765,6 +765,8 @@ const getMyBookings = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Unauthorized. User ID not provided.' });
         }
 
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
         const bookings = await bookingModel.getBookingsByUserId(clientUserId);
 
         return res.status(200).json({
