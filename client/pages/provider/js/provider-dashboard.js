@@ -1178,12 +1178,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td><strong style="color:#2563eb; font-size:0.88rem;">${packageNameStr}</strong></td>
                     <td style="white-space:nowrap;"><span style="font-size:0.85rem; color:#334155; font-weight:600;">${dateStr}</span></td>
                     <td style="white-space:nowrap;">
-                        <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <strong style="font-size:0.95rem; color:#10b981; font-weight:800;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
-                                ${payInfo.badgeHtml}
-                            </div>
-                            ${payInfo.isPartial ? `<div style="font-size:0.72rem; color:#64748b; font-weight:500;">Bal: ₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>` : ''}
+                        <div style="display:flex; flex-direction:column; gap:1px; line-height:1.35;">
+                            <strong style="font-size:0.95rem; color:#10b981; font-weight:800;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                            ${payInfo.isPartial ? `
+                                <span style="font-size:0.76rem; color:#475569; font-weight:500;">Bal: ₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                <span style="font-size:0.74rem; color:#d97706; font-weight:600;">Partial Payment</span>
+                            ` : (payInfo.isFull ? `
+                                <span style="font-size:0.74rem; color:#16a34a; font-weight:600;">Full Payment</span>
+                            ` : `
+                                <span style="font-size:0.74rem; color:#64748b; font-weight:500;">Unpaid</span>
+                            `)}
                         </div>
                     </td>
                     <td style="white-space:nowrap;"><span class="status-badge status-${statusLower}">${b.BookingStatus || 'Confirmed'}</span></td>
@@ -1218,13 +1222,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const locStr = b.Location || b.EventAddress || b.EventPlace || 'Batangas';
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
             const payInfo = getBookingPaymentInfo(b);
-
-            const subTextHtml = payInfo.isPartial 
-                ? `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Bal: <strong style="color:#dc2626; font-weight:700;">₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> of ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
-                : (payInfo.isFull 
-                    ? `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Total: ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
-                    : `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Total: ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
-                );
 
             let actionButtonsHtml = '';
             if (statusLower === 'pending') {
@@ -1275,12 +1272,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td style="padding:18px 20px; white-space:nowrap;"><span style="font-size:0.92rem; color:#334155; font-weight:600;">${dateDisplay}</span></td>
                     <td style="padding:18px 20px;"><span style="font-size:0.92rem; color:#475569; font-weight:500;">${locStr}</span></td>
                     <td style="padding:18px 20px; white-space:nowrap;">
-                        <div style="display:flex; flex-direction:column; gap:3px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong style="font-size:1.05rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
-                                ${payInfo.badgeHtml}
-                            </div>
-                            ${subTextHtml}
+                        <div style="display:flex; flex-direction:column; gap:1px; line-height:1.35;">
+                            <strong style="font-size:1.05rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                            ${payInfo.isPartial ? `
+                                <span style="font-size:0.82rem; color:#475569; font-weight:500;">Bal: ₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                <span style="font-size:0.78rem; color:#d97706; font-weight:600;">Partial Payment</span>
+                            ` : (payInfo.isFull ? `
+                                <span style="font-size:0.78rem; color:#16a34a; font-weight:600;">Full Payment</span>
+                            ` : `
+                                <span style="font-size:0.78rem; color:#64748b; font-weight:500;">Unpaid</span>
+                            `)}
                         </div>
                     </td>
                     <td style="padding:18px 20px; white-space:nowrap;"><span class="status-badge status-${statusLower}" style="font-size:0.86rem; padding:6px 14px; border-radius:20px; font-weight:700;">${b.BookingStatus || 'Confirmed'}</span></td>
@@ -1523,8 +1524,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (totalEl) totalEl.textContent = `₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
         const payInfo = getBookingPaymentInfo(booking);
-        const badgeEl = document.getElementById('pbd-payment-type-badge');
-        if (badgeEl) badgeEl.innerHTML = payInfo.badgeHtml;
+        if (badgeEl) {
+            badgeEl.innerHTML = payInfo.isFull 
+                ? `<span style="font-size:0.85rem; color:#16a34a; font-weight:600;">(Full Payment)</span>` 
+                : (payInfo.isPartial 
+                    ? `<span style="font-size:0.85rem; color:#d97706; font-weight:600;">(Partial Payment)</span>` 
+                    : `<span style="font-size:0.85rem; color:#64748b; font-weight:500;">(Unpaid)</span>`
+                );
+        }
 
         const paidEl = document.getElementById('pbd-amount-paid');
         if (paidEl) paidEl.textContent = `₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -2824,9 +2831,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Venue:</strong> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
                         </div>
                         <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <span style="font-size:0.85rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                                ${payInfo.badgeHtml}
+                            <div style="display:flex; flex-direction:column; gap:1px; line-height:1.25;">
+                                <span style="font-size:0.88rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                ${payInfo.isPartial ? `
+                                    <span style="font-size:0.74rem; color:#475569; font-weight:500;">Bal: ₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span style="font-size:0.72rem; color:#d97706; font-weight:600;">Partial Payment</span>
+                                ` : (payInfo.isFull ? `
+                                    <span style="font-size:0.72rem; color:#16a34a; font-weight:600;">Full Payment</span>
+                                ` : `
+                                    <span style="font-size:0.72rem; color:#64748b; font-weight:500;">Unpaid</span>
+                                `)}
                             </div>
                             <button type="button" onclick="window.viewBookingInManagement(${b.BookingID})" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.75rem; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:700;">
                                 View Booking
