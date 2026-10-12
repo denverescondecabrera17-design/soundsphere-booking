@@ -692,7 +692,7 @@
                                 </div>
                                 <div>
                                     <h1 style="font-size:1.55rem; font-weight:800; color:#0a192f; margin:0;">System Audit Trail &amp; Activity Logs</h1>
-                                    <p style="color:#64748b; font-size:0.88rem; margin:0;">Immutable chronological audit log of all administrator actions, application reviews, disputes, suspensions, and platform events</p>
+                                    <p style="color:#64748b; font-size:0.88rem; margin:0;">Complete chronological ledger of all platform bookings, client payments, withdrawals, subscriptions, application reviews, disputes, and administrative events.</p>
                                 </div>
                             </div>
                             <button type="button" id="btn-refresh-audit" style="background:#2563eb; color:#fff; padding:9px 18px; border:none; border-radius:10px; font-weight:700; font-size:0.86rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.25); transition:all 0.2s;">
@@ -706,19 +706,22 @@
                         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                             <label style="font-size:0.84rem; font-weight:700; color:#475569;">Event Filter:</label>
                             <select id="audit-filter-action" style="padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.84rem; color:#0a192f; background:#fff; cursor:pointer;">
-                                <option value="all">All Events</option>
-                                <option value="Report">Client Reports &amp; Disputes</option>
-                                <option value="Application">Application Reviews (Approve/Reject)</option>
+                                <option value="all">All Events &amp; Transactions</option>
+                                <option value="Payment">Client Payments &amp; Transactions</option>
+                                <option value="Booking">Bookings &amp; Reservations</option>
+                                <option value="Withdrawal">Withdrawals &amp; Payouts</option>
+                                <option value="Subscription">Provider Subscriptions</option>
+                                <option value="Application">Provider Applications</option>
                                 <option value="Suspended">Account Suspensions</option>
                                 <option value="Reactivated">Account Reactivations</option>
-                                <option value="Withdrawal">Withdrawal &amp; Payout Events</option>
+                                <option value="Report">Client Reports &amp; Disputes</option>
                                 <option value="Profile">Admin Profile Updates</option>
                             </select>
                             <span id="audit-log-counter" style="font-size:0.82rem; color:#64748b; font-weight:700;">Showing 0 events</span>
                         </div>
                         <div style="position:relative; min-width:280px;">
                             <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.84rem;"></i>
-                            <input type="text" id="audit-search-input" placeholder="Search actor, action, description..." style="width:100%; padding:8px 14px 8px 34px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.84rem; box-sizing:border-box;">
+                            <input type="text" id="audit-search-input" placeholder="Search actor, action, description, reference ID..." style="width:100%; padding:8px 14px 8px 34px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.84rem; box-sizing:border-box;">
                         </div>
                     </div>
 
@@ -726,7 +729,7 @@
                     <div class="panel">
                         <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
                             <h3><i class="fa-solid fa-timeline" style="color:#2563eb;"></i> Chronological System Event Ledger</h3>
-                            <span style="font-size:0.82rem; color:#64748b; font-weight:600;">Recorded in Microsoft SQL Server ActivityLogs</span>
+                            <span style="font-size:0.82rem; color:#64748b; font-weight:600;">Recorded in Microsoft SQL Server Activity &amp; Transaction Ledger</span>
                         </div>
                         <div class="panel-body">
                             <div class="table-responsive">

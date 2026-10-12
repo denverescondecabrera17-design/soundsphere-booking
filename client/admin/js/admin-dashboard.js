@@ -2166,14 +2166,18 @@ async function loadAuditTrailPage() {
                 const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
                 const filtered = _auditAllData.filter(log => {
-                    const matchAction = actionVal === 'all' || (log.Action || '').toLowerCase().includes(actionVal.toLowerCase());
+                    const matchAction = actionVal === 'all' || 
+                        (log.Action || '').toLowerCase().includes(actionVal.toLowerCase()) ||
+                        (log.SourceCategory || '').toLowerCase().includes(actionVal.toLowerCase()) ||
+                        (log.EntityType || '').toLowerCase().includes(actionVal.toLowerCase());
                     const matchSearch = !searchVal ||
                         (log.Action || '').toLowerCase().includes(searchVal) ||
                         (log.Description || '').toLowerCase().includes(searchVal) ||
                         (log.ActorName || '').toLowerCase().includes(searchVal) ||
                         (log.ActorEmail || '').toLowerCase().includes(searchVal) ||
                         (log.EntityType || '').toLowerCase().includes(searchVal) ||
-                        String(log.LogID).includes(searchVal);
+                        (log.DisplayID || '').toLowerCase().includes(searchVal) ||
+                        String(log.LogID || '').toLowerCase().includes(searchVal);
                     return matchAction && matchSearch;
                 });
 
@@ -2215,9 +2219,17 @@ function _auditRenderTable(logs) {
             bg = '#fff1f2'; color = '#be123c'; icon = 'fa-triangle-exclamation';
         } else if (/suspend/i.test(action)) {
             bg = '#fee2e2'; color = '#991b1b'; icon = 'fa-ban';
+        } else if (/payment/i.test(action)) {
+            bg = '#ecfdf5'; color = '#047857'; icon = 'fa-receipt';
+        } else if (/booking/i.test(action)) {
+            bg = '#eff6ff'; color = '#2563eb'; icon = 'fa-calendar-check';
+        } else if (/subscription/i.test(action)) {
+            bg = '#fef3c7'; color = '#b45309'; icon = 'fa-crown';
+        } else if (/application/i.test(action)) {
+            bg = '#fdf4ff'; color = '#a21caf'; icon = 'fa-file-signature';
         } else if (/approv|reactivat|paid|resolv/i.test(action)) {
             bg = '#ecfdf5'; color = '#047857'; icon = 'fa-circle-check';
-        } else if (/reject|dismiss/i.test(action)) {
+        } else if (/reject|dismiss|cancel/i.test(action)) {
             bg = '#f1f5f9'; color = '#475569'; icon = 'fa-xmark';
         } else if (/withdraw|payout/i.test(action)) {
             bg = '#f5f3ff'; color = '#6d28d9'; icon = 'fa-money-bill-transfer';
@@ -2226,9 +2238,11 @@ function _auditRenderTable(logs) {
         return `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:${color};padding:4px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;"><i class="fa-solid ${icon}"></i> ${escHtml(action)}</span>`;
     };
 
-    tbody.innerHTML = logs.map(l => `
+    tbody.innerHTML = logs.map(l => {
+        const idText = l.DisplayID ? (l.DisplayID.startsWith('#') ? l.DisplayID : `#${l.DisplayID}`) : `#LOG-${l.LogID}`;
+        return `
         <tr>
-            <td style="font-weight:700;color:#2563eb;font-size:0.82rem;">#LOG-${l.LogID}</td>
+            <td style="font-weight:700;color:#2563eb;font-size:0.82rem;">${escHtml(idText)}</td>
             <td style="font-size:0.82rem;color:#475569;white-space:nowrap;">
                 ${l.CreatedAt ? new Date(l.CreatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
             </td>
@@ -2245,7 +2259,7 @@ function _auditRenderTable(logs) {
                 ${l.EntityType ? `<span style="background:#f8fafc;border:1px solid #cbd5e1;padding:3px 8px;border-radius:6px;font-weight:700;color:#334155;">${escHtml(l.EntityType)}${l.EntityID ? ` #${l.EntityID}` : ''}</span>` : '—'}
             </td>
         </tr>
-    `).join('');
+    `;}).join('');
 }
 
 /* ==========================================================================

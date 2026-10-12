@@ -761,26 +761,188 @@ const getAdminAuditLogs = async (req, res) => {
         const pool = await connectDB();
         const actionFilter = req.query.action;
         const search = (req.query.search || '').trim();
-        const limit = parseInt(req.query.limit, 10) || 200;
+        const limit = parseInt(req.query.limit, 10) || 500;
 
         let queryStr = `
+            WITH UnifiedAuditLogs AS (
+                -- 1. Explicit ActivityLogs entries
+                SELECT
+                    al.LogID AS RawLogID,
+                    'LOG-' + CAST(al.LogID AS VARCHAR(30)) AS DisplayID,
+                    al.UserID,
+                    al.Action,
+                    al.Description,
+                    al.EntityType,
+                    al.EntityID,
+                    al.CreatedAt,
+                    COALESCE(adm.FullName, c.FirstName + ' ' + c.LastName, sp.BusinessName, u.Email, 'SoundSphere Administrator') AS ActorName,
+                    u.Email AS ActorEmail,
+                    COALESCE(r.RoleName, 'Administrator') AS ActorRole,
+                    'Activity' AS SourceCategory
+                FROM dbo.ActivityLogs al
+                LEFT JOIN dbo.Users u ON al.UserID = u.UserID
+                LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
+                LEFT JOIN dbo.Admins adm ON u.UserID = adm.UserID
+                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+                LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
+
+                UNION ALL
+
+                -- 2. Financial Payments from dbo.Payments & dbo.Bookings
+                SELECT
+                    p.PaymentID AS RawLogID,
+                    'TXN-' + CAST(1000 + p.PaymentID AS VARCHAR(30)) AS DisplayID,
+                    b.ClientUserID AS UserID,
+                    'Payment ' + COALESCE(p.PaymentStatus, 'Verified') AS Action,
+                    'Client payment of ₱' + 
+                        CONVERT(VARCHAR(50), CAST(p.Amount AS DECIMAL(18,2)), 1) + 
+                        ' via ' + COALESCE(p.PaymentMethod, 'PayMongo GCash') + 
+                        ' for Booking #' + CAST(p.BookingID AS VARCHAR(30)) + ' (' + COALESCE(b.PackageName, 'Event Service') + 
+                        ' - ' + COALESCE(spPay.BusinessName, 'Provider') + '). Status: ' + COALESCE(p.PaymentStatus, 'Paid & Confirmed') AS Description,
+                    'Payment' AS EntityType,
+                    p.PaymentID AS EntityID,
+                    COALESCE(p.PaidAt, p.CreatedAt, b.CreatedAt) AS CreatedAt,
+                    COALESCE(cPay.FirstName + ' ' + cPay.LastName, b.ClientName, uClient.Email, 'Client Payer') AS ActorName,
+                    uClient.Email AS ActorEmail,
+                    'Client' AS ActorRole,
+                    'Payment' AS SourceCategory
+                FROM dbo.Payments p
+                LEFT JOIN dbo.Bookings b ON p.BookingID = b.BookingID
+                LEFT JOIN dbo.Users uClient ON b.ClientUserID = uClient.UserID
+                LEFT JOIN dbo.Clients cPay ON b.ClientUserID = cPay.UserID
+                LEFT JOIN dbo.ServiceProviders spPay ON b.ProviderID = spPay.ProviderID
+
+                UNION ALL
+
+                -- 3. Bookings from dbo.Bookings
+                SELECT
+                    b.BookingID AS RawLogID,
+                    'BK-' + CAST(b.BookingID AS VARCHAR(30)) AS DisplayID,
+                    b.ClientUserID AS UserID,
+                    'Booking ' + COALESCE(b.BookingStatus, 'Created') AS Action,
+                    'Booking reservation #' + COALESCE(b.BookingReference, 'BK-' + CAST(b.BookingID AS VARCHAR(30))) + 
+                        ' for "' + COALESCE(b.PackageName, 'Package') + '" with ' + COALESCE(spBk.BusinessName, 'Service Provider') + 
+                        '. Total: ₱' + CONVERT(VARCHAR(50), CAST(b.TotalAmount AS DECIMAL(18,2)), 1) + 
+                        '. Event Date: ' + CONVERT(VARCHAR(30), b.EventDate, 107) + 
+                        '. Status: ' + COALESCE(b.BookingStatus, 'Pending') AS Description,
+                    'Booking' AS EntityType,
+                    b.BookingID AS EntityID,
+                    b.CreatedAt,
+                    COALESCE(cBk.FirstName + ' ' + cBk.LastName, b.ClientName, uBk.Email, 'Client') AS ActorName,
+                    uBk.Email AS ActorEmail,
+                    'Client' AS ActorRole,
+                    'Booking' AS SourceCategory
+                FROM dbo.Bookings b
+                LEFT JOIN dbo.Users uBk ON b.ClientUserID = uBk.UserID
+                LEFT JOIN dbo.Clients cBk ON b.ClientUserID = cBk.UserID
+                LEFT JOIN dbo.ServiceProviders spBk ON b.ProviderID = spBk.ProviderID
+
+                UNION ALL
+
+                -- 4. Withdrawals & Payouts from dbo.Withdrawals
+                SELECT
+                    w.WithdrawalID AS RawLogID,
+                    'WD-' + CAST(100 + w.WithdrawalID AS VARCHAR(30)) AS DisplayID,
+                    spWd.UserID AS UserID,
+                    'Payout ' + COALESCE(w.Status, 'Requested') AS Action,
+                    'Provider ' + COALESCE(spWd.BusinessName, w.AccountName, 'Provider') + 
+                        ' payout request for ₱' + CONVERT(VARCHAR(50), CAST(w.Amount AS DECIMAL(18,2)), 1) + 
+                        ' via ' + COALESCE(w.PayoutMethod, 'GCash') + 
+                        ' to ' + COALESCE(w.AccountName, 'Provider') + ' (' + COALESCE(w.AccountReference, 'N/A') + 
+                        '). Status: ' + COALESCE(w.Status, 'Pending') AS Description,
+                    'Withdrawal' AS EntityType,
+                    w.WithdrawalID AS EntityID,
+                    COALESCE(w.ProcessedAt, w.RequestedAt) AS CreatedAt,
+                    COALESCE(spWd.BusinessName, spWd.OwnerName, uWd.Email, 'Service Provider') AS ActorName,
+                    uWd.Email AS ActorEmail,
+                    'Service Provider' AS ActorRole,
+                    'Withdrawal' AS SourceCategory
+                FROM dbo.Withdrawals w
+                LEFT JOIN dbo.ServiceProviders spWd ON w.ProviderID = spWd.ProviderID
+                LEFT JOIN dbo.Users uWd ON spWd.UserID = uWd.UserID
+
+                UNION ALL
+
+                -- 5. Subscriptions from dbo.ProviderSubscriptions
+                SELECT
+                    sub.SubscriptionID AS RawLogID,
+                    'SUB-' + CAST(sub.SubscriptionID AS VARCHAR(30)) AS DisplayID,
+                    sub.UserID,
+                    'Subscription ' + COALESCE(sub.Status, 'Active') AS Action,
+                    'Service Provider ' + COALESCE(spSub.BusinessName, 'Provider') + 
+                        ' enrolled in ' + COALESCE(sub.PlanName, sub.PlanType, 'Provider') + 
+                        ' plan (₱' + CONVERT(VARCHAR(50), CAST(sub.Price AS DECIMAL(18,2)), 1) + 
+                        '). Status: ' + COALESCE(sub.Status, 'Active') AS Description,
+                    'Subscription' AS EntityType,
+                    sub.SubscriptionID AS EntityID,
+                    COALESCE(sub.CreatedAt, sub.StartDate) AS CreatedAt,
+                    COALESCE(spSub.BusinessName, spSub.OwnerName, uSub.Email, 'Service Provider') AS ActorName,
+                    uSub.Email AS ActorEmail,
+                    'Service Provider' AS ActorRole,
+                    'Subscription' AS SourceCategory
+                FROM dbo.ProviderSubscriptions sub
+                LEFT JOIN dbo.Users uSub ON sub.UserID = uSub.UserID
+                LEFT JOIN dbo.ServiceProviders spSub ON (sub.ProviderID = spSub.ProviderID OR sub.UserID = spSub.UserID)
+
+                UNION ALL
+
+                -- 6. Applications from dbo.ProviderApplications
+                SELECT
+                    pa.ApplicationID AS RawLogID,
+                    'APP-' + CAST(pa.ApplicationID AS VARCHAR(30)) AS DisplayID,
+                    pa.UserID,
+                    'Application ' + COALESCE(pa.Status, 'Submitted') AS Action,
+                    'Service Provider application for "' + COALESCE(pa.BusinessName, 'Business') + 
+                        '" submitted by ' + COALESCE(pa.OwnerName, 'Applicant') + 
+                        '. Status: ' + COALESCE(pa.Status, 'Pending') AS Description,
+                    'ProviderApplication' AS EntityType,
+                    pa.ApplicationID AS EntityID,
+                    COALESCE(pa.SubmittedAt, pa.ReviewedAt) AS CreatedAt,
+                    COALESCE(pa.OwnerName, uApp.Email, 'Applicant') AS ActorName,
+                    uApp.Email AS ActorEmail,
+                    'Applicant' AS ActorRole,
+                    'Application' AS SourceCategory
+                FROM dbo.ProviderApplications pa
+                LEFT JOIN dbo.Users uApp ON pa.UserID = uApp.UserID
+
+                UNION ALL
+
+                -- 7. Client Reports from dbo.ProviderReports
+                SELECT
+                    pr.ReportID AS RawLogID,
+                    'REP-' + CAST(pr.ReportID AS VARCHAR(30)) AS DisplayID,
+                    pr.ReporterUserID AS UserID,
+                    'Client Report Filed' AS Action,
+                    'Client filed Incident Report #' + CAST(pr.ReportID AS VARCHAR(30)) + 
+                        ' against "' + COALESCE(spRep.BusinessName, 'Provider') + 
+                        '" for: ' + COALESCE(pr.Reason, 'Incident') + '. Status: ' + COALESCE(pr.Status, 'Pending') AS Description,
+                    'ProviderReport' AS EntityType,
+                    pr.ReportID AS EntityID,
+                    pr.CreatedAt,
+                    COALESCE(cRep.FirstName + ' ' + cRep.LastName, uRep.Email, 'Client') AS ActorName,
+                    uRep.Email AS ActorEmail,
+                    'Client' AS ActorRole,
+                    'Report' AS SourceCategory
+                FROM dbo.ProviderReports pr
+                LEFT JOIN dbo.Users uRep ON pr.ReporterUserID = uRep.UserID
+                LEFT JOIN dbo.Clients cRep ON pr.ReporterUserID = cRep.UserID
+                LEFT JOIN dbo.ServiceProviders spRep ON pr.ProviderID = spRep.ProviderID
+            )
             SELECT TOP (${limit})
-                al.LogID,
-                al.UserID,
-                al.Action,
-                al.Description,
-                al.EntityType,
-                al.EntityID,
-                al.CreatedAt,
-                COALESCE(adm.FullName, c.FirstName + ' ' + c.LastName, sp.BusinessName, u.Email, 'System Superadmin') AS ActorName,
-                u.Email AS ActorEmail,
-                COALESCE(r.RoleName, 'System') AS ActorRole
-            FROM dbo.ActivityLogs al
-            LEFT JOIN dbo.Users u ON al.UserID = u.UserID
-            LEFT JOIN dbo.Roles r ON u.RoleID = r.RoleID
-            LEFT JOIN dbo.Admins adm ON u.UserID = adm.UserID
-            LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-            LEFT JOIN dbo.ServiceProviders sp ON u.UserID = sp.UserID
+                u.RawLogID,
+                u.DisplayID,
+                u.DisplayID AS LogID,
+                u.UserID,
+                u.Action,
+                u.Description,
+                u.EntityType,
+                u.EntityID,
+                u.CreatedAt,
+                u.ActorName,
+                u.ActorEmail,
+                u.ActorRole,
+                u.SourceCategory
+            FROM UnifiedAuditLogs u
             WHERE 1=1
         `;
 
@@ -788,15 +950,15 @@ const getAdminAuditLogs = async (req, res) => {
 
         if (actionFilter && actionFilter !== 'all') {
             request.input('ActionFilter', sql.NVarChar(100), `%${actionFilter}%`);
-            queryStr += ` AND al.Action LIKE @ActionFilter`;
+            queryStr += ` AND (u.Action LIKE @ActionFilter OR u.SourceCategory LIKE @ActionFilter OR u.EntityType LIKE @ActionFilter)`;
         }
 
         if (search) {
             request.input('SearchTerm', sql.NVarChar(255), `%${search}%`);
-            queryStr += ` AND (al.Action LIKE @SearchTerm OR al.Description LIKE @SearchTerm OR u.Email LIKE @SearchTerm OR adm.FullName LIKE @SearchTerm OR al.EntityType LIKE @SearchTerm)`;
+            queryStr += ` AND (u.Action LIKE @SearchTerm OR u.Description LIKE @SearchTerm OR u.ActorEmail LIKE @SearchTerm OR u.ActorName LIKE @SearchTerm OR u.EntityType LIKE @SearchTerm OR u.DisplayID LIKE @SearchTerm)`;
         }
 
-        queryStr += ` ORDER BY al.CreatedAt DESC;`;
+        queryStr += ` ORDER BY u.CreatedAt DESC;`;
 
         const result = await request.query(queryStr);
 
