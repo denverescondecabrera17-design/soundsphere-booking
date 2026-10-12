@@ -78,9 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
             packagesGrid.innerHTML = packageItems.map((item, index) => {
                 const p = item.provider;
                 const pkg = item.pkg;
-                const priceFormatted = (pkg.price || p.startingPrice || 15000).toLocaleString();
-                const bannerImg = (pkg.images && pkg.images[0] && pkg.images[0].url) || p.banner || (index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
-
+                let bannerImg = (pkg.images && pkg.images[0] && pkg.images[0].url) || p.banner || (index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
+                if (typeof bannerImg === 'string' && bannerImg.startsWith('/data:')) {
+                    bannerImg = bannerImg.substring(1);
+                }
                 return `
                     <div class="product-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" onclick="window.location.href='/provider-detail.html?id=${p.id}'" style="cursor:pointer;">
                         <span class="product-badge-mall">SoundSphere Verified</span>

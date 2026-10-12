@@ -53,8 +53,10 @@ if (fs.existsSync(srcJs)) {
 const srcDetailJs = path.join(__dirname, '../client/js/provider-detail.js');
 const detailTargets = [
     path.join(__dirname, '../client/pages/provider-detail.js'),
+    path.join(__dirname, '../client/pages/js/provider-detail.js'),
     path.join(__dirname, '../public/js/provider-detail.js'),
-    path.join(__dirname, '../public/pages/provider-detail.js')
+    path.join(__dirname, '../public/pages/provider-detail.js'),
+    path.join(__dirname, '../public/pages/js/provider-detail.js')
 ];
 if (fs.existsSync(srcDetailJs)) {
     const detailContent = fs.readFileSync(srcDetailJs, 'utf8');

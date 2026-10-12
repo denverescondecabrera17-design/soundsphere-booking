@@ -176,8 +176,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Helper: Unified Partner Avatar & Initials Generator
     const getPartnerAvatarUrl = (partner) => {
         const partnerName = partner?.name || (partner?.role === 'Client' ? 'Client Partner' : 'Service Provider');
-        if (partner?.avatar && partner.avatar.trim() && !partner.avatar.includes('default_avatar')) {
-            return partner.avatar;
+        if (partner?.avatar && typeof partner.avatar === 'string' && partner.avatar.trim() && !partner.avatar.includes('default_avatar')) {
+            let av = partner.avatar.trim();
+            if (av.startsWith('/data:')) av = av.substring(1);
+            else if (!av.startsWith('http') && !av.startsWith('/') && !av.startsWith('data:')) av = '/' + av;
+            return av;
         }
         // Extract Initials consistently (First & Last Word letters)
         const cleanName = partnerName.trim().replace(/[^a-zA-Z0-9\s]/g, '');

@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             remainingMinutes,
                             timeRemainingText,
                             providerName: b.ProviderName || 'Sound & Lights Provider',
-                            providerThumb: b.ProviderAvatar || 'images/concert_line_array.png',
+                            providerThumb: (b.ProviderAvatar && typeof b.ProviderAvatar === 'string' && b.ProviderAvatar.startsWith('/data:')) ? b.ProviderAvatar.substring(1) : (b.ProviderAvatar || 'images/concert_line_array.png'),
                             packageName: b.PackageName,
                             eventName: b.EventName,
                             eventType: b.EventType,
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="booking-card-body">
                     <div>
                         <div class="provider-info-row">
-                            <img src="${b.providerThumb}" alt="${b.providerName}" class="provider-thumb" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
+                            <img src="${(typeof b.providerThumb === 'string' && b.providerThumb.startsWith('/data:')) ? b.providerThumb.substring(1) : (b.providerThumb || 'images/concert_line_array.png')}" alt="${b.providerName}" class="provider-thumb" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Provider&background=0084ff&color=fff';">
                             <div class="provider-details">
                                 <h3>${b.providerName}</h3>
                                 <div class="package-name">${b.packageName}</div>

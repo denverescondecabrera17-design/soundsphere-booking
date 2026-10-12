@@ -91,6 +91,14 @@ const findOrCreateConversation = async ({ user1Id, user2Id, bookingId = null, ap
  * @param {number} userId 
  * @returns {Promise<Array>}
  */
+const cleanAvatarUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('/data:')) return trimmed.substring(1);
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http') || trimmed.startsWith('/')) return trimmed;
+    return '/' + trimmed;
+};
+
 const getUserConversations = async (userId) => {
     const pool = getPool();
     if (!pool) return [];
@@ -158,7 +166,7 @@ const getUserConversations = async (userId) => {
             name: row.PartnerName || row.PartnerEmail,
             email: row.PartnerEmail,
             role: row.PartnerRole,
-            avatar: row.PartnerAvatar ? (row.PartnerAvatar.startsWith('http') || row.PartnerAvatar.startsWith('/') ? row.PartnerAvatar : '/' + row.PartnerAvatar) : null
+            avatar: cleanAvatarUrl(row.PartnerAvatar)
         },
         lastMessage: row.LastMessageText ? {
             id: row.LastMessageID,
@@ -247,7 +255,7 @@ const getConversationMessages = async ({ conversationId, userId }) => {
         isRead: Boolean(row.IsRead),
         readAt: row.ReadAt,
         senderName: row.SenderName,
-        senderAvatar: row.SenderAvatar ? (row.SenderAvatar.startsWith('http') || row.SenderAvatar.startsWith('/') ? row.SenderAvatar : '/' + row.SenderAvatar) : null,
+        senderAvatar: cleanAvatarUrl(row.SenderAvatar),
         isMine: row.SenderUserID === uid
     }));
 };
