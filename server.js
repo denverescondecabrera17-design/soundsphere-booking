@@ -46,11 +46,22 @@ app.use('/api', async (req, res, next) => {
     next();
 });
 
-// Serve Client Static Frontend Assets
-app.use(express.static(path.join(__dirname, 'client'), { etag: false, maxAge: 0 }));
-app.use(express.static(path.join(__dirname, 'client', 'pages'), { etag: false, maxAge: 0 }));
-app.use('/client', express.static(path.join(__dirname, 'client'), { etag: false, maxAge: 0 }));
-app.use(express.static(path.join(__dirname, 'public'), { etag: false, maxAge: 0 }));
+// Serve Client Static Frontend Assets with aggressive no-cache headers for HTML/JS
+const staticOptions = {
+    etag: false,
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+};
+app.use(express.static(path.join(__dirname, 'client'), staticOptions));
+app.use(express.static(path.join(__dirname, 'client', 'pages'), staticOptions));
+app.use('/client', express.static(path.join(__dirname, 'client'), staticOptions));
+app.use(express.static(path.join(__dirname, 'public'), staticOptions));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { etag: false, maxAge: 0 }));
 app.use('/uploads', express.static(path.join(__dirname, 'client', 'uploads'), { etag: false, maxAge: 0 }));
 
