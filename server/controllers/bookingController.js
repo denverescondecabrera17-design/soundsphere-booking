@@ -27,6 +27,22 @@ const getPackageById = async (req, res) => {
             return res.status(503).json({ success: false, message: 'Database connection temporarily unavailable.' });
         }
 
+        let hasAddDayCol = false;
+        try {
+            const colCheck = await pool.request().query("SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Packages') AND name = 'AdditionalDayPercentage'");
+            hasAddDayCol = Boolean(colCheck.recordset && colCheck.recordset.length > 0);
+            if (!hasAddDayCol) {
+                await pool.request().query("ALTER TABLE dbo.Packages ADD AdditionalDayPercentage DECIMAL(5,2) DEFAULT 20.00; EXEC('UPDATE dbo.Packages SET AdditionalDayPercentage = 20.00 WHERE AdditionalDayPercentage IS NULL;')");
+                hasAddDayCol = true;
+            }
+        } catch (colErr) {
+            console.warn('AdditionalDayPercentage column check/migration notice:', colErr.message);
+        }
+
+        const addDayColSql = hasAddDayCol 
+            ? 'COALESCE(p.AdditionalDayPercentage, 20.00) AS AdditionalDayPercentage,' 
+            : 'CAST(20.00 AS DECIMAL(5,2)) AS AdditionalDayPercentage,';
+
         let pkgRes = await pool.request()
             .input('PackageID', sql.Int, packageId)
             .query(`
@@ -35,7 +51,7 @@ const getPackageById = async (req, res) => {
                     p.UserID AS ProviderUserID,
                     p.PackageName,
                     p.Price,
-                    COALESCE(p.AdditionalDayPercentage, 20.00) AS AdditionalDayPercentage,
+                    ${addDayColSql}
                     p.Category,
                     p.Description,
                     p.Inclusions,
@@ -66,7 +82,7 @@ const getPackageById = async (req, res) => {
                     p.UserID AS ProviderUserID,
                     p.PackageName,
                     p.Price,
-                    COALESCE(p.AdditionalDayPercentage, 20.00) AS AdditionalDayPercentage,
+                    ${addDayColSql}
                     p.Category,
                     p.Description,
                     p.Inclusions,
@@ -99,19 +115,24 @@ const getPackageById = async (req, res) => {
         const pkgData = pkgRes.recordset[0];
         const actualPkgId = pkgData.PackageID;
 
-        // Fetch package images
-        const imgRes = await pool.request()
-            .input('PackageID', sql.Int, actualPkgId)
-            .query(`
-                SELECT ImageID, ImageUrl FROM dbo.PackageImages
-                WHERE PackageID = @PackageID
-                ORDER BY ImageID ASC;
-            `);
+        // Fetch package images safely
+        try {
+            const imgRes = await pool.request()
+                .input('PackageID', sql.Int, actualPkgId)
+                .query(`
+                    SELECT ImageID, ImageUrl FROM dbo.PackageImages
+                    WHERE PackageID = @PackageID
+                    ORDER BY ImageID ASC;
+                `);
 
-        pkgData.images = (imgRes.recordset || []).map(img => ({
-            id: img.ImageID,
-            url: img.ImageUrl
-        }));
+            pkgData.images = (imgRes.recordset || []).map(img => ({
+                id: img.ImageID,
+                url: img.ImageUrl
+            }));
+        } catch (imgErr) {
+            console.warn('Package images query notice:', imgErr.message);
+            pkgData.images = [];
+        }
 
         pkgData.inclusionsList = pkgData.Inclusions ? pkgData.Inclusions.split(',').map(s => s.trim()).filter(Boolean) : [];
         pkgData.priceFormatted = parseFloat(pkgData.Price || 0).toLocaleString();

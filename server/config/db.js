@@ -318,6 +318,44 @@ const autoSeedDatabase = async (activePool) => {
             END
         `);
 
+        // Auto-Migrate dbo.Packages and dbo.PackageImages Tables
+        await activePool.request().query(`
+            IF OBJECT_ID('dbo.Packages', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Packages (
+                    PackageID INT IDENTITY(1,1) PRIMARY KEY,
+                    UserID INT NOT NULL,
+                    PackageName NVARCHAR(150) NOT NULL,
+                    Category NVARCHAR(100) NULL,
+                    Description NVARCHAR(MAX) NULL,
+                    Price DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                    Inclusions NVARCHAR(MAX) NULL,
+                    AdditionalDayPercentage DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+                    IsActive BIT NOT NULL DEFAULT 1,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+
+            IF OBJECT_ID('dbo.Packages', 'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Packages') AND name = 'AdditionalDayPercentage')
+                BEGIN
+                    ALTER TABLE dbo.Packages ADD AdditionalDayPercentage DECIMAL(5,2) DEFAULT 20.00;
+                    EXEC('UPDATE dbo.Packages SET AdditionalDayPercentage = 20.00 WHERE AdditionalDayPercentage IS NULL;');
+                END
+            END;
+
+            IF OBJECT_ID('dbo.PackageImages', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.PackageImages (
+                    ImageID INT IDENTITY(1,1) PRIMARY KEY,
+                    PackageID INT NOT NULL,
+                    ImageUrl NVARCHAR(500) NOT NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                );
+            END;
+        `);
+
         // Auto-Migrate dbo.Reviews Table
         await activePool.request().query(`
             IF OBJECT_ID('dbo.Reviews', 'U') IS NULL
