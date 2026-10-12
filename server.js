@@ -36,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Content Security Policy (CSP): Permit 'unsafe-eval', 'unsafe-inline', data: and blob: to unblock JavaScript eval
-const CSP_HEADER_VALUE = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src-elem * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; style-src-elem * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *;";
+const CSP_HEADER_VALUE = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *; worker-src * blob: data:;";
 
 app.use((req, res, next) => {
     res.setHeader('Content-Security-Policy', CSP_HEADER_VALUE);
