@@ -682,6 +682,31 @@ const createBooking = async (req, res) => {
             });
         }
 
+        // Email Confirmation Dispatch
+        try {
+            const emailService = require('../services/emailService');
+            const targetEmail = clientEmail || (req.user ? req.user.email : null);
+            if (emailService && emailService.sendBookingConfirmationEmail && targetEmail) {
+                emailService.sendBookingConfirmationEmail({
+                    toEmail: targetEmail,
+                    clientName: notifClientName,
+                    bookingReference: refCode,
+                    packageName: actualPackageName,
+                    eventDate: eventDate,
+                    startTime: startTime,
+                    endTime: endTime,
+                    venueName: venueName,
+                    eventPlace: finalPlace,
+                    totalAmount: totalAmount,
+                    amountPaid: amountPaid,
+                    remainingBalance: remainingBalance,
+                    paymentType: selectedPaymentType
+                }).catch(e => console.warn('Booking confirmation email notice:', e.message));
+            }
+        } catch (mailErr) {
+            console.warn('Booking confirmation email setup notice:', mailErr.message);
+        }
+
         return res.status(201).json({
             success: true,
             message: '🎉 Booking reservation confirmed successfully!',

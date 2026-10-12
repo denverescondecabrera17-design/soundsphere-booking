@@ -643,12 +643,117 @@ const sendRefundProcessedClientEmail = async ({
     }
 };
 
+/**
+ * Send Official Booking Confirmation Email Receipt to Client
+ */
+const sendBookingConfirmationEmail = async ({
+    toEmail,
+    clientName = 'Valued Client',
+    bookingReference,
+    packageName,
+    eventDate,
+    startTime,
+    endTime,
+    venueName,
+    eventPlace,
+    totalAmount,
+    amountPaid,
+    remainingBalance,
+    paymentType
+}) => {
+    if (!toEmail) return null;
+    const formatPhp = (val) => '₱' + (parseFloat(val) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const mailOptions = {
+        from: {
+            name: 'SoundSphere Reservations',
+            address: process.env.SMTP_USER
+        },
+        to: toEmail.trim().toLowerCase(),
+        replyTo: process.env.SMTP_USER,
+        subject: `🎉 Booking Confirmed! [${bookingReference}] - ${packageName}`,
+        html: `
+            <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 28px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: #0a192f; margin: 0; font-size: 24px; font-weight: 800;">Sound<span style="color: #2563eb;">Sphere</span></h2>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Lights & Sounds Event Booking System</p>
+                </div>
+
+                <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 24px;">
+                    <span style="color: #059669; font-size: 22px; font-weight: 900; letter-spacing: -0.01em;">BOOKING CONFIRMED</span>
+                    <p style="color: #065f46; font-size: 14px; margin: 6px 0 0 0;">Your reservation has been confirmed and registered in our database.</p>
+                </div>
+
+                <p style="font-size: 15px; color: #0f172a;">Hello <strong>${clientName}</strong>,</p>
+                <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                    Thank you for choosing SoundSphere! Here are the details of your confirmed event booking:
+                </p>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin: 20px 0;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b;">Booking Reference:</td>
+                            <td style="padding: 6px 0; color: #2563eb; font-weight: 800; text-align: right;">${bookingReference}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b;">Package:</td>
+                            <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${packageName}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b;">Event Date:</td>
+                            <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${eventDate}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b;">Schedule:</td>
+                            <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${startTime || '08:00'} - ${endTime || '22:00'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b;">Venue & Location:</td>
+                            <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${venueName || 'Venue'}, ${eventPlace || 'Batangas'}</td>
+                        </tr>
+                        <tr style="border-top: 1px dashed #cbd5e1;">
+                            <td style="padding: 10px 0 6px 0; color: #0a192f; font-weight: 700;">Total Amount:</td>
+                            <td style="padding: 10px 0 6px 0; color: #0a192f; font-weight: 800; font-size: 15px; text-align: right;">${formatPhp(totalAmount)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; color: #059669; font-weight: 700;">Amount Paid:</td>
+                            <td style="padding: 4px 0; color: #059669; font-weight: 800; text-align: right;">${formatPhp(amountPaid)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; color: #64748b;">Remaining Balance:</td>
+                            <td style="padding: 4px 0; color: ${remainingBalance > 0 ? '#dc2626' : '#64748b'}; font-weight: 800; text-align: right;">${formatPhp(remainingBalance)}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <p style="font-size: 13px; color: #64748b; line-height: 1.5; text-align: center; margin-top: 18px;">
+                    You can view, manage, and track this booking at any time under <strong>Me / Profile &gt; My Bookings</strong>.
+                </p>
+
+                <div style="margin-top: 26px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                    &copy; ${new Date().getFullYear()} SoundSphere Platform. All rights reserved.
+                </div>
+            </div>
+        `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(` REAL GMAIL BOOKING CONFIRMATION DISPATCH SUCCESSFUL! Message ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error(' Gmail SMTP Booking Confirmation Error:', error.message);
+        return null;
+    }
+};
+
 module.exports = {
     sendOTPEmail,
     sendPasswordResetEmail,
     sendProviderAppOTPEmail,
     sendBalanceDueReminderEmail,
     sendPayoutDisbursedClientEmail,
-    sendRefundProcessedClientEmail
+    sendRefundProcessedClientEmail,
+    sendBookingConfirmationEmail
 };
 

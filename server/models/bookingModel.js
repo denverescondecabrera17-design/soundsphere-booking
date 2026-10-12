@@ -1033,6 +1033,7 @@ module.exports = {
     getBookingsByProviderUserId,
     createReview,
     getReviewsByUserId,
+    resolveProviderId,
     cancelBookingByClient,
     settleRemainingBalance
 };

@@ -1697,12 +1697,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const bkData = await bkRes.json();
 
-                if (bkData && bkData.success && bkData.booking) {
-                    try {
-                        sessionStorage.setItem('soundsphere_last_booking', JSON.stringify(bkData.booking));
-                    } catch (e) {}
-                }
-
                 if (bkRes.status === 401 || (bkData && bkData.message && bkData.message.includes('Session expired'))) {
                     if (typeof window.showToast === 'function') {
                         window.showToast('⚠️ Session expired. Please log in again.', 'warning');
@@ -1711,6 +1705,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.location.href = `/login.html?returnUrl=${encodeURIComponent(window.location.href)}`;
                     }, 1200);
                     return;
+                }
+
+                if (!bkRes.ok || !bkData.success) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = `<span>Confirm Booking</span> <i class="fa-solid fa-arrow-right"></i>`;
+                    const errMsg = (bkData && (bkData.message || bkData.error)) || 'Failed to submit booking reservation. Please check schedule availability and try again.';
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(`⚠️ ${errMsg}`, 'error');
+                    } else {
+                        alert(errMsg);
+                    }
+                    return;
+                }
+
+                if (bkData && bkData.success && bkData.booking) {
+                    try {
+                        sessionStorage.setItem('soundsphere_last_booking', JSON.stringify(bkData.booking));
+                    } catch (e) {}
                 }
 
                 // 3. Direct Live Redirect to PayMongo Official Hosted Checkout Page

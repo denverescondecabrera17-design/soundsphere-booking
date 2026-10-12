@@ -1626,6 +1626,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetSec === 'wallet' && typeof window.loadClientWalletData === 'function') {
                 window.loadClientWalletData();
             }
+            if ((targetSec === 'bookings' || targetSec === 'balances' || targetSec === 'history') && typeof window.fetchUserBookings === 'function') {
+                window.fetchUserBookings();
+            }
             return;
         }
 
@@ -4891,7 +4894,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial User Bookings Fetch from SQL Server DB
     if (typeof window.fetchUserBookings === 'function') {
         window.fetchUserBookings();
+        setInterval(window.fetchUserBookings, 15000);
     }
+
+    // Auto-refresh when tab becomes active / gains focus
+    window.addEventListener('focus', () => {
+        if (typeof window.fetchUserBookings === 'function') window.fetchUserBookings();
+        if (typeof fetchNotifications === 'function') fetchNotifications();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            if (typeof window.fetchUserBookings === 'function') window.fetchUserBookings();
+            if (typeof fetchNotifications === 'function') fetchNotifications();
+        }
+    });
 });
 
 // ==================== GLOBAL PHOTO CAROUSEL & SWIPE CONTROLLERS ====================
