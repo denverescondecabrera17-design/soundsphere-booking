@@ -35,6 +35,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Content Security Policy (CSP): Permit 'unsafe-eval', 'unsafe-inline', data: and blob: to unblock JavaScript eval
+const CSP_HEADER_VALUE = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src-elem * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; style-src-elem * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *;";
+
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', CSP_HEADER_VALUE);
+    next();
+});
+
 // Serverless (Vercel): make sure the DB pool is connected before any API route runs.
 // On a cold start the pool is empty, and controllers using getPool() would get null.
 app.use('/api', async (req, res, next) => {
@@ -51,6 +59,7 @@ const staticOptions = {
     etag: false,
     maxAge: 0,
     setHeaders: (res, filePath) => {
+        res.setHeader('Content-Security-Policy', CSP_HEADER_VALUE);
         if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
