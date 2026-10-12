@@ -573,54 +573,71 @@ const getDashboardStats = async (req, res) => {
             allBookings = [];
         }
 
-        const upcomingBookings = allBookings.filter(b => b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Pending');
-        
-        // Accurate Today's Schedule count
-        const now = new Date();
-        const localYear = now.getFullYear();
-        const localMonth = String(now.getMonth() + 1).padStart(2, '0');
-        const localDay = String(now.getDate()).padStart(2, '0');
-        const localDateStr = `${localYear}-${localMonth}-${localDay}`;
-        const utcDateStr = now.toISOString().split('T')[0];
+        // Manila Timezone Formatting (UTC+8)
+        const nowManilaStr = new Intl.DateTimeFormat('en-CA', { 
+            timeZone: 'Asia/Manila', 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+        }).format(new Date());
 
-        const isToday = (dateVal) => {
-            if (!dateVal) return false;
-            const str = String(dateVal).trim();
-            if (str.startsWith(localDateStr) || str.startsWith(utcDateStr)) return true;
+        const getBookingDateStr = (dateVal) => {
+            if (!dateVal) return null;
+            if (typeof dateVal === 'string') {
+                const clean = dateVal.trim().split('T')[0];
+                if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+            }
             const d = new Date(dateVal);
             if (!isNaN(d.getTime())) {
-                const dy = d.getFullYear();
-                const dm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const dStr = `${dy}-${dm}-${dd}`;
-                return dStr === localDateStr || dStr === utcDateStr;
+                return new Intl.DateTimeFormat('en-CA', { 
+                    timeZone: 'Asia/Manila', 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit' 
+                }).format(d);
             }
-            return false;
+            return null;
         };
 
-        const todaysEvents = allBookings.filter(b => {
+        // Active bookings (excluding cancelled, rejected, or refunded)
+        const activeBookings = allBookings.filter(b => {
             const st = (b.BookingStatus || '').toLowerCase();
-            if (st === 'cancelled' || st === 'rejected') return false;
-            return isToday(b.EventDate) || isToday(b.ServiceStartDate);
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            return st !== 'cancelled' && st !== 'rejected' && pSt !== 'refunded';
         });
 
-        // Accurate Contract, Collected & Available Net Balance calculations
+        // 1. TODAY'S SCHEDULE: Non-cancelled bookings on today's Manila date
+        const todaysEvents = activeBookings.filter(b => {
+            const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
+            return bDate === nowManilaStr;
+        });
+
+        // 2. UPCOMING BOOKINGS: Future confirmed/pending bookings strictly AFTER today
+        const upcomingBookings = activeBookings.filter(b => {
+            const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
+            const isConfirmedOrPending = (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Pending');
+            return bDate && bDate > nowManilaStr && isConfirmedOrPending;
+        });
+
+        // 3. AVAILABLE BALANCE & EARNINGS: Strictly calculated from collected funds minus commission and withdrawals
         let totalContractEarnings = 0;
         let totalCollectedEarnings = 0;
 
         allBookings.forEach(b => {
             const st = b.BookingStatus || '';
-            if (st === 'Confirmed' || st === 'Completed') {
-                const tot = parseFloat(b.TotalAmount || 0);
-                const paid = parseFloat(b.AmountPaid || 0);
-                const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            if (st !== 'Cancelled' && st !== 'Rejected' && pSt !== 'refunded') {
+                if (st === 'Confirmed' || st === 'Completed') {
+                    const tot = parseFloat(b.TotalAmount || 0);
+                    const paid = parseFloat(b.AmountPaid || 0);
+                    const commRate = parseFloat(b.CommissionRate || 5) / 100;
 
-                const contractNet = tot * (1 - commRate);
-                const isFullPaid = (b.PaymentStatus === 'Paid' || st === 'Completed');
-                const collectedNet = (isFullPaid ? tot : paid) * (1 - commRate);
+                    const contractNet = tot * (1 - commRate);
+                    const collectedNet = paid * (1 - commRate);
 
-                totalContractEarnings += contractNet;
-                totalCollectedEarnings += collectedNet;
+                    totalContractEarnings += contractNet;
+                    totalCollectedEarnings += collectedNet;
+                }
             }
         });
 
@@ -678,6 +695,7 @@ const getDashboardStats = async (req, res) => {
                 collectedEarnings: parseFloat(totalCollectedEarnings.toFixed(2)),
                 monthlyEarnings: parseFloat(availableBalance.toFixed(2)),
                 upcomingBookings,
+                todaysEvents,
                 allBookings,
                 reviewsList
             }
