@@ -1527,6 +1527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (totalEl) totalEl.textContent = `₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
         const payInfo = getBookingPaymentInfo(booking);
+        const badgeEl = document.getElementById('pbd-payment-type-badge');
         if (badgeEl) {
             badgeEl.innerHTML = payInfo.isFull 
                 ? `<span style="font-size:0.85rem; color:#16a34a; font-weight:600;">(Full Payment)</span>` 
