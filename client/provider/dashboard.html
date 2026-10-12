@@ -327,10 +327,10 @@
                     </div>
 
                     <!-- Main Calendar 2-Column Grid -->
-                    <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:22px; align-items:start;" id="prov-calendar-layout-grid">
+                    <div style="display:grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap:22px; align-items:start;" id="prov-calendar-layout-grid">
                         
                         <!-- Left Column: Interactive Month Calendar -->
-                        <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                        <div class="panel" style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 2px 10px rgba(0,0,0,0.02); min-width:0; overflow:hidden;">
                             
                             <!-- Month Navigation & Controls -->
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #f1f5f9;">
@@ -355,7 +355,7 @@
                             </div>
 
                             <!-- Day Names Header (Sun - Sat) -->
-                            <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; text-align:center; font-weight:700; font-size:0.8rem; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                            <div style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px; text-align:center; font-weight:700; font-size:0.8rem; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
                                 <div style="color:#ef4444;">Sun</div>
                                 <div>Mon</div>
                                 <div>Tue</div>
@@ -366,7 +366,7 @@
                             </div>
 
                             <!-- 7-Column Dynamic Calendar Grid -->
-                            <div id="prov-cal-cells-grid" class="prov-calendar-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; min-height:380px;">
+                            <div id="prov-cal-cells-grid" class="prov-calendar-grid" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px; min-height:380px;">
                                 <!-- Dynamically generated day cells -->
                             </div>
 
@@ -486,6 +486,9 @@
                         transition: all 0.18s ease;
                         position: relative;
                         user-select: none;
+                        min-width: 0;
+                        overflow: hidden;
+                        box-sizing: border-box;
                     }
                     .prov-calendar-grid .prov-day-cell:hover:not(.empty) {
                         border-color: #2563eb;
@@ -550,6 +553,10 @@
                         overflow: hidden;
                         text-overflow: ellipsis;
                         line-height: 1.2;
+                        display: inline-block;
+                        max-width: 100%;
+                        box-sizing: border-box;
+                        vertical-align: middle;
                     }
                     .badge-status-avail {
                         background: #dcfce7;
