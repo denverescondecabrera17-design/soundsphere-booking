@@ -201,7 +201,7 @@
                                                     <th style="padding:10px 14px;">Client</th>
                                                     <th style="padding:10px 14px;">Package & Event</th>
                                                     <th style="padding:10px 14px;">Date & Location</th>
-                                                    <th style="padding:10px 14px;">Amount</th>
+                                                    <th style="padding:10px 14px;">Amount Paid</th>
                                                     <th style="padding:10px 14px;">Status</th>
                                                     <th style="padding:10px 14px;">Action</th>
                                                 </tr>
@@ -270,7 +270,7 @@
                                         <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">PACKAGE / EVENT</th>
                                         <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">EVENT DATE</th>
                                         <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">LOCATION</th>
-                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">AMOUNT</th>
+                                        <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">AMOUNT PAID</th>
                                         <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">BOOKING STATUS</th>
                                         <th style="padding:16px 20px; font-size:0.88rem; font-weight:800; letter-spacing:0.6px; background:#f8fafc; color:#334155; border-bottom:2.5px solid #cbd5e1; white-space:nowrap;">ACTIONS</th>
                                     </tr>
@@ -1156,9 +1156,12 @@
                             <span>Total Client Booking Amount:</span>
                             <strong id="pbd-total-amount" style="color:#059669;">₱0.00</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:0.92rem; color:#475569;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.92rem; color:#475569;">
                             <span>Amount Paid by Client:</span>
-                            <strong id="pbd-amount-paid" style="color:#0a192f;">₱0.00</strong>
+                            <span style="display:inline-flex; align-items:center; gap:8px;">
+                                <span id="pbd-payment-type-badge"></span>
+                                <strong id="pbd-amount-paid" style="color:#0a192f;">₱0.00</strong>
+                            </span>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:0.92rem; color:#b91c1c;">
                             <span>Remaining Balance to Collect:</span>

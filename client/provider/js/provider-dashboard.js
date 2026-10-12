@@ -1062,6 +1062,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Helper to evaluate paid amount, remaining balance, and identify Partial vs Full payment
+    const getBookingPaymentInfo = (b) => {
+        const totalAmt = parseFloat(b.TotalAmount || 0);
+        const amtPaid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+        const remBal = (b.RemainingBalance != null && !isNaN(b.RemainingBalance)) 
+            ? parseFloat(b.RemainingBalance) 
+            : Math.max(0, totalAmt - amtPaid);
+
+        const payStatus = String(b.PaymentStatus || '').toLowerCase();
+        const payType = String(b.PaymentType || '').toLowerCase();
+
+        // Check if fully paid
+        const isFull = (remBal <= 0 && amtPaid > 0) || 
+                       (totalAmt > 0 && amtPaid >= totalAmt) || 
+                       (payStatus === 'paid' && remBal <= 0) || 
+                       (payType === 'full' && remBal <= 0);
+
+        // Check if partial (downpayment)
+        const isPartial = !isFull && (
+            payStatus === 'partial' ||
+            payType === 'downpayment' ||
+            payType === 'partial' ||
+            (amtPaid > 0 && remBal > 0) ||
+            (amtPaid > 0 && amtPaid < totalAmt)
+        );
+
+        let badgeText = 'Unpaid';
+        let badgeColor = '#64748b';
+        let badgeBg = '#f1f5f9';
+        let badgeBorder = '#cbd5e1';
+        let badgeIcon = 'fa-circle-exclamation';
+
+        if (isFull) {
+            badgeText = 'Full Payment';
+            badgeColor = '#059669';
+            badgeBg = '#ecfdf5';
+            badgeBorder = '#a7f3d0';
+            badgeIcon = 'fa-circle-check';
+        } else if (isPartial) {
+            badgeText = 'Partial Payment';
+            badgeColor = '#d97706';
+            badgeBg = '#fef3c7';
+            badgeBorder = '#fde68a';
+            badgeIcon = 'fa-clock-rotate-left';
+        }
+
+        const badgeHtml = `
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:800; color:${badgeColor}; background:${badgeBg}; border:1px solid ${badgeBorder}; padding:2px 8px; border-radius:12px; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap;">
+                <i class="fa-solid ${badgeIcon}" style="font-size:0.7rem;"></i> ${badgeText}
+            </span>
+        `;
+
+        return {
+            totalAmt,
+            amtPaid,
+            remBal,
+            isFull,
+            isPartial,
+            badgeText,
+            badgeHtml
+        };
+    };
+
     // Render Upcoming Reservations
     const renderUpcomingReservations = (bookings) => {
         const tableBody = document.getElementById('table-upcoming-reservations');
@@ -1077,6 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const packageNameStr = b.PackageName || b.packageName || b.EventName || 'Event Service Package';
             const dateStr = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
+            const payInfo = getBookingPaymentInfo(b);
 
             let actionButtonsHtml = '';
             if (statusLower === 'pending') {
@@ -1113,7 +1177,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td><strong style="color:#0a192f; font-size:0.9rem;">${clientNameStr}</strong></td>
                     <td><strong style="color:#2563eb; font-size:0.88rem;">${packageNameStr}</strong></td>
                     <td style="white-space:nowrap;"><span style="font-size:0.85rem; color:#334155; font-weight:600;">${dateStr}</span></td>
-                    <td style="white-space:nowrap;"><strong style="font-size:0.92rem; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td style="white-space:nowrap;">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <strong style="font-size:0.95rem; color:#10b981; font-weight:800;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                ${payInfo.badgeHtml}
+                            </div>
+                            ${payInfo.isPartial ? `<div style="font-size:0.72rem; color:#64748b; font-weight:500;">Bal: ₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>` : ''}
+                        </div>
+                    </td>
                     <td style="white-space:nowrap;"><span class="status-badge status-${statusLower}">${b.BookingStatus || 'Confirmed'}</span></td>
                     <td onclick="event.stopPropagation();" style="white-space:nowrap;">${actionButtonsHtml}</td>
                 </tr>
@@ -1145,6 +1217,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dateDisplay = (formattedStart === formattedEnd || !rawEndDate) ? formattedStart : `${formattedStart} – ${formattedEnd}`;
             const locStr = b.Location || b.EventAddress || b.EventPlace || 'Batangas';
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
+            const payInfo = getBookingPaymentInfo(b);
+
+            const subTextHtml = payInfo.isPartial 
+                ? `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Bal: <strong style="color:#dc2626; font-weight:700;">₱${payInfo.remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> of ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
+                : (payInfo.isFull 
+                    ? `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Total: ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
+                    : `<div style="font-size:0.76rem; color:#64748b; font-weight:500; margin-top:2px;">Total: ₱${payInfo.totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>`
+                );
 
             let actionButtonsHtml = '';
             if (statusLower === 'pending') {
@@ -1194,7 +1274,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td style="padding:18px 20px;"><strong style="color:#2563eb; font-size:0.98rem; font-weight:700;">${packageNameStr}</strong></td>
                     <td style="padding:18px 20px; white-space:nowrap;"><span style="font-size:0.92rem; color:#334155; font-weight:600;">${dateDisplay}</span></td>
                     <td style="padding:18px 20px;"><span style="font-size:0.92rem; color:#475569; font-weight:500;">${locStr}</span></td>
-                    <td style="padding:18px 20px; white-space:nowrap;"><strong style="font-size:1.05rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td style="padding:18px 20px; white-space:nowrap;">
+                        <div style="display:flex; flex-direction:column; gap:3px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong style="font-size:1.05rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                ${payInfo.badgeHtml}
+                            </div>
+                            ${subTextHtml}
+                        </div>
+                    </td>
                     <td style="padding:18px 20px; white-space:nowrap;"><span class="status-badge status-${statusLower}" style="font-size:0.86rem; padding:6px 14px; border-radius:20px; font-weight:700;">${b.BookingStatus || 'Confirmed'}</span></td>
                     <td style="padding:18px 20px; white-space:nowrap;" onclick="event.stopPropagation();">${actionButtonsHtml}</td>
                 </tr>
@@ -1434,11 +1522,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalEl = document.getElementById('pbd-total-amount');
         if (totalEl) totalEl.textContent = `₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+        const payInfo = getBookingPaymentInfo(booking);
+        const badgeEl = document.getElementById('pbd-payment-type-badge');
+        if (badgeEl) badgeEl.innerHTML = payInfo.badgeHtml;
+
         const paidEl = document.getElementById('pbd-amount-paid');
-        if (paidEl) paidEl.textContent = `₱${amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (paidEl) paidEl.textContent = `₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
         const balEl = document.getElementById('pbd-remaining-balance');
-        if (balEl) balEl.textContent = `₱${Math.max(0, remBal).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (balEl) balEl.textContent = `₱${Math.max(0, payInfo.remBal).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
         const earnEl = document.getElementById('pbd-provider-earnings');
         if (earnEl) earnEl.textContent = `₱${provEarn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -2705,7 +2797,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             } else {
-                bookingsList.innerHTML = activeBookings.map(b => `
+                bookingsList.innerHTML = activeBookings.map(b => {
+                    const payInfo = getBookingPaymentInfo(b);
+                    return `
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,0.03); transition:0.2s;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
                             <div>
@@ -2730,13 +2824,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Venue:</strong> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
                         </div>
                         <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.85rem; font-weight:800; color:#10b981;">₱${parseFloat(b.TotalAmount || 0).toLocaleString()}</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:0.85rem; font-weight:800; color:#10b981;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                ${payInfo.badgeHtml}
+                            </div>
                             <button type="button" onclick="window.viewBookingInManagement(${b.BookingID})" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.75rem; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:700;">
                                 View Booking
                             </button>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
     };
