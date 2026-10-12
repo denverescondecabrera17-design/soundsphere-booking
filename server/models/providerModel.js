@@ -4,7 +4,18 @@
  * Handles provider queries, filtering, and marketplace data retrieval
  */
 
-const { getPool, connectDB } = require('../config/db');
+const { getPool, connectDB, getOrConnectPool } = require('../config/db');
+
+/**
+ * Helper to ensure a live database connection pool
+ */
+const getActivePool = async () => {
+    let pool = getPool();
+    if (!pool || !pool.connected) {
+        pool = await connectDB();
+    }
+    return pool;
+};
 
 /**
  * Get All Approved & Active Service Providers directly from SQL Server Database
@@ -14,12 +25,16 @@ const getAllApprovedProviders = async (filters = {}) => {
     let allProviders = [];
 
     try {
-        let pool = null;
-        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+        let pool = await getActivePool();
+        if (!pool) {
+            console.warn('Database pool not ready in getAllApprovedProviders');
+            return [];
+        }
 
         const query = `
             SELECT 
                 u.UserID,
+                sp.ProviderID,
                 COALESCE(sp.BusinessName, pa.BusinessName, NULLIF(LTRIM(RTRIM(COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, ''))), ''), u.Email) AS BusinessName,
                 COALESCE(NULLIF(LTRIM(RTRIM(COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, ''))), ''), sp.OwnerName, pa.OwnerName, 'Service Provider') AS OwnerName,
                 u.Email,
@@ -171,6 +186,7 @@ const getAllApprovedProviders = async (filters = {}) => {
             return {
                 id: p.UserID,
                 userId: p.UserID,
+                providerId: p.ProviderID || p.UserID,
                 name: p.BusinessName || 'SoundSphere Service Provider',
                 businessName: p.BusinessName || 'SoundSphere Service Provider',
                 ownerName: p.OwnerName || 'Provider Owner',
@@ -250,22 +266,99 @@ const getAllApprovedProviders = async (filters = {}) => {
 };
 
 /**
- * Get Provider Details By ID
+ * Get Provider Details By ID (supports lookup by UserID or ProviderID with fallback)
  * @param {Number} providerId 
  */
 const getProviderById = async (providerId) => {
-    const all = await getAllApprovedProviders();
     const pid = parseInt(providerId, 10);
-    return all.find(p => p.id === pid || p.userId === pid) || null;
+    const all = await getAllApprovedProviders();
+    const found = all.find(p => p.id === pid || p.userId === pid || p.providerId === pid);
+    if (found) return found;
+
+    // Fallback: direct query to dbo.ServiceProviders / dbo.Users
+    try {
+        const pool = await getActivePool();
+        if (!pool) return null;
+
+        const res = await pool.request()
+            .input('PID', pid)
+            .query(`
+                SELECT TOP 1
+                    u.UserID,
+                    sp.ProviderID,
+                    COALESCE(sp.BusinessName, pa.BusinessName, NULLIF(LTRIM(RTRIM(COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, ''))), ''), u.Email) AS BusinessName,
+                    COALESCE(NULLIF(LTRIM(RTRIM(COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, ''))), ''), sp.OwnerName, pa.OwnerName, 'Service Provider') AS OwnerName,
+                    u.Email,
+                    COALESCE(u.Phone, pa.ContactNumber) AS Phone,
+                    sp.ProfilePicture AS ProviderProfilePicture,
+                    u.ProfilePicture AS UserProfilePicture,
+                    COALESCE(sp.CoverageArea, pa.CoverageArea, c.Address, 'Batangas') AS CoverageArea,
+                    COALESCE(sp.Description, 'Professional Lights & Sounds Service Provider.') AS Description,
+                    COALESCE(sp.BusinessAddress, pa.BusinessAddress, c.Address) AS BusinessAddress,
+                    COALESCE(sp.VerificationStatus, pa.Status, 'Approved') AS VerificationStatus
+                FROM dbo.ServiceProviders sp
+                FULL OUTER JOIN dbo.Users u ON sp.UserID = u.UserID
+                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+                LEFT JOIN dbo.ProviderApplications pa ON u.UserID = pa.UserID
+                WHERE sp.ProviderID = @PID OR sp.UserID = @PID OR u.UserID = @PID
+            `);
+
+        if (res.recordset && res.recordset.length > 0) {
+            const p = res.recordset[0];
+            const targetUserId = p.UserID || pid;
+            const provPkgs = await getPackagesByProviderId(targetUserId);
+
+            let firstSetupPhoto = null;
+            for (const pkg of provPkgs) {
+                if (pkg.images && pkg.images.length > 0 && pkg.images[0].url) {
+                    firstSetupPhoto = pkg.images[0].url;
+                    break;
+                }
+            }
+            const bannerUrl = firstSetupPhoto || p.ProviderProfilePicture || p.UserProfilePicture || null;
+            const categories = [...new Set(provPkgs.map(k => k.category || k.Category).filter(Boolean))];
+
+            return {
+                id: targetUserId,
+                userId: targetUserId,
+                providerId: p.ProviderID || targetUserId,
+                name: p.BusinessName || 'SoundSphere Service Provider',
+                businessName: p.BusinessName || 'SoundSphere Service Provider',
+                ownerName: p.OwnerName || 'Provider Owner',
+                email: p.Email || '',
+                phone: p.Phone || '',
+                profilePicture: p.ProviderProfilePicture || null,
+                avatar: p.ProviderProfilePicture || null,
+                userProfilePicture: p.UserProfilePicture || null,
+                description: p.Description || 'Professional Lights & Sounds Service Provider.',
+                businessAddress: p.BusinessAddress || '',
+                verificationStatus: p.VerificationStatus || 'Approved',
+                verified: true,
+                rating: 5.0,
+                reviewsCount: 0,
+                reviews: [],
+                banner: bannerUrl,
+                coverageArea: p.CoverageArea || "Batangas",
+                coverageRadiusKm: 30,
+                startingPrice: provPkgs.length > 0 ? Math.min(...provPkgs.map(k => parseFloat(k.price || k.Price || 15000))) : 15000,
+                categories: categories.length > 0 ? categories : ["Concert Audio & Stage Lights"],
+                packages: provPkgs
+            };
+        }
+    } catch (err) {
+        console.warn('Fallback getProviderById error:', err.message);
+    }
+
+    return null;
 };
 
 // ------------------------------------------------------------------------
 // Services CRUD Model Functions (dbo.Services)
 // ------------------------------------------------------------------------
 const getServicesByProviderId = async (userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
     try {
+        const pool = await getActivePool();
+        if (!pool) return [];
         const result = await pool.request()
             .input('UserID', parseInt(userId, 10))
             .query(`SELECT * FROM dbo.Services WHERE UserID = @UserID OR ProviderUserID = @UserID ORDER BY ServiceID DESC`);
@@ -276,8 +369,8 @@ const getServicesByProviderId = async (userId) => {
 };
 
 const createService = async (serviceData) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const name = serviceData.serviceName || serviceData.name;
     const cat = serviceData.category || 'Sound Systems';
     const desc = serviceData.description || name;
@@ -314,8 +407,8 @@ const createService = async (serviceData) => {
 };
 
 const updateService = async (serviceId, userId, serviceData) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const name = serviceData.serviceName || serviceData.name;
     const cat = serviceData.category || 'Sound Systems';
     const price = parseFloat(serviceData.price || 0);
@@ -336,8 +429,8 @@ const updateService = async (serviceId, userId, serviceData) => {
 };
 
 const deleteService = async (serviceId, userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const result = await pool.request()
         .input('ServiceID', parseInt(serviceId, 10))
         .input('UserID', parseInt(userId, 10))
@@ -349,9 +442,9 @@ const deleteService = async (serviceId, userId) => {
 // Service Packages CRUD Model Functions (dbo.Packages)
 // ------------------------------------------------------------------------
 const getPackagesByProviderId = async (userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
     try {
+        const pool = await getActivePool();
+        if (!pool) return [];
         const result = await pool.request()
             .input('UserID', parseInt(userId, 10))
             .query(`
@@ -399,9 +492,9 @@ const getPackagesByProviderId = async (userId) => {
 };
 
 const getPackageById = async (packageId, userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
     try {
+        const pool = await getActivePool();
+        if (!pool) return null;
         const result = await pool.request()
             .input('PackageID', parseInt(packageId, 10))
             .input('UserID', parseInt(userId, 10))
@@ -450,8 +543,8 @@ const getPackageById = async (packageId, userId) => {
 
 const addPackageImages = async (packageId, imageUrls = []) => {
     if (!imageUrls || imageUrls.length === 0) return;
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) return;
 
     for (const url of imageUrls) {
         await pool.request()
@@ -462,8 +555,8 @@ const addPackageImages = async (packageId, imageUrls = []) => {
 };
 
 const deletePackagePhotoById = async (imageId, userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) return false;
     const result = await pool.request()
         .input('ImageID', parseInt(imageId, 10))
         .input('UserID', parseInt(userId, 10))
@@ -477,8 +570,8 @@ const deletePackagePhotoById = async (imageId, userId) => {
 };
 
 const createPackage = async (packageData) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const name = packageData.packageName || packageData.name || packageData.PackageName || 'Unnamed Package Offer';
     const cat = packageData.category || packageData.Category || 'Concert Audio & Stage Lights';
     const desc = packageData.description || packageData.Description || name;
@@ -503,8 +596,8 @@ const createPackage = async (packageData) => {
 };
 
 const updatePackage = async (packageId, userId, packageData) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const name = packageData.packageName || packageData.name || packageData.PackageName || 'Unnamed Package Offer';
     const cat = packageData.category || packageData.Category || 'Concert Audio & Stage Lights';
     const desc = packageData.description || packageData.Description || name;
@@ -538,8 +631,8 @@ const updatePackage = async (packageId, userId, packageData) => {
 };
 
 const deletePackage = async (packageId, userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const result = await pool.request()
         .input('PackageID', parseInt(packageId, 10))
         .input('UserID', parseInt(userId, 10))
@@ -551,8 +644,8 @@ const deletePackage = async (packageId, userId) => {
 // Withdrawals Model Functions (dbo.Withdrawals)
 // ------------------------------------------------------------------------
 const getWithdrawalsByProviderId = async (userId) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) return [];
     const result = await pool.request()
         .input('UserID', parseInt(userId, 10))
         .query(`SELECT * FROM dbo.Withdrawals WHERE ProviderUserID = @UserID ORDER BY RequestedAt DESC`);
@@ -560,8 +653,8 @@ const getWithdrawalsByProviderId = async (userId) => {
 };
 
 const createWithdrawalRequest = async (withdrawalData) => {
-    let pool = null;
-    try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
     const result = await pool.request()
         .input('ProviderUserID', parseInt(withdrawalData.userId, 10))
         .input('Amount', parseFloat(withdrawalData.amount || 0))

@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const isAzure = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('.database.windows.net'));
-const isMonsterAsp = (process.env.DB_SERVER && process.env.DB_SERVER.toLowerCase().includes('monsterasp'));
+const isMonsterAsp = (process.env.DB_SERVER && (process.env.DB_SERVER.toLowerCase().includes('monsterasp') || process.env.DB_SERVER.toLowerCase().includes('databaseasp.net')));
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Explicit DB_ENCRYPT takes precedence; defaults to true only on Azure, and false for MonsterASP/others
