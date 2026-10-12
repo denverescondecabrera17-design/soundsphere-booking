@@ -506,11 +506,149 @@ const sendPayoutDisbursedClientEmail = async ({
     }
 };
 
+/**
+ * Send Real Refund Processed / Disbursed Confirmation Email to Client
+ * @param {object} params
+ */
+const sendRefundProcessedClientEmail = async ({
+    toEmail,
+    clientName,
+    refundRequestId,
+    bookingReference,
+    packageName,
+    providerName,
+    amount,
+    payoutMethod,
+    accountName,
+    accountNumber,
+    referenceNumber,
+    notes
+}) => {
+    const formattedAmount = parseFloat(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    console.log(`\n==================================================`);
+    console.log(` 📧 SENDING CLIENT REFUND CONFIRMATION EMAIL`);
+    console.log(` FROM: ${process.env.SMTP_USER}`);
+    console.log(` TO: ${toEmail} (${clientName || 'Client'})`);
+    console.log(` REFUND ID: #${refundRequestId} | BOOKING REF: ${bookingReference || 'N/A'}`);
+    console.log(` AMOUNT REFUNDED: ₱${formattedAmount} | METHOD: ${payoutMethod}`);
+    console.log(` ACCOUNT: ${accountName} (${accountNumber})`);
+    console.log(`==================================================\n`);
+
+    const mailOptions = {
+        from: {
+            name: 'SoundSphere Cashier Refunds',
+            address: process.env.SMTP_USER
+        },
+        to: toEmail.trim().toLowerCase(),
+        replyTo: process.env.SMTP_USER,
+        subject: `💸 Refund Completed: Booking ${bookingReference || '#' + refundRequestId} - SoundSphere`,
+        text: `Hello ${clientName || 'Client'},\n\nYour refund request (Reference: ${bookingReference || '#' + refundRequestId}) has been officially processed and marked as Refunded by the SoundSphere Cashier.\n\nThe refund of ₱${formattedAmount} has been transferred to your designated account outside the system:\nPayment Channel: ${payoutMethod || 'GCash'}\nAccount Name: ${accountName || '-'}\nAccount Number / Mobile: ${accountNumber || '-'}\nTransaction Reference: ${referenceNumber || 'N/A'}\n\nYour booking and payment status is now updated to Refunded. Thank you for using SoundSphere!\n\nRegards,\nSoundSphere Cashier & Finance Team`,
+        html: `
+            <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: #0a192f; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Sound<span style="color: #2563eb;">Sphere</span></h2>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 4px; font-weight: 500;">Official Cashier Refund Confirmation</p>
+                </div>
+
+                <div style="border-top: 3px solid #10b981; padding-top: 24px;">
+                    <div style="display: inline-block; background: #ecfdf5; color: #047857; font-weight: 800; font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 1.5px solid #a7f3d0; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ✓ Refund Sent & Completed
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #0a192f; margin-top: 0;">Hello <strong>${clientName || 'Client'}</strong>,</p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                        This is an official confirmation from the <strong>SoundSphere Cashier</strong> that your refund has been processed outside the platform and successfully marked as <strong>Refunded</strong>.
+                    </p>
+
+                    <!-- Refund Card -->
+                    <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <h4 style="margin: 0 0 14px 0; color: #0a192f; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                            Refund Summary
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Refund Request ID:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 800; font-family: monospace; text-align: right;">#REF-${refundRequestId}</td>
+                            </tr>
+                            ${bookingReference ? `
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Booking Reference:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 800; font-family: monospace; text-align: right;">${bookingReference}</td>
+                            </tr>
+                            ` : ''}
+                            ${packageName ? `
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Service / Package:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${packageName}</td>
+                            </tr>
+                            ` : ''}
+                            ${providerName ? `
+                            <tr>
+                                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Provider:</td>
+                                <td style="padding: 6px 0; color: #0a192f; font-weight: 700; text-align: right;">${providerName}</td>
+                            </tr>
+                            ` : ''}
+                            <tr style="border-top: 1.5px dashed #cbd5e1;">
+                                <td style="padding: 12px 0 4px 0; color: #0a192f; font-weight: 800; font-size: 15px;">Total Amount Refunded:</td>
+                                <td style="padding: 12px 0 4px 0; color: #059669; font-weight: 900; font-size: 20px; text-align: right;">₱${formattedAmount}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Destination Details -->
+                    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 13px; font-weight: 800; text-transform: uppercase;">
+                            Payout Account Destination
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Payout Method:</td>
+                                <td style="padding: 4px 0; color: #0a192f; font-weight: 700; text-align: right;">${payoutMethod || 'GCash / Bank Transfer'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Account Holder:</td>
+                                <td style="padding: 4px 0; color: #0a192f; font-weight: 700; text-align: right;">${accountName || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Account / Mobile Number:</td>
+                                <td style="padding: 4px 0; color: #2563eb; font-weight: 800; font-family: monospace; text-align: right;">${accountNumber || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;">Status:</td>
+                                <td style="padding: 4px 0; color: #059669; font-weight: 800; text-align: right;">REFUNDED</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p style="font-size: 13px; color: #64748b; line-height: 1.5; text-align: center; margin-top: 16px;">
+                        The funds have been transferred directly to your destination account outside the system. Your booking records and client portal have been updated to reflect the completed refund.
+                    </p>
+                </div>
+
+                <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                    &copy; ${new Date().getFullYear()} SoundSphere Platform. All rights reserved.
+                </div>
+            </div>
+        `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(` REAL GMAIL CLIENT REFUND NOTICE SUCCESSFUL! Message ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error(' Gmail SMTP Client Refund Notice Error:', error.message);
+        throw error;
+    }
+};
+
 module.exports = {
     sendOTPEmail,
     sendPasswordResetEmail,
     sendProviderAppOTPEmail,
     sendBalanceDueReminderEmail,
-    sendPayoutDisbursedClientEmail
+    sendPayoutDisbursedClientEmail,
+    sendRefundProcessedClientEmail
 };
 

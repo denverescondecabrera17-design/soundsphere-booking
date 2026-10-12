@@ -347,7 +347,7 @@ if (fs.existsSync(srcMarketplaceJs)) {
 const cashierSyncList = [
     { src: '../client/cashier/dashboard.html', targets: ['../public/cashier/dashboard.html', '../client/pages/cashier/dashboard.html'] },
     { src: '../client/cashier/css/cashier.css', targets: ['../public/cashier/css/cashier.css', '../client/pages/cashier/css/cashier.css'] },
-    { src: '../client/cashier/js/cashier-dashboard.js', targets: ['../public/cashier/js/cashier-dashboard.js', '../client/pages/cashier/js/cashier-dashboard.js'] },
+    { src: '../client/cashier/js/cashier-dashboard.js', targets: ['../public/cashier/js/cashier-dashboard.js', '../public/cashier/cashier-dashboard.js', '../client/pages/cashier/js/cashier-dashboard.js', '../client/pages/cashier/cashier-dashboard.js'] },
     { src: '../client/admin/dashboard.html', targets: ['../public/admin/dashboard.html'] },
     { src: '../client/admin/js/admin-dashboard.js', targets: ['../public/admin/js/admin-dashboard.js'] }
 ];

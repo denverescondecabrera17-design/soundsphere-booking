@@ -303,7 +303,7 @@ const approveRefundPayout = async ({ refundRequestId, cashierUserId, referenceNu
     const refNo = referenceNumber || `REF-CASHIER-${Date.now().toString().slice(-6)}`;
     const finalNotes = adminNotes || `Manually disbursed by Cashier via ${reqData.PayoutMethod}`;
 
-    // 1. Update status
+    // 1. Update status in dbo.RefundRequests
     await pool.request()
         .input('RID', sql.Int, rId)
         .input('RefNo', sql.NVarChar(100), refNo)
@@ -319,12 +319,79 @@ const approveRefundPayout = async ({ refundRequestId, cashierUserId, referenceNu
             WHERE RefundRequestID = @RID;
         `);
 
-    // 2. Notify Client
+    // 2. Update linked Booking and Payments to 'Refunded' if BookingID exists
+    let bookingRef = reqData.BookingReference || null;
+    let packageName = null;
+    let providerName = null;
+
+    if (reqData.BookingID) {
+        try {
+            await pool.request()
+                .input('BID', sql.Int, reqData.BookingID)
+                .query(`
+                    UPDATE dbo.Bookings
+                    SET PaymentStatus = 'Refunded',
+                        RemainingBalance = 0,
+                        UpdatedAt = GETDATE()
+                    WHERE BookingID = @BID;
+
+                    IF OBJECT_ID('dbo.Payments', 'U') IS NOT NULL
+                    BEGIN
+                        UPDATE dbo.Payments
+                        SET PaymentStatus = 'Refunded',
+                            UpdatedAt = GETDATE()
+                        WHERE BookingID = @BID;
+                    END
+                `);
+
+            const bkRes = await pool.request()
+                .input('BID', sql.Int, reqData.BookingID)
+                .query(`
+                    SELECT bk.BookingReference, bk.PackageName, bk.EventName, sp.BusinessName
+                    FROM dbo.Bookings bk
+                    LEFT JOIN dbo.ServiceProviders sp ON bk.ProviderID = sp.ProviderID
+                    WHERE bk.BookingID = @BID;
+                `);
+
+            if (bkRes.recordset && bkRes.recordset.length > 0) {
+                const bRow = bkRes.recordset[0];
+                bookingRef = bRow.BookingReference || bookingRef;
+                packageName = bRow.PackageName || bRow.EventName || null;
+                providerName = bRow.BusinessName || null;
+            }
+        } catch (bkErr) {
+            console.warn('[approveRefundPayout] Booking status update warning:', bkErr.message);
+        }
+    }
+
+    // 3. Resolve Client Email & Name
+    let clientEmail = reqData.ClientEmail || null;
+    let clientName = reqData.ClientName || 'Client';
+
+    if (!clientEmail && reqData.UserID) {
+        try {
+            const uRes = await pool.request()
+                .input('UID', sql.Int, reqData.UserID)
+                .query(`SELECT Email, FirstName, LastName FROM dbo.Users WHERE UserID = @UID;`);
+            if (uRes.recordset && uRes.recordset.length > 0) {
+                clientEmail = uRes.recordset[0].Email || null;
+                if (!clientName || clientName === 'Client') {
+                    const fn = uRes.recordset[0].FirstName || '';
+                    const ln = uRes.recordset[0].LastName || '';
+                    clientName = `${fn} ${ln}`.trim() || clientName;
+                }
+            }
+        } catch (uErr) {
+            console.warn('[approveRefundPayout] User lookup warning:', uErr.message);
+        }
+    }
+
+    // 4. In-App Notification to Client
     const amtStr = parseFloat(reqData.Amount).toLocaleString('en-US', { minimumFractionDigits: 2 });
     await pool.request()
         .input('UID', sql.Int, reqData.UserID)
         .input('Title', sql.NVarChar(150), '💸 Refund Sent & Marked as Refunded')
-        .input('Msg', sql.NVarChar(500), `Your refund payout of ₱${amtStr} has been manually sent via ${reqData.PayoutMethod} to ${reqData.AccountName} (${reqData.AccountNumber}) and marked as Refunded. Payment Reference: ${refNo}.`)
+        .input('Msg', sql.NVarChar(500), `Your refund payout of ₱${amtStr} has been transferred via ${reqData.PayoutMethod} to ${reqData.AccountName} (${reqData.AccountNumber}) and marked as Refunded.`)
         .input('RID', sql.Int, rId)
         .query(`
             IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
@@ -334,13 +401,39 @@ const approveRefundPayout = async ({ refundRequestId, cashierUserId, referenceNu
             END
         `);
 
+    // 5. Send Real Email Notice to Client
+    if (clientEmail && clientEmail.includes('@')) {
+        try {
+            const emailService = require('./emailService');
+            await emailService.sendRefundProcessedClientEmail({
+                toEmail: clientEmail,
+                clientName,
+                refundRequestId: rId,
+                bookingReference: bookingRef,
+                packageName,
+                providerName,
+                amount: reqData.Amount,
+                payoutMethod: reqData.PayoutMethod,
+                accountName: reqData.AccountName,
+                accountNumber: reqData.AccountNumber,
+                referenceNumber: refNo,
+                notes: finalNotes
+            });
+        } catch (emailErr) {
+            console.warn('[approveRefundPayout] Refund notification email warning:', emailErr.message);
+        }
+    }
+
     return {
         success: true,
         refundRequestId: rId,
         amount: reqData.Amount,
         referenceNumber: refNo,
         payoutMethod: reqData.PayoutMethod,
-        accountName: reqData.AccountName
+        accountName: reqData.AccountName,
+        accountNumber: reqData.AccountNumber,
+        clientEmail,
+        bookingReference: bookingRef
     };
 };
 

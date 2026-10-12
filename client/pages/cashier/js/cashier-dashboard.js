@@ -1100,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (disburseBtn) {
             e.stopPropagation();
             const reqId = disburseBtn.getAttribute('data-id');
-            openCashierDisburseModal(reqId);
+            executeMarkRefundAsRefunded(reqId, disburseBtn);
             return;
         }
 
@@ -1211,9 +1211,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
                     </button>
                 `;
-                document.getElementById('btn-fullscreen-disburse')?.addEventListener('click', () => {
-                    closeClientBookingDetailsFullScreen();
-                    openCashierDisburseModal(item.RefundRequestID);
+                document.getElementById('btn-fullscreen-disburse')?.addEventListener('click', (e) => {
+                    executeMarkRefundAsRefunded(item.RefundRequestID, e.currentTarget);
                 });
                 document.getElementById('btn-fullscreen-reject')?.addEventListener('click', () => {
                     closeClientBookingDetailsFullScreen();
@@ -1272,81 +1271,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Modal: Disburse Client Refund
-    const modalCashierDisburse = document.getElementById('modal-cashier-disburse-refund');
-    const formCashierDisburse = document.getElementById('form-cashier-disburse-refund');
-
-    function openCashierDisburseModal(reqId) {
+    // Direct Mark as Refunded (Cashier transfers outside system, directly mark and notify/email)
+    async function executeMarkRefundAsRefunded(reqId, btnElement) {
         const item = currentRefundsList.find(r => String(r.RefundRequestID) === String(reqId));
-        if (!item) return;
+        const clientName = item ? (item.ClientName || 'Client') : 'Client';
+        const amountStr = item ? formatPHP(item.Amount) : '';
+        const methodStr = item ? (item.PayoutMethod || 'GCash') : 'GCash';
+        const accName = item ? (item.AccountName || '-') : '-';
+        const accNum = item ? (item.AccountNumber || '-') : '-';
 
-        document.getElementById('cashier-disburse-request-id').value = item.RefundRequestID;
-        document.getElementById('cashier-disburse-client-name').textContent = item.ClientName || 'Client';
-        document.getElementById('cashier-disburse-amount').textContent = formatPHP(item.Amount);
-        document.getElementById('cashier-disburse-channel').textContent = item.PayoutMethod || 'GCash';
-        document.getElementById('cashier-disburse-account-name').textContent = item.AccountName || 'Account';
-        document.getElementById('cashier-disburse-account-number').textContent = item.AccountNumber || '-';
-        document.getElementById('cashier-disburse-ref-number').value = '';
-        document.getElementById('cashier-disburse-notes').value = '';
+        const confirmed = confirm(
+            `Confirm Manual Refund Sent Outside System:\n\n` +
+            `• Client: ${clientName}\n` +
+            `• Amount to Refund: ${amountStr}\n` +
+            `• Payout Method: ${methodStr}\n` +
+            `• Destination Account: ${accName} (${accNum})\n\n` +
+            `Are you sure you want to mark this as Refunded?\nThis will update the client's status and automatically send them an email confirming the refund.`
+        );
+        if (!confirmed) return;
 
-        modalCashierDisburse.classList.add('active');
-    }
+        let originalBtnHtml = '';
+        if (btnElement) {
+            originalBtnHtml = btnElement.innerHTML;
+            btnElement.disabled = true;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+        }
 
-    function closeCashierDisburseModal() {
-        if (!modalCashierDisburse) return;
-        modalCashierDisburse.classList.remove('active');
-    }
+        try {
+            const res = await fetch(`/api/cashier/refund-requests/${reqId}/approve`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    referenceNumber: `MANUAL-${reqId}`,
+                    notes: `Manually transferred via ${methodStr} outside system by Cashier`
+                })
+            });
 
-    document.getElementById('btn-close-cashier-disburse')?.addEventListener('click', closeCashierDisburseModal);
-    document.getElementById('btn-cancel-cashier-disburse')?.addEventListener('click', closeCashierDisburseModal);
-
-    if (formCashierDisburse) {
-        formCashierDisburse.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const reqId = document.getElementById('cashier-disburse-request-id').value;
-            const refNo = document.getElementById('cashier-disburse-ref-number').value.trim();
-            const notes = document.getElementById('cashier-disburse-notes').value.trim();
-
-            if (!refNo) {
-                alert('Please enter the payment transaction reference number (e.g. from your GCash or Bank app).');
-                return;
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to mark refund as completed.');
             }
 
-            const submitBtn = document.getElementById('btn-submit-cashier-disburse');
-            const origHtml = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Disbursing...`;
+            alert(`🎉 Refund Successfully Marked as Refunded!\n\nAmount: ${amountStr}\nStatus has been reflected to the client and a confirmation email has been sent.`);
+            await loadClientRefundsList();
+            loadCashierSummary();
 
-            try {
-                const res = await fetch(`/api/cashier/refund-requests/${reqId}/approve`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        referenceNumber: refNo,
-                        notes: notes || `Manually disbursed via GCash/Bank (Ref: ${refNo})`
-                    })
-                });
-
-                const data = await res.json();
-                if (!res.ok || !data.success) {
-                    throw new Error(data.message || 'Failed to approve refund.');
-                }
-
-                alert(`🎉 Refund Successfully Sent & Marked as Refunded!\n\nReference: ${refNo}\nThe payment has been marked as refunded and reflected to the client.`);
-                closeCashierDisburseModal();
-                loadClientRefundsList();
-                loadCashierSummary();
-            } catch (err) {
-                console.error('Error approving refund:', err);
-                alert(`⚠️ Error: ${err.message}`);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = origHtml;
+            // Refresh fullscreen view if open
+            const bView = document.getElementById('view-cashier-booking-details');
+            if (bView && !bView.classList.contains('hidden') && bView.style.display !== 'none') {
+                openClientBookingDetailsFullScreen(reqId);
             }
-        });
+        } catch (err) {
+            console.error('Error marking refund as refunded:', err);
+            alert(`⚠️ Error: ${err.message}`);
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalBtnHtml || `<i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded`;
+            }
+        }
     }
 
     // Modal: Reject Client Refund
