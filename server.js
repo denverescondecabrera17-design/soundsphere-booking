@@ -22,7 +22,7 @@ const subscriptionRoutes = require('./server/routes/subscriptionRoutes');
 const cashierRoutes = require('./server/routes/cashierRoutes');
 const walletRoutes = require('./server/routes/walletRoutes');
 
-const { getMapsConfig } = require('./server/config/mapsConfig');
+const { getMapsConfig, geocodeAddress } = require('./server/config/mapsConfig');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -85,6 +85,7 @@ reviewRouter.post('/reviews', verifyToken, bookingController.submitReview);
 app.use('/api/reviews', reviewRouter);
 
 app.get('/api/config/maps-key', getMapsConfig);
+app.get('/api/config/geocode', geocodeAddress);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);

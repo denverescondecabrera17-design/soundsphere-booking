@@ -400,10 +400,90 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const MUNICIPALITY_COORDS = {
-        'Lian': { lat: 13.8402, lng: 120.6558 },
-        'Balayan': { lat: 13.9388, lng: 120.7308 },
-        'Nasugbu': { lat: 14.0722, lng: 120.6318 }
+        'Balayan': { lat: 13.9388, lng: 120.7308, name: 'Balayan, Batangas' },
+        'Nasugbu': { lat: 14.0714, lng: 120.6347, name: 'Nasugbu, Batangas' },
+        'Lian': { lat: 14.0322, lng: 120.6514, name: 'Lian, Batangas' },
+        'Calatagan': { lat: 13.8322, lng: 120.6322, name: 'Calatagan, Batangas' },
+        'Tuy': { lat: 14.0225, lng: 120.7308, name: 'Tuy, Batangas' },
+        'Calaca': { lat: 13.9317, lng: 120.8128, name: 'Calaca, Batangas' },
+        'Lemery': { lat: 13.9189, lng: 120.8911, name: 'Lemery, Batangas' },
+        'Taal': { lat: 13.8833, lng: 120.9333, name: 'Taal, Batangas' }
     };
+
+    const normalizePhAddress = (query, place = '') => {
+        if (!query) return '';
+        let q = String(query).trim();
+        // Convert abbreviations: BRY, BRGY, BGY, BGRY -> Barangay
+        q = q.replace(/\b(?:brgy|bry|bgy|bgry)\.?\s*(\d+|[a-zA-Z]+)?\b/gi, (match, p1) => {
+            return p1 ? `Barangay ${p1}` : 'Barangay';
+        });
+        q = q.replace(/\bpob\.?\b/gi, 'Poblacion');
+        q = q.replace(/\bst\.?\b/gi, 'Street');
+        q = q.replace(/\bave\.?\b/gi, 'Avenue');
+        q = q.replace(/\s+/g, ' ').trim();
+        return q;
+    };
+    window.normalizePhAddress = normalizePhAddress;
+
+    const searchLocation = async (query) => {
+        if (!query) return [];
+        const place = (placeSelect && placeSelect.value) ? placeSelect.value : 'Balayan';
+        const cleanQ = normalizePhAddress(query, place);
+
+        // 1. Instant 0ms local match
+        if (typeof matchLocalBatangasPlaces === 'function') {
+            const localMatches = matchLocalBatangasPlaces(cleanQ, place);
+            if (localMatches && localMatches.length > 0) {
+                return localMatches.map(m => ({
+                    lat: String(m.lat),
+                    lon: String(m.lng || m.lon),
+                    display_name: `${m.name}, ${m.place || place}, Batangas, Philippines`
+                }));
+            }
+        }
+
+        // 2. Extract barangay if present
+        const brgyMatch = cleanQ.match(/\bBarangay\s+([A-Za-z0-9\s]+?)(?:,|$|\s+(?:Balayan|Nasugbu|Lian|Batangas))/i);
+        const brgyName = brgyMatch ? `Barangay ${brgyMatch[1].trim()}` : '';
+
+        // Strip generic venue words to get cleaner location
+        const strippedQ = cleanQ.replace(/\b(?:covered court|court|gym|gymnasium|multipurpose hall|hall|plaza|resort|hotel|near|beside|in front of|tapat ng|tabi ng|compound|subdivision|phase \d+|blk \d+|lot \d+)\b/gi, '').trim();
+
+        const queriesToTry = [
+            `${cleanQ}, ${place}, Batangas, Philippines`,
+            `${cleanQ}, Batangas, Philippines`,
+            brgyName ? `${brgyName}, ${place}, Batangas, Philippines` : null,
+            brgyName ? `${brgyName}, Batangas, Philippines` : null,
+            strippedQ && strippedQ !== cleanQ ? `${strippedQ}, ${place}, Batangas, Philippines` : null,
+            `${place}, Batangas, Philippines`
+        ].filter(Boolean);
+
+        for (const q of queriesToTry) {
+            try {
+                const res = await fetch(`/api/config/geocode?q=${encodeURIComponent(q)}`);
+                if (res.ok) {
+                    const results = await res.json();
+                    if (results && results.length > 0) return results;
+                }
+            } catch (e) {}
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=ph&limit=5`);
+                if (res.ok) {
+                    const results = await res.json();
+                    if (results && results.length > 0) return results;
+                }
+            } catch (e) {}
+        }
+
+        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
+        return [{
+            lat: String(mCoords.lat),
+            lon: String(mCoords.lng),
+            display_name: `${cleanQ ? cleanQ + ', ' : ''}${place}, Batangas, Philippines`
+        }];
+    };
+    window.searchLocation = searchLocation;
 
     // Haversine Spherical Distance Calculation (in kilometers)
     const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -1344,15 +1424,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const place = placeSelect ? placeSelect.value : 'Balayan';
 
                     if (!venue && !addr) {
-                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'];
+                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
                         selectPlaceOnMap(mCoords.lat, mCoords.lng);
                         return;
                     }
 
-                    const cleanAddr = normalizePhAddress(addr, place);
-                    const cleanVenue = normalizePhAddress(venue, place);
+                    const cleanAddr = typeof normalizePhAddress === 'function' ? normalizePhAddress(addr, place) : addr;
+                    const cleanVenue = typeof normalizePhAddress === 'function' ? normalizePhAddress(venue, place) : venue;
 
-                    // Extract barangay if present
+                    // 1. Instant 0ms local match with Batangas places dataset
+                    if (typeof matchLocalBatangasPlaces === 'function') {
+                        const localMatches = matchLocalBatangasPlaces(`${cleanVenue} ${cleanAddr}`, place);
+                        if (localMatches && localMatches.length > 0) {
+                            const top = localMatches[0];
+                            selectPlaceOnMap(parseFloat(top.lat), parseFloat(top.lng || top.lon));
+                            return;
+                        }
+                    }
+
+                    // 2. Extract barangay if present
                     const combined = `${cleanAddr} ${cleanVenue}`;
                     const brgyMatch = combined.match(/\bBarangay\s+([A-Za-z0-9\s]+?)(?:,|$|\s+(?:Balayan|Nasugbu|Lian|Batangas))/i);
                     const brgyName = brgyMatch ? `Barangay ${brgyMatch[1].trim()}` : '';
@@ -1367,6 +1457,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     for (const cand of candidates) {
                         try {
+                            const res = await fetch(`/api/config/geocode?q=${encodeURIComponent(cand)}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data && data.length > 0) {
+                                    selectPlaceOnMap(parseFloat(data[0].lat), parseFloat(data[0].lon || data[0].lng));
+                                    return;
+                                }
+                            }
+                        } catch (e) {}
+
+                        try {
                             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(cand)}&countrycodes=ph&limit=1`);
                             if (res.ok) {
                                 const data = await res.json();
@@ -1379,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     // Fallback to municipality coords so pin ALWAYS jumps to the town
-                    const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'];
+                    const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
                     selectPlaceOnMap(mCoords.lat, mCoords.lng);
                 };
 
