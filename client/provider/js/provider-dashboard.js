@@ -779,10 +779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (elAvail) elAvail.textContent = `₱${parseFloat(data.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     if (elEarnings) elEarnings.textContent = `₱${parseFloat(data.totalEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     if (elWithdrawn) elWithdrawn.textContent = `₱${parseFloat(data.totalWithdrawn || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                    const statMonthlyEarnings = document.getElementById('stat-monthly-earnings');
-                    if (statMonthlyEarnings && data.availableBalance !== undefined) {
-                        statMonthlyEarnings.textContent = `₱${parseFloat(data.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                    }
+
 
                     if (tableBody) {
                         const withdrawals = data.withdrawals || [];
@@ -935,22 +932,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.success && data.stats) {
                     const s = data.stats;
 
-                    // Force-remove Total Services card if still lingering from browser cache
+                    // Force-remove Total Services & Available Balance cards if still lingering from browser cache
                     const leftoverTotalServicesCard = document.getElementById('stat-total-services')?.closest('.stat-card');
                     if (leftoverTotalServicesCard) {
                         leftoverTotalServicesCard.remove();
                     }
+                    const leftoverBalanceCard = document.getElementById('stat-monthly-earnings')?.closest('.stat-card');
+                    if (leftoverBalanceCard) {
+                        leftoverBalanceCard.remove();
+                    }
 
                     const statUpcomingBookings = document.getElementById('stat-upcoming-bookings');
                     const statTodaysEvents = document.getElementById('stat-todays-events');
-                    const statMonthlyEarnings = document.getElementById('stat-monthly-earnings');
 
                     if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
                     if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
-                    if (statMonthlyEarnings) {
-                        const bal = (s.availableBalance !== undefined && s.availableBalance !== null) ? s.availableBalance : (s.monthlyEarnings || 0);
-                        statMonthlyEarnings.textContent = `₱${parseFloat(bal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                    }
 
                     // Render Upcoming Event Reservations Table
                     renderUpcomingReservations(s.upcomingBookings || []);
