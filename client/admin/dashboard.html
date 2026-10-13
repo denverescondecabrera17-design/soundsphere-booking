@@ -1123,6 +1123,46 @@
         </div>
     </div>
 
+    <!-- Modal: Edit Permit Expiration Date -->
+    <div class="admin-modal-overlay hidden" id="modal-admin-edit-permit-expiry" role="dialog" aria-modal="true" style="z-index:999999;">
+        <div class="admin-modal-card" style="max-width:440px; border-radius:16px; overflow:hidden;">
+            <div style="padding:18px 22px; background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#fff; display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2563eb;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:8px; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem;">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#fff;">Edit Permit Expiration</h3>
+                        <p style="margin:2px 0 0 0; font-size:0.75rem; color:#94a3b8;">Set permit expiration based on provider's document</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeAdminEditPermitExpiry()" style="background:none; border:none; color:#cbd5e1; font-size:1.4rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="form-admin-edit-permit-expiry" onsubmit="submitAdminEditPermitExpiry(event)" style="padding:22px; display:flex; flex-direction:column; gap:16px;">
+                <input type="hidden" id="admin-edit-permit-provider-id" value="">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px;">
+                    <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Service Provider</span>
+                    <strong id="admin-edit-permit-biz-name" style="display:block; font-size:0.95rem; color:#0a192f; margin-top:2px;"></strong>
+                </div>
+                <div>
+                    <label for="admin-edit-permit-issued-input" style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Permit Issued Date</label>
+                    <input type="date" id="admin-edit-permit-issued-input" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label for="admin-edit-permit-expiry-input" style="display:block; font-size:0.82rem; font-weight:700; color:#0f172a; margin-bottom:6px;">Permit Expiration Date <span style="color:#ef4444;">*</span></label>
+                    <input type="date" id="admin-edit-permit-expiry-input" required style="width:100%; padding:10px 14px; border:1.5px solid #2563eb; border-radius:8px; font-size:0.9rem; font-weight:600; box-sizing:border-box;">
+                    <span style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Enter the expiration date indicated on the provider's business permit.</span>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">
+                    <button type="button" onclick="closeAdminEditPermitExpiry()" style="padding:9px 16px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-weight:600; font-size:0.86rem; color:#475569;">Cancel</button>
+                    <button type="submit" id="btn-save-admin-edit-expiry" style="padding:9px 20px; background:#2563eb; color:#fff; border:none; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Expiration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: Review Permit Renewal Submission -->
     <div class="admin-modal-overlay hidden" id="modal-admin-review-permit" role="dialog" aria-modal="true" style="z-index:999999;">
         <div class="admin-modal-card" style="max-width:720px;">

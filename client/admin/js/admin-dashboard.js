@@ -3162,6 +3162,8 @@ function _renderAdminPermitsTable() {
             statusBadge = `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-ban"></i> Expired (${Math.abs(p.DaysRemaining ?? 0)}d ago)</span>`;
         } else if (p.ComplianceStatus === 'Expiring_Soon') {
             statusBadge = `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-triangle-exclamation"></i> Expires in ${p.DaysRemaining ?? 0}d</span>`;
+        } else if (p.ComplianceStatus === 'Not_Set' || !p.PermitExpirationDate) {
+            statusBadge = `<span style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-circle-question"></i> Not Specified</span>`;
         } else {
             statusBadge = `<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-circle-check"></i> Valid (${p.DaysRemaining ?? 0}d left)</span>`;
         }
@@ -3196,6 +3198,7 @@ function _renderAdminPermitsTable() {
             actionButtons += `<button type="button" onclick="openAdminReviewPermit(${p.ProviderID})" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(37,99,235,0.3);"><i class="fa-solid fa-file-signature"></i> Review Renewal</button>`;
         }
         
+        actionButtons += `<button type="button" onclick="openAdminEditPermitExpiry(${p.ProviderID})" style="background:#f8fafc;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Set or edit permit expiration date"><i class="fa-solid fa-calendar-days"></i> Edit Date</button>`;
         actionButtons += `<button type="button" onclick="sendAdminPermitNotice(${p.ProviderID}, '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Send Renewal Reminder Notice to Provider"><i class="fa-solid fa-paper-plane" style="color:#0284c7;"></i> Notice</button>`;
 
         // Document preview action
@@ -3284,11 +3287,23 @@ function openAdminReviewPermit(providerId) {
         prevExpEl.value = p.PermitExpirationDate ? new Date(p.PermitExpirationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'None';
     }
 
-    // Propose default new expiry date (1 year from now)
+    // Set verified new expiry date based on the provider's given expiration
     if (newExpEl) {
-        const nextYear = new Date();
-        nextYear.setFullYear(nextYear.getFullYear() + 1);
-        newExpEl.value = nextYear.toISOString().split('T')[0];
+        const givenExpiry = p.RenewalPermitExpiryDate || p.PermitRenewalExpiryDate || p.PermitExpirationDate || p.PermitExpiryDate;
+        if (givenExpiry) {
+            try {
+                const expDateObj = new Date(givenExpiry);
+                newExpEl.value = expDateObj.toISOString().split('T')[0];
+            } catch (e) {
+                const nextYear = new Date();
+                nextYear.setFullYear(nextYear.getFullYear() + 1);
+                newExpEl.value = nextYear.toISOString().split('T')[0];
+            }
+        } else {
+            const nextYear = new Date();
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            newExpEl.value = nextYear.toISOString().split('T')[0];
+        }
     }
 
     // Reset reject section
@@ -3414,3 +3429,114 @@ function previewPermitDoc(encodedUrl, businessName) {
     const cleanSrc = (rawUrl.startsWith('/data:') ? rawUrl.slice(1) : rawUrl);
     window.open(cleanSrc, '_blank');
 }
+
+/**
+ * Open the modal to edit or set a provider's business permit expiration date directly.
+ */
+function openAdminEditPermitExpiry(providerId) {
+    const p = _permitsAllData.find(x => x.ProviderID === providerId);
+    if (!p) {
+        showToast('Provider record not found.', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('modal-admin-edit-permit-expiry');
+    const idInput = document.getElementById('admin-edit-permit-provider-id');
+    const nameEl = document.getElementById('admin-edit-permit-biz-name');
+    const issuedInput = document.getElementById('admin-edit-permit-issued-input');
+    const expiryInput = document.getElementById('admin-edit-permit-expiry-input');
+
+    if (!modal) return;
+
+    if (idInput) idInput.value = p.ProviderID;
+    if (nameEl) nameEl.textContent = p.BusinessName + (p.OwnerName ? ` (${p.OwnerName})` : '');
+
+    if (issuedInput) {
+        const rawIssued = p.PermitIssuedDate;
+        if (rawIssued) {
+            try {
+                issuedInput.value = new Date(rawIssued).toISOString().split('T')[0];
+            } catch (e) {
+                issuedInput.value = '';
+            }
+        } else {
+            issuedInput.value = '';
+        }
+    }
+
+    if (expiryInput) {
+        const rawExp = p.RenewalPermitExpiryDate || p.PermitRenewalExpiryDate || p.PermitExpirationDate || p.PermitExpiryDate;
+        if (rawExp) {
+            try {
+                expiryInput.value = new Date(rawExp).toISOString().split('T')[0];
+            } catch (e) {
+                expiryInput.value = '';
+            }
+        } else {
+            expiryInput.value = '';
+        }
+    }
+
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Close the modal to edit permit expiration.
+ */
+function closeAdminEditPermitExpiry() {
+    const modal = document.getElementById('modal-admin-edit-permit-expiry');
+    if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Submit the edited permit expiration date to the backend.
+ */
+async function submitAdminEditPermitExpiry(event) {
+    if (event) event.preventDefault();
+
+    const providerId = document.getElementById('admin-edit-permit-provider-id')?.value;
+    const expiryDate = document.getElementById('admin-edit-permit-expiry-input')?.value;
+    const issuedDate = document.getElementById('admin-edit-permit-issued-input')?.value;
+
+    if (!providerId || !expiryDate) {
+        alert('Please specify a valid expiration date.');
+        return;
+    }
+
+    const btnSave = document.getElementById('btn-save-admin-edit-expiry');
+    const originalContent = btnSave ? btnSave.innerHTML : 'Save Expiration';
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    }
+
+    try {
+        const res = await fetch(`/api/admin/permits/${providerId}/expiry`, {
+            method: 'PUT',
+            headers: {
+                ...getAdminHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                permitExpiryDate: expiryDate,
+                permitIssuedDate: issuedDate || null
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to update permit expiration date');
+
+        showToast('✓ Permit expiration date updated successfully!', 'success');
+        closeAdminEditPermitExpiry();
+        loadAdminPermitsPage();
+    } catch (err) {
+        console.error('submitAdminEditPermitExpiry error:', err);
+        showToast(err.message || 'Failed to update permit expiration date', 'error');
+    } finally {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = originalContent;
+        }
+    }
+}
+

@@ -1540,33 +1540,35 @@ const getAdminPermits = async (req, res) => {
                 u.Email AS ProviderEmail,
                 COALESCE(sp.ContactNumber, pa.ContactNumber, u.Phone, 'N/A') AS ContactNumber,
                 COALESCE(sp.ProfilePicture, u.ProfilePicture, NULL) AS Avatar,
-                sp.PermitExpiryDate,
+                COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) AS PermitExpiryDate,
+                COALESCE(sp.PermitIssuedDate, sp.PermitRenewalIssuedDate, pa.PermitIssuedDate) AS PermitIssuedDate,
                 sp.PermitNoticeSentAt,
                 sp.PermitRenewalDoc,
                 sp.PermitRenewalExpiryDate,
                 sp.PermitRenewalSubmittedAt,
                 sp.PermitRenewalStatus,
                 sp.PermitRenewalNotes,
-                pa.BusinessPermit_Url,
+                COALESCE(sp.PermitRenewalDoc, pa.BusinessPermit_Url) AS BusinessPermit_Url,
                 sp.VerificationStatus,
                 u.AccountStatus,
                 (SELECT COUNT(*) FROM dbo.Bookings b WHERE (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)) AS TotalBookings
             FROM dbo.ServiceProviders sp
             JOIN dbo.Users u ON sp.UserID = u.UserID
-            LEFT JOIN dbo.ProviderApplications pa ON sp.ApplicationID = pa.ApplicationID
+            LEFT JOIN dbo.ProviderApplications pa ON (sp.ApplicationID = pa.ApplicationID OR sp.UserID = pa.UserID)
             ORDER BY 
                 CASE 
                     WHEN sp.PermitRenewalStatus = 'Pending_Review' THEN 1
-                    WHEN sp.PermitExpiryDate IS NOT NULL AND sp.PermitExpiryDate < CAST(GETDATE() AS DATE) THEN 2
-                    WHEN sp.PermitExpiryDate IS NOT NULL AND sp.PermitExpiryDate <= DATEADD(day, 30, CAST(GETDATE() AS DATE)) THEN 3
+                    WHEN COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) IS NOT NULL 
+                         AND COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) < CAST(GETDATE() AS DATE) THEN 2
+                    WHEN COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) IS NOT NULL 
+                         AND COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) <= DATEADD(day, 30, CAST(GETDATE() AS DATE)) THEN 3
                     ELSE 4
                 END ASC,
-                sp.PermitExpiryDate ASC;
+                COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) ASC;
         `;
         const result = await pool.request().query(query);
         const providers = result.recordset || [];
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
         let validCount = 0;
         let expiringSoonCount = 0;
@@ -1579,10 +1581,13 @@ const getAdminPermits = async (req, res) => {
             let isExpired = false;
             let isExpiringSoon = false;
 
-            if (p.PermitExpiryDate) {
-                const exp = new Date(p.PermitExpiryDate);
-                exp.setHours(0, 0, 0, 0);
-                daysRemaining = Math.round((exp - today) / (1000 * 60 * 60 * 24));
+            const effectiveExpiry = p.PermitExpiryDate || p.PermitRenewalExpiryDate;
+
+            if (effectiveExpiry) {
+                const exp = new Date(effectiveExpiry);
+                const utcExp = Date.UTC(exp.getFullYear(), exp.getMonth(), exp.getDate());
+                const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+                daysRemaining = Math.floor((utcExp - utcToday) / (1000 * 60 * 60 * 24));
                 if (daysRemaining < 0) {
                     permitStatus = 'Expired';
                     isExpired = true;
@@ -1609,7 +1614,9 @@ const getAdminPermits = async (req, res) => {
                 Avatar: p.Avatar || null,
                 Email: p.ProviderEmail || p.Email,
                 Phone: p.ContactNumber || p.Phone,
-                PermitExpirationDate: p.PermitExpiryDate,
+                PermitExpirationDate: effectiveExpiry,
+                RenewalPermitExpiryDate: p.PermitRenewalExpiryDate,
+                PermitIssuedDate: p.PermitIssuedDate,
                 ComplianceStatus: compStatus,
                 DaysRemaining: daysRemaining,
                 PermitFile: p.BusinessPermit_Url || p.PermitRenewalDoc,
@@ -1852,6 +1859,62 @@ const reviewPermitRenewal = async (req, res) => {
     }
 };
 
+/**
+ * PUT /api/admin/permits/:id/expiry
+ * Update or set the permit expiration and issued date for a provider
+ */
+const updatePermitExpiry = async (req, res) => {
+    try {
+        const pool = await connectDB();
+        const providerId = parseInt(req.params.id || req.params.providerId, 10);
+        const expiryDate = req.body.expiryDate || req.body.permitExpiryDate;
+        const issuedDate = req.body.issuedDate || req.body.permitIssuedDate;
+
+        if (!expiryDate) {
+            return res.status(400).json({ success: false, message: 'Permit expiration date is required.' });
+        }
+
+        const parsedExp = new Date(expiryDate);
+        let parsedIssued = issuedDate ? new Date(issuedDate) : null;
+
+        await pool.request()
+            .input('ProviderID', sql.Int, providerId)
+            .input('Exp', sql.Date, parsedExp)
+            .input('Issued', sql.Date, parsedIssued)
+            .query(`
+                UPDATE dbo.ServiceProviders
+                SET PermitExpiryDate = @Exp,
+                    PermitIssuedDate = COALESCE(@Issued, PermitIssuedDate)
+                WHERE ProviderID = @ProviderID;
+
+                -- Also sync linked application
+                UPDATE pa
+                SET pa.PermitExpiryDate = @Exp,
+                    pa.PermitIssuedDate = COALESCE(@Issued, pa.PermitIssuedDate)
+                FROM dbo.ProviderApplications pa
+                JOIN dbo.ServiceProviders sp ON (sp.ApplicationID = pa.ApplicationID OR sp.UserID = pa.UserID)
+                WHERE sp.ProviderID = @ProviderID;
+            `);
+
+        await logActivity(
+            pool,
+            req.user?.userId || null,
+            'Permit Expiration Updated',
+            `Set permit expiration to ${parsedExp.toLocaleDateString()} for Provider #${providerId}`,
+            'ServiceProvider',
+            providerId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Permit expiration date successfully updated.'
+        });
+    } catch (err) {
+        console.error('Update Permit Expiry Error:', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getAdminStats,
     searchAdminEntities,
@@ -1874,5 +1937,6 @@ module.exports = {
     getAdminPermits,
     sendPermitNotice,
     reviewPermitRenewal,
+    updatePermitExpiry,
     logActivity
 };

@@ -30,6 +30,8 @@ router.get('/permits', adminController.getAdminPermits);
 router.post('/permits/:id/send-notice', adminController.sendPermitNotice);
 router.post('/permits/:id/review', adminController.reviewPermitRenewal);
 router.post('/permits/:id/review-renewal', adminController.reviewPermitRenewal);
+router.put('/permits/:id/expiry', adminController.updatePermitExpiry);
+router.post('/permits/:id/expiry', adminController.updatePermitExpiry);
 
 // Admin Applications Review & Approval Endpoints
 router.get('/applications', providerAppController.getPendingApplications);
