@@ -1531,6 +1531,33 @@ const getAdminBookingDetails = async (req, res) => {
 const getAdminPermits = async (req, res) => {
     try {
         const pool = await connectDB();
+
+        // 1. Check existing columns to prevent "Invalid column name" errors on unmigrated databases
+        const colCheck = await pool.request().query(`
+            SELECT TABLE_NAME, COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME IN ('ServiceProviders', 'ProviderApplications')
+        `);
+        const existingCols = new Set(colCheck.recordset.map(c => `${c.TABLE_NAME}.${c.COLUMN_NAME}`));
+        const hasSpCol = (col) => existingCols.has(`ServiceProviders.${col}`);
+        const hasPaCol = (col) => existingCols.has(`ProviderApplications.${col}`);
+
+        const spExp = hasSpCol('PermitExpiryDate') ? "TRY_CAST(NULLIF(sp.PermitExpiryDate, '') AS DATE)" : "NULL";
+        const spRenewExp = hasSpCol('PermitRenewalExpiryDate') ? "TRY_CAST(NULLIF(sp.PermitRenewalExpiryDate, '') AS DATE)" : "NULL";
+        const paExp = hasPaCol('PermitExpiryDate') ? "TRY_CAST(NULLIF(pa.PermitExpiryDate, '') AS DATE)" : "NULL";
+
+        const spIssued = hasSpCol('PermitIssuedDate') ? "TRY_CAST(NULLIF(sp.PermitIssuedDate, '') AS DATE)" : "NULL";
+        const spRenewIssued = hasSpCol('PermitRenewalIssuedDate') ? "TRY_CAST(NULLIF(sp.PermitRenewalIssuedDate, '') AS DATE)" : "NULL";
+        const paIssued = hasPaCol('PermitIssuedDate') ? "TRY_CAST(NULLIF(pa.PermitIssuedDate, '') AS DATE)" : "NULL";
+
+        const spNotice = hasSpCol('PermitNoticeSentAt') ? "sp.PermitNoticeSentAt" : "NULL AS PermitNoticeSentAt";
+        const spRenewDoc = hasSpCol('PermitRenewalDoc') ? "sp.PermitRenewalDoc" : "NULL AS PermitRenewalDoc";
+        const spRenewSub = hasSpCol('PermitRenewalSubmittedAt') ? "sp.PermitRenewalSubmittedAt" : "NULL AS PermitRenewalSubmittedAt";
+        const spRenewStat = hasSpCol('PermitRenewalStatus') ? "sp.PermitRenewalStatus" : "NULL AS PermitRenewalStatus";
+        const spRenewNotes = hasSpCol('PermitRenewalNotes') ? "sp.PermitRenewalNotes" : "NULL AS PermitRenewalNotes";
+        const paPermitUrl = hasPaCol('BusinessPermit_Url') ? "pa.BusinessPermit_Url" : (hasPaCol('BusinessPermitDoc') ? "pa.BusinessPermitDoc" : "NULL");
+        const paContact = hasPaCol('ContactNumber') ? "pa.ContactNumber" : "NULL";
+
         const query = `
             SELECT 
                 sp.ProviderID,
@@ -1538,17 +1565,17 @@ const getAdminPermits = async (req, res) => {
                 sp.BusinessName,
                 COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
                 u.Email AS ProviderEmail,
-                COALESCE(sp.ContactNumber, pa.ContactNumber, u.Phone, 'N/A') AS ContactNumber,
+                COALESCE(sp.ContactNumber, ${paContact}, u.Phone, 'N/A') AS ContactNumber,
                 COALESCE(sp.ProfilePicture, u.ProfilePicture, NULL) AS Avatar,
-                COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) AS PermitExpiryDate,
-                COALESCE(sp.PermitIssuedDate, sp.PermitRenewalIssuedDate, pa.PermitIssuedDate) AS PermitIssuedDate,
-                sp.PermitNoticeSentAt,
-                sp.PermitRenewalDoc,
-                sp.PermitRenewalExpiryDate,
-                sp.PermitRenewalSubmittedAt,
-                sp.PermitRenewalStatus,
-                sp.PermitRenewalNotes,
-                COALESCE(sp.PermitRenewalDoc, pa.BusinessPermit_Url) AS BusinessPermit_Url,
+                COALESCE(${spExp}, ${spRenewExp}, ${paExp}) AS PermitExpiryDate,
+                COALESCE(${spIssued}, ${spRenewIssued}, ${paIssued}) AS PermitIssuedDate,
+                ${spNotice === 'NULL AS PermitNoticeSentAt' ? 'NULL AS PermitNoticeSentAt' : 'sp.PermitNoticeSentAt'},
+                ${spRenewDoc === 'NULL AS PermitRenewalDoc' ? 'NULL AS PermitRenewalDoc' : 'sp.PermitRenewalDoc'},
+                ${spRenewExp} AS PermitRenewalExpiryDate,
+                ${spRenewSub === 'NULL AS PermitRenewalSubmittedAt' ? 'NULL AS PermitRenewalSubmittedAt' : 'sp.PermitRenewalSubmittedAt'},
+                ${spRenewStat === 'NULL AS PermitRenewalStatus' ? 'NULL AS PermitRenewalStatus' : 'sp.PermitRenewalStatus'},
+                ${spRenewNotes === 'NULL AS PermitRenewalNotes' ? 'NULL AS PermitRenewalNotes' : 'sp.PermitRenewalNotes'},
+                COALESCE(${hasSpCol('PermitRenewalDoc') ? 'sp.PermitRenewalDoc' : 'NULL'}, ${paPermitUrl}) AS BusinessPermit_Url,
                 sp.VerificationStatus,
                 u.AccountStatus,
                 (SELECT COUNT(*) FROM dbo.Bookings b WHERE (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)) AS TotalBookings
@@ -1557,14 +1584,14 @@ const getAdminPermits = async (req, res) => {
             LEFT JOIN dbo.ProviderApplications pa ON (sp.ApplicationID = pa.ApplicationID OR sp.UserID = pa.UserID)
             ORDER BY 
                 CASE 
-                    WHEN sp.PermitRenewalStatus = 'Pending_Review' THEN 1
-                    WHEN COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) IS NOT NULL 
-                         AND COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) < CAST(GETDATE() AS DATE) THEN 2
-                    WHEN COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) IS NOT NULL 
-                         AND COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) <= DATEADD(day, 30, CAST(GETDATE() AS DATE)) THEN 3
+                    WHEN ${hasSpCol('PermitRenewalStatus') ? "sp.PermitRenewalStatus" : "'None'"} = 'Pending_Review' THEN 1
+                    WHEN COALESCE(${spExp}, ${spRenewExp}, ${paExp}) IS NOT NULL 
+                         AND COALESCE(${spExp}, ${spRenewExp}, ${paExp}) < CAST(GETDATE() AS DATE) THEN 2
+                    WHEN COALESCE(${spExp}, ${spRenewExp}, ${paExp}) IS NOT NULL 
+                         AND COALESCE(${spExp}, ${spRenewExp}, ${paExp}) <= DATEADD(day, 30, CAST(GETDATE() AS DATE)) THEN 3
                     ELSE 4
                 END ASC,
-                COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) ASC;
+                COALESCE(${spExp}, ${spRenewExp}, ${paExp}) ASC;
         `;
         const result = await pool.request().query(query);
         const providers = result.recordset || [];
@@ -1585,20 +1612,22 @@ const getAdminPermits = async (req, res) => {
 
             if (effectiveExpiry) {
                 const exp = new Date(effectiveExpiry);
-                const utcExp = Date.UTC(exp.getFullYear(), exp.getMonth(), exp.getDate());
-                const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-                daysRemaining = Math.floor((utcExp - utcToday) / (1000 * 60 * 60 * 24));
-                if (daysRemaining < 0) {
-                    permitStatus = 'Expired';
-                    isExpired = true;
-                    expiredCount++;
-                } else if (daysRemaining <= 30) {
-                    permitStatus = 'Expiring_Soon';
-                    isExpiringSoon = true;
-                    expiringSoonCount++;
-                } else {
-                    permitStatus = 'Valid';
-                    validCount++;
+                if (!isNaN(exp.getTime())) {
+                    const utcExp = Date.UTC(exp.getFullYear(), exp.getMonth(), exp.getDate());
+                    const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+                    daysRemaining = Math.floor((utcExp - utcToday) / (1000 * 60 * 60 * 24));
+                    if (daysRemaining < 0) {
+                        permitStatus = 'Expired';
+                        isExpired = true;
+                        expiredCount++;
+                    } else if (daysRemaining <= 30) {
+                        permitStatus = 'Expiring_Soon';
+                        isExpiringSoon = true;
+                        expiringSoonCount++;
+                    } else {
+                        permitStatus = 'Valid';
+                        validCount++;
+                    }
                 }
             }
 
@@ -1646,7 +1675,11 @@ const getAdminPermits = async (req, res) => {
         });
     } catch (error) {
         console.error('Get Admin Permits Error:', error);
-        return res.status(500).json({ success: false, message: 'Failed to retrieve provider permits list.' });
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to retrieve provider permits list.',
+            error: error.message 
+        });
     }
 };
 

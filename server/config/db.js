@@ -324,6 +324,43 @@ const autoSeedDatabase = async (activePool) => {
                     ALTER TABLE dbo.Bookings ADD CompletionAcceptedAt DATETIME2 NULL;
                 END
             END
+
+            -- Auto-Migrate ServiceProviders & ProviderApplications Permit Compliance Columns
+            IF OBJECT_ID('dbo.ServiceProviders', 'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitExpiryDate')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitExpiryDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitIssuedDate')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitIssuedDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitNoticeSentAt')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitNoticeSentAt DATETIME2 NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalDoc')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalDoc NVARCHAR(MAX) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalExpiryDate')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalExpiryDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalIssuedDate')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalIssuedDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalSubmittedAt')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalSubmittedAt DATETIME2 NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalStatus')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalStatus NVARCHAR(50) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalNotes')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalNotes NVARCHAR(500) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitStatus')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitStatus NVARCHAR(50) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitNumber')
+                    ALTER TABLE dbo.ServiceProviders ADD PermitNumber NVARCHAR(100) NULL;
+            END;
+
+            IF OBJECT_ID('dbo.ProviderApplications', 'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'BusinessPermit_Url')
+                    ALTER TABLE dbo.ProviderApplications ADD BusinessPermit_Url NVARCHAR(MAX) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'PermitExpiryDate')
+                    ALTER TABLE dbo.ProviderApplications ADD PermitExpiryDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ProviderApplications') AND name = 'PermitIssuedDate')
+                    ALTER TABLE dbo.ProviderApplications ADD PermitIssuedDate DATE NULL;
+            END;
         `);
 
         // Auto-Migrate dbo.Packages and dbo.PackageImages Tables

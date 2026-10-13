@@ -3021,7 +3021,16 @@ async function loadAdminPermitsPage() {
         });
 
         if (handleAdminAuthError && handleAdminAuthError(res)) return;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            try {
+                const errJson = await res.json();
+                if (errJson && (errJson.error || errJson.message)) {
+                    detail = `${errJson.message || ''} ${errJson.error ? '(' + errJson.error + ')' : ''}`.trim();
+                }
+            } catch (e) {}
+            throw new Error(detail);
+        }
 
         const data = await res.json();
         _permitsAllData = data.providers || [];
