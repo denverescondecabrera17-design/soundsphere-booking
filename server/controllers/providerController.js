@@ -1269,10 +1269,13 @@ const getProviderPermitStatus = async (req, res) => {
                     sp.UserID,
                     sp.BusinessName,
                     sp.PermitExpiryDate,
+                    sp.PermitIssuedDate,
+                    sp.PermitNumber,
                     sp.PermitStatus,
                     sp.PermitNoticeSentAt,
                     sp.PermitRenewalDoc,
                     sp.PermitRenewalExpiryDate,
+                    sp.PermitRenewalIssuedDate,
                     sp.PermitRenewalSubmittedAt,
                     sp.PermitRenewalStatus,
                     sp.PermitRenewalNotes,
@@ -1336,9 +1339,9 @@ const submitPermitRenewal = async (req, res) => {
         const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : null;
         if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
 
-        const { expiryDate } = req.body;
+        const { expiryDate, issuedDate, permitNumber } = req.body;
         if (!expiryDate) {
-            return res.status(400).json({ success: false, message: 'New permit expiration date is required.' });
+            return res.status(400).json({ success: false, message: 'Permit expiration date is required.' });
         }
 
         const parsedDate = new Date(expiryDate);
@@ -1346,6 +1349,11 @@ const submitPermitRenewal = async (req, res) => {
         today.setHours(0, 0, 0, 0);
         if (parsedDate <= today) {
             return res.status(400).json({ success: false, message: 'Expiration date must be in the future.' });
+        }
+
+        let parsedIssued = null;
+        if (issuedDate) {
+            parsedIssued = new Date(issuedDate);
         }
 
         let documentUrl = null;
@@ -1359,7 +1367,7 @@ const submitPermitRenewal = async (req, res) => {
         }
 
         if (!documentUrl) {
-            return res.status(400).json({ success: false, message: 'A copy of the renewed business permit is required.' });
+            return res.status(400).json({ success: false, message: 'A copy of the business permit is required.' });
         }
 
         let pool = null;
@@ -1379,10 +1387,15 @@ const submitPermitRenewal = async (req, res) => {
             .input('PID', sql.Int, prov.ProviderID)
             .input('Doc', sql.NVarChar(sql.MAX), documentUrl)
             .input('Exp', sql.Date, parsedDate)
+            .input('Issued', sql.Date, parsedIssued)
+            .input('PNum', sql.NVarChar(100), permitNumber ? permitNumber.trim() : null)
             .query(`
                 UPDATE dbo.ServiceProviders
                 SET PermitRenewalDoc = @Doc,
                     PermitRenewalExpiryDate = @Exp,
+                    PermitRenewalIssuedDate = @Issued,
+                    PermitIssuedDate = COALESCE(@Issued, PermitIssuedDate),
+                    PermitNumber = COALESCE(@PNum, PermitNumber),
                     PermitRenewalSubmittedAt = GETDATE(),
                     PermitRenewalStatus = 'Pending_Review',
                     PermitRenewalNotes = NULL

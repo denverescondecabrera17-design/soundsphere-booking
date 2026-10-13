@@ -674,6 +674,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-provider-subscription';
             loadProviderSubscriptionData();
         }
+        else if (cleanHash === 'permits-section' || cleanHash === 'view-provider-permits') {
+            targetViewId = 'view-provider-permits';
+            loadProviderPermitStatus();
+        }
 
         // Fallback: If target view panel element doesn't exist in DOM, default to view-provider-dashboard
         if (!document.getElementById(targetViewId)) {
@@ -3513,6 +3517,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             formData.append('permitFile', file);
             formData.append('expiryDate', expiryDate);
 
+            const issuedDateInput = document.getElementById('input-provider-renewal-issued');
+            if (issuedDateInput && issuedDateInput.value) {
+                formData.append('issuedDate', issuedDateInput.value);
+            }
+
             const refNumberInput = document.getElementById('input-provider-renewal-number');
             if (refNumberInput && refNumberInput.value) {
                 formData.append('permitNumber', refNumberInput.value.trim());
@@ -3564,3 +3573,169 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadProviderPermitStatus();
     switchProviderView(window.location.hash);
 });
+
+
+    // -------------------------------------------------------------
+    // Business Permit Upload Modal Logic
+    // -------------------------------------------------------------
+    let modalSelectedPermitFile = null;
+
+    window.openUploadPermitModal = () => {
+        const modal = document.getElementById('modal-provider-upload-permit');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else if (typeof switchProviderView === 'function') {
+            switchProviderView('#permits-section');
+        }
+    };
+
+    window.closeUploadPermitModal = () => {
+        const modal = document.getElementById('modal-provider-upload-permit');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    window.handleModalPermitFileSelect = (event) => {
+        const file = event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Please select a valid image (JPG, PNG, WEBP) or PDF document.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Document size exceeds 10MB limit. Please upload a smaller file.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        modalSelectedPermitFile = file;
+        const previewStrip = document.getElementById('modal-permit-preview-strip');
+        const fileNameEl = document.getElementById('modal-permit-file-name');
+        if (previewStrip && fileNameEl) {
+            fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            previewStrip.classList.remove('hidden');
+        }
+    };
+
+    window.clearModalPermitFile = () => {
+        modalSelectedPermitFile = null;
+        const fileInput = document.getElementById('modal-input-permit-file');
+        if (fileInput) fileInput.value = '';
+        const previewStrip = document.getElementById('modal-permit-preview-strip');
+        if (previewStrip) previewStrip.classList.add('hidden');
+    };
+
+    window.submitModalPermitUpload = async (event) => {
+        event.preventDefault();
+        const fileInput = document.getElementById('modal-input-permit-file');
+        const file = modalSelectedPermitFile || (fileInput && fileInput.files ? fileInput.files[0] : null);
+
+        if (!file) {
+            showToast('Please attach a copy or photo of your business permit.', 'error');
+            return;
+        }
+
+        const expiryDateInput = document.getElementById('modal-permit-expiry-date');
+        const expiryDate = expiryDateInput ? expiryDateInput.value : '';
+
+        if (!expiryDate) {
+            showToast('Please select the expiration date stated on your permit.', 'error');
+            if (expiryDateInput) expiryDateInput.focus();
+            return;
+        }
+
+        const parsedDate = new Date(expiryDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (parsedDate <= today) {
+            showToast('The expiration date must be in the future.', 'error');
+            if (expiryDateInput) expiryDateInput.focus();
+            return;
+        }
+
+        const issuedDateInput = document.getElementById('modal-permit-issued-date');
+        const issuedDate = issuedDateInput ? issuedDateInput.value : '';
+
+        const permitNumberInput = document.getElementById('modal-permit-number');
+        const permitNumber = permitNumberInput ? permitNumberInput.value.trim() : '';
+
+        const btnSubmit = document.getElementById('btn-submit-modal-permit');
+        const origBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
+        if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Permit...';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('permitFile', file);
+            formData.append('expiryDate', expiryDate);
+            if (issuedDate) formData.append('issuedDate', issuedDate);
+            if (permitNumber) formData.append('permitNumber', permitNumber);
+
+            const res = await fetch('/api/providers/permit-renewal', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast('✓ Business permit submitted! Our compliance team will review it shortly.', 'success');
+                window.clearModalPermitFile();
+                if (expiryDateInput) expiryDateInput.value = '';
+                if (issuedDateInput) issuedDateInput.value = '';
+                if (permitNumberInput) permitNumberInput.value = '';
+                window.closeUploadPermitModal();
+                if (typeof loadProviderPermitStatus === 'function') {
+                    await loadProviderPermitStatus();
+                }
+            } else {
+                showToast(data.message || 'Failed to submit business permit.', 'error');
+            }
+        } catch (err) {
+            console.error('Error submitting permit modal:', err);
+            showToast('Network error while submitting permit. Please try again.', 'error');
+        } finally {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = origBtnHtml;
+            }
+        }
+    };
+
+    // Modal Dropzone wiring
+    const modalDropzone = document.getElementById('modal-permit-dropzone');
+    if (modalDropzone) {
+        modalDropzone.addEventListener('click', () => {
+            const fileInput = document.getElementById('modal-input-permit-file');
+            if (fileInput) fileInput.click();
+        });
+
+        modalDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            modalDropzone.style.borderColor = '#2563eb';
+            modalDropzone.style.background = '#eff6ff';
+        });
+
+        modalDropzone.addEventListener('dragleave', () => {
+            modalDropzone.style.borderColor = '#cbd5e1';
+            modalDropzone.style.background = '#f8fafc';
+        });
+
+        modalDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            modalDropzone.style.borderColor = '#cbd5e1';
+            modalDropzone.style.background = '#f8fafc';
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                const fileInput = document.getElementById('modal-input-permit-file');
+                if (fileInput) {
+                    fileInput.files = e.dataTransfer.files;
+                    window.handleModalPermitFileSelect({ target: fileInput });
+                }
+            }
+        });
+    }

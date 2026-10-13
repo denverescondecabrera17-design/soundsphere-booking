@@ -3149,7 +3149,10 @@ function _renderAdminPermitsTable() {
 
     tbody.innerHTML = filtered.map(p => {
         // Avatar
-        const avatarUrl = p.Avatar ? (p.Avatar.startsWith('data:') || p.Avatar.startsWith('http') || p.Avatar.startsWith('/') ? p.Avatar : '/' + p.Avatar) : '/images/default-avatar.png';
+        const fallbackAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.BusinessName || 'Provider') + '&background=0084ff&color=fff&bold=true';
+        const avatarUrl = (p.Avatar && String(p.Avatar).trim() !== '') 
+            ? (p.Avatar.startsWith('data:') || p.Avatar.startsWith('http') || p.Avatar.startsWith('/') ? p.Avatar : '/' + p.Avatar) 
+            : fallbackAvatar;
 
         // Compliance status badge
         let statusBadge = '';
@@ -3207,7 +3210,7 @@ function _renderAdminPermitsTable() {
             <tr>
                 <td>
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <img src="${avatarUrl}" alt="Provider" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;">
+                        <img src="${avatarUrl}" alt="Provider" onerror="this.onerror=null; this.src='${fallbackAvatar}';" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;">
                         <div>
                             <div style="font-weight:800;color:#0a192f;font-size:0.88rem;">${esc(p.BusinessName)}</div>
                             <div style="font-size:0.76rem;color:#64748b;">${esc(p.OwnerName)}</div>
@@ -3346,6 +3349,7 @@ async function _submitPermitReview(action) {
             return;
         }
         payload.expirationDate = expDate;
+        payload.newExpiryDate = expDate;
     } else {
         const reason = (rejectReasonEl?.value || '').trim();
         if (!reason) {

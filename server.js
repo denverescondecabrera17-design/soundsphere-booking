@@ -74,6 +74,14 @@ app.use(express.static(path.join(__dirname, 'public'), staticOptions));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { etag: false, maxAge: 0 }));
 app.use('/uploads', express.static(path.join(__dirname, 'client', 'uploads'), { etag: false, maxAge: 0 }));
 
+// Universal Default Avatar Fallback Route (prevents any 404 for default-avatar.png on local and Vercel)
+app.get(['/images/default-avatar.png', '/default-avatar.png', '*/default-avatar.png', '*/images/default-avatar.png'], (req, res) => {
+    const avatarPath = path.join(__dirname, 'public', 'images', 'default-avatar.png');
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.sendFile(avatarPath);
+});
+
 // Mount API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

@@ -1539,6 +1539,7 @@ const getAdminPermits = async (req, res) => {
                 COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
                 u.Email AS ProviderEmail,
                 COALESCE(sp.ContactNumber, pa.ContactNumber, u.Phone, 'N/A') AS ContactNumber,
+                COALESCE(sp.ProfilePicture, u.ProfilePicture, NULL) AS Avatar,
                 sp.PermitExpiryDate,
                 sp.PermitNoticeSentAt,
                 sp.PermitRenewalDoc,
@@ -1605,6 +1606,7 @@ const getAdminPermits = async (req, res) => {
 
             return {
                 ...p,
+                Avatar: p.Avatar || null,
                 Email: p.ProviderEmail || p.Email,
                 Phone: p.ContactNumber || p.Phone,
                 PermitExpirationDate: p.PermitExpiryDate,
@@ -1746,7 +1748,7 @@ const sendPermitNotice = async (req, res) => {
 const reviewPermitRenewal = async (req, res) => {
     try {
         const providerId = parseInt(req.params.id, 10);
-        const { action, rejectionReason, newExpiryDate } = req.body;
+        const { action, rejectionReason, newExpiryDate, expirationDate } = req.body;
 
         if (!providerId || !['approve', 'reject'].includes(action)) {
             return res.status(400).json({ success: false, message: 'Invalid Provider ID or review action.' });
@@ -1770,7 +1772,7 @@ const reviewPermitRenewal = async (req, res) => {
         const prov = provRes.recordset[0];
 
         if (action === 'approve') {
-            const finalExpiry = newExpiryDate || prov.PermitRenewalExpiryDate;
+            const finalExpiry = newExpiryDate || expirationDate || prov.PermitRenewalExpiryDate;
             if (!finalExpiry) {
                 return res.status(400).json({ success: false, message: 'New permit expiration date is required to approve renewal.' });
             }
