@@ -1663,11 +1663,13 @@ const sendPermitNotice = async (req, res) => {
         const provRes = await pool.request()
             .input('ProviderID', sql.Int, providerId)
             .query(`
-                SELECT sp.ProviderID, sp.UserID, sp.BusinessName, sp.PermitExpiryDate,
+                SELECT sp.ProviderID, sp.UserID, sp.BusinessName,
+                       COALESCE(sp.PermitExpiryDate, sp.PermitRenewalExpiryDate, pa.PermitExpiryDate) AS PermitExpiryDate,
                        COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
-                       u.Email, u.FullName
+                       u.Email
                 FROM dbo.ServiceProviders sp
                 JOIN dbo.Users u ON sp.UserID = u.UserID
+                LEFT JOIN dbo.ProviderApplications pa ON (sp.ApplicationID = pa.ApplicationID OR sp.UserID = pa.UserID)
                 WHERE sp.ProviderID = @ProviderID;
             `);
 
@@ -1696,30 +1698,41 @@ const sendPermitNotice = async (req, res) => {
             .query('UPDATE dbo.ServiceProviders SET PermitNoticeSentAt = GETDATE() WHERE ProviderID = @ProviderID;');
 
         // Create In-App Notification
-        await notificationModel.createNotification({
-            userId: prov.UserID,
-            type: 'PermitCompliance',
-            title: isExpired ? 'Business Permit Expired - Renewal Required' : 'Notice: Business Permit Expiring Soon',
-            message: isExpired
-                ? `Your business permit has expired. As per platform policy, you cannot accept new bookings until a renewed permit is submitted. Please upload your renewed permit in your Provider Dashboard.`
-                : `Your business permit will expire in ${daysRemaining} days. Please upload your renewed permit soon to avoid booking disruption.`,
-            relatedId: providerId,
-            relatedType: 'ProviderPermit'
-        });
+        const notifTitle = isExpired ? 'Business Permit Expired - Renewal Required' : 'Notice: Business Permit Expiring Soon';
+        const notifMsg = isExpired
+            ? `Your business permit has expired. As per platform policy, you cannot accept new bookings until a renewed permit is submitted. Please upload your renewed permit in your Provider Dashboard.`
+            : `Your business permit will expire in ${daysRemaining} days. Please upload your renewed permit soon to avoid booking disruption.`;
+
+        await pool.request()
+            .input('UID', sql.Int, prov.UserID)
+            .input('Title', sql.NVarChar(200), notifTitle)
+            .input('Msg', sql.NVarChar(500), notifMsg)
+            .input('Type', sql.NVarChar(50), 'PermitCompliance')
+            .input('RelID', sql.Int, providerId)
+            .input('RelType', sql.NVarChar(50), 'ProviderPermit')
+            .query(`
+                IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                BEGIN
+                    INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType)
+                    VALUES (@UID, @Title, @Msg, @Type, @RelID, @RelType);
+                END
+            `);
 
         // Send Real Email Notice
         const emailService = require('../services/emailService');
         let emailSent = false;
         try {
-            await emailService.sendPermitRenewalNoticeEmail({
-                toEmail: prov.Email,
-                providerName: prov.OwnerName || prov.FullName,
-                businessName: prov.BusinessName,
-                expiryDate: prov.PermitExpiryDate,
-                isExpired,
-                daysRemaining
-            });
-            emailSent = true;
+            if (typeof emailService.sendPermitRenewalNoticeEmail === 'function') {
+                await emailService.sendPermitRenewalNoticeEmail({
+                    toEmail: prov.Email,
+                    providerName: prov.OwnerName,
+                    businessName: prov.BusinessName,
+                    expiryDate: prov.PermitExpiryDate,
+                    isExpired,
+                    daysRemaining
+                });
+                emailSent = true;
+            }
         } catch (emErr) {
             console.warn('Permit email notice error:', emErr.message);
         }
