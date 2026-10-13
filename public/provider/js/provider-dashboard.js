@@ -3487,12 +3487,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.submitModalPermitUpload = async (event) => {
-        event.preventDefault();
+        if (event) event.preventDefault();
         const fileInput = document.getElementById('modal-input-permit-file');
         const file = modalSelectedPermitFile || (fileInput && fileInput.files ? fileInput.files[0] : null);
 
+        const notify = (msg, type = 'success') => {
+            if (typeof showToast === 'function') showToast(msg, type);
+            else if (typeof window.showToast === 'function') window.showToast(msg, type);
+            else alert(msg);
+        };
+
         if (!file) {
-            showToast('Please attach a copy or photo of your business permit.', 'error');
+            notify('Please attach a copy or photo of your business permit.', 'error');
             return;
         }
 
@@ -3500,7 +3506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const expiryDate = expiryDateInput ? expiryDateInput.value : '';
 
         if (!expiryDate) {
-            showToast('Please select the expiration date stated on your permit.', 'error');
+            notify('Please select the expiration date stated on your permit.', 'error');
             if (expiryDateInput) expiryDateInput.focus();
             return;
         }
@@ -3509,8 +3515,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (parsedDate <= today) {
-            showToast('The expiration date must be in the future.', 'error');
+            notify('The expiration date must be in the future.', 'error');
             if (expiryDateInput) expiryDateInput.focus();
+            return;
+        }
+
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken)
+            ? SoundSphereAPI.getAuthToken()
+            : (localStorage.getItem('soundsphere_auth_token') || sessionStorage.getItem('soundsphere_auth_token') || '');
+
+        if (!token) {
+            notify('Authentication session expired. Please log in again.', 'error');
             return;
         }
 
@@ -3540,23 +3555,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: formData
             });
 
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (jsonErr) {
+                data = { success: false, message: `Server responded with HTTP ${res.status}` };
+            }
+
             if (res.ok && data.success) {
-                showToast('✓ Business permit submitted! Our compliance team will review it shortly.', 'success');
+                notify('✓ Business permit submitted! Our compliance team will review it shortly.', 'success');
                 window.clearModalPermitFile();
                 if (expiryDateInput) expiryDateInput.value = '';
                 if (issuedDateInput) issuedDateInput.value = '';
-                if (expiryDateInput) expiryDateInput.value = '';
                 window.closeUploadPermitModal();
                 if (typeof loadProviderPermitStatus === 'function') {
                     await loadProviderPermitStatus();
                 }
             } else {
-                showToast(data.message || 'Failed to submit business permit.', 'error');
+                notify(data.message || 'Failed to submit business permit.', 'error');
             }
         } catch (err) {
             console.error('Error submitting permit modal:', err);
-            showToast('Network error while submitting permit. Please try again.', 'error');
+            notify(err.message || 'Error submitting permit. Please try again.', 'error');
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;

@@ -22,11 +22,11 @@ try {
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Invalid image file type. Only JPG, PNG, and WebP are allowed.'));
+        cb(new Error('Invalid file type. Only JPG, PNG, WebP, and PDF are allowed.'));
     }
 };
 
@@ -1407,14 +1407,18 @@ const submitPermitRenewal = async (req, res) => {
             const adminUsers = await pool.request().query("SELECT UserID FROM dbo.Users WHERE RoleID = 1 OR RoleID IN (SELECT RoleID FROM dbo.Roles WHERE RoleName = 'Administrator');");
             if (adminUsers.recordset && adminUsers.recordset.length) {
                 for (const admin of adminUsers.recordset) {
-                    await notificationModel.createNotification({
-                        userId: admin.UserID,
-                        type: 'PermitRenewalSubmission',
-                        title: 'New Business Permit Renewal Submitted',
-                        message: `Provider "${prov.BusinessName}" has submitted a renewed business permit expiring on ${parsedDate.toLocaleDateString()}. Please review and verify.`,
-                        relatedId: prov.ProviderID,
-                        relatedType: 'ProviderPermit'
-                    });
+                    await pool.request()
+                        .input('AdminUID', sql.Int, admin.UserID)
+                        .input('Title', sql.NVarChar(200), 'New Business Permit Renewal Submitted')
+                        .input('Msg', sql.NVarChar(500), `Provider "${prov.BusinessName}" has submitted a renewed business permit expiring on ${parsedDate.toLocaleDateString()}. Please review and verify.`)
+                        .input('PID', sql.Int, prov.ProviderID)
+                        .query(`
+                            IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                            BEGIN
+                                INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType)
+                                VALUES (@AdminUID, @Title, @Msg, 'PermitRenewalSubmission', @PID, 'ProviderPermit');
+                            END
+                        `);
                 }
             }
         } catch (notifErr) {
