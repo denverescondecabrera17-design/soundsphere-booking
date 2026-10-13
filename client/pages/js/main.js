@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof bannerImg === 'string' && bannerImg.startsWith('/data:')) {
                     bannerImg = bannerImg.substring(1);
                 }
+                const rawPrice = Number(pkg.price || p.startingPrice || 15000);
+                const priceFormatted = rawPrice.toLocaleString('en-US');
                 return `
                     <div class="product-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" onclick="window.location.href='/provider-detail.html?id=${p.id}'" style="cursor:pointer;">
                         <span class="product-badge-mall">SoundSphere Verified</span>
@@ -100,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="product-price-row">
                                 <span class="product-price">₱${priceFormatted}</span>
-                                <button type="button" class="btn-book-sm btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${pkg.name}" data-pkg-price="${pkg.price || p.startingPrice || 15000}" style="border:none; cursor:pointer;">Book Now</button>
+                                <button type="button" class="btn-book-sm btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${pkg.name}" data-pkg-price="${rawPrice}" style="border:none; cursor:pointer;">Book Now</button>
                             </div>
                         </div>
                     </div>
