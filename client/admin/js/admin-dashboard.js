@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const html = (!apps || apps.length === 0)
             ? `<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">No pending applications.</td></tr>`
             : apps.map(app => `
-                <tr>
+                <tr onclick="window.viewAppDetails(${app.ApplicationID})" style="cursor:pointer; transition:background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" title="Click to view application details in full screen">
                     <td>
                         <strong style="color:#0a192f; font-size:0.92rem;">${app.ApplicantName || app.OwnerName || 'Client Applicant'}</strong>
                         <div style="font-size:0.78rem; color:#64748b;">${app.ApplicantEmail || 'No email'}</div>
@@ -450,13 +450,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td><span class="status-badge status-${(app.Status || 'Pending').toLowerCase()}">${app.Status || 'Pending Review'}</span></td>
                     <td>
                         <div style="display:flex; gap:6px;">
-                            <button type="button" class="btn-card-secondary" onclick="window.viewAppDetails(${app.ApplicationID})" style="padding:6px 12px; font-size:0.78rem; font-weight:700;">
-                                <i class="fa-solid fa-eye"></i> Details
-                            </button>
-                            <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:6px 12px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer;">
+                            <button type="button" onclick="event.stopPropagation(); window.approveApp(${app.ApplicationID})" style="padding:6px 14px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer;" title="Approve Application">
                                 <i class="fa-solid fa-check"></i> Approve
                             </button>
-                            <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:6px 12px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer;">
+                            <button type="button" onclick="event.stopPropagation(); window.promptRejectApp(${app.ApplicationID})" style="padding:6px 14px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer;" title="Reject Application">
                                 <i class="fa-solid fa-xmark"></i> Reject
                             </button>
                         </div>
@@ -1119,11 +1116,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         `).join('');
     };
 
-    // View Application Details Modal Handler
+    // View Application Details Fullscreen Handler
     window.viewAppDetails = async (applicationId) => {
         const modal = document.getElementById('modal-admin-view-app');
         const modalBody = document.getElementById('admin-view-app-body');
-        const modalActions = document.getElementById('admin-view-app-actions');
+        const titleEl = document.getElementById('admin-view-app-title');
+        const subEl = document.getElementById('admin-view-app-subtitle');
+        const badgeEl = document.getElementById('admin-view-app-status-badge');
+        const headerActionsEl = document.getElementById('admin-view-app-header-actions');
 
         if (!modal || !modalBody) return;
 
@@ -1135,55 +1135,201 @@ document.addEventListener('DOMContentLoaded', async () => {
             const app = apps.find(a => String(a.ApplicationID) === String(applicationId));
 
             if (app) {
-                modalBody.innerHTML = `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                        <h4 style="margin:0 0 6px 0; color:#0a192f; font-size:1.05rem;">Applicant Profile</h4>
-                        <div style="font-size:0.88rem; color:#475569;">Name: <strong style="color:#0a192f;">${app.ApplicantName || app.OwnerName}</strong></div>
-                        <div style="font-size:0.88rem; color:#475569;">Email: <strong style="color:#2563eb;">${app.ApplicantEmail || 'N/A'}</strong></div>
-                        <div style="font-size:0.88rem; color:#475569;">Contact: <strong style="color:#0a192f;">${app.ContactNumber}</strong></div>
-                    </div>
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                        <h4 style="margin:0 0 6px 0; color:#0a192f; font-size:1.05rem;">Business Details</h4>
-                        <div style="font-size:0.88rem; color:#475569;">Business Name: <strong style="color:#2563eb;">${app.BusinessName}</strong></div>
-                        <div style="font-size:0.88rem; color:#475569;">Coverage Area: <strong style="color:#0a192f;">${app.CoverageArea}</strong></div>
-                        <div style="font-size:0.88rem; color:#475569;">Address: <strong style="color:#0a192f;">${app.BusinessAddress}</strong></div>
-                    </div>
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                        <h4 style="margin:0 0 8px 0; color:#0a192f; font-size:1.05rem;">Submitted Credentials & Permits</h4>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:8px;">
-                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
-                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Valid ID (Front)</div>
-                                ${app.GovtID_Url && app.GovtID_Url.startsWith('data:image') 
-                                    ? `<a href="${app.GovtID_Url}" target="_blank"><img src="${app.GovtID_Url}" alt="Govt ID Front" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
-                                    : `<span style="font-size:0.78rem; background:#eff6ff; color:#2563eb; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-id-card"></i> Front Attached</span>`}
-                            </div>
-                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
-                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> Valid ID (Back)</div>
-                                ${app.GovtID_Back_Url && app.GovtID_Back_Url.startsWith('data:image') 
-                                    ? `<a href="${app.GovtID_Back_Url}" target="_blank"><img src="${app.GovtID_Back_Url}" alt="Govt ID Back" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
-                                    : `<span style="font-size:0.78rem; background:#eff6ff; color:#2563eb; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-id-card-clip"></i> Back Attached</span>`}
-                            </div>
-                            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; text-align:center;">
-                                <div style="font-size:0.75rem; font-weight:700; color:#475569; margin-bottom:6px;"><i class="fa-solid fa-file-contract" style="color:#059669;"></i> Business Permit</div>
-                                ${app.BusinessPermit_Url && app.BusinessPermit_Url.startsWith('data:image') 
-                                    ? `<a href="${app.BusinessPermit_Url}" target="_blank"><img src="${app.BusinessPermit_Url}" alt="Business Permit" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view full image"></a>`
-                                    : `<span style="font-size:0.78rem; background:#ecfdf5; color:#059669; padding:6px 8px; border-radius:6px; font-weight:700; display:inline-block;"><i class="fa-solid fa-file-contract"></i> Permit Attached</span>`}
-                            </div>
-                        </div>
-                        <div style="margin-top:10px; font-size:0.86rem; color:#475569; display:flex; gap:16px; flex-wrap:wrap;">
-                            <div><i class="fa-solid fa-calendar-plus" style="color:#10b981;"></i> Date Issued: <strong style="color:#0a192f;">${app.PermitIssuedDate ? new Date(app.PermitIssuedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}</strong></div>
-                            <div><i class="fa-solid fa-calendar-check" style="color:#f59e0b;"></i> Expiration Date: <strong style="color:#0a192f;">${app.PermitExpiryDate ? new Date(app.PermitExpiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}</strong></div>
-                        </div>
-                    </div>
-                `;
+                if (titleEl) titleEl.textContent = app.BusinessName || 'Application Details';
+                if (subEl) {
+                    const subDate = new Date(app.SubmittedAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                    subEl.textContent = `Application #APP-${app.ApplicationID} • Submitted on ${subDate}`;
+                }
+                if (badgeEl) {
+                    badgeEl.textContent = app.Status || 'Pending Review';
+                    badgeEl.className = `status-badge status-${(app.Status || 'pending').toLowerCase()}`;
+                }
 
-                modalActions.innerHTML = `
-                    <button type="button" onclick="document.getElementById('modal-admin-view-app').classList.add('hidden')" style="padding:8px 18px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-weight:600;">Close</button>
-                    <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:8px 18px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-xmark"></i> Reject</button>
-                    <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:8px 22px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-check"></i> Approve Application</button>
+                if (headerActionsEl) {
+                    headerActionsEl.innerHTML = `
+                        <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:8px 18px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-xmark"></i> Reject
+                        </button>
+                        <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:8px 22px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-check"></i> Approve Application
+                        </button>
+                    `;
+                }
+
+                const sanitizeImg = (url) => {
+                    if (!url) return null;
+                    if (url.startsWith('/data:')) return url.substring(1);
+                    return url;
+                };
+
+                const govtFront = sanitizeImg(app.GovtID_Url);
+                const govtBack = sanitizeImg(app.GovtID_Back_Url);
+                const permit = sanitizeImg(app.BusinessPermit_Url);
+
+                modalBody.innerHTML = `
+                    <!-- Top Application Status Card -->
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <span style="font-size:0.8rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Application Overview</span>
+                            <h3 style="margin:4px 0 0 0; font-size:1.35rem; color:#0a192f; font-weight:800;">${app.BusinessName}</h3>
+                            <div style="font-size:0.86rem; color:#475569; margin-top:4px;">
+                                Submitted by <strong style="color:#0a192f;">${app.ApplicantName || app.OwnerName || 'Applicant'}</strong> • 
+                                <span style="color:#2563eb;">${app.ApplicantEmail || 'No email provided'}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="status-badge status-${(app.Status || 'pending').toLowerCase()}" style="font-size:0.92rem; padding:8px 18px;">
+                                ${app.Status || 'Pending Review'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Applicant & Business Profile Grid -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+                        <!-- Applicant Profile Card -->
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="font-size:0.82rem; font-weight:800; color:#475569; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:18px; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-user" style="color:#2563eb;"></i> Applicant Profile
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:14px;">
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Full Name</div>
+                                    <div style="font-size:1.02rem; font-weight:700; color:#0a192f; margin-top:2px;">${app.ApplicantName || app.OwnerName || 'N/A'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Email Address</div>
+                                    <div style="font-size:0.95rem; font-weight:600; color:#2563eb; margin-top:2px;">${app.ApplicantEmail || 'N/A'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Contact Number</div>
+                                    <div style="font-size:0.95rem; font-weight:700; color:#0a192f; margin-top:2px;">${app.ContactNumber || 'N/A'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">User Account ID</div>
+                                    <div style="font-size:0.88rem; font-weight:600; color:#64748b; margin-top:2px;">#UID-${app.UserID}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Business Information Card -->
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="font-size:0.82rem; font-weight:800; color:#475569; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:18px; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-briefcase" style="color:#2563eb;"></i> Business Information
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:14px;">
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Business Name</div>
+                                    <div style="font-size:1.02rem; font-weight:700; color:#2563eb; margin-top:2px;">${app.BusinessName || 'N/A'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Service Category</div>
+                                    <div style="font-size:0.95rem; font-weight:600; color:#0a192f; margin-top:2px;">Sound & Lighting Systems</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Coverage Area</div>
+                                    <div style="font-size:0.95rem; font-weight:700; color:#0a192f; margin-top:2px;">
+                                        <i class="fa-solid fa-location-dot" style="color:#ef4444; margin-right:4px;"></i> ${app.CoverageArea || 'Batangas'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Operating Business Address</div>
+                                    <div style="font-size:0.92rem; font-weight:600; color:#334155; margin-top:2px;">${app.BusinessAddress || 'Not specified'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submitted Credentials & Permits Card -->
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="font-size:0.82rem; font-weight:800; color:#475569; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:18px; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-file-contract" style="color:#2563eb;"></i> Verification Documents & Permits
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
+                            <!-- Government ID Front -->
+                            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                                <div style="font-size:0.84rem; font-weight:800; color:#0a192f; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Government ID (Front)
+                                </div>
+                                ${govtFront ? `
+                                    <a href="${govtFront}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
+                                        <img src="${govtFront}" alt="Govt ID Front" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
+                                    </a>
+                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                ` : `
+                                    <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
+                                `}
+                            </div>
+
+                            <!-- Government ID Back -->
+                            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                                <div style="font-size:0.84rem; font-weight:800; color:#0a192f; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> Government ID (Back)
+                                </div>
+                                ${govtBack ? `
+                                    <a href="${govtBack}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
+                                        <img src="${govtBack}" alt="Govt ID Back" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
+                                    </a>
+                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                ` : `
+                                    <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
+                                `}
+                            </div>
+
+                            <!-- Business Permit -->
+                            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                                <div style="font-size:0.84rem; font-weight:800; color:#0a192f; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-file-contract" style="color:#059669;"></i> Mayor's / Business Permit
+                                </div>
+                                ${permit ? `
+                                    <a href="${permit}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
+                                        <img src="${permit}" alt="Business Permit" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
+                                    </a>
+                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                ` : `
+                                    <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Permit Validity Dates -->
+                        <div style="margin-top:20px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; display:flex; gap:28px; flex-wrap:wrap; align-items:center;">
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Permit Issue Date</span>
+                                <div style="font-size:0.92rem; font-weight:700; color:#0a192f; margin-top:2px;">
+                                    <i class="fa-solid fa-calendar-plus" style="color:#10b981; margin-right:4px;"></i>
+                                    ${app.PermitIssuedDate ? new Date(app.PermitIssuedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}
+                                </div>
+                            </div>
+                            <div style="height:28px; width:1px; background:#cbd5e1;"></div>
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Permit Expiration Date</span>
+                                <div style="font-size:0.92rem; font-weight:700; color:#0a192f; margin-top:2px;">
+                                    <i class="fa-solid fa-calendar-check" style="color:#f59e0b; margin-right:4px;"></i>
+                                    ${app.PermitExpiryDate ? new Date(app.PermitExpiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Action Toolbar Card -->
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+                        <button type="button" onclick="document.getElementById('modal-admin-view-app').classList.add('hidden')" style="padding:10px 22px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; cursor:pointer; font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Applications
+                        </button>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:10px 22px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-xmark"></i> Reject Application
+                            </button>
+                            <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:10px 26px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-check"></i> Approve Application
+                            </button>
+                        </div>
+                    </div>
                 `;
 
                 modal.classList.remove('hidden');
+                modal.scrollTop = 0;
             }
         } catch (e) {
             console.error('Error viewing app details:', e);
