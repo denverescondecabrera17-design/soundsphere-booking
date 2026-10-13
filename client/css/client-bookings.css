@@ -207,6 +207,13 @@ body.client-bookings-body {
     border: 1px solid #a7f3d0;
 }
 
+.status-badge.status-awaiting,
+.status-badge[class*="awaiting"] {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
 .status-badge.status-cancelled {
     background: #fee2e2;
     color: #b91c1c;

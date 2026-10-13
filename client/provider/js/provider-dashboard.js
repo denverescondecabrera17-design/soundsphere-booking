@@ -991,7 +991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.completeProviderBooking = async (bookingId) => {
-        if (!confirm(`Mark booking #${bookingId} as COMPLETED?`)) return;
+        if (!confirm(`Mark booking #${bookingId} as COMPLETED?\n\nOnce submitted, the client will be notified to confirm and accept within 24 hours. If not accepted within 1 day, it will be automatically accepted, unlocking your withdrawal payout to the Cashier.`)) return;
         try {
             const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
             const headers = { 'Content-Type': 'application/json' };
@@ -1003,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                if (typeof showToast === 'function') showToast(`✓ Booking #${bookingId} marked as completed!`, 'success');
+                if (typeof showToast === 'function') showToast(data.message || `✓ Completion request sent to client!`, 'success');
                 loadDashboardData();
             } else {
                 if (typeof showToast === 'function') showToast(data.message || 'Failed to complete booking.', 'error');
@@ -1062,6 +1062,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             return dStr;
         } catch (e) {
             return dStr;
+        }
+    };
+
+    // Helper to determine if today is the day of services or later
+    const isEventServiceDayOrPast = (dStr) => {
+        if (!dStr || dStr === 'Scheduled') return true;
+        try {
+            const cleanStr = String(dStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            let eventDate;
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                eventDate = new Date(year, month, day);
+            } else {
+                eventDate = new Date(dStr);
+            }
+            if (isNaN(eventDate.getTime())) return true;
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const eventStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+            return todayStart >= eventStart;
+        } catch (e) {
+            return true;
         }
     };
 
@@ -1154,12 +1179,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             } else if (statusLower === 'confirmed') {
+                const rawDate = b.ServiceStartDate || b.EventDate;
+                const isDayOfService = isEventServiceDayOrPast(rawDate);
+                const formattedDate = formatEventDisplayDate(rawDate);
                 actionButtonsHtml = `
-                    <div style="display:flex; gap:6px;">
-                        <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Complete</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        ${isDayOfService ? `
+                            <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-flag-checkered"></i> Complete</button>
+                        ` : `
+                            <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedDate})" style="padding:6px 12px; font-size:0.8rem; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.75; display:inline-flex; align-items:center; gap:4px;" onclick="event.stopPropagation();"><i class="fa-solid fa-lock"></i> Complete (${formattedDate})</button>
+                        `}
                         <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Cancel</button>
                     </div>
                 `;
+            } else if (statusLower === 'awaiting client confirmation') {
+                actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:5px 9px; border-radius:6px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;" title="Provider marked service complete. The client has 24 hours to confirm, or it will automatically accept."><i class="fa-solid fa-hourglass-half"></i> Awaiting Client Acceptance (Auto-accepts in 24h)</span>`;
             } else if (statusLower === 'completed') {
                 const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
                 if (wdStatus === 'pending') {
@@ -1235,12 +1269,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             } else if (statusLower === 'confirmed') {
+                const isDayOfService = isEventServiceDayOrPast(rawStartDate);
                 actionButtonsHtml = `
-                    <div style="display:flex; gap:8px; flex-wrap:nowrap;">
-                        <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(37,99,235,0.2);">Complete</button>
+                    <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center;">
+                        ${isDayOfService ? `
+                            <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(37,99,235,0.2); display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-flag-checkered"></i> Complete</button>
+                        ` : `
+                            <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedStart})" style="padding:8px 16px; font-size:0.86rem; border:1.5px solid #cbd5e1; border-radius:8px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.8; display:inline-flex; align-items:center; gap:6px;" onclick="event.stopPropagation();"><i class="fa-solid fa-lock"></i> Complete (${formattedStart})</button>
+                        `}
                         <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(239,68,68,0.2);">Cancel</button>
                     </div>
                 `;
+            } else if (statusLower === 'awaiting client confirmation') {
+                actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:7px 14px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;" title="The service has been completed by the provider. The client has 24 hours to confirm, or it will automatically accept."><i class="fa-solid fa-hourglass-half"></i> Awaiting Client Acceptance (Auto-accepts in 24h)</span>`;
             } else if (statusLower === 'completed') {
                 const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
                 if (wdStatus === 'pending') {
@@ -1558,9 +1599,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
             } else if (statusLower === 'confirmed') {
+                const rawDateModal = booking.ServiceStartDate || booking.EventDate;
+                const isDayOfServiceModal = isEventServiceDayOrPast(rawDateModal);
+                const formattedDateModal = formatEventDisplayDate(rawDateModal);
                 actionsContainer.innerHTML = `
-                    <button type="button" onclick="${hideFullscreen} window.completeProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Complete Event</button>
+                    ${isDayOfServiceModal ? `
+                        <button type="button" onclick="${hideFullscreen} window.completeProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px;"><i class="fa-solid fa-flag-checkered"></i> Complete Event</button>
+                    ` : `
+                        <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedDateModal})" style="padding:10px 22px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:8px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.8; display:inline-flex; align-items:center; gap:8px;"><i class="fa-solid fa-lock"></i> Complete Event (${formattedDateModal})</button>
+                    `}
                     <button type="button" onclick="${hideFullscreen} window.cancelProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Cancel Booking</button>
+                `;
+                if (footerBar) footerBar.style.display = 'flex';
+            } else if (statusLower === 'awaiting client confirmation') {
+                actionsContainer.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:0.92rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-hourglass-half"></i> Service Marked Complete - Awaiting Client Acceptance (Auto-accepts in 24h)
+                        </span>
+                    </div>
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
             } else if (statusLower === 'completed') {

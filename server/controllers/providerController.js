@@ -2,6 +2,8 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const providerModel = require('../models/providerModel');
+const notificationModel = require('../models/notificationModel');
+const { checkAndAutoAcceptCompletions } = require('../services/autoCompletionService');
 const { getPool, connectDB, sql } = require('../config/db');
 
 // Ensure Upload Directories Exist for Service Provider Photos (Safe for serverless / Vercel)
@@ -706,6 +708,11 @@ const getProviderBookings = async (req, res) => {
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
+        // Proactively process any completions past the 24-hour window
+        try {
+            await checkAndAutoAcceptCompletions();
+        } catch (e) { }
+
         try {
             const result = await pool.request().input('UID', userId).query(`
                 SELECT 
@@ -742,6 +749,8 @@ const getProviderBookings = async (req, res) => {
                     b.PaymentType,
                     b.BookingStatus,
                     b.PaymentStatus,
+                    b.CompletionRequestedAt,
+                    b.CompletionAcceptedAt,
                     b.CreatedAt,
                     COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client Account') AS ClientName,
                     COALESCE(NULLIF(b.ClientPhone, ''), u.Phone) AS ClientPhone,
@@ -803,17 +812,76 @@ const completeBooking = async (req, res) => {
         const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || 13);
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+        if (!pool) return res.status(500).json({ success: false, message: 'Database pool unavailable.' });
 
+        // Fetch booking record
+        const bkRes = await pool.request()
+            .input('BID', id)
+            .query(`
+                SELECT b.*, 
+                       sp.BusinessName, sp.ProviderID AS SpProviderID, sp.UserID AS SpUserID
+                FROM dbo.Bookings b
+                LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
+                WHERE b.BookingID = @BID;
+            `);
+        
+        const booking = bkRes.recordset[0];
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
+        // Validate provider ownership
+        const isOwner = (booking.ProviderID == userId || booking.SpUserID == userId || booking.SpProviderID == userId);
+        if (!isOwner) {
+            return res.status(403).json({ success: false, message: 'Unauthorized to mark this booking as complete.' });
+        }
+
+        // Enforce: Complete button is only available on or after the day of services!
+        const rawDate = booking.ServiceStartDate || booking.EventDate;
+        if (rawDate) {
+            const now = new Date();
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const eventDate = new Date(rawDate);
+            const eventMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+
+            if (todayMidnight < eventMidnight) {
+                const dateFormatted = eventDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                return res.status(400).json({
+                    success: false,
+                    message: `The Complete button will only be available on the day of services (${dateFormatted}).`
+                });
+            }
+        }
+
+        // Mark as Awaiting Client Confirmation and set CompletionRequestedAt
         await pool.request()
             .input('BID', id)
-            .input('UID', userId)
             .query(`
                 UPDATE dbo.Bookings 
-                SET BookingStatus = 'Completed', UpdatedAt = GETDATE() 
-                WHERE BookingID = @BID AND (ProviderID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID));
+                SET BookingStatus = 'Awaiting Client Confirmation',
+                    CompletionRequestedAt = GETDATE(),
+                    UpdatedAt = GETDATE() 
+                WHERE BookingID = @BID;
             `);
 
-        return res.status(200).json({ success: true, message: `Booking #${id} marked as completed.` });
+        // Send Notification to Client
+        if (booking.ClientUserID) {
+            const ref = booking.BookingReference || `BK-${booking.BookingID}`;
+            const providerName = booking.BusinessName || 'Service Provider';
+            await notificationModel.createNotification({
+                userId: booking.ClientUserID,
+                type: 'service_completed_pending',
+                title: 'Service Completed - Confirmation Needed',
+                message: `${providerName} marked booking ${ref} as completed. Please confirm and accept completion within 24 hours (or it will auto-accept).`,
+                relatedId: booking.BookingID,
+                relatedType: 'Booking'
+            });
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: `Booking #${id} marked as complete! A notification has been sent to the client to confirm within 24 hours.` 
+        });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }

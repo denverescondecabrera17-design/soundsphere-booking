@@ -8,6 +8,7 @@ const bookingModel = require('../models/bookingModel');
 const paymentModel = require('../models/paymentModel');
 const notificationModel = require('../models/notificationModel');
 const paymongoService = require('../services/paymongoService');
+const { checkAndAutoAcceptCompletions } = require('../services/autoCompletionService');
 const { getPool, getOrConnectPool, sql } = require('../config/db');
 
 /**
@@ -788,6 +789,9 @@ const getMyBookings = async (req, res) => {
 
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
+        // Proactively auto-accept any completions older than 24 hours
+        try { await checkAndAutoAcceptCompletions(); } catch (e) { }
+
         const bookings = await bookingModel.getBookingsByUserId(clientUserId);
 
         return res.status(200).json({
@@ -1017,6 +1021,78 @@ const settleBookingBalance = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/bookings/:id/accept-completion
+ * Client confirms and accepts that provider has completed the event service
+ */
+const acceptBookingCompletion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || req.query.userId);
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await getOrConnectPool(); }
+        if (!pool) return res.status(500).json({ success: false, message: 'Database connection failed.' });
+
+        const bkRes = await pool.request()
+            .input('BID', id)
+            .query(`
+                SELECT b.*, 
+                       sp.UserID AS ProviderUserID, sp.BusinessName,
+                       u.Email AS ClientEmail,
+                       COALESCE(b.ClientName, NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), u.Email, 'Client') AS FullClientName
+                FROM dbo.Bookings b
+                LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
+                LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
+                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
+                WHERE b.BookingID = @BID;
+            `);
+        
+        const booking = bkRes.recordset[0];
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
+        if (booking.BookingStatus === 'Completed') {
+            return res.status(200).json({ success: true, message: 'Booking is already marked as completed.' });
+        }
+
+        // Update booking to 'Completed' and release escrow
+        await pool.request()
+            .input('BID', id)
+            .query(`
+                UPDATE dbo.Bookings
+                SET BookingStatus = 'Completed',
+                    CompletionAcceptedAt = GETDATE(),
+                    EscrowStatus = 'Released',
+                    UpdatedAt = GETDATE()
+                WHERE BookingID = @BID;
+            `);
+
+        // Notify the Service Provider that client accepted completion!
+        const providerUid = booking.ProviderUserID || booking.ProviderID;
+        if (providerUid) {
+            const ref = booking.BookingReference || `BK-${booking.BookingID}`;
+            const clientName = booking.FullClientName || 'Client';
+            await notificationModel.createNotification({
+                userId: providerUid,
+                type: 'completion_accepted',
+                title: 'Service Completion Confirmed & Accepted!',
+                message: `Client ${clientName} accepted the completion for booking ${ref}. You may now request your payout withdrawal to the Cashier.`,
+                relatedId: booking.BookingID,
+                relatedType: 'Booking'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Service completion accepted successfully! You can now leave feedback and ratings for your provider.'
+        });
+    } catch (err) {
+        console.error('Accept booking completion error:', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getPackageById,
     getTransportationFees,
@@ -1037,5 +1113,6 @@ module.exports = {
     submitReview,
     createPayMongoCheckout,
     cancelBooking,
-    settleBookingBalance
+    settleBookingBalance,
+    acceptBookingCompletion
 };

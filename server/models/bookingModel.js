@@ -620,6 +620,8 @@ const BOOKING_SELECT_FIELDS = `
     b.BookingStatus,
     b.PaymentStatus,
     b.EscrowStatus,
+    b.CompletionRequestedAt,
+    b.CompletionAcceptedAt,
     b.CreatedAt,
     b.UpdatedAt
 `;

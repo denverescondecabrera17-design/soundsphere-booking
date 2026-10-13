@@ -80,6 +80,7 @@ const syncFilesList = [
     { src: '../client/css/client-messages.css', targets: ['../public/css/client-messages.css', '../client/pages/css/client-messages.css', '../public/pages/css/client-messages.css', '../client/client/css/client-messages.css', '../public/client/css/client-messages.css'] },
     { src: '../client/js/client-messages.js', targets: ['../public/js/client-messages.js', '../client/pages/js/client-messages.js', '../public/pages/js/client-messages.js'] },
     { src: '../client/client-bookings.html', targets: ['../public/client-bookings.html', '../client/pages/client-bookings.html', '../public/pages/client-bookings.html'] },
+    { src: '../client/css/client-bookings.css', targets: ['../public/css/client-bookings.css', '../client/pages/css/client-bookings.css', '../public/pages/css/client-bookings.css', '../client/client/css/client-bookings.css', '../public/client/css/client-bookings.css'] },
     { src: '../client/js/client-bookings.js', targets: ['../public/js/client-bookings.js', '../client/pages/js/client-bookings.js', '../public/pages/js/client-bookings.js'] },
     { src: '../client/css/booking-calendar-modal.css', targets: ['../public/css/booking-calendar-modal.css', '../client/pages/css/booking-calendar-modal.css', '../client/client/css/booking-calendar-modal.css', '../public/client/css/booking-calendar-modal.css'] },
     { src: '../client/js/booking-calendar-modal.js', targets: ['../public/js/booking-calendar-modal.js', '../client/pages/js/booking-calendar-modal.js'] },

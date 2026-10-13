@@ -315,6 +315,14 @@ const autoSeedDatabase = async (activePool) => {
                 BEGIN
                     ALTER TABLE dbo.Bookings ADD BalanceReminderSentAt DATETIME2 NULL;
                 END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Bookings') AND name = 'CompletionRequestedAt')
+                BEGIN
+                    ALTER TABLE dbo.Bookings ADD CompletionRequestedAt DATETIME2 NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Bookings') AND name = 'CompletionAcceptedAt')
+                BEGIN
+                    ALTER TABLE dbo.Bookings ADD CompletionAcceptedAt DATETIME2 NULL;
+                END
             END
         `);
 

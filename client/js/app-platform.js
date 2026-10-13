@@ -900,6 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         let statusBadgeClass = 'status-confirmed';
                         if (statusLower === 'pending') statusBadgeClass = 'status-pending';
+                        else if (statusLower === 'awaiting client confirmation') statusBadgeClass = 'status-awaiting';
                         else if (statusLower === 'completed') statusBadgeClass = 'status-completed';
                         else if (statusLower === 'cancelled' || statusLower === 'rejected') statusBadgeClass = 'status-cancelled';
 
@@ -912,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const formattedEnd = formatDisplayTime(b.EndTime);
 
                         let filterStatus = statusLower;
-                        if (['confirmed', 'approved', 'paid'].includes(statusLower)) {
+                        if (['confirmed', 'approved', 'paid'].includes(statusLower) || statusLower === 'awaiting client confirmation') {
                             filterStatus = 'confirmed';
                         } else if (['cancelled', 'rejected'].includes(statusLower)) {
                             filterStatus = 'cancelled';
@@ -994,8 +995,33 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
 
+                                ${statusLower === 'awaiting client confirmation' ? `
+                                    <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px; padding:14px 18px; margin: 4px 0 10px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem;"></i>
+                                            <div>
+                                                <div style="font-weight:800; color:#92400e; font-size:0.95rem;">Service Marked Complete by Provider</div>
+                                                <div style="font-size:0.84rem; color:#b45309;">Please confirm that your event setup and services were fulfilled. Auto-accepts in 24 hours.</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:all 0.15s ease;">
+                                            <i class="fa-solid fa-circle-check"></i> Accept Completion
+                                        </button>
+                                    </div>
+                                ` : ''}
+
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
-                                    ${statusLower === 'completed' ? `
+                                    ${statusLower === 'awaiting client confirmation' ? `
+                                        <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
+                                            <i class="fa-solid fa-circle-check"></i> Accept Completion
+                                        </button>
+                                        <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
+                                            <i class="fa-solid fa-file-invoice"></i> View Official Receipt
+                                        </a>
+                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
+                                            <i class="fa-solid fa-comments"></i> Chat Provider
+                                        </a>
+                                    ` : (statusLower === 'completed') ? `
                                         <button type="button" class="btn-card-rate-review" onclick="window.handleRateButtonClick(this)"
                                             data-booking-id="${b.BookingID}"
                                             data-provider-id="${b.ProviderID || ''}"
@@ -1127,6 +1153,32 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                     }
+
+                    // Window Accept Completion Handler
+                    window.acceptBookingCompletion = async (bookingId, bookingRef) => {
+                        if (!confirm(`Confirm that provider services for Booking #${bookingRef || bookingId} have been completed?\n\nThis will mark the booking as Completed and release provider payout to the Cashier. You can also leave a rating and review.`)) return;
+                        try {
+                            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                            const res = await fetch(`/api/bookings/${bookingId}/accept-completion`, {
+                                method: 'POST',
+                                headers
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                                showToast(data.message || '✓ Service completion accepted!', 'success');
+                                if (typeof window.fetchUserBookings === 'function') window.fetchUserBookings();
+                                else window.location.reload();
+                            } else {
+                                showToast(data.message || 'Failed to accept completion.', 'error');
+                            }
+                        } catch (err) {
+                            console.error('Accept completion error:', err);
+                            showToast('Network error while accepting completion.', 'error');
+                        }
+                    };
 
                     // Active status pill filter execution
                     const activeStatusBtn = document.querySelector('.booking-status-filter-btn.active');

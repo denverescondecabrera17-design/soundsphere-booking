@@ -213,6 +213,7 @@ app.use((err, req, res, next) => {
 
 // Initialize DB, Background Schedulers and Start Express Server
 const { startBalanceReminderScheduler } = require('./server/services/balanceReminderService');
+const { startAutoCompletionScheduler } = require('./server/services/autoCompletionService');
 
 const startServer = async () => {
     await connectDB();
@@ -226,6 +227,8 @@ const startServer = async () => {
 
         // Start automated 1-day balance reminder scheduler (in-app notification + email)
         startBalanceReminderScheduler();
+        // Start automated 24-hour completion auto-acceptance scheduler
+        startAutoCompletionScheduler();
     });
 };
 
