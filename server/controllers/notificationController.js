@@ -4,6 +4,7 @@
  */
 
 const notificationModel = require('../models/notificationModel');
+const adminController = require('./adminController');
 
 /**
  * GET /api/notifications
@@ -11,6 +12,14 @@ const notificationModel = require('../models/notificationModel');
  */
 const getUserNotifications = async (req, res) => {
     try {
+        const userRole = String(req.user?.roleName || req.user?.role || req.user?.RoleName || req.user?.Role || '').toLowerCase();
+        const userRoleId = parseInt(req.user?.roleId || req.user?.RoleID, 10);
+        const userEmail = String(req.user?.email || req.user?.Email || '').toLowerCase();
+
+        if (userRole === 'admin' || userRole === 'administrator' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com' || req.query.scope === 'admin') {
+            return adminController.getAdminNotifications(req, res);
+        }
+
         const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.query.userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized. Authentication token required.' });
@@ -40,13 +49,20 @@ const getUserNotifications = async (req, res) => {
  */
 const markNotificationRead = async (req, res) => {
     try {
+        const notifIdStr = String(req.params.id || '');
+        if (notifIdStr.startsWith('app-') || notifIdStr.startsWith('wd-') || notifIdStr.startsWith('rep-') || notifIdStr.startsWith('bk-')) {
+            return res.status(200).json({ success: true, message: 'Notification marked as read.' });
+        }
+
         const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.body.userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized. Authentication token required.' });
         }
         const notificationId = parseInt(req.params.id, 10);
 
-        await notificationModel.markAsRead(notificationId, userId);
+        if (!isNaN(notificationId)) {
+            await notificationModel.markAsRead(notificationId, userId);
+        }
         const unreadCount = await notificationModel.getUnreadCountByUserId(userId);
 
         return res.status(200).json({
@@ -70,7 +86,15 @@ const markNotificationRead = async (req, res) => {
  */
 const markAllNotificationsRead = async (req, res) => {
     try {
-        const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.body.userId;
+        const userRole = String(req.user?.roleName || req.user?.role || req.user?.RoleName || req.user?.Role || '').toLowerCase();
+        const userRoleId = parseInt(req.user?.roleId || req.user?.RoleID, 10);
+        const userEmail = String(req.user?.email || req.user?.Email || '').toLowerCase();
+
+        if (userRole === 'admin' || userRole === 'administrator' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com' || req.body?.scope === 'admin') {
+            return adminController.markAllAdminNotificationsRead(req, res);
+        }
+
+        const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.body?.userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized. Authentication token required.' });
         }

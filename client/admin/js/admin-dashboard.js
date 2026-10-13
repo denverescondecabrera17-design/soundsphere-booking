@@ -1587,13 +1587,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const headers = getAdminHeaders();
-            const res = await fetch('/api/notifications', { headers });
+            let res = await fetch('/api/admin/notifications', { headers });
+            if (!res.ok) {
+                res = await fetch('/api/notifications?scope=admin', { headers });
+            }
 
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
                     adminNotificationsData = data.notifications || [];
-                    const unreadCount = data.unreadCount || 0;
+                    const unreadCount = typeof data.unreadCount === 'number' ? data.unreadCount : adminNotificationsData.filter(n => !n.IsRead).length;
 
                     // Update Unread Counter Badge
                     if (notificationBadge) {
@@ -1613,6 +1616,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Helper: Determine Icon and Badge Color for Notification Type
+    const getNotifVisuals = (type, title) => {
+        const t = (type || '').toLowerCase();
+        const str = (title || '').toLowerCase();
+
+        if (t === 'application' || str.includes('application')) {
+            return { color: '#2563eb', bg: '#eff6ff', icon: 'fa-file-signature' };
+        }
+        if (t === 'withdrawal' || str.includes('withdrawal') || str.includes('payout')) {
+            return { color: '#10b981', bg: '#ecfdf5', icon: 'fa-money-bill-transfer' };
+        }
+        if (t === 'report' || str.includes('report') || str.includes('dispute')) {
+            return { color: '#ef4444', bg: '#fef2f2', icon: 'fa-triangle-exclamation' };
+        }
+        if (t === 'booking' || str.includes('booking')) {
+            return { color: '#8b5cf6', bg: '#f5f3ff', icon: 'fa-calendar-check' };
+        }
+        if (t === 'payment' || t === 'subscription' || str.includes('subscription')) {
+            return { color: '#f59e0b', bg: '#fffbeb', icon: 'fa-credit-card' };
+        }
+        return { color: '#2563eb', bg: '#eff6ff', icon: 'fa-bell' };
+    };
+
     // Render Notifications List
     const renderNotificationItems = (notifs) => {
         if (!notificationList) return;
@@ -1623,9 +1649,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!filtered || filtered.length === 0) {
             notificationList.innerHTML = `
-                <div style="padding:28px 16px; text-align:center; color:#64748b; font-size:0.88rem;">
+                <div style="padding:32px 16px; text-align:center; color:#64748b; font-size:0.88rem;">
                     <i class="fa-solid fa-bell-slash" style="font-size:1.8rem; color:#cbd5e1; margin-bottom:8px; display:block;"></i>
-                    No notifications yet.
+                    ${currentNotifFilter === 'unread' ? 'No unread notifications.' : 'No notifications yet.'}
                 </div>
             `;
             return;
@@ -1633,21 +1659,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         notificationList.innerHTML = filtered.map(n => {
             const isUnread = !n.IsRead;
-            const bg = isUnread ? '#eff6ff' : '#ffffff';
-            const iconColor = n.NotificationType === 'Application' ? '#2563eb' : (n.NotificationType === 'Booking' ? '#10b981' : '#f59e0b');
-            const iconClass = n.NotificationType === 'Application' ? 'fa-file-signature' : (n.NotificationType === 'Booking' ? 'fa-calendar-check' : 'fa-bell');
+            const bg = isUnread ? '#f8fafc' : '#ffffff';
+            const visuals = getNotifVisuals(n.NotificationType, n.Title);
+
+            const displayTitle = String(n.Title || '').replace(/^\?\?\s*/, '📢 ').replace(/\?(\d)/g, '₱$1');
+            const displayMsg = String(n.Message || '').replace(/\?\?\s*/g, '📢 ').replace(/\?(\d)/g, '₱$1');
 
             return `
-                <div class="notification-item" data-id="${n.NotificationID}" data-type="${n.NotificationType || ''}" data-title="${n.Title || ''}" style="padding:12px 16px; background:${bg}; border-bottom:1px solid #f1f5f9; display:flex; gap:12px; align-items:flex-start; cursor:pointer; transition:background 0.2s ease;">
-                    <div style="width:34px; height:34px; border-radius:50%; background:#ffffff; border:1px solid #e2e8f0; color:${iconColor}; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
-                        <i class="fa-solid ${iconClass}"></i>
+                <div class="notification-item" data-id="${n.NotificationID}" data-type="${n.NotificationType || ''}" data-title="${displayTitle}" data-related-id="${n.RelatedID || ''}" style="padding:12px 16px; background:${bg}; border-bottom:1px solid #f1f5f9; display:flex; gap:12px; align-items:flex-start; cursor:pointer; transition:background 0.2s ease;">
+                    <div style="width:36px; height:36px; border-radius:50%; background:${visuals.bg}; border:1px solid #e2e8f0; color:${visuals.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                        <i class="fa-solid ${visuals.icon}"></i>
                     </div>
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <strong style="font-size:0.86rem; color:#0a192f;">${n.Title}</strong>
-                            ${isUnread ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block; margin-left:6px;"></span>' : ''}
+                            <strong style="font-size:0.86rem; color:#0a192f; line-height:1.3;">${displayTitle}</strong>
+                            ${isUnread ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block; margin-left:6px; flex-shrink:0;"></span>' : ''}
                         </div>
-                        <p style="font-size:0.78rem; color:#475569; margin:2px 0 4px 0; line-height:1.4;">${n.Message}</p>
+                        <p style="font-size:0.78rem; color:#475569; margin:3px 0 4px 0; line-height:1.4;">${displayMsg}</p>
                         <span style="font-size:0.72rem; color:#94a3b8;">${new Date(n.CreatedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 </div>
@@ -1658,13 +1686,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         notificationList.querySelectorAll('.notification-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const notifId = item.getAttribute('data-id');
-                const type = item.getAttribute('data-type');
-                const title = item.getAttribute('data-title');
+                const type = (item.getAttribute('data-type') || '').toLowerCase();
+                const title = (item.getAttribute('data-title') || '').toLowerCase();
+                const relatedId = item.getAttribute('data-related-id');
 
-                // Mark Notification as Read in SQL Server
+                // Mark local copy as read
+                const found = adminNotificationsData.find(x => String(x.NotificationID) === String(notifId));
+                if (found) found.IsRead = true;
+
+                // Mark Notification as Read on Server
                 try {
                     const headers = getAdminHeaders();
-                    await fetch(`/api/notifications/${notifId}/read`, { method: 'PUT', headers });
+                    await fetch(`/api/admin/notifications/${notifId}/read`, { method: 'PUT', headers });
                 } catch (e) {
                     console.warn('Error marking notification read:', e.message);
                 }
@@ -1672,18 +1705,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Close Notification Panel
                 if (notificationPanel) notificationPanel.classList.add('hidden');
 
-                // Reload Notifications & Unread Counter
-                await loadAdminNotifications();
+                // Update badge and list
+                const unread = adminNotificationsData.filter(x => !x.IsRead).length;
+                if (notificationBadge) {
+                    if (unread > 0) {
+                        notificationBadge.textContent = unread > 99 ? '99+' : unread;
+                        notificationBadge.classList.remove('hidden');
+                    } else {
+                        notificationBadge.classList.add('hidden');
+                    }
+                }
+                renderNotificationItems(adminNotificationsData);
 
-                // Target Tab Navigation
-                if (type === 'Application' || title.includes('Application')) {
-                    document.getElementById('nav-item-apps')?.click();
-                } else if (type === 'Provider' || title.includes('Provider')) {
-                    document.getElementById('nav-item-providers')?.click();
-                } else if (type === 'Booking' || title.includes('Booking')) {
-                    document.getElementById('nav-item-bookings')?.click();
-                } else if (type === 'Payment' || title.includes('Payment')) {
-                    document.getElementById('nav-item-revenue')?.click();
+                // Smart Target Navigation
+                if (type === 'application' || title.includes('application')) {
+                    switchAdminView('applications-section');
+                    if (relatedId && typeof window.viewAppDetails === 'function') {
+                        setTimeout(() => window.viewAppDetails(relatedId), 150);
+                    }
+                } else if (type === 'withdrawal' || title.includes('withdrawal') || title.includes('payout')) {
+                    switchAdminView('withdrawal-section');
+                } else if (type === 'report' || title.includes('report') || title.includes('dispute')) {
+                    switchAdminView('reports-section');
+                } else if (type === 'booking' || title.includes('booking')) {
+                    switchAdminView('dashboard-overview');
+                } else if (type === 'provider' || title.includes('provider')) {
+                    switchAdminView('providers-section');
+                } else if (type === 'subscription' || title.includes('subscription')) {
+                    switchAdminView('subscriptions-section');
+                } else {
+                    switchAdminView('dashboard-overview');
                 }
             });
         });
@@ -1694,14 +1745,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnMarkAllRead.addEventListener('click', async () => {
             if (!getAdminToken()) return;
 
+            // Optimistically mark all read locally
+            adminNotificationsData.forEach(n => { n.IsRead = true; });
+            if (notificationBadge) notificationBadge.classList.add('hidden');
+            renderNotificationItems(adminNotificationsData);
+
             try {
                 const headers = getAdminHeaders();
-                const res = await fetch('/api/notifications/read-all', { method: 'PUT', headers });
+                let res = await fetch('/api/admin/notifications/read-all', { method: 'PUT', headers });
+                if (!res.ok) {
+                    res = await fetch('/api/notifications/read-all', { method: 'PUT', headers, body: JSON.stringify({ scope: 'admin' }) });
+                }
 
                 if (res.ok) {
                     showToast('✓ All notifications marked as read.', 'success');
-                    if (notificationBadge) notificationBadge.classList.add('hidden');
-                    await loadAdminNotifications();
                 }
             } catch (err) {
                 console.warn('Error marking all as read:', err.message);
@@ -1733,18 +1790,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        historyList.innerHTML = notifs.map(n => `
-            <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:${n.IsRead ? '#fff' : '#eff6ff'}; display:flex; gap:14px; align-items:flex-start;">
-                <div style="width:36px; height:36px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
-                    <i class="fa-solid fa-bell"></i>
+        historyList.innerHTML = notifs.map(n => {
+            const visuals = getNotifVisuals(n.NotificationType, n.Title);
+            const displayTitle = String(n.Title || '').replace(/^\?\?\s*/, '📢 ').replace(/\?(\d)/g, '₱$1');
+            const displayMsg = String(n.Message || '').replace(/\?\?\s*/g, '📢 ').replace(/\?(\d)/g, '₱$1');
+
+            return `
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:${n.IsRead ? '#fff' : '#f8fafc'}; display:flex; gap:14px; align-items:flex-start;">
+                    <div style="width:38px; height:38px; border-radius:50%; background:${visuals.bg}; color:${visuals.color}; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                        <i class="fa-solid ${visuals.icon}"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <strong style="font-size:0.92rem; color:#0a192f; display:block;">${displayTitle}</strong>
+                        <p style="font-size:0.84rem; color:#475569; margin:4px 0 6px 0; line-height:1.4;">${displayMsg}</p>
+                        <span style="font-size:0.75rem; color:#94a3b8;">${new Date(n.CreatedAt).toLocaleString()}</span>
+                    </div>
                 </div>
-                <div style="flex:1;">
-                    <strong style="font-size:0.92rem; color:#0a192f; display:block;">${n.Title}</strong>
-                    <p style="font-size:0.84rem; color:#475569; margin:4px 0 6px 0;">${n.Message}</p>
-                    <span style="font-size:0.75rem; color:#94a3b8;">${new Date(n.CreatedAt).toLocaleString()}</span>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     };
 
     // Background Real-Time Polling Interval (Every 15 Seconds)

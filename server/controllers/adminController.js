@@ -1190,6 +1190,275 @@ const updateReportStatus = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/admin/notifications
+ * Retrieves real-time administrative operational notifications
+ */
+const getAdminNotifications = async (req, res) => {
+    try {
+        const pool = await connectDB();
+        const adminUserId = req.user?.userId || req.user?.id || 38;
+
+        // 1. Fetch persistent notifications targeted for Admin from dbo.Notifications
+        let notifications = [];
+        try {
+            const notifRes = await pool.request()
+                .input('AdminUID', sql.Int, adminUserId)
+                .query(`
+                    SELECT 
+                        n.NotificationID,
+                        n.NotificationType,
+                        n.Title,
+                        n.Message,
+                        n.RelatedID,
+                        n.RelatedType,
+                        n.IsRead,
+                        n.CreatedAt
+                    FROM dbo.Notifications n
+                    WHERE n.UserID = @AdminUID 
+                       OR n.UserID IN (SELECT UserID FROM dbo.Users WHERE RoleID = 1 OR Email = 'soundsphere@gmail.com')
+                       OR n.NotificationType IN ('AdminAlert', 'SystemAlert', 'AdminNotice')
+                    ORDER BY n.CreatedAt DESC;
+                `);
+            notifications = notifRes.recordset || [];
+        } catch (e) {
+            console.warn('Persistent admin notifications fetch notice:', e.message);
+        }
+
+        // 2. Fetch pending provider applications
+        try {
+            const appsRes = await pool.request().query(`
+                SELECT 
+                    pa.ApplicationID,
+                    pa.BusinessName,
+                    COALESCE(pa.OwnerName, u.Email) AS ApplicantName,
+                    pa.CoverageArea,
+                    pa.SubmittedAt,
+                    pa.Status
+                FROM dbo.ProviderApplications pa
+                LEFT JOIN dbo.Users u ON pa.UserID = u.UserID
+                WHERE pa.Status = 'Pending'
+                ORDER BY pa.SubmittedAt DESC;
+            `);
+
+            for (const app of (appsRes.recordset || [])) {
+                const alreadyExists = notifications.some(n => n.NotificationType === 'Application' && String(n.RelatedID) === String(app.ApplicationID));
+                if (!alreadyExists) {
+                    notifications.push({
+                        NotificationID: `app-${app.ApplicationID}`,
+                        NotificationType: 'Application',
+                        Title: `New Provider Application: ${app.BusinessName}`,
+                        Message: `${app.ApplicantName || 'Applicant'} applied for "${app.BusinessName}" (${app.CoverageArea || 'Batangas'}). Click to review credentials in full screen.`,
+                        RelatedID: app.ApplicationID,
+                        RelatedType: 'Application',
+                        IsRead: false,
+                        CreatedAt: app.SubmittedAt
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Admin applications notification fetch notice:', e.message);
+        }
+
+        // 3. Fetch pending withdrawal requests
+        try {
+            const wdRes = await pool.request().query(`
+                SELECT 
+                    w.WithdrawalID,
+                    w.Amount,
+                    w.PayoutMethod,
+                    w.Status,
+                    w.RequestedAt,
+                    ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName
+                FROM dbo.Withdrawals w
+                LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
+                WHERE w.Status = 'Pending'
+                ORDER BY w.RequestedAt DESC;
+            `);
+
+            for (const wd of (wdRes.recordset || [])) {
+                const alreadyExists = notifications.some(n => n.NotificationType === 'Withdrawal' && String(n.RelatedID) === String(wd.WithdrawalID));
+                if (!alreadyExists) {
+                    const amt = parseFloat(wd.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    notifications.push({
+                        NotificationID: `wd-${wd.WithdrawalID}`,
+                        NotificationType: 'Withdrawal',
+                        Title: `Pending Payout Request: ₱${amt}`,
+                        Message: `${wd.ProviderName} requested a payout of ₱${amt} via ${wd.PayoutMethod || 'GCash'}. Action required.`,
+                        RelatedID: wd.WithdrawalID,
+                        RelatedType: 'Withdrawal',
+                        IsRead: false,
+                        CreatedAt: wd.RequestedAt
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Admin withdrawals notification fetch notice:', e.message);
+        }
+
+        // 4. Fetch pending client reports / disputes
+        try {
+            const repRes = await pool.request().query(`
+                SELECT 
+                    r.ReportID,
+                    r.Reason,
+                    r.Status,
+                    r.CreatedAt,
+                    ISNULL(sp.BusinessName, 'Provider') AS ProviderName
+                FROM dbo.ProviderReports r
+                LEFT JOIN dbo.ServiceProviders sp ON r.ProviderID = sp.ProviderID
+                WHERE r.Status IN ('Pending', 'Under Review')
+                ORDER BY r.CreatedAt DESC;
+            `);
+
+            for (const rep of (repRes.recordset || [])) {
+                const alreadyExists = notifications.some(n => n.NotificationType === 'Report' && String(n.RelatedID) === String(rep.ReportID));
+                if (!alreadyExists) {
+                    notifications.push({
+                        NotificationID: `rep-${rep.ReportID}`,
+                        NotificationType: 'Report',
+                        Title: `Dispute Filed: Report #${rep.ReportID}`,
+                        Message: `Client complaint against ${rep.ProviderName}: "${rep.Reason || 'Dispute'}". Investigation required.`,
+                        RelatedID: rep.ReportID,
+                        RelatedType: 'Report',
+                        IsRead: false,
+                        CreatedAt: rep.CreatedAt
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Admin reports notification fetch notice:', e.message);
+        }
+
+        // 5. Fetch recent bookings (last 10)
+        try {
+            const bkRes = await pool.request().query(`
+                SELECT TOP 10
+                    b.BookingID,
+                    b.BookingReference,
+                    b.TotalAmount,
+                    b.BookingStatus,
+                    b.CreatedAt,
+                    b.PackageName,
+                    ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName,
+                    COALESCE(b.ClientName, u.Email, 'Client') AS ClientName
+                FROM dbo.Bookings b
+                LEFT JOIN dbo.ServiceProviders sp ON b.ProviderID = sp.ProviderID
+                LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
+                ORDER BY b.CreatedAt DESC;
+            `);
+
+            for (const bk of (bkRes.recordset || [])) {
+                const alreadyExists = notifications.some(n => n.NotificationType === 'Booking' && String(n.RelatedID) === String(bk.BookingID));
+                if (!alreadyExists) {
+                    const total = parseFloat(bk.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    notifications.push({
+                        NotificationID: `bk-${bk.BookingID}`,
+                        NotificationType: 'Booking',
+                        Title: `Booking ${bk.BookingStatus || 'Confirmed'}: #${bk.BookingReference || bk.BookingID}`,
+                        Message: `${bk.ClientName} booked "${bk.PackageName || 'Package'}" with ${bk.ProviderName} (Total: ₱${total}).`,
+                        RelatedID: bk.BookingID,
+                        RelatedType: 'Booking',
+                        IsRead: true,
+                        CreatedAt: bk.CreatedAt
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Admin bookings notification fetch notice:', e.message);
+        }
+
+        // Sort all notifications by CreatedAt DESC
+        notifications.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+
+        // Sanitize any broken legacy characters like '??' or '?750'
+        notifications = notifications.map(n => ({
+            ...n,
+            Title: String(n.Title || '').replace(/^\?\?\s*/, '📢 ').replace(/\?(\d)/g, '₱$1'),
+            Message: String(n.Message || '').replace(/\?\?\s*/g, '📢 ').replace(/\?(\d)/g, '₱$1')
+        }));
+
+        const unreadCount = notifications.filter(n => !n.IsRead).length;
+
+        return res.status(200).json({
+            success: true,
+            unreadCount,
+            notifications
+        });
+    } catch (error) {
+        console.error('Get Admin Notifications Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve admin notifications.',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * PUT /api/admin/notifications/:id/read
+ * Mark an administrative notification as read
+ */
+const markAdminNotificationRead = async (req, res) => {
+    try {
+        const notifId = req.params.id;
+        const pool = await connectDB();
+        const numericId = parseInt(notifId, 10);
+
+        if (!isNaN(numericId)) {
+            await pool.request()
+                .input('NID', sql.Int, numericId)
+                .query(`
+                    IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                    BEGIN
+                        UPDATE dbo.Notifications
+                        SET IsRead = 1, ReadAt = GETDATE()
+                        WHERE NotificationID = @NID;
+                    END
+                `);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Notification marked as read.'
+        });
+    } catch (error) {
+        console.error('Mark Admin Notification Read Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to mark notification read.' });
+    }
+};
+
+/**
+ * PUT /api/admin/notifications/read-all
+ * Mark all admin notifications as read
+ */
+const markAllAdminNotificationsRead = async (req, res) => {
+    try {
+        const adminUserId = req.user?.userId || req.user?.id || 38;
+        const pool = await connectDB();
+
+        await pool.request()
+            .input('AdminUID', sql.Int, adminUserId)
+            .query(`
+                IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                BEGIN
+                    UPDATE dbo.Notifications
+                    SET IsRead = 1, ReadAt = GETDATE()
+                    WHERE UserID = @AdminUID
+                       OR UserID IN (SELECT UserID FROM dbo.Users WHERE RoleID = 1);
+                END
+            `);
+
+        return res.status(200).json({
+            success: true,
+            message: 'All notifications marked as read.'
+        });
+    } catch (error) {
+        console.error('Mark All Admin Notifications Read Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to mark all notifications read.' });
+    }
+};
+
 module.exports = {
     getAdminStats,
     searchAdminEntities,
@@ -1205,5 +1474,8 @@ module.exports = {
     getAdminAuditLogs,
     getAdminClientReports,
     updateReportStatus,
+    getAdminNotifications,
+    markAdminNotificationRead,
+    markAllAdminNotificationsRead,
     logActivity
 };

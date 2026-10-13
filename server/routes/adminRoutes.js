@@ -44,4 +44,10 @@ router.get('/audit-logs', adminController.getAdminAuditLogs);
 router.get('/reports', adminController.getAdminClientReports);
 router.put('/reports/:id/status', adminController.updateReportStatus);
 
+// Admin Real-Time Operational Notifications Endpoints
+router.get('/notifications', adminController.getAdminNotifications);
+router.put('/notifications/read-all', adminController.markAllAdminNotificationsRead);
+router.put('/notifications/:id/read', adminController.markAdminNotificationRead);
+
 module.exports = router;
+
