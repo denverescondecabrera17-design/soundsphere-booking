@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="payment-status-badge ${b.paymentStatusClass}">${b.paymentStatus}</span>
                         ${b.status === 'Awaiting Client Confirmation' ? `
                             <span class="status-badge status-awaiting" style="background:#fef3c7; color:#b45309; border:1.5px solid #f59e0b; font-weight:800;" title="Provider finished services. Confirm completion within 24h.">
-                                <i class="fa-solid fa-clock-rotate-left"></i> Awaiting Your Confirmation
+                                Awaiting Your Confirmation
                             </span>
                         ` : `
                             <span class="status-badge status-${b.status.toLowerCase()}">
@@ -355,16 +355,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="font-size:0.82rem; color:#b45309;">Please confirm that your lights &amp; sounds service was performed. Automatically accepts in 24 hours.</div>
                             </div>
                         </div>
-                        <button type="button" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.3); transition:all 0.15s ease;">
-                            <i class="fa-solid fa-circle-check"></i> Accept Completion
+                        <button type="button" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3); transition:all 0.15s ease;">
+                            Accept Completion
                         </button>
                     </div>
                 ` : ''}
 
                 <div class="booking-card-actions">
                     ${b.status === 'Awaiting Client Confirmation' ? `
-                        <button type="button" class="btn-action-sm btn-accept-completion" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.25);">
-                            <i class="fa-solid fa-check-double"></i> Accept Completion
+                        <button type="button" class="btn-action-sm btn-accept-completion" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.25);">
+                            Accept Completion
                         </button>
                     ` : ''}
 

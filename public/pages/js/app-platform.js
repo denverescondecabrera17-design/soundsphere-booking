@@ -1004,16 +1004,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <div style="font-size:0.84rem; color:#b45309;">Please confirm that your event setup and services were fulfilled. Auto-accepts in 24 hours.</div>
                                             </div>
                                         </div>
-                                        <button type="button" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:all 0.15s ease;">
-                                            <i class="fa-solid fa-circle-check"></i> Accept Completion
+                                        <button type="button" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; font-size:0.92rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:all 0.15s ease;">
+                                            Accept Completion
                                         </button>
                                     </div>
                                 ` : ''}
 
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
                                     ${statusLower === 'awaiting client confirmation' ? `
-                                        <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; display:inline-flex; align-items:center; gap:8px; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
-                                            <i class="fa-solid fa-circle-check"></i> Accept Completion
+                                        <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
+                                            Accept Completion
                                         </button>
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
