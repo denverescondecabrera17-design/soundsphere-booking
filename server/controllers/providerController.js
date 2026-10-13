@@ -788,6 +788,26 @@ const acceptBooking = async (req, res) => {
         let pool = null;
         try { pool = getPool(); } catch (e) { pool = await connectDB(); }
 
+        // Check Business Permit Validity Guard
+        const permitCheck = await pool.request()
+            .input('UID', userId)
+            .query("SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE UserID = @UID OR ProviderID = @UID;");
+        if (permitCheck.recordset && permitCheck.recordset[0]) {
+            const provRow = permitCheck.recordset[0];
+            if (provRow.PermitExpiryDate) {
+                const expiry = new Date(provRow.PermitExpiryDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (expiry < today) {
+                    return res.status(403).json({
+                        success: false,
+                        isPermitExpired: true,
+                        message: `Cannot accept new bookings. Your business permit expired on ${expiry.toLocaleDateString()}. Please submit a renewed business permit for administrator verification.`
+                    });
+                }
+            }
+        }
+
         await pool.request()
             .input('BID', id)
             .input('UID', userId)
@@ -1229,6 +1249,175 @@ const createWithdrawalRequest = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/providers/permit-status
+ * Get the current provider's permit compliance status
+ */
+const getProviderPermitStatus = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : null;
+        if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+
+        const provRes = await pool.request()
+            .input('UID', sql.Int, userId)
+            .query(`
+                SELECT 
+                    sp.ProviderID,
+                    sp.UserID,
+                    sp.BusinessName,
+                    sp.PermitExpiryDate,
+                    sp.PermitStatus,
+                    sp.PermitNoticeSentAt,
+                    sp.PermitRenewalDoc,
+                    sp.PermitRenewalExpiryDate,
+                    sp.PermitRenewalSubmittedAt,
+                    sp.PermitRenewalStatus,
+                    sp.PermitRenewalNotes,
+                    pa.BusinessPermit_Url
+                FROM dbo.ServiceProviders sp
+                LEFT JOIN dbo.ProviderApplications pa ON sp.ApplicationID = pa.ApplicationID
+                WHERE sp.UserID = @UID OR sp.ProviderID = @UID;
+            `);
+
+        if (!provRes.recordset || !provRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Provider profile not found.' });
+        }
+
+        const prov = provRes.recordset[0];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let permitStatus = 'Not_Set';
+        let daysRemaining = null;
+        let isExpired = false;
+        let isExpiringSoon = false;
+
+        if (prov.PermitExpiryDate) {
+            const exp = new Date(prov.PermitExpiryDate);
+            exp.setHours(0, 0, 0, 0);
+            daysRemaining = Math.round((exp - today) / (1000 * 60 * 60 * 24));
+            if (daysRemaining < 0) {
+                permitStatus = 'Expired';
+                isExpired = true;
+            } else if (daysRemaining <= 30) {
+                permitStatus = 'Expiring_Soon';
+                isExpiringSoon = true;
+            } else {
+                permitStatus = 'Valid';
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            permit: {
+                ...prov,
+                permitStatus,
+                daysRemaining,
+                isExpired,
+                isExpiringSoon,
+                isBookingDisabled: isExpired
+            }
+        });
+    } catch (error) {
+        console.error('Get Provider Permit Status Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * POST /api/providers/permit-renewal
+ * Service provider submits a renewed business permit document and expiration date
+ */
+const submitPermitRenewal = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : null;
+        if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized.' });
+
+        const { expiryDate } = req.body;
+        if (!expiryDate) {
+            return res.status(400).json({ success: false, message: 'New permit expiration date is required.' });
+        }
+
+        const parsedDate = new Date(expiryDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (parsedDate <= today) {
+            return res.status(400).json({ success: false, message: 'Expiration date must be in the future.' });
+        }
+
+        let documentUrl = null;
+
+        // If file uploaded via multipart
+        if (req.file) {
+            const base64Data = req.file.buffer.toString('base64');
+            documentUrl = `data:${req.file.mimetype};base64,${base64Data}`;
+        } else if (req.body.permitDocumentUrl || req.body.documentBase64) {
+            documentUrl = req.body.permitDocumentUrl || req.body.documentBase64;
+        }
+
+        if (!documentUrl) {
+            return res.status(400).json({ success: false, message: 'A copy of the renewed business permit is required.' });
+        }
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+
+        const provRes = await pool.request()
+            .input('UID', sql.Int, userId)
+            .query("SELECT ProviderID, BusinessName FROM dbo.ServiceProviders WHERE UserID = @UID OR ProviderID = @UID;");
+
+        if (!provRes.recordset || !provRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Provider profile not found.' });
+        }
+
+        const prov = provRes.recordset[0];
+
+        await pool.request()
+            .input('PID', sql.Int, prov.ProviderID)
+            .input('Doc', sql.NVarChar(sql.MAX), documentUrl)
+            .input('Exp', sql.Date, parsedDate)
+            .query(`
+                UPDATE dbo.ServiceProviders
+                SET PermitRenewalDoc = @Doc,
+                    PermitRenewalExpiryDate = @Exp,
+                    PermitRenewalSubmittedAt = GETDATE(),
+                    PermitRenewalStatus = 'Pending_Review',
+                    PermitRenewalNotes = NULL
+                WHERE ProviderID = @PID;
+            `);
+
+        // Notify Admins
+        try {
+            const adminUsers = await pool.request().query("SELECT UserID FROM dbo.Users WHERE RoleID = 1 OR RoleID IN (SELECT RoleID FROM dbo.Roles WHERE RoleName = 'Administrator');");
+            if (adminUsers.recordset && adminUsers.recordset.length) {
+                for (const admin of adminUsers.recordset) {
+                    await notificationModel.createNotification({
+                        userId: admin.UserID,
+                        type: 'PermitRenewalSubmission',
+                        title: 'New Business Permit Renewal Submitted',
+                        message: `Provider "${prov.BusinessName}" has submitted a renewed business permit expiring on ${parsedDate.toLocaleDateString()}. Please review and verify.`,
+                        relatedId: prov.ProviderID,
+                        relatedType: 'ProviderPermit'
+                    });
+                }
+            }
+        } catch (notifErr) {
+            console.warn('Admin notification notice:', notifErr.message);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Business permit renewal submitted successfully! Our administrators will review and verify it shortly.'
+        });
+    } catch (error) {
+        console.error('Submit Permit Renewal Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getProviders,
     getProviderById,
@@ -1250,6 +1439,8 @@ module.exports = {
     completeBooking,
     cancelBooking,
     getProviderReviewsList,
+    getProviderPermitStatus,
+    submitPermitRenewal,
     upload,
     uploadPackagePhotos,
     deletePackagePhoto

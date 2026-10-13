@@ -747,6 +747,118 @@ const sendBookingConfirmationEmail = async ({
     }
 };
 
+/**
+ * Send Business Permit Expiration Notice Email to Service Provider
+ */
+const sendPermitRenewalNoticeEmail = async ({
+    toEmail,
+    providerName,
+    businessName,
+    expiryDate,
+    isExpired,
+    daysRemaining
+}) => {
+    if (!toEmail) return null;
+
+    const formattedDate = expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Expired';
+    const statusText = isExpired ? 'EXPIRED' : `EXPIRING IN ${daysRemaining} DAYS`;
+    const statusColor = isExpired ? '#dc2626' : '#d97706';
+    const statusBg = isExpired ? '#fef2f2' : '#fffbeb';
+    const borderCol = isExpired ? '#fecaca' : '#fde68a';
+
+    const subject = isExpired
+        ? `[Action Required] SoundSphere Business Permit Expired - ${businessName || providerName}`
+        : `[Notice] SoundSphere Business Permit Expiring Soon - ${businessName || providerName}`;
+
+    const mailOptions = {
+        from: {
+            name: 'SoundSphere Compliance Team',
+            address: process.env.SMTP_USER
+        },
+        to: toEmail.trim().toLowerCase(),
+        subject,
+        html: `
+            <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: #0a192f; margin: 0; font-size: 24px; font-weight: 800;">Sound<span style="color: #2563eb;">Sphere</span></h2>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Provider Compliance & Regulatory Notice</p>
+                </div>
+
+                <div style="background: ${statusBg}; border: 1px solid ${borderCol}; border-radius: 10px; padding: 18px 20px; text-align: center; margin-bottom: 24px;">
+                    <span style="display: inline-block; font-size: 12px; font-weight: 800; color: ${statusColor}; letter-spacing: 1px; text-transform: uppercase;">
+                        Compliance Status
+                    </span>
+                    <h3 style="margin: 6px 0 0 0; color: ${statusColor}; font-size: 18px; font-weight: 800;">
+                        ${isExpired ? 'BUSINESS PERMIT EXPIRED' : `BUSINESS PERMIT EXPIRING SOON (${daysRemaining} DAYS)`}
+                    </h3>
+                </div>
+
+                <div style="color: #334155; font-size: 14px; line-height: 1.6;">
+                    <p>Dear <strong>${providerName || businessName}</strong>,</p>
+                    <p>
+                        This is an official compliance notification regarding your registered business permit for <strong>${businessName}</strong> on SoundSphere.
+                    </p>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin: 18px 0;">
+                        <table style="width: 100%; font-size: 13px;">
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b; width: 45%;"><strong>Business Name:</strong></td>
+                                <td style="padding: 4px 0; color: #0a192f; font-weight: 700;">${businessName}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;"><strong>Permit Expiration Date:</strong></td>
+                                <td style="padding: 4px 0; color: ${statusColor}; font-weight: 700;">${formattedDate}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; color: #64748b;"><strong>Booking Capability:</strong></td>
+                                <td style="padding: 4px 0; color: ${isExpired ? '#dc2626' : '#059669'}; font-weight: 700;">
+                                    ${isExpired ? 'Disabled for New Bookings' : 'Active (Pending Expiry)'}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    ${isExpired ? `
+                        <div style="background: #fff1f2; border-left: 4px solid #e11d48; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+                            <strong style="color: #9f1239; font-size: 13px; display: block; margin-bottom: 4px;">⚠️ Service Disruption Notice:</strong>
+                            <span style="color: #881337; font-size: 13px;">
+                                Because your business permit has expired, your profile cannot receive or accept new client bookings. Your existing confirmed bookings remain active and must still be fulfilled.
+                            </span>
+                        </div>
+                    ` : `
+                        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+                            <strong style="color: #92400e; font-size: 13px; display: block; margin-bottom: 4px;">⚠️ Action Required:</strong>
+                            <span style="color: #78350f; font-size: 13px;">
+                                Please submit your renewed business permit before ${formattedDate} to avoid interruption of your booking reception.
+                            </span>
+                        </div>
+                    `}
+
+                    <h4 style="margin: 20px 0 8px 0; color: #0a192f; font-size: 14px;">Next Steps:</h4>
+                    <ol style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+                        <li>Obtain your renewed Mayor's / Business Permit from your local municipal hall (LGU).</li>
+                        <li>Log in to your <strong>SoundSphere Provider Dashboard</strong>.</li>
+                        <li>Submit a clear photo or PDF copy of your renewed permit along with the new expiration date.</li>
+                        <li>Our administrative compliance team will verify and re-enable your full booking capabilities.</li>
+                    </ol>
+                </div>
+
+                <div style="margin-top: 30px; padding-top: 18px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                    &copy; ${new Date().getFullYear()} SoundSphere Platform Regulatory Compliance. All rights reserved.
+                </div>
+            </div>
+        `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(` REAL GMAIL PERMIT NOTICE DISPATCH SUCCESSFUL! Message ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error(' Gmail SMTP Permit Notice Dispatch Error:', error.message);
+        return null;
+    }
+};
+
 module.exports = {
     sendOTPEmail,
     sendPasswordResetEmail,
@@ -754,6 +866,8 @@ module.exports = {
     sendBalanceDueReminderEmail,
     sendPayoutDisbursedClientEmail,
     sendRefundProcessedClientEmail,
-    sendBookingConfirmationEmail
+    sendBookingConfirmationEmail,
+    sendPermitRenewalNoticeEmail
 };
+
 

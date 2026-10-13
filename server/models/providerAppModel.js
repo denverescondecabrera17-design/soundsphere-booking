@@ -219,7 +219,7 @@ const approveApplication = async (applicationId) => {
         const appReq = new sql.Request(transaction);
         const appRes = await appReq
             .input('ApplicationID', sql.Int, applicationId)
-            .query("SELECT ApplicationID, UserID, BusinessName, OwnerName, BusinessAddress, CoverageArea, Status FROM dbo.ProviderApplications WHERE ApplicationID = @ApplicationID");
+            .query("SELECT ApplicationID, UserID, BusinessName, OwnerName, BusinessAddress, CoverageArea, Status, PermitExpiryDate FROM dbo.ProviderApplications WHERE ApplicationID = @ApplicationID");
 
         if (!appRes.recordset.length) {
             throw new Error('Application record not found.');
@@ -270,16 +270,18 @@ const approveApplication = async (applicationId) => {
             .input('OwnerLastName', sql.NVarChar(100), ownerLastName)
             .input('BusinessAddress', sql.NVarChar(255), app.BusinessAddress)
             .input('CoverageArea', sql.NVarChar(255), app.CoverageArea)
+            .input('PermitExpiryDate', sql.Date, app.PermitExpiryDate ? new Date(app.PermitExpiryDate) : null)
             .query(`
                 IF NOT EXISTS (SELECT * FROM dbo.ServiceProviders WHERE UserID = @UserID)
                 BEGIN
-                    INSERT INTO dbo.ServiceProviders (UserID, ApplicationID, BusinessName, OwnerName, OwnerFirstName, OwnerLastName, BusinessAddress, CoverageArea, VerificationStatus)
-                    VALUES (@UserID, @ApplicationID, @BusinessName, @OwnerName, @OwnerFirstName, @OwnerLastName, @BusinessAddress, @CoverageArea, 'Approved');
+                    INSERT INTO dbo.ServiceProviders (UserID, ApplicationID, BusinessName, OwnerName, OwnerFirstName, OwnerLastName, BusinessAddress, CoverageArea, VerificationStatus, PermitExpiryDate)
+                    VALUES (@UserID, @ApplicationID, @BusinessName, @OwnerName, @OwnerFirstName, @OwnerLastName, @BusinessAddress, @CoverageArea, 'Approved', @PermitExpiryDate);
                 END
                 ELSE
                 BEGIN
                     UPDATE dbo.ServiceProviders
-                    SET BusinessName = @BusinessName, OwnerName = @OwnerName, OwnerFirstName = @OwnerFirstName, OwnerLastName = @OwnerLastName, BusinessAddress = @BusinessAddress, CoverageArea = @CoverageArea, VerificationStatus = 'Approved'
+                    SET BusinessName = @BusinessName, OwnerName = @OwnerName, OwnerFirstName = @OwnerFirstName, OwnerLastName = @OwnerLastName, BusinessAddress = @BusinessAddress, CoverageArea = @CoverageArea, VerificationStatus = 'Approved',
+                        PermitExpiryDate = COALESCE(@PermitExpiryDate, PermitExpiryDate)
                     WHERE UserID = @UserID;
                 END
             `);

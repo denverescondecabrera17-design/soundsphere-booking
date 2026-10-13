@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sidebarNavLinks.forEach(link => {
             const href = link.getAttribute('href');
-            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section')) {
+            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-permits' && href === '#permits-section')) {
                 link.classList.add('active');
             } else {
                 link.classList.remove('active');
@@ -3179,10 +3179,388 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadProviderCalendarSchedule();
         }
     }, 20000);
+    // ------------------------------------------------------------------------
+    // Business Permit & Compliance Management
+    // ------------------------------------------------------------------------
+    let selectedPermitFile = null;
+
+    window.handlePermitFileSelect = (event) => {
+        const file = event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Please select a valid image (JPG, PNG, WEBP) or PDF document.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Document size exceeds 10MB limit. Please upload a smaller file.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        selectedPermitFile = file;
+        const previewStrip = document.getElementById('permit-file-preview-strip');
+        const fileNameEl = document.getElementById('permit-file-name');
+        if (previewStrip && fileNameEl) {
+            fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            previewStrip.classList.remove('hidden');
+        }
+    };
+
+    window.clearSelectedPermitFile = () => {
+        selectedPermitFile = null;
+        const fileInput = document.getElementById('input-provider-renewal-file');
+        if (fileInput) fileInput.value = '';
+        const previewStrip = document.getElementById('permit-file-preview-strip');
+        if (previewStrip) previewStrip.classList.add('hidden');
+    };
+
+    // Dropzone drag-and-drop
+    const dropzone = document.getElementById('permit-upload-dropzone');
+    if (dropzone) {
+        dropzone.addEventListener('click', () => {
+            const fileInput = document.getElementById('input-provider-renewal-file');
+            if (fileInput) fileInput.click();
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#2563eb';
+            dropzone.style.background = '#eff6ff';
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = '#cbd5e1';
+            dropzone.style.background = '#f8fafc';
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#cbd5e1';
+            dropzone.style.background = '#f8fafc';
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                const fileInput = document.getElementById('input-provider-renewal-file');
+                if (fileInput) {
+                    fileInput.files = e.dataTransfer.files;
+                    window.handlePermitFileSelect({ target: fileInput });
+                }
+            }
+        });
+    }
+
+    const loadProviderPermitStatus = async () => {
+        try {
+            const res = await fetch('/api/providers/permit-status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!data.success || !data.permit) {
+                console.warn('Unable to retrieve permit status:', data.message);
+                return;
+            }
+
+            const p = data.permit;
+            const permitStatus = p.permitStatus || 'Not_Set';
+            const daysRemaining = p.daysRemaining;
+            const isRenewalPending = (p.PermitRenewalStatus === 'Pending_Review' || p.PermitRenewalStatus === 'Pending');
+
+            // 1. Overview Dashboard Alert Banner
+            const banner = document.getElementById('provider-permit-alert-banner');
+            const bannerTitle = document.getElementById('permit-alert-title');
+            const bannerDesc = document.getElementById('permit-alert-desc');
+            const bannerBtn = document.getElementById('permit-alert-btn');
+            const bannerIcon = document.getElementById('permit-alert-icon');
+            const bannerIconBox = document.getElementById('permit-alert-icon-box');
+
+            if (banner) {
+                if (isRenewalPending) {
+                    banner.classList.remove('hidden');
+                    banner.style.background = '#eff6ff';
+                    banner.style.borderColor = '#bfdbfe';
+                    if (bannerIconBox) { bannerIconBox.style.background = '#dbeafe'; bannerIconBox.style.color = '#2563eb'; }
+                    if (bannerIcon) bannerIcon.className = 'fa-solid fa-hourglass-half';
+                    if (bannerTitle) bannerTitle.textContent = 'Permit Renewal Under Compliance Review';
+                    if (bannerDesc) bannerDesc.textContent = 'Your renewed municipal business permit is currently being verified by our compliance team.';
+                    if (bannerBtn) {
+                        bannerBtn.textContent = 'View Permit Details';
+                        bannerBtn.style.background = '#2563eb';
+                        bannerBtn.style.color = '#fff';
+                    }
+                } else if (permitStatus === 'Expired') {
+                    banner.classList.remove('hidden');
+                    banner.style.background = '#fef2f2';
+                    banner.style.borderColor = '#fecaca';
+                    if (bannerIconBox) { bannerIconBox.style.background = '#fee2e2'; bannerIconBox.style.color = '#dc2626'; }
+                    if (bannerIcon) bannerIcon.className = 'fa-solid fa-circle-exclamation';
+                    if (bannerTitle) bannerTitle.textContent = 'Action Required: Your Business Permit Has Expired';
+                    if (bannerDesc) bannerDesc.textContent = `Your registered business permit expired ${Math.abs(daysRemaining || 0)} day(s) ago. Submit your renewed municipal license now to restore full verification.`;
+                    if (bannerBtn) {
+                        bannerBtn.textContent = 'Renew Permit Now';
+                        bannerBtn.style.background = '#dc2626';
+                        bannerBtn.style.color = '#fff';
+                    }
+                } else if (permitStatus === 'Expiring_Soon') {
+                    banner.classList.remove('hidden');
+                    banner.style.background = '#fffbeb';
+                    banner.style.borderColor = '#fde68a';
+                    if (bannerIconBox) { bannerIconBox.style.background = '#fef3c7'; bannerIconBox.style.color = '#d97706'; }
+                    if (bannerIcon) bannerIcon.className = 'fa-solid fa-triangle-exclamation';
+                    if (bannerTitle) bannerTitle.textContent = 'Business Permit Expiring Soon';
+                    if (bannerDesc) bannerDesc.textContent = `Your registered business permit will expire in ${daysRemaining} day(s). Upload your renewal now to maintain continuous booking availability.`;
+                    if (bannerBtn) {
+                        bannerBtn.textContent = 'Renew Permit';
+                        bannerBtn.style.background = '#d97706';
+                        bannerBtn.style.color = '#fff';
+                    }
+                } else if (permitStatus === 'Not_Set') {
+                    banner.classList.remove('hidden');
+                    banner.style.background = '#f8fafc';
+                    banner.style.borderColor = '#e2e8f0';
+                    if (bannerIconBox) { bannerIconBox.style.background = '#eff6ff'; bannerIconBox.style.color = '#2563eb'; }
+                    if (bannerIcon) bannerIcon.className = 'fa-solid fa-file-shield';
+                    if (bannerTitle) bannerTitle.textContent = 'Submit Your Business Permit';
+                    if (bannerDesc) bannerDesc.textContent = 'Please provide your municipal business permit or mayor\'s permit to ensure platform compliance.';
+                    if (bannerBtn) {
+                        bannerBtn.textContent = 'Upload Permit';
+                        bannerBtn.style.background = '#2563eb';
+                        bannerBtn.style.color = '#fff';
+                    }
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
+
+            // 2. Sidebar Badge
+            const sidebarBadge = document.getElementById('badge-provider-permit-sidebar');
+            if (sidebarBadge) {
+                if (isRenewalPending) {
+                    sidebarBadge.textContent = 'In Review';
+                    sidebarBadge.style.cssText = 'display:inline-block; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:10px; background:#dbeafe; color:#1e40af;';
+                } else if (permitStatus === 'Expired') {
+                    sidebarBadge.textContent = 'Expired';
+                    sidebarBadge.style.cssText = 'display:inline-block; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:10px; background:#fee2e2; color:#991b1b;';
+                } else if (permitStatus === 'Expiring_Soon') {
+                    sidebarBadge.textContent = `${daysRemaining}d`;
+                    sidebarBadge.style.cssText = 'display:inline-block; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:10px; background:#fef3c7; color:#92400e;';
+                } else {
+                    sidebarBadge.style.display = 'none';
+                }
+            }
+
+            // 3. Status Cards in #view-provider-permits
+            const statusBadgeCard = document.getElementById('card-permit-status-badge');
+            if (statusBadgeCard) {
+                if (isRenewalPending) {
+                    statusBadgeCard.innerHTML = '<span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-hourglass-half"></i> Renewal Under Review</span>';
+                } else if (permitStatus === 'Expired') {
+                    statusBadgeCard.innerHTML = `<span style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-ban"></i> Expired (${Math.abs(daysRemaining || 0)}d ago)</span>`;
+                } else if (permitStatus === 'Expiring_Soon') {
+                    statusBadgeCard.innerHTML = `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-triangle-exclamation"></i> Expiring Soon (${daysRemaining}d)</span>`;
+                } else if (permitStatus === 'Valid') {
+                    statusBadgeCard.innerHTML = `<span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-check"></i> Active &amp; Valid (${daysRemaining}d left)</span>`;
+                } else {
+                    statusBadgeCard.innerHTML = '<span style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-circle-question"></i> Not Configured</span>';
+                }
+            }
+
+            const expDateEl = document.getElementById('card-permit-exp-date');
+            const daysRemainingEl = document.getElementById('card-permit-days-remaining');
+            if (expDateEl) {
+                if (p.PermitExpiryDate) {
+                    const d = new Date(p.PermitExpiryDate);
+                    expDateEl.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    if (daysRemainingEl) {
+                        daysRemainingEl.textContent = daysRemaining < 0 
+                            ? `Overdue by ${Math.abs(daysRemaining)} days` 
+                            : `${daysRemaining} days remaining`;
+                        daysRemainingEl.style.color = daysRemaining < 0 ? '#e11d48' : (daysRemaining <= 30 ? '#d97706' : '#059669');
+                    }
+                } else {
+                    expDateEl.textContent = 'Not Specified';
+                    if (daysRemainingEl) {
+                        daysRemainingEl.textContent = 'Please submit permit documentation';
+                        daysRemainingEl.style.color = '#64748b';
+                    }
+                }
+            }
+
+            const permitNumberEl = document.getElementById('card-permit-number');
+            if (permitNumberEl) {
+                permitNumberEl.textContent = p.BusinessName || 'Municipal Permit';
+            }
+
+            // 4. Active Document Preview
+            const previewContainer = document.getElementById('provider-active-permit-preview');
+            const activeDoc = p.PermitRenewalDoc || p.BusinessPermit_Url;
+            if (previewContainer) {
+                if (!activeDoc) {
+                    previewContainer.innerHTML = `
+                        <div style="padding:20px; color:#94a3b8;">
+                            <i class="fa-solid fa-file-circle-xmark" style="font-size:2.4rem; margin-bottom:10px; display:block; color:#64748b;"></i>
+                            <span style="font-size:0.88rem; display:block; color:#cbd5e1; font-weight:700;">No Permit Document Attached</span>
+                            <span style="font-size:0.78rem; color:#94a3b8; display:block; margin-top:4px;">Upload your renewed business license using the form on the right.</span>
+                        </div>
+                    `;
+                } else {
+                    const cleanDoc = activeDoc.startsWith('/data:') ? activeDoc.slice(1) : activeDoc;
+                    if (cleanDoc.startsWith('data:image/') || cleanDoc.endsWith('.jpg') || cleanDoc.endsWith('.jpeg') || cleanDoc.endsWith('.png') || cleanDoc.endsWith('.webp')) {
+                        previewContainer.innerHTML = `
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
+                                <img src="${cleanDoc}" alt="Business Permit" style="max-height:220px; max-width:100%; border-radius:8px; object-fit:contain; box-shadow:0 4px 14px rgba(0,0,0,0.4);">
+                                <a href="${cleanDoc}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.82rem; text-decoration:none; display:inline-flex; align-items:center; gap:5px; font-weight:700;">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        // PDF
+                        previewContainer.innerHTML = `
+                            <div style="padding:20px; text-align:center;">
+                                <i class="fa-solid fa-file-pdf" style="font-size:3rem; color:#ef4444; margin-bottom:10px; display:block;"></i>
+                                <span style="color:#e2e8f0; font-size:0.88rem; font-weight:700; display:block;">Municipal Permit Document (PDF)</span>
+                                <a href="${cleanDoc}" target="_blank" rel="noopener noreferrer" style="margin-top:10px; background:#2563eb; color:#fff; padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px;">
+                                    <i class="fa-solid fa-eye"></i> View PDF Document
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            // 5. Compliance Reminders Notice
+            const noticesBox = document.getElementById('provider-permit-notices-container');
+            const noticesText = document.getElementById('provider-permit-notices-text');
+            if (noticesBox && noticesText) {
+                if (p.PermitNoticeSentAt) {
+                    const nd = new Date(p.PermitNoticeSentAt);
+                    noticesBox.style.display = 'block';
+                    noticesText.textContent = `Administrative renewal reminder issued on ${nd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`;
+                } else {
+                    noticesBox.style.display = 'none';
+                }
+            }
+
+            // 6. Renewal Application In-Progress Box
+            const renewalBox = document.getElementById('provider-renewal-status-box');
+            const renewalDesc = document.getElementById('provider-renewal-status-desc');
+            if (renewalBox) {
+                if (isRenewalPending) {
+                    renewalBox.classList.remove('hidden');
+                    renewalBox.style.background = '#eff6ff';
+                    renewalBox.style.borderColor = '#bfdbfe';
+                    if (renewalDesc) {
+                        const subDate = p.PermitRenewalSubmittedAt ? new Date(p.PermitRenewalSubmittedAt).toLocaleDateString() : 'recently';
+                        const expDateStr = p.PermitRenewalExpiryDate ? new Date(p.PermitRenewalExpiryDate).toLocaleDateString() : '';
+                        renewalDesc.textContent = `Submitted on ${subDate}${expDateStr ? ' (Requested Expiry: ' + expDateStr + ')' : ''}. Our team is verifying this document. You can re-upload below if you need to replace it.`;
+                    }
+                } else if (p.PermitRenewalStatus === 'Rejected') {
+                    renewalBox.classList.remove('hidden');
+                    renewalBox.style.background = '#fff1f2';
+                    renewalBox.style.borderColor = '#fecdd3';
+                    if (renewalDesc) {
+                        renewalDesc.innerHTML = `<strong style="color:#be123c;">Previous Renewal Rejected:</strong> ${p.PermitRenewalNotes || 'Please ensure the uploaded document is clear, complete, and legally valid.'}`;
+                    }
+                } else {
+                    renewalBox.classList.add('hidden');
+                }
+            }
+
+        } catch (err) {
+            console.error('Error loading provider permit status:', err);
+        }
+    };
+
+    window.submitProviderPermitRenewal = async (event) => {
+        event.preventDefault();
+        const fileInput = document.getElementById('input-provider-renewal-file');
+        const file = selectedPermitFile || (fileInput && fileInput.files ? fileInput.files[0] : null);
+
+        if (!file) {
+            showToast('Please attach a copy of your renewed municipal permit (image or PDF).', 'error');
+            return;
+        }
+
+        const expiryDateInput = document.getElementById('input-provider-renewal-expiry');
+        const expiryDate = expiryDateInput ? expiryDateInput.value : '';
+
+        if (!expiryDate) {
+            showToast('Please select the new expiration date stated on your renewed permit.', 'error');
+            if (expiryDateInput) expiryDateInput.focus();
+            return;
+        }
+
+        const parsedDate = new Date(expiryDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (parsedDate <= today) {
+            showToast('The expiration date must be in the future.', 'error');
+            if (expiryDateInput) expiryDateInput.focus();
+            return;
+        }
+
+        const btnSubmit = document.getElementById('btn-submit-permit-renewal');
+        const origBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
+        if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Renewal...';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('permitFile', file);
+            formData.append('expiryDate', expiryDate);
+
+            const refNumberInput = document.getElementById('input-provider-renewal-number');
+            if (refNumberInput && refNumberInput.value) {
+                formData.append('permitNumber', refNumberInput.value.trim());
+            }
+
+            const res = await fetch('/api/providers/permit-renewal', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast('✓ Permit renewal submitted! Our team will verify it shortly.', 'success');
+                window.clearSelectedPermitFile();
+                if (expiryDateInput) expiryDateInput.value = '';
+                if (refNumberInput) refNumberInput.value = '';
+                await loadProviderPermitStatus();
+            } else {
+                showToast(data.message || 'Failed to submit permit renewal.', 'error');
+            }
+        } catch (err) {
+            console.error('Error submitting permit renewal:', err);
+            showToast('Network error while submitting renewal. Please try again.', 'error');
+        } finally {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = origBtnHtml;
+            }
+        }
+    };
+
+    const btnRefreshPermit = document.getElementById('btn-refresh-provider-permit');
+    if (btnRefreshPermit) {
+        btnRefreshPermit.addEventListener('click', () => {
+            showToast('Refreshing permit status...', 'info');
+            loadProviderPermitStatus();
+        });
+    }
+
+
 
     // Initial Data Fetch
     await loadDashboardData();
     await loadPackages();
     await loadProviderCalendarSchedule();
+        await loadProviderPermitStatus();
     switchProviderView(window.location.hash);
 });

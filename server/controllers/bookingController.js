@@ -192,6 +192,28 @@ const checkAvailability = async (req, res) => {
             });
         }
 
+        const pool = getPool();
+        // Check Business Permit Validity Guard
+        const permitCheck = await pool.request()
+            .input('ProviderID', sql.Int, parsedProvId)
+            .query(`SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID OR UserID = @ProviderID;`);
+        if (permitCheck.recordset && permitCheck.recordset[0]) {
+            const provRow = permitCheck.recordset[0];
+            if (provRow.PermitExpiryDate) {
+                const expiry = new Date(provRow.PermitExpiryDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (expiry < today) {
+                    return res.status(200).json({
+                        success: true,
+                        isAvailable: false,
+                        isPermitExpired: true,
+                        message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has expired. New bookings are currently disabled.`
+                    });
+                }
+            }
+        }
+
         const result = await bookingModel.checkProviderAvailability({
             providerId: parsedProvId,
             serviceStartDate: startDate,
@@ -552,6 +574,28 @@ const createBooking = async (req, res) => {
                     success: false,
                     message: 'This is your own service. You cannot book your own packages.'
                 });
+            }
+        }
+
+        // Check Provider Business Permit Validity Guard
+        if (actualProviderId) {
+            const permitCheck = await pool.request()
+                .input('ProviderID', sql.Int, actualProviderId)
+                .query(`SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;`);
+            if (permitCheck.recordset && permitCheck.recordset[0]) {
+                const provRow = permitCheck.recordset[0];
+                if (provRow.PermitExpiryDate) {
+                    const expiry = new Date(provRow.PermitExpiryDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (expiry < today) {
+                        return res.status(403).json({
+                            success: false,
+                            isPermitExpired: true,
+                            message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} expired on ${expiry.toLocaleDateString()}. New bookings are disabled until a renewed business permit is submitted and verified.`
+                        });
+                    }
+                }
             }
         }
 

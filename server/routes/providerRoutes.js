@@ -44,6 +44,10 @@ router.post('/withdrawals/create', verifyToken, providerController.createWithdra
 // Reviews Routes
 router.get('/reviews/my-reviews', verifyToken, providerController.getProviderReviewsList);
 
+// Permit Compliance & Renewal Routes
+router.get('/permit-status', verifyToken, providerController.getProviderPermitStatus);
+router.post('/permit-renewal', verifyToken, providerController.upload.single('permitFile'), providerController.submitPermitRenewal);
+
 // Availability & Capacity Management Routes (Authenticated for Provider Dashboard)
 router.get('/calendar/schedule', verifyToken, bookingController.getProviderCalendarSchedule);
 router.put('/calendar/default-capacity', verifyToken, bookingController.saveDefaultDailyCapacity);

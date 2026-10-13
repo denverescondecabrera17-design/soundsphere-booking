@@ -87,7 +87,16 @@ const getAdminStats = async (req, res) => {
                 ISNULL(NULLIF(sp.CoverageArea, ''), ISNULL(pa.CoverageArea, 'Batangas')) AS CoverageArea, 
                 ISNULL(pa.ContactNumber, ISNULL(u.Phone, 'N/A')) AS ContactNumber,
                 ISNULL(u.AccountStatus, 'Active') AS AccountStatus,
-                sp.CreatedAt AS ApprovedAt
+                sp.CreatedAt AS ApprovedAt,
+                sp.PermitExpiryDate,
+                sp.PermitNoticeSentAt,
+                sp.PermitRenewalDoc,
+                sp.PermitRenewalExpiryDate,
+                sp.PermitRenewalSubmittedAt,
+                sp.PermitRenewalStatus,
+                sp.PermitRenewalNotes,
+                pa.BusinessPermit_Url,
+                u.Email AS ProviderEmail
             FROM dbo.ServiceProviders sp
             JOIN dbo.Users u ON sp.UserID = u.UserID
             LEFT JOIN dbo.ProviderApplications pa ON sp.ApplicationID = pa.ApplicationID;
@@ -1515,6 +1524,332 @@ const getAdminBookingDetails = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/admin/permits
+ * List all providers with their business permit status, expiration, and renewal info
+ */
+const getAdminPermits = async (req, res) => {
+    try {
+        const pool = await connectDB();
+        const query = `
+            SELECT 
+                sp.ProviderID,
+                sp.UserID,
+                sp.BusinessName,
+                COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
+                u.Email AS ProviderEmail,
+                COALESCE(sp.ContactNumber, pa.ContactNumber, u.Phone, 'N/A') AS ContactNumber,
+                sp.PermitExpiryDate,
+                sp.PermitNoticeSentAt,
+                sp.PermitRenewalDoc,
+                sp.PermitRenewalExpiryDate,
+                sp.PermitRenewalSubmittedAt,
+                sp.PermitRenewalStatus,
+                sp.PermitRenewalNotes,
+                pa.BusinessPermit_Url,
+                sp.VerificationStatus,
+                u.AccountStatus,
+                (SELECT COUNT(*) FROM dbo.Bookings b WHERE (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)) AS TotalBookings
+            FROM dbo.ServiceProviders sp
+            JOIN dbo.Users u ON sp.UserID = u.UserID
+            LEFT JOIN dbo.ProviderApplications pa ON sp.ApplicationID = pa.ApplicationID
+            ORDER BY 
+                CASE 
+                    WHEN sp.PermitRenewalStatus = 'Pending_Review' THEN 1
+                    WHEN sp.PermitExpiryDate IS NOT NULL AND sp.PermitExpiryDate < CAST(GETDATE() AS DATE) THEN 2
+                    WHEN sp.PermitExpiryDate IS NOT NULL AND sp.PermitExpiryDate <= DATEADD(day, 30, CAST(GETDATE() AS DATE)) THEN 3
+                    ELSE 4
+                END ASC,
+                sp.PermitExpiryDate ASC;
+        `;
+        const result = await pool.request().query(query);
+        const providers = result.recordset || [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let validCount = 0;
+        let expiringSoonCount = 0;
+        let expiredCount = 0;
+        let renewalPendingCount = 0;
+
+        const mapped = providers.map(p => {
+            let permitStatus = 'Not_Set';
+            let daysRemaining = null;
+            let isExpired = false;
+            let isExpiringSoon = false;
+
+            if (p.PermitExpiryDate) {
+                const exp = new Date(p.PermitExpiryDate);
+                exp.setHours(0, 0, 0, 0);
+                daysRemaining = Math.round((exp - today) / (1000 * 60 * 60 * 24));
+                if (daysRemaining < 0) {
+                    permitStatus = 'Expired';
+                    isExpired = true;
+                    expiredCount++;
+                } else if (daysRemaining <= 30) {
+                    permitStatus = 'Expiring_Soon';
+                    isExpiringSoon = true;
+                    expiringSoonCount++;
+                } else {
+                    permitStatus = 'Valid';
+                    validCount++;
+                }
+            }
+
+            if (p.PermitRenewalStatus === 'Pending_Review') {
+                renewalPendingCount++;
+            }
+
+            const isRenewalPending = (p.PermitRenewalStatus === 'Pending_Review' || p.PermitRenewalStatus === 'Pending');
+            const compStatus = isRenewalPending ? 'Renewal_Pending' : permitStatus;
+
+            return {
+                ...p,
+                Email: p.ProviderEmail || p.Email,
+                Phone: p.ContactNumber || p.Phone,
+                PermitExpirationDate: p.PermitExpiryDate,
+                ComplianceStatus: compStatus,
+                DaysRemaining: daysRemaining,
+                PermitFile: p.BusinessPermit_Url || p.PermitRenewalDoc,
+                RenewalPermitFile: p.PermitRenewalDoc,
+                RenewalPermitStatus: isRenewalPending ? 'Pending' : p.PermitRenewalStatus,
+                RenewalSubmittedAt: p.PermitRenewalSubmittedAt,
+                RenewalRejectionReason: p.PermitRenewalNotes,
+                LastNoticeSentAt: p.PermitNoticeSentAt,
+                permitStatus,
+                daysRemaining,
+                isExpired,
+                isExpiringSoon,
+                isBookingDisabled: isExpired
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            summary: {
+                total: mapped.length,
+                valid: validCount,
+                expiringSoon: expiringSoonCount,
+                expired: expiredCount,
+                renewalPending: renewalPendingCount
+            },
+            providers: mapped
+        });
+    } catch (error) {
+        console.error('Get Admin Permits Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to retrieve provider permits list.' });
+    }
+};
+
+/**
+ * POST /api/admin/permits/:id/send-notice
+ * Send official permit renewal notice (in-app + email) to provider
+ */
+const sendPermitNotice = async (req, res) => {
+    try {
+        const providerId = parseInt(req.params.id, 10);
+        if (!providerId) return res.status(400).json({ success: false, message: 'Invalid Provider ID.' });
+
+        const pool = await connectDB();
+        const provRes = await pool.request()
+            .input('ProviderID', sql.Int, providerId)
+            .query(`
+                SELECT sp.ProviderID, sp.UserID, sp.BusinessName, sp.PermitExpiryDate,
+                       COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
+                       u.Email, u.FullName
+                FROM dbo.ServiceProviders sp
+                JOIN dbo.Users u ON sp.UserID = u.UserID
+                WHERE sp.ProviderID = @ProviderID;
+            `);
+
+        if (!provRes.recordset || !provRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Provider not found.' });
+        }
+
+        const prov = provRes.recordset[0];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let isExpired = false;
+        let daysRemaining = null;
+
+        if (prov.PermitExpiryDate) {
+            const exp = new Date(prov.PermitExpiryDate);
+            exp.setHours(0, 0, 0, 0);
+            daysRemaining = Math.round((exp - today) / (1000 * 60 * 60 * 24));
+            isExpired = daysRemaining < 0;
+        } else {
+            isExpired = true;
+        }
+
+        // Update PermitNoticeSentAt
+        await pool.request()
+            .input('ProviderID', sql.Int, providerId)
+            .query('UPDATE dbo.ServiceProviders SET PermitNoticeSentAt = GETDATE() WHERE ProviderID = @ProviderID;');
+
+        // Create In-App Notification
+        await notificationModel.createNotification({
+            userId: prov.UserID,
+            type: 'PermitCompliance',
+            title: isExpired ? 'Business Permit Expired - Renewal Required' : 'Notice: Business Permit Expiring Soon',
+            message: isExpired
+                ? `Your business permit has expired. As per platform policy, you cannot accept new bookings until a renewed permit is submitted. Please upload your renewed permit in your Provider Dashboard.`
+                : `Your business permit will expire in ${daysRemaining} days. Please upload your renewed permit soon to avoid booking disruption.`,
+            relatedId: providerId,
+            relatedType: 'ProviderPermit'
+        });
+
+        // Send Real Email Notice
+        const emailService = require('../services/emailService');
+        let emailSent = false;
+        try {
+            await emailService.sendPermitRenewalNoticeEmail({
+                toEmail: prov.Email,
+                providerName: prov.OwnerName || prov.FullName,
+                businessName: prov.BusinessName,
+                expiryDate: prov.PermitExpiryDate,
+                isExpired,
+                daysRemaining
+            });
+            emailSent = true;
+        } catch (emErr) {
+            console.warn('Permit email notice error:', emErr.message);
+        }
+
+        // Log Activity Audit Trail
+        try {
+            await logActivity(
+                pool,
+                req.user?.userId || null,
+                'Business Permit Notice Sent',
+                `Sent renewal notice to "${prov.BusinessName}" (${prov.Email})`,
+                'ServiceProvider',
+                providerId
+            );
+        } catch (logErr) {
+            console.warn('Log activity error:', logErr.message);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Notice successfully sent to ${prov.BusinessName} (${prov.Email}).${emailSent ? ' Official email notification dispatched.' : ''}`
+        });
+    } catch (error) {
+        console.error('Send Permit Notice Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to send permit renewal notice.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/admin/permits/:id/review-renewal
+ * Approve or Reject submitted renewal permit
+ */
+const reviewPermitRenewal = async (req, res) => {
+    try {
+        const providerId = parseInt(req.params.id, 10);
+        const { action, rejectionReason, newExpiryDate } = req.body;
+
+        if (!providerId || !['approve', 'reject'].includes(action)) {
+            return res.status(400).json({ success: false, message: 'Invalid Provider ID or review action.' });
+        }
+
+        const pool = await connectDB();
+        const provRes = await pool.request()
+            .input('ProviderID', sql.Int, providerId)
+            .query(`
+                SELECT sp.ProviderID, sp.UserID, sp.BusinessName, sp.PermitRenewalExpiryDate, sp.PermitRenewalDoc,
+                       u.Email, u.FullName
+                FROM dbo.ServiceProviders sp
+                JOIN dbo.Users u ON sp.UserID = u.UserID
+                WHERE sp.ProviderID = @ProviderID;
+            `);
+
+        if (!provRes.recordset || !provRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Provider not found.' });
+        }
+
+        const prov = provRes.recordset[0];
+
+        if (action === 'approve') {
+            const finalExpiry = newExpiryDate || prov.PermitRenewalExpiryDate;
+            if (!finalExpiry) {
+                return res.status(400).json({ success: false, message: 'New permit expiration date is required to approve renewal.' });
+            }
+
+            await pool.request()
+                .input('ProviderID', sql.Int, providerId)
+                .input('PermitExpiryDate', sql.Date, new Date(finalExpiry))
+                .query(`
+                    UPDATE dbo.ServiceProviders
+                    SET PermitExpiryDate = @PermitExpiryDate,
+                        PermitRenewalStatus = 'Approved',
+                        PermitRenewalNotes = NULL,
+                        PermitStatus = 'Active'
+                    WHERE ProviderID = @ProviderID;
+                `);
+
+            await notificationModel.createNotification({
+                userId: prov.UserID,
+                type: 'PermitCompliance',
+                title: 'Business Permit Renewal Approved',
+                message: `Congratulations! Your renewed business permit has been approved. Your expiration date is updated to ${new Date(finalExpiry).toLocaleDateString()}. New booking reception is fully active.`,
+                relatedId: providerId,
+                relatedType: 'ProviderPermit'
+            });
+
+            await logActivity(
+                pool,
+                req.user?.userId || null,
+                'Permit Renewal Approved',
+                `Approved permit renewal for "${prov.BusinessName}". Valid until ${new Date(finalExpiry).toLocaleDateString()}`,
+                'ServiceProvider',
+                providerId
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: `Permit renewal approved for ${prov.BusinessName}. Booking reception has been fully restored.`
+            });
+        } else {
+            // Reject
+            await pool.request()
+                .input('ProviderID', sql.Int, providerId)
+                .input('Notes', sql.NVarChar(500), rejectionReason || 'Submitted document does not meet compliance standards.')
+                .query(`
+                    UPDATE dbo.ServiceProviders
+                    SET PermitRenewalStatus = 'Rejected',
+                        PermitRenewalNotes = @Notes
+                    WHERE ProviderID = @ProviderID;
+                `);
+
+            await notificationModel.createNotification({
+                userId: prov.UserID,
+                type: 'PermitCompliance',
+                title: 'Business Permit Renewal Rejected',
+                message: `Your business permit renewal was not approved. Reason: ${rejectionReason || 'Document verification failed.'}. Please re-upload a valid document.`,
+                relatedId: providerId,
+                relatedType: 'ProviderPermit'
+            });
+
+            await logActivity(
+                pool,
+                req.user?.userId || null,
+                'Permit Renewal Rejected',
+                `Rejected permit renewal for "${prov.BusinessName}". Reason: ${rejectionReason || 'Invalid document'}`,
+                'ServiceProvider',
+                providerId
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: `Permit renewal for ${prov.BusinessName} rejected.`
+            });
+        }
+    } catch (error) {
+        console.error('Review Permit Renewal Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process permit review.', error: error.message });
+    }
+};
+
 module.exports = {
     getAdminStats,
     searchAdminEntities,
@@ -1534,5 +1869,8 @@ module.exports = {
     markAdminNotificationRead,
     markAllAdminNotificationsRead,
     getAdminBookingDetails,
+    getAdminPermits,
+    sendPermitNotice,
+    reviewPermitRenewal,
     logActivity
 };

@@ -204,6 +204,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-active-providers';
         } else if (cleanHash === 'clients-section' || cleanHash === 'registered-clients' || cleanHash === 'view-registered-clients') {
             targetViewId = 'view-registered-clients';
+        } else if (cleanHash === 'permits-section' || cleanHash === 'permit-compliance' || cleanHash === 'view-admin-permits') {
+            targetViewId = 'view-admin-permits';
         } else if (cleanHash === 'subscriptions-section' || cleanHash === 'provider-subscriptions' || cleanHash === 'view-admin-subscriptions') {
             targetViewId = 'view-admin-subscriptions';
         } else if (cleanHash === 'withdrawal-section' || cleanHash === 'withdrawals' || cleanHash === 'view-withdrawal') {
@@ -222,6 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (targetViewId === 'view-pending-applications' && (href === '#applications-section' || href === '#pending-applications')) ||
                 (targetViewId === 'view-active-providers' && (href === '#providers-section' || href === '#active-providers')) ||
                 (targetViewId === 'view-registered-clients' && (href === '#clients-section' || href === '#registered-clients')) ||
+                (targetViewId === 'view-admin-permits' && (href === '#permits-section' || href === '#permit-compliance')) ||
                 (targetViewId === 'view-admin-subscriptions' && (href === '#subscriptions-section' || href === '#provider-subscriptions')) ||
                 (targetViewId === 'view-withdrawal' && (href === '#withdrawal-section' || href === '#withdrawals')) ||
                 (targetViewId === 'view-client-reports' && (href === '#reports-section' || href === '#client-reports')) ||
@@ -245,7 +248,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // Auto-load data for views when navigated to
-        if (targetViewId === 'view-admin-subscriptions' && typeof loadAdminSubscriptionsPage === 'function') {
+        if (targetViewId === 'view-admin-permits' && typeof loadAdminPermitsPage === 'function') {
+            setTimeout(() => loadAdminPermitsPage(), 50);
+        } else if (targetViewId === 'view-admin-subscriptions' && typeof loadAdminSubscriptionsPage === 'function') {
             setTimeout(() => loadAdminSubscriptionsPage(), 50);
         } else if (targetViewId === 'view-withdrawal' && typeof loadWithdrawalsPage === 'function') {
             setTimeout(() => loadWithdrawalsPage(), 50);
@@ -2993,3 +2998,415 @@ function _renderAdminSubscriptionPaymentsTable(payments) {
     }).join('');
 }
 
+// ============================================================================
+// BUSINESS PERMIT MONITORING & COMPLIANCE
+// ============================================================================
+
+let _permitsAllData = [];
+let _permitsInitialised = false;
+let _currentReviewPermit = null;
+
+/**
+ * Load all provider business permits from the backend and populate the monitoring table.
+ */
+async function loadAdminPermitsPage() {
+    const tbody = document.getElementById('table-admin-permits');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Loading business permits...</td></tr>`;
+
+    try {
+        const res = await fetch('/api/admin/permits', {
+            headers: getAdminHeaders()
+        });
+
+        if (handleAdminAuthError && handleAdminAuthError(res)) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        _permitsAllData = data.providers || [];
+
+        // Update KPI metrics
+        if (data.summary) {
+            const s = data.summary;
+            const elTotal = document.getElementById('permit-stat-total');
+            const elValid = document.getElementById('permit-stat-valid');
+            const elExpSoon = document.getElementById('permit-stat-expiring-soon');
+            const elExpired = document.getElementById('permit-stat-expired');
+            const elPending = document.getElementById('permit-stat-pending-renewal');
+            const badgeSidebar = document.getElementById('badge-permit-expiring');
+
+            if (elTotal) elTotal.textContent = s.total || 0;
+            if (elValid) elValid.textContent = s.valid || 0;
+            if (elExpSoon) elExpSoon.textContent = s.expiringSoon || 0;
+            if (elExpired) elExpired.textContent = s.expired || 0;
+            if (elPending) elPending.textContent = s.pendingRenewal || 0;
+
+            if (badgeSidebar) {
+                const badgeCount = (s.expiringSoon || 0) + (s.expired || 0) + (s.pendingRenewal || 0);
+                if (badgeCount > 0) {
+                    badgeSidebar.textContent = badgeCount;
+                    badgeSidebar.style.display = 'inline-block';
+                } else {
+                    badgeSidebar.style.display = 'none';
+                }
+            }
+        }
+
+        // Render table
+        _renderAdminPermitsTable();
+
+        // Wire up filters and buttons once
+        if (!_permitsInitialised) {
+            _permitsInitialised = true;
+
+            const filterSel = document.getElementById('filter-permit-status');
+            if (filterSel) {
+                filterSel.addEventListener('change', () => _renderAdminPermitsTable());
+            }
+
+            const searchInput = document.getElementById('search-admin-permits');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => _renderAdminPermitsTable());
+            }
+
+            const btnRefresh = document.getElementById('btn-refresh-admin-permits');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', () => loadAdminPermitsPage());
+            }
+
+            // Wire up modal review actions
+            const btnRejectToggle = document.getElementById('btn-admin-permit-reject-toggle');
+            const rejectSection = document.getElementById('modal-permit-reject-section');
+            if (btnRejectToggle && rejectSection) {
+                btnRejectToggle.addEventListener('click', () => {
+                    const isHidden = rejectSection.classList.contains('hidden');
+                    if (isHidden) {
+                        rejectSection.classList.remove('hidden');
+                        btnRejectToggle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Reject';
+                        btnRejectToggle.style.background = '#e11d48';
+                        btnRejectToggle.style.color = '#fff';
+                    } else {
+                        // Confirm rejection
+                        _submitPermitReview('reject');
+                    }
+                });
+            }
+
+            const btnApprove = document.getElementById('btn-admin-permit-approve');
+            if (btnApprove) {
+                btnApprove.addEventListener('click', () => {
+                    _submitPermitReview('approve');
+                });
+            }
+        }
+
+    } catch (err) {
+        console.error('loadAdminPermitsPage error:', err);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Failed to load permit data. Please try again.</td></tr>`;
+    }
+}
+
+/**
+ * Filter and render the business permits table.
+ */
+function _renderAdminPermitsTable() {
+    const tbody = document.getElementById('table-admin-permits');
+    if (!tbody) return;
+
+    const filterVal = document.getElementById('filter-permit-status')?.value || 'all';
+    const searchVal = (document.getElementById('search-admin-permits')?.value || '').trim().toLowerCase();
+
+    let filtered = _permitsAllData.filter(p => {
+        // Status filter
+        if (filterVal !== 'all') {
+            if (filterVal === 'Renewal_Pending' && p.ComplianceStatus !== 'Renewal_Pending' && p.RenewalPermitStatus !== 'Pending') return false;
+            if (filterVal === 'Expiring_Soon' && p.ComplianceStatus !== 'Expiring_Soon') return false;
+            if (filterVal === 'Expired' && p.ComplianceStatus !== 'Expired') return false;
+            if (filterVal === 'Valid' && p.ComplianceStatus !== 'Valid') return false;
+        }
+
+        // Search filter
+        if (searchVal) {
+            const bName = (p.BusinessName || '').toLowerCase();
+            const oName = (p.OwnerName || '').toLowerCase();
+            const email = (p.Email || '').toLowerCase();
+            const phone = (p.Phone || '').toLowerCase();
+            if (!bName.includes(searchVal) && !oName.includes(searchVal) && !email.includes(searchVal) && !phone.includes(searchVal)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:36px;color:#64748b;"><i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.5rem;display:block;margin-bottom:8px;"></i>No business permits match the selected criteria.</td></tr>`;
+        return;
+    }
+
+    const esc = (txt) => typeof escHtml === 'function' ? escHtml(txt || '') : (txt || '');
+
+    tbody.innerHTML = filtered.map(p => {
+        // Avatar
+        const avatarUrl = p.Avatar ? (p.Avatar.startsWith('data:') || p.Avatar.startsWith('http') || p.Avatar.startsWith('/') ? p.Avatar : '/' + p.Avatar) : '/images/default-avatar.png';
+
+        // Compliance status badge
+        let statusBadge = '';
+        if (p.ComplianceStatus === 'Renewal_Pending' || p.RenewalPermitStatus === 'Pending') {
+            statusBadge = `<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-file-signature"></i> Renewal Pending</span>`;
+        } else if (p.ComplianceStatus === 'Expired') {
+            statusBadge = `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-ban"></i> Expired (${Math.abs(p.DaysRemaining ?? 0)}d ago)</span>`;
+        } else if (p.ComplianceStatus === 'Expiring_Soon') {
+            statusBadge = `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-triangle-exclamation"></i> Expires in ${p.DaysRemaining ?? 0}d</span>`;
+        } else {
+            statusBadge = `<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-circle-check"></i> Valid (${p.DaysRemaining ?? 0}d left)</span>`;
+        }
+
+        // Expiration date display
+        let expDateDisplay = '<span style="color:#94a3b8;font-size:0.82rem;">Not Specified</span>';
+        if (p.PermitExpirationDate) {
+            const d = new Date(p.PermitExpirationDate);
+            expDateDisplay = `<strong style="color:#0a192f;font-size:0.86rem;">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>`;
+        }
+
+        // Notice History
+        let noticeDisplay = '<span style="color:#94a3b8;font-size:0.8rem;">None sent</span>';
+        if (p.LastNoticeSentAt) {
+            const d = new Date(p.LastNoticeSentAt);
+            noticeDisplay = `<div style="font-size:0.8rem;color:#475569;"><i class="fa-regular fa-paper-plane" style="color:#2563eb;margin-right:4px;"></i>${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div><span style="font-size:0.72rem;color:#64748b;">${p.NoticeCount || 1} notice(s) issued</span>`;
+        }
+
+        // Renewal Submission
+        let renewalDisplay = '<span style="color:#94a3b8;font-size:0.8rem;">None</span>';
+        if (p.RenewalPermitStatus === 'Pending') {
+            renewalDisplay = `<span style="background:#eff6ff;color:#2563eb;font-weight:700;font-size:0.76rem;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-clock"></i> Submitted ${p.RenewalSubmittedAt ? new Date(p.RenewalSubmittedAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span>`;
+        } else if (p.RenewalPermitStatus === 'Approved') {
+            renewalDisplay = `<span style="color:#10b981;font-weight:700;font-size:0.76rem;"><i class="fa-solid fa-check"></i> Renewed</span>`;
+        } else if (p.RenewalPermitStatus === 'Rejected') {
+            renewalDisplay = `<span style="color:#e11d48;font-weight:700;font-size:0.76rem;" title="${esc(p.RenewalRejectionReason)}"><i class="fa-solid fa-xmark"></i> Rejected</span>`;
+        }
+
+        // Actions
+        let actionButtons = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">`;
+        if (p.RenewalPermitStatus === 'Pending') {
+            actionButtons += `<button type="button" onclick="openAdminReviewPermit(${p.ProviderID})" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(37,99,235,0.3);"><i class="fa-solid fa-file-signature"></i> Review Renewal</button>`;
+        }
+        
+        actionButtons += `<button type="button" onclick="sendAdminPermitNotice(${p.ProviderID}, '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Send Renewal Reminder Notice to Provider"><i class="fa-solid fa-paper-plane" style="color:#0284c7;"></i> Notice</button>`;
+
+        // Document preview action
+        const activeDoc = p.RenewalPermitFile || p.PermitFile;
+        if (activeDoc) {
+            actionButtons += `<button type="button" onclick="previewPermitDoc('${encodeURIComponent(activeDoc)}', '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#64748b;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;cursor:pointer;" title="View Attached Permit File"><i class="fa-solid fa-file"></i></button>`;
+        }
+
+        actionButtons += `</div>`;
+
+        return `
+            <tr>
+                <td>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <img src="${avatarUrl}" alt="Provider" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;">
+                        <div>
+                            <div style="font-weight:800;color:#0a192f;font-size:0.88rem;">${esc(p.BusinessName)}</div>
+                            <div style="font-size:0.76rem;color:#64748b;">${esc(p.OwnerName)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size:0.82rem;color:#334155;"><i class="fa-regular fa-envelope" style="color:#94a3b8;margin-right:5px;"></i>${esc(p.Email)}</div>
+                    <div style="font-size:0.76rem;color:#64748b;margin-top:2px;"><i class="fa-solid fa-phone" style="color:#94a3b8;margin-right:5px;"></i>${esc(p.Phone || 'N/A')}</div>
+                </td>
+                <td>${expDateDisplay}</td>
+                <td>${statusBadge}</td>
+                <td>${noticeDisplay}</td>
+                <td>${renewalDisplay}</td>
+                <td>${actionButtons}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Open the modal to review a submitted renewal permit.
+ */
+function openAdminReviewPermit(providerId) {
+    const p = _permitsAllData.find(x => x.ProviderID === providerId);
+    if (!p) {
+        showToast('Provider record not found.', 'error');
+        return;
+    }
+    _currentReviewPermit = p;
+
+    const modal = document.getElementById('modal-admin-review-permit');
+    const titleEl = document.getElementById('modal-permit-title');
+    const subtitleEl = document.getElementById('modal-permit-subtitle');
+    const infoStrip = document.getElementById('modal-permit-info-strip');
+    const docPreview = document.getElementById('modal-permit-doc-preview');
+    const prevExpEl = document.getElementById('modal-permit-prev-expiry');
+    const newExpEl = document.getElementById('modal-permit-new-expiry');
+    const rejectSec = document.getElementById('modal-permit-reject-section');
+    const rejectReason = document.getElementById('modal-permit-reject-reason');
+    const btnRejectToggle = document.getElementById('btn-admin-permit-reject-toggle');
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `Review Permit: ${p.BusinessName}`;
+    if (subtitleEl) subtitleEl.textContent = `Submitted by ${p.OwnerName} (${p.Email})`;
+
+    if (infoStrip) {
+        infoStrip.innerHTML = `
+            <div>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Business Name</span>
+                <strong style="display:block;color:#0a192f;font-size:0.92rem;">${p.BusinessName}</strong>
+            </div>
+            <div>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Owner / Representative</span>
+                <strong style="display:block;color:#0a192f;font-size:0.92rem;">${p.OwnerName}</strong>
+            </div>
+            <div>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Submission Date</span>
+                <span style="display:block;color:#334155;font-size:0.86rem;">${p.RenewalSubmittedAt ? new Date(p.RenewalSubmittedAt).toLocaleString() : 'N/A'}</span>
+            </div>
+            <div>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Permit Number / Notes</span>
+                <span style="display:block;color:#334155;font-size:0.86rem;">${p.PermitNumber || 'Standard Municipal Permit'}</span>
+            </div>
+        `;
+    }
+
+    // Previous Expiry
+    if (prevExpEl) {
+        prevExpEl.value = p.PermitExpirationDate ? new Date(p.PermitExpirationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'None';
+    }
+
+    // Propose default new expiry date (1 year from now)
+    if (newExpEl) {
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        newExpEl.value = nextYear.toISOString().split('T')[0];
+    }
+
+    // Reset reject section
+    if (rejectSec) rejectSec.classList.add('hidden');
+    if (rejectReason) rejectReason.value = '';
+    if (btnRejectToggle) {
+        btnRejectToggle.innerHTML = '<i class="fa-solid fa-xmark"></i> Reject';
+        btnRejectToggle.style.background = '#fff1f2';
+        btnRejectToggle.style.color = '#e11d48';
+    }
+
+    // Preview Permit Document
+    const docUrl = p.RenewalPermitFile || p.PermitFile;
+    if (docPreview) {
+        if (!docUrl) {
+            docPreview.innerHTML = `<span style="color:#94a3b8;">No permit document attached.</span>`;
+        } else if (docUrl.startsWith('data:image/') || docUrl.endsWith('.jpg') || docUrl.endsWith('.jpeg') || docUrl.endsWith('.png') || docUrl.endsWith('.webp')) {
+            const cleanSrc = (docUrl.startsWith('/data:') ? docUrl.slice(1) : docUrl);
+            docPreview.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;">
+                    <img src="${cleanSrc}" alt="Permit Document" style="max-height:360px;max-width:100%;border-radius:8px;object-fit:contain;box-shadow:0 4px 14px rgba(0,0,0,0.5);">
+                    <a href="${cleanSrc}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;font-size:0.82rem;text-decoration:none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution</a>
+                </div>
+            `;
+        } else {
+            // PDF or other document
+            docPreview.innerHTML = `
+                <div style="padding:24px;text-align:center;">
+                    <i class="fa-solid fa-file-pdf" style="font-size:3rem;color:#ef4444;margin-bottom:12px;display:block;"></i>
+                    <p style="color:#fff;margin:0 0 12px 0;font-size:0.9rem;">Document uploaded in PDF or binary format</p>
+                    <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="background:#2563eb;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.86rem;display:inline-flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> View PDF Document
+                    </a>
+                </div>
+            `;
+        }
+    }
+
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Submit an approval or rejection for the renewal permit.
+ */
+async function _submitPermitReview(action) {
+    if (!_currentReviewPermit) return;
+
+    const providerId = _currentReviewPermit.ProviderID;
+    const newExpEl = document.getElementById('modal-permit-new-expiry');
+    const rejectReasonEl = document.getElementById('modal-permit-reject-reason');
+
+    let payload = { action };
+
+    if (action === 'approve') {
+        const expDate = newExpEl?.value;
+        if (!expDate) {
+            alert('Please select a valid expiration date before approving.');
+            return;
+        }
+        payload.expirationDate = expDate;
+    } else {
+        const reason = (rejectReasonEl?.value || '').trim();
+        if (!reason) {
+            alert('Please provide a reason for rejecting the renewal permit.');
+            return;
+        }
+        payload.rejectionReason = reason;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/permits/${providerId}/review`, {
+            method: 'POST',
+            headers: {
+                ...getAdminHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Operation failed');
+
+        showToast(action === 'approve' ? '✓ Permit renewal approved and active!' : 'Permit renewal rejected. Notice sent to provider.', action === 'approve' ? 'success' : 'info');
+        document.getElementById('modal-admin-review-permit')?.classList.add('hidden');
+        loadAdminPermitsPage();
+    } catch (err) {
+        console.error('Error reviewing permit:', err);
+        showToast(err.message || 'Error processing permit review', 'error');
+    }
+}
+
+/**
+ * Send renewal notice to provider.
+ */
+async function sendAdminPermitNotice(providerId, businessName) {
+    if (!confirm(`Send official business permit renewal reminder to "${businessName}"?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/permits/${providerId}/send-notice`, {
+            method: 'POST',
+            headers: getAdminHeaders()
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to send notice');
+
+        showToast(`✓ Renewal reminder sent to ${businessName}`, 'success');
+        loadAdminPermitsPage();
+    } catch (err) {
+        console.error('sendAdminPermitNotice error:', err);
+        showToast(err.message || 'Failed to send permit notice', 'error');
+    }
+}
+
+/**
+ * Simple document preview helper for permits.
+ */
+function previewPermitDoc(encodedUrl, businessName) {
+    const rawUrl = decodeURIComponent(encodedUrl);
+    const cleanSrc = (rawUrl.startsWith('/data:') ? rawUrl.slice(1) : rawUrl);
+    window.open(cleanSrc, '_blank');
+}

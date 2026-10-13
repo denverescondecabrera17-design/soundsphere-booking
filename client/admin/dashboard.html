@@ -42,6 +42,10 @@
                 <a href="#clients-section" class="menu-item" id="nav-item-clients">
                     <i class="fa-solid fa-users"></i> Registered Clients
                 </a>
+                <a href="#permits-section" class="menu-item" id="nav-item-permits">
+                    <i class="fa-solid fa-id-card-clip"></i> Permit Compliance
+                    <span id="badge-permit-expiring" class="badge badge-danger" style="display:none;">0</span>
+                </a>
                 <a href="#reports-section" class="menu-item" id="nav-item-reports">
                     <i class="fa-solid fa-triangle-exclamation"></i> Client Reports
                     <span id="badge-pending-reports" class="badge badge-warning" style="display:none;">0</span>
@@ -752,8 +756,136 @@
                             </div>
                         </div>
                     </div>
+                <!-- VIEW: BUSINESS PERMIT MONITORING & REGULATORY COMPLIANCE -->
+                <div class="admin-view-panel hidden" id="view-admin-permits">
+                    <!-- Page Header -->
+                    <div style="margin-bottom:28px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <div style="width:46px; height:46px; background:linear-gradient(135deg,#0284c7,#0369a1); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(2,132,199,0.35);">
+                                    <i class="fa-solid fa-id-card-clip" style="color:#fff; font-size:1.2rem;"></i>
+                                </div>
+                                <div>
+                                    <h1 style="font-size:1.55rem; font-weight:800; color:#0a192f; margin:0;">Business Permit Monitoring & Compliance</h1>
+                                    <p style="color:#64748b; font-size:0.88rem; margin:0;">Monitor municipal permit expiration dates, issue renewal notices, and review renewed permits</p>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <button type="button" id="btn-refresh-admin-permits" style="background:#fff; border:1px solid #cbd5e1; color:#0a192f; padding:9px 16px; border-radius:10px; font-weight:700; font-size:0.84rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(0,0,0,0.04); transition:all 0.2s;">
+                                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Metric Cards -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:18px; margin-bottom:28px;">
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">Total Monitored</div>
+                                    <strong id="permit-stat-total" style="font-size:1.65rem; color:#0a192f; display:block; margin-top:6px;">0</strong>
+                                </div>
+                                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1rem;">
+                                    <i class="fa-solid fa-store"></i>
+                                </div>
+                            </div>
+                            <span style="font-size:0.75rem; color:#64748b; display:block; margin-top:6px;">All approved service providers</span>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #bbf7d0; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:0.05em;">Valid (&gt;30 Days)</div>
+                                    <strong id="permit-stat-valid" style="font-size:1.65rem; color:#10b981; display:block; margin-top:6px;">0</strong>
+                                </div>
+                                <div style="width:36px; height:36px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1rem;">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </div>
+                            </div>
+                            <span style="font-size:0.75rem; color:#15803d; display:block; margin-top:6px;">Compliant and operational</span>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #fef3c7; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#d97706; text-transform:uppercase; letter-spacing:0.05em;">Expiring Soon (&le;30d)</div>
+                                    <strong id="permit-stat-expiring-soon" style="font-size:1.65rem; color:#d97706; display:block; margin-top:6px;">0</strong>
+                                </div>
+                                <div style="width:36px; height:36px; border-radius:8px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1rem;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                            </div>
+                            <span style="font-size:0.75rem; color:#b45309; display:block; margin-top:6px;">Notice recommended</span>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #fecdd3; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#e11d48; text-transform:uppercase; letter-spacing:0.05em;">Expired Permits</div>
+                                    <strong id="permit-stat-expired" style="font-size:1.65rem; color:#e11d48; display:block; margin-top:6px;">0</strong>
+                                </div>
+                                <div style="width:36px; height:36px; border-radius:8px; background:#fee2e2; color:#e11d48; display:flex; align-items:center; justify-content:center; font-size:1rem;">
+                                    <i class="fa-solid fa-ban"></i>
+                                </div>
+                            </div>
+                            <span style="font-size:0.75rem; color:#be123c; display:block; margin-top:6px;">Booking acceptance blocked</span>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #bfdbfe; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <div style="font-size:0.75rem; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.05em;">Renewal Pending</div>
+                                    <strong id="permit-stat-pending-renewal" style="font-size:1.65rem; color:#2563eb; display:block; margin-top:6px;">0</strong>
+                                </div>
+                                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1rem;">
+                                    <i class="fa-solid fa-file-signature"></i>
+                                </div>
+                            </div>
+                            <span style="font-size:0.75rem; color:#1d4ed8; display:block; margin-top:6px;">Submitted for verification</span>
+                        </div>
+                    </div>
+
+                    <!-- Table Panel -->
+                    <div class="panel">
+                        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                            <div class="search-box" style="width:320px;">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="search-admin-permits" placeholder="Search provider, business, or email..." style="width:100%; padding:8px 12px 8px 36px; border:1px solid #cbd5e1; border-radius:8px;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <select id="filter-permit-status" style="padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.88rem;">
+                                    <option value="all">All Permit Statuses</option>
+                                    <option value="Renewal_Pending">Pending Renewal Review</option>
+                                    <option value="Expiring_Soon">Expiring Soon (&le;30 Days)</option>
+                                    <option value="Expired">Expired</option>
+                                    <option value="Valid">Valid</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Service Provider</th>
+                                            <th>Contact Details</th>
+                                            <th>Permit Expiration</th>
+                                            <th>Compliance Status</th>
+                                            <th>Notice History</th>
+                                            <th>Renewal Submission</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-admin-permits">
+                                        <tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">Loading business permits...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <!-- END AUDIT TRAIL VIEW PANEL -->
+                <!-- END PERMITS VIEW PANEL -->
 
             </main>
         </div>
@@ -984,6 +1116,66 @@
                     <i class="fa-solid fa-chart-pie"></i> View Platform Overview
                 </button>
                 <button type="button" onclick="document.getElementById('modal-admin-booking-detail').classList.add('hidden')" style="padding:8px 22px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-weight:600; font-size:0.86rem; color:#334155;">Close</button>
+            </div>
+    <!-- Modal: Review Permit Renewal Submission -->
+    <div class="admin-modal-overlay hidden" id="modal-admin-review-permit" role="dialog" aria-modal="true" style="z-index:999999;">
+        <div class="admin-modal-card" style="max-width:720px;">
+            <div style="padding:20px 24px; background:linear-gradient(135deg, #0a192f 0%, #1e293b 100%); color:#ffffff; display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #0284c7;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; border-radius:10px; background:#0284c7; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.15rem;">
+                        <i class="fa-solid fa-id-card-clip"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#fff;" id="modal-permit-title">Review Permit Renewal</h3>
+                        <p style="margin:2px 0 0 0; font-size:0.78rem; color:#94a3b8;" id="modal-permit-subtitle">Verify updated municipal business license</p>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-admin-review-permit').classList.add('hidden')" style="background:none; border:none; color:#cbd5e1; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            
+            <div style="padding:24px; max-height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:18px;">
+                <!-- Provider Info Strip -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px;" id="modal-permit-info-strip">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Document Viewer Box -->
+                <div>
+                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em;">Submitted Permit Document</label>
+                    <div id="modal-permit-doc-preview" style="background:#0f172a; border-radius:12px; padding:16px; text-align:center; min-height:220px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <!-- Image or PDF link -->
+                    </div>
+                </div>
+
+                <!-- Expiry Date Verification Field -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div>
+                        <label style="display:block; font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:6px;">Current / Previous Expiration</label>
+                        <input type="text" id="modal-permit-prev-expiry" readonly style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; background:#f1f5f9; color:#64748b; font-size:0.9rem;" value="None">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.82rem; font-weight:700; color:#0f172a; margin-bottom:6px;">Verified New Expiration Date <span style="color:#ef4444;">*</span></label>
+                        <input type="date" id="modal-permit-new-expiry" style="width:100%; padding:10px 14px; border:1.5px solid #2563eb; border-radius:8px; font-size:0.9rem; font-weight:600;">
+                    </div>
+                </div>
+
+                <!-- Rejection Reason Field (Hidden by default, shown if rejecting) -->
+                <div id="modal-permit-reject-section" class="hidden">
+                    <label style="display:block; font-size:0.82rem; font-weight:700; color:#e11d48; margin-bottom:6px;">Rejection Reason <span style="color:#ef4444;">*</span></label>
+                    <textarea id="modal-permit-reject-reason" style="width:100%; height:80px; padding:10px 14px; border:1.5px solid #fecdd3; border-radius:8px; font-family:inherit; font-size:0.88rem;" placeholder="State why the permit was rejected (e.g., Unclear image, expired date, wrong business name)..."></textarea>
+                </div>
+            </div>
+
+            <div style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <button type="button" onclick="document.getElementById('modal-admin-review-permit').classList.add('hidden')" style="padding:9px 18px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-weight:600; font-size:0.86rem; color:#475569;">Cancel</button>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" id="btn-admin-permit-reject-toggle" style="padding:9px 18px; border:1px solid #fecdd3; border-radius:8px; background:#fff1f2; color:#e11d48; cursor:pointer; font-weight:700; font-size:0.86rem;">
+                        <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                    <button type="button" id="btn-admin-permit-approve" style="padding:9px 22px; border:none; border-radius:8px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; cursor:pointer; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                        <i class="fa-solid fa-check"></i> Approve &amp; Activate
+                    </button>
+                </div>
             </div>
         </div>
     </div>

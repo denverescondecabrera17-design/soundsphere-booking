@@ -660,6 +660,34 @@ const autoSeedDatabase = async (activePool) => {
                 BEGIN
                     ALTER TABLE dbo.ServiceProviders ADD PermitExpiryDate DATE NULL;
                 END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitNoticeSentAt')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitNoticeSentAt DATETIME NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalDoc')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalDoc NVARCHAR(MAX) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalExpiryDate')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalExpiryDate DATE NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalSubmittedAt')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalSubmittedAt DATETIME NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalStatus')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalStatus NVARCHAR(50) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitRenewalNotes')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitRenewalNotes NVARCHAR(500) NULL;
+                END
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceProviders') AND name = 'PermitStatus')
+                BEGIN
+                    ALTER TABLE dbo.ServiceProviders ADD PermitStatus NVARCHAR(50) NULL;
+                END
                 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UX_ProviderApplications_ActiveUser' AND object_id = OBJECT_ID('dbo.ProviderApplications'))
                 BEGIN
                     CREATE UNIQUE NONCLUSTERED INDEX UX_ProviderApplications_ActiveUser

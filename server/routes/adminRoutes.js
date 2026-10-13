@@ -25,6 +25,12 @@ router.get('/search', adminController.searchAdminEntities);
 router.post('/providers/:id/suspend', adminController.suspendProvider);
 router.post('/providers/:id/reactivate', adminController.reactivateProvider);
 
+// Admin Business Permit Monitoring & Renewal Endpoints
+router.get('/permits', adminController.getAdminPermits);
+router.post('/permits/:id/send-notice', adminController.sendPermitNotice);
+router.post('/permits/:id/review', adminController.reviewPermitRenewal);
+router.post('/permits/:id/review-renewal', adminController.reviewPermitRenewal);
+
 // Admin Applications Review & Approval Endpoints
 router.get('/applications', providerAppController.getPendingApplications);
 router.post('/applications/:id/approve', providerAppController.approveApplication);

@@ -102,7 +102,7 @@ syncFilesList.forEach(item => {
     }
 });
 
-// 4. Sync admin.css
+// 4. Sync admin dashboard & css & js
 const srcAdminCss = path.join(__dirname, '../client/admin/css/admin.css');
 const adminCssTargets = [
     path.join(__dirname, '../public/admin/css/admin.css')
@@ -112,6 +112,30 @@ if (fs.existsSync(srcAdminCss)) {
     adminCssTargets.forEach(target => {
         safeWriteFileSync(target, adminCssContent);
         console.log(`Synced admin.css -> ${target}`);
+    });
+}
+
+const srcAdminHtml = path.join(__dirname, '../client/admin/dashboard.html');
+const adminHtmlTargets = [
+    path.join(__dirname, '../public/admin/dashboard.html')
+];
+if (fs.existsSync(srcAdminHtml)) {
+    const adminHtmlContent = fs.readFileSync(srcAdminHtml, 'utf8');
+    adminHtmlTargets.forEach(target => {
+        safeWriteFileSync(target, adminHtmlContent);
+        console.log(`Synced admin/dashboard.html -> ${target}`);
+    });
+}
+
+const srcAdminJs = path.join(__dirname, '../client/admin/js/admin-dashboard.js');
+const adminJsTargets = [
+    path.join(__dirname, '../public/admin/js/admin-dashboard.js')
+];
+if (fs.existsSync(srcAdminJs)) {
+    const adminJsContent = fs.readFileSync(srcAdminJs, 'utf8');
+    adminJsTargets.forEach(target => {
+        safeWriteFileSync(target, adminJsContent);
+        console.log(`Synced admin/admin-dashboard.js -> ${target}`);
     });
 }
 
