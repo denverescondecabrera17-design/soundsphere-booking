@@ -1717,7 +1717,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 renderNotificationItems(adminNotificationsData);
 
-                // Smart Target Navigation
+                // Smart Target Navigation & Direct Modal Opener
                 if (type === 'application' || title.includes('application')) {
                     switchAdminView('applications-section');
                     if (relatedId && typeof window.viewAppDetails === 'function') {
@@ -1727,8 +1727,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     switchAdminView('withdrawal-section');
                 } else if (type === 'report' || title.includes('report') || title.includes('dispute')) {
                     switchAdminView('reports-section');
+                    if (relatedId && typeof window.viewAdminReportDetails === 'function') {
+                        setTimeout(() => window.viewAdminReportDetails(parseInt(relatedId, 10)), 150);
+                    }
                 } else if (type === 'booking' || title.includes('booking')) {
-                    switchAdminView('dashboard-overview');
+                    const match = title.match(/#([a-zA-Z0-9_-]+)/);
+                    const bookingIdent = relatedId || (match ? match[1] : null);
+                    if (bookingIdent && typeof window.openAdminBookingModal === 'function') {
+                        window.openAdminBookingModal(bookingIdent);
+                    } else {
+                        switchAdminView('dashboard-overview');
+                    }
                 } else if (type === 'provider' || title.includes('provider')) {
                     switchAdminView('providers-section');
                 } else if (type === 'subscription' || title.includes('subscription')) {
@@ -1738,6 +1747,216 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         });
+    };
+
+    // Admin Booking Details Modal Opener
+    window.openAdminBookingModal = async (bookingIdOrRef) => {
+        if (!bookingIdOrRef) return;
+
+        const modal = document.getElementById('modal-admin-booking-detail');
+        const modalBody = document.getElementById('admin-booking-modal-body');
+        const titleEl = document.getElementById('admin-booking-modal-title');
+        const subtitleEl = document.getElementById('admin-booking-modal-subtitle');
+        const btnSwitchOverview = document.getElementById('btn-admin-booking-modal-switch-view');
+
+        if (!modal || !modalBody) return;
+
+        modal.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = `Booking Details`;
+        if (subtitleEl) subtitleEl.textContent = `Loading details for #${bookingIdOrRef}...`;
+
+        modalBody.innerHTML = `
+            <div style="padding:48px 16px; text-align:center; color:#64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#2563eb; margin-bottom:12px; display:block;"></i>
+                Fetching comprehensive booking record...
+            </div>
+        `;
+
+        if (btnSwitchOverview) {
+            btnSwitchOverview.onclick = () => {
+                modal.classList.add('hidden');
+                switchAdminView('dashboard-overview');
+            };
+        }
+
+        try {
+            const headers = getAdminHeaders();
+            let res = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingIdOrRef)}`, { headers });
+            if (!res.ok) {
+                res = await fetch(`/api/bookings/${encodeURIComponent(bookingIdOrRef)}`, { headers });
+            }
+
+            if (!res.ok) {
+                throw new Error('Could not retrieve booking details.');
+            }
+
+            const data = await res.json();
+            const b = data.booking;
+            if (!b) throw new Error('Booking record not found.');
+
+            const ref = b.BookingReference || `BK-${b.BookingID}`;
+            if (titleEl) titleEl.textContent = `Booking #${ref}`;
+            if (subtitleEl) subtitleEl.textContent = `${b.PackageName || 'Sound & Light Service'} • Booked on ${new Date(b.CreatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+            // Status Badge Colors
+            const statusLower = (b.BookingStatus || 'confirmed').toLowerCase();
+            let statusBg = '#eff6ff', statusColor = '#2563eb', statusBorder = '#bfdbfe';
+            if (statusLower === 'completed') {
+                statusBg = '#ecfdf5'; statusColor = '#059669'; statusBorder = '#a7f3d0';
+            } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
+                statusBg = '#fef2f2'; statusColor = '#dc2626'; statusBorder = '#fecaca';
+            } else if (statusLower === 'pending') {
+                statusBg = '#fffbeb'; statusColor = '#d97706'; statusBorder = '#fde68a';
+            }
+
+            // Payment / Escrow Badge
+            const payLower = (b.PaymentStatus || '').toLowerCase();
+            let payBg = '#ecfdf5', payColor = '#059669';
+            if (payLower === 'pending' || payLower === 'unpaid') {
+                payBg = '#fffbeb'; payColor = '#d97706';
+            }
+
+            const total = parseFloat(b.TotalAmount || 0);
+            const paid = parseFloat(b.AmountPaid || 0);
+            const balance = parseFloat(b.RemainingBalance || (total - paid > 0 ? total - paid : 0));
+            const pkgPrice = parseFloat(b.PackagePrice || total);
+            const transFee = parseFloat(b.TransportationFee || 0);
+            const commission = parseFloat(b.CommissionAmount || (total * 0.10));
+            const earnings = parseFloat(b.ProviderEarnings || (total - commission));
+
+            const clientName = b.DisplayClientName || b.ClientName || 'Client';
+            const clientEmail = b.DisplayClientEmail || b.ClientEmail || 'N/A';
+            const clientPhone = b.DisplayClientPhone || b.ClientPhone || 'N/A';
+
+            const provName = b.ProviderName || b.BusinessName || 'Service Provider';
+            const provEmail = b.ProviderEmail || 'N/A';
+            const provPhone = b.ProviderPhone || 'N/A';
+
+            const eventDateFormatted = b.EventDate ? new Date(b.EventDate).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+            const eventTimeFormatted = b.StartTime && b.EndTime ? `${b.StartTime} - ${b.EndTime}` : (b.EventTime || 'N/A');
+
+            modalBody.innerHTML = `
+                <!-- Status Banner -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#64748b; letter-spacing:0.5px;">Booking Status</span>
+                        <div style="margin-top:4px;">
+                            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; font-size:0.86rem; font-weight:700; background:${statusBg}; color:${statusColor}; border:1px solid ${statusBorder};">
+                                <span style="width:8px; height:8px; border-radius:50%; background:${statusColor};"></span>
+                                ${b.BookingStatus || 'Confirmed'}
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#64748b; letter-spacing:0.5px;">Escrow & Payment</span>
+                        <div style="margin-top:4px;">
+                            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; font-size:0.86rem; font-weight:700; background:${payBg}; color:${payColor}; border:1px solid #e2e8f0;">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                ${b.EscrowStatus || (b.PaymentStatus === 'Paid' ? 'Held in Escrow' : b.PaymentStatus || 'Paid')}
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#64748b; letter-spacing:0.5px;">Total Value</span>
+                        <div style="font-size:1.25rem; font-weight:900; color:#0a192f; margin-top:2px;">
+                            ₱${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-Column Parties Grid -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <!-- Client Card -->
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <h4 style="margin:0; font-size:0.92rem; font-weight:800; color:#0a192f;">Client Details</h4>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:0.84rem;">
+                            <div><strong style="color:#64748b;">Full Name:</strong> <span style="color:#0a192f; font-weight:600;">${escHtml(clientName)}</span></div>
+                            <div><strong style="color:#64748b;">Email:</strong> <span style="color:#0a192f;">${escHtml(clientEmail)}</span></div>
+                            <div><strong style="color:#64748b;">Contact:</strong> <span style="color:#0a192f;">${escHtml(clientPhone)}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Service Provider Card -->
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:#f0fdf4; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                            <h4 style="margin:0; font-size:0.92rem; font-weight:800; color:#0a192f;">Service Provider</h4>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:0.84rem;">
+                            <div><strong style="color:#64748b;">Business:</strong> <span style="color:#0a192f; font-weight:600;">${escHtml(provName)}</span></div>
+                            <div><strong style="color:#64748b;">Email:</strong> <span style="color:#0a192f;">${escHtml(provEmail)}</span></div>
+                            <div><strong style="color:#64748b;">Contact:</strong> <span style="color:#0a192f;">${escHtml(provPhone)}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Schedule & Location Card -->
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <div style="width:32px; height:32px; border-radius:8px; background:#f5f3ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </div>
+                        <h4 style="margin:0; font-size:0.92rem; font-weight:800; color:#0a192f;">Event Schedule & Location</h4>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.84rem;">
+                        <div><strong style="color:#64748b;">Package:</strong> <span style="color:#0a192f; font-weight:700;">${escHtml(b.PackageName || 'N/A')}</span></div>
+                        <div><strong style="color:#64748b;">Event Date:</strong> <span style="color:#0a192f; font-weight:600;">${eventDateFormatted}</span></div>
+                        <div><strong style="color:#64748b;">Event Time:</strong> <span style="color:#0a192f;">${eventTimeFormatted}</span></div>
+                        <div><strong style="color:#64748b;">Duration:</strong> <span style="color:#0a192f;">${b.NumberOfHours ? `${b.NumberOfHours} hour(s)` : ''} ${b.NumberOfDays ? `(${b.NumberOfDays} day(s))` : ''}</span></div>
+                        <div style="grid-column:1 / -1;"><strong style="color:#64748b;">Venue / Address:</strong> <span style="color:#0a192f;">${escHtml(b.VenueName || b.Location || b.EventAddress || 'N/A')}</span></div>
+                        ${b.LocationNotes ? `<div style="grid-column:1 / -1;"><strong style="color:#64748b;">Special Notes:</strong> <span style="color:#475569;">${escHtml(b.LocationNotes)}</span></div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Financial Breakdown Card -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <div style="width:32px; height:32px; border-radius:8px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+                        <h4 style="margin:0; font-size:0.92rem; font-weight:800; color:#0a192f;">Financial & Platform Commission Breakdown</h4>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; text-align:center;">
+                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                            <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase; font-weight:700;">Package Price</span>
+                            <div style="font-size:0.95rem; font-weight:800; color:#0a192f; margin-top:4px;">₱${pkgPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                            <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase; font-weight:700;">Transportation</span>
+                            <div style="font-size:0.95rem; font-weight:800; color:#0a192f; margin-top:4px;">₱${transFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px;">
+                            <span style="font-size:0.72rem; color:#1e40af; text-transform:uppercase; font-weight:700;">Admin Fee (10%)</span>
+                            <div style="font-size:0.95rem; font-weight:800; color:#2563eb; margin-top:4px;">₱${commission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px;">
+                            <span style="font-size:0.72rem; color:#065f46; text-transform:uppercase; font-weight:700;">Provider Net (90%)</span>
+                            <div style="font-size:0.95rem; font-weight:800; color:#059669; margin-top:4px;">₱${earnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:10px; border-top:1px dashed #cbd5e1; font-size:0.84rem;">
+                        <div><strong style="color:#64748b;">Amount Paid by Client:</strong> <span style="color:#059669; font-weight:800;">₱${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+                        <div><strong style="color:#64748b;">Remaining Balance:</strong> <span style="color:${balance > 0 ? '#d97706' : '#64748b'}; font-weight:800;">₱${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error('Error opening admin booking modal:', err);
+            modalBody.innerHTML = `
+                <div style="padding:32px 16px; text-align:center; color:#dc2626;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                    <strong style="font-size:1rem;">Failed to load booking details</strong>
+                    <p style="font-size:0.82rem; color:#64748b; margin-top:4px;">${err.message || 'The booking record could not be retrieved.'}</p>
+                </div>
+            `;
+        }
     };
 
     // Mark All Notifications as Read Action
@@ -1796,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const displayMsg = String(n.Message || '').replace(/\?\?\s*/g, '📢 ').replace(/\?(\d)/g, '₱$1');
 
             return `
-                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:${n.IsRead ? '#fff' : '#f8fafc'}; display:flex; gap:14px; align-items:flex-start;">
+                <div class="history-notification-item" data-id="${n.NotificationID}" data-type="${n.NotificationType || ''}" data-title="${displayTitle}" data-related-id="${n.RelatedID || ''}" style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:${n.IsRead ? '#fff' : '#f8fafc'}; display:flex; gap:14px; align-items:flex-start; cursor:pointer; transition:background 0.2s ease;">
                     <div style="width:38px; height:38px; border-radius:50%; background:${visuals.bg}; color:${visuals.color}; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
                         <i class="fa-solid ${visuals.icon}"></i>
                     </div>
@@ -1808,6 +2027,55 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }).join('');
+
+        historyList.querySelectorAll('.history-notification-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const notifId = item.getAttribute('data-id');
+                const type = (item.getAttribute('data-type') || '').toLowerCase();
+                const title = (item.getAttribute('data-title') || '').toLowerCase();
+                const relatedId = item.getAttribute('data-related-id');
+
+                if (modalNotifHistory) modalNotifHistory.classList.add('hidden');
+
+                // Mark local copy as read
+                const found = adminNotificationsData.find(x => String(x.NotificationID) === String(notifId));
+                if (found) found.IsRead = true;
+
+                try {
+                    const headers = getAdminHeaders();
+                    fetch(`/api/admin/notifications/${notifId}/read`, { method: 'PUT', headers });
+                } catch (e) {}
+
+                // Smart Target Navigation & Direct Modal Opener
+                if (type === 'application' || title.includes('application')) {
+                    switchAdminView('applications-section');
+                    if (relatedId && typeof window.viewAppDetails === 'function') {
+                        setTimeout(() => window.viewAppDetails(relatedId), 150);
+                    }
+                } else if (type === 'withdrawal' || title.includes('withdrawal') || title.includes('payout')) {
+                    switchAdminView('withdrawal-section');
+                } else if (type === 'report' || title.includes('report') || title.includes('dispute')) {
+                    switchAdminView('reports-section');
+                    if (relatedId && typeof window.viewAdminReportDetails === 'function') {
+                        setTimeout(() => window.viewAdminReportDetails(parseInt(relatedId, 10)), 150);
+                    }
+                } else if (type === 'booking' || title.includes('booking')) {
+                    const match = title.match(/#([a-zA-Z0-9_-]+)/);
+                    const bookingIdent = relatedId || (match ? match[1] : null);
+                    if (bookingIdent && typeof window.openAdminBookingModal === 'function') {
+                        window.openAdminBookingModal(bookingIdent);
+                    } else {
+                        switchAdminView('dashboard-overview');
+                    }
+                } else if (type === 'provider' || title.includes('provider')) {
+                    switchAdminView('providers-section');
+                } else if (type === 'subscription' || title.includes('subscription')) {
+                    switchAdminView('subscriptions-section');
+                } else {
+                    switchAdminView('dashboard-overview');
+                }
+            });
+        });
     };
 
     // Background Real-Time Polling Interval (Every 15 Seconds)

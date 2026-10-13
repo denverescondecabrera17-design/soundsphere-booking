@@ -49,5 +49,9 @@ router.get('/notifications', adminController.getAdminNotifications);
 router.put('/notifications/read-all', adminController.markAllAdminNotificationsRead);
 router.put('/notifications/:id/read', adminController.markAdminNotificationRead);
 
+// Admin Detailed Booking Overview Endpoint
+router.get('/bookings/:id', adminController.getAdminBookingDetails);
+
 module.exports = router;
+
 

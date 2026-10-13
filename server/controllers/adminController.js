@@ -1459,6 +1459,62 @@ const markAllAdminNotificationsRead = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/admin/bookings/:id
+ * Retrieve comprehensive booking details for administrator modal
+ */
+const getAdminBookingDetails = async (req, res) => {
+    try {
+        const id = req.params.id;
+        if (!id || id === 'undefined' || id === 'null') {
+            return res.status(400).json({ success: false, message: 'Valid Booking ID or Reference is required.' });
+        }
+
+        const pool = await connectDB();
+        const cleanId = String(id).trim().replace(/^#/, '');
+        const isNum = !isNaN(parseInt(cleanId, 10));
+        const numId = isNum ? parseInt(cleanId, 10) : -1;
+
+        const queryStr = `
+            SELECT 
+                b.*,
+                sp.BusinessName AS ProviderName,
+                sp.OwnerName AS ProviderOwnerName,
+                sp.CoverageArea AS ProviderCoverage,
+                uProv.Email AS ProviderEmail,
+                uProv.Phone AS ProviderPhone,
+                COALESCE(b.ClientName, uClient.Email, 'Client') AS DisplayClientName,
+                COALESCE(b.ClientEmail, uClient.Email) AS DisplayClientEmail,
+                COALESCE(b.ClientPhone, uClient.Phone) AS DisplayClientPhone
+            FROM dbo.Bookings b
+            LEFT JOIN dbo.ServiceProviders sp ON b.ProviderID = sp.ProviderID
+            LEFT JOIN dbo.Users uProv ON sp.UserID = uProv.UserID
+            LEFT JOIN dbo.Users uClient ON b.ClientUserID = uClient.UserID
+            WHERE b.BookingID = @ID 
+               OR b.BookingReference = @Ref
+               OR b.BookingReference = @RawRef;
+        `;
+
+        const result = await pool.request()
+            .input('ID', sql.Int, numId)
+            .input('Ref', sql.NVarChar(50), cleanId)
+            .input('RawRef', sql.NVarChar(50), String(id).trim())
+            .query(queryStr);
+
+        if (!result.recordset || !result.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
+        return res.status(200).json({
+            success: true,
+            booking: result.recordset[0]
+        });
+    } catch (error) {
+        console.error('Get Admin Booking Details Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to retrieve booking details.', error: error.message });
+    }
+};
+
 module.exports = {
     getAdminStats,
     searchAdminEntities,
@@ -1477,5 +1533,6 @@ module.exports = {
     getAdminNotifications,
     markAdminNotificationRead,
     markAllAdminNotificationsRead,
+    getAdminBookingDetails,
     logActivity
 };

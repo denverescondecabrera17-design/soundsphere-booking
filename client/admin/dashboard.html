@@ -961,6 +961,33 @@
         </div>
     </div>
 
+    <!-- View Booking Details Modal -->
+    <div class="admin-modal-overlay hidden" id="modal-admin-booking-detail" role="dialog" aria-modal="true" style="z-index:999999;">
+        <div class="admin-modal-card" style="max-width:760px;">
+            <div style="padding:20px 24px; background:linear-gradient(135deg, #0A192F 0%, #1e293b 100%); border-bottom:3px solid #2563eb; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; border-radius:10px; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.15rem;">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.18rem; color:#fff; font-weight:800;" id="admin-booking-modal-title">Booking Details</h3>
+                        <p style="margin:2px 0 0 0; font-size:0.78rem; color:#94a3b8;" id="admin-booking-modal-subtitle">Reservation & Financial Overview</p>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-admin-booking-detail').classList.add('hidden')" style="background:none; border:none; font-size:1.6rem; color:#94a3b8; cursor:pointer;">&times;</button>
+            </div>
+            <div style="padding:24px; max-height:68vh; overflow-y:auto; display:flex; flex-direction:column; gap:18px;" id="admin-booking-modal-body">
+                <!-- Dynamically populated -->
+            </div>
+            <div style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" id="btn-admin-booking-modal-switch-view" style="background:none; border:none; color:#2563eb; font-weight:700; font-size:0.84rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-chart-pie"></i> View Platform Overview
+                </button>
+                <button type="button" onclick="document.getElementById('modal-admin-booking-detail').classList.add('hidden')" style="padding:8px 22px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-weight:600; font-size:0.86rem; color:#334155;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="../js/api.js?v=2.0"></script>
     <script src="/js/notifications.js?v=2.0"></script>
