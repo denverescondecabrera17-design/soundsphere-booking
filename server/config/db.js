@@ -374,6 +374,20 @@ const autoSeedDatabase = async (activePool) => {
             BEGIN
                 ALTER TABLE dbo.Packages ALTER COLUMN BannerUrl NVARCHAR(MAX) NULL;
             END;
+
+            -- Auto-Migrate dbo.Bookings for BookingStatus length and completion timestamps
+            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Bookings' AND COLUMN_NAME = 'BookingStatus' AND (CHARACTER_MAXIMUM_LENGTH < 50 AND CHARACTER_MAXIMUM_LENGTH <> -1))
+            BEGIN
+                ALTER TABLE dbo.Bookings ALTER COLUMN BookingStatus NVARCHAR(50) NOT NULL;
+            END;
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Bookings' AND COLUMN_NAME = 'CompletedAt')
+            BEGIN
+                ALTER TABLE dbo.Bookings ADD CompletedAt DATETIME2 NULL;
+            END;
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Bookings' AND COLUMN_NAME = 'AutoAcceptedAt')
+            BEGIN
+                ALTER TABLE dbo.Bookings ADD AutoAcceptedAt DATETIME2 NULL;
+            END;
         `);
 
         // Auto-Migrate dbo.Reviews Table
