@@ -1313,18 +1313,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
 
                     <!-- Bottom Action Toolbar Card -->
-                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-                        <button type="button" onclick="document.getElementById('modal-admin-view-app').classList.add('hidden')" style="padding:10px 22px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; cursor:pointer; font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-arrow-left"></i> Back to Applications
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:10px 22px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-xmark"></i> Reject Application
                         </button>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:10px 22px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
-                                <i class="fa-solid fa-xmark"></i> Reject Application
-                            </button>
-                            <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:10px 26px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
-                                <i class="fa-solid fa-check"></i> Approve Application
-                            </button>
-                        </div>
+                        <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:10px 26px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-check"></i> Approve Application
+                        </button>
                     </div>
                 `;
 
