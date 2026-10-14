@@ -36,24 +36,6 @@
                 <a href="javascript:void(0)" id="btn-header-back-to-calendar" onclick="if (typeof window.handleBookingBackNav === 'function') { window.handleBookingBackNav(event); } else if (typeof window.handleBackToCalendarSelection === 'function') { window.handleBackToCalendarSelection(event); } else { history.back(); }" class="nav-action-btn secondary" style="height: 38px; padding: 0 16px; font-size: 0.88rem; font-weight: 700; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color:#ffffff; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'" title="Back to Provider Details">
                     <i class="fa-solid fa-arrow-left"></i> Back
                 </a>
-
-                <!-- User Profile Dropdown Pill -->
-                <div class="user-avatar-menu">
-                    <button type="button" class="avatar-btn" id="avatar-btn" style="height: 38px; padding: 0 12px; gap: 8px;">
-                        <div class="avatar-img" id="user-avatar-initials" style="width: 28px; height: 28px; font-size: 0.75rem;">UA</div>
-                        <span class="avatar-name" id="user-display-name" style="font-size: 0.88rem;">User Account</span>
-                        <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
-                    </button>
-                    <div class="user-dropdown hidden" id="user-dropdown" style="display: none;">
-                        <div class="dropdown-header">
-                            <div class="user-title" id="dropdown-user-title">SoundSphere Account</div>
-                            <div class="user-role" id="dropdown-user-role">Verified Client</div>
-                        </div>
-                        <button type="button" class="dropdown-item text-danger logout-item" id="logout-btn">
-                            <i class="fa-solid fa-right-from-bracket"></i> Sign Out / Logout
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </header>
