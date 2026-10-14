@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 1100" width="100%" height="100%" style="background:#fefbf3; font-family:'Segoe UI', Arial, Helvetica, sans-serif;">
+    <defs>
+      <linearGradient id="goldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#b45309" />
+        <stop offset="30%" stop-color="#f59e0b" />
+        <stop offset="50%" stop-color="#fef08a" />
+        <stop offset="70%" stop-color="#d97706" />
+        <stop offset="100%" stop-color="#92400e" />
+      </linearGradient>
+      <linearGradient id="blueHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#0a192f" />
+        <stop offset="100%" stop-color="#1e3a8a" />
+      </linearGradient>
+      <radialGradient id="watermark" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#0284c7" stop-opacity="0.08" />
+        <stop offset="100%" stop-color="#0284c7" stop-opacity="0" />
+      </radialGradient>
+      <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.12" />
+      </filter>
+    </defs>
+
+    <!-- Background Base -->
+    <rect x="0" y="0" width="850" height="1100" fill="#fcfaf2" />
+    
+    <!-- Outer Guilloche Border -->
+    <rect x="25" y="25" width="800" height="1050" fill="none" stroke="url(#goldBorder)" stroke-width="12" rx="10" />
+    <rect x="42" y="42" width="766" height="1016" fill="none" stroke="#0a192f" stroke-width="2.5" />
+    <rect x="48" y="48" width="754" height="1004" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="6,4" />
+
+    <!-- Corner Decorative Accents -->
+    <g fill="#b45309">
+      <circle cx="48" cy="48" r="6" />
+      <circle cx="802" cy="48" r="6" />
+      <circle cx="48" cy="1052" r="6" />
+      <circle cx="802" cy="1052" r="6" />
+    </g>
+
+    <!-- Center Background Seal Watermark -->
+    <circle cx="425" cy="550" r="240" fill="url(#watermark)" />
+    <circle cx="425" cy="550" r="210" fill="none" stroke="#0284c7" stroke-opacity="0.06" stroke-width="3" stroke-dasharray="8,6" />
+    <text x="425" y="555" font-size="28" font-weight="900" fill="#0284c7" fill-opacity="0.08" text-anchor="middle" letter-spacing="4" transform="rotate(-30 425 550)">OFFICIAL BUSINESS PERMIT</text>
+
+    <!-- Top Header -->
+    <g text-anchor="middle">
+      <!-- Seal Emblem -->
+      <g transform="translate(425, 115)">
+        <circle cx="0" cy="0" r="42" fill="#1e3a8a" />
+        <circle cx="0" cy="0" r="38" fill="#fef08a" stroke="#b45309" stroke-width="1.5" />
+        <circle cx="0" cy="0" r="32" fill="#1e40af" />
+        <path d="M-18,-6 L18,-6 L0,22 Z" fill="#fbbf24" />
+        <circle cx="0" cy="-12" r="5" fill="#f59e0b" />
+        <circle cx="-14" cy="10" r="4" fill="#fbbf24" />
+        <circle cx="14" cy="10" r="4" fill="#fbbf24" />
+        <text x="0" y="3" font-size="8" font-weight="bold" fill="#fff" text-anchor="middle">OFFICIAL</text>
+      </g>
+
+      <text x="425" y="185" font-size="13" font-weight="700" fill="#475569" letter-spacing="2">REPUBLIC OF THE PHILIPPINES</text>
+      <text x="425" y="206" font-size="17" font-weight="800" fill="#0f172a" letter-spacing="1.5">CITY GOVERNMENT EXECUTIVE OFFICE</text>
+      <text x="425" y="225" font-size="12" font-weight="700" fill="#2563eb" letter-spacing="1">BUSINESS PERMITS AND LICENSING DIVISION</text>
+      
+      <!-- Horizontal Rule -->
+      <line x1="120" y1="240" x2="730" y2="240" stroke="#cbd5e1" stroke-width="1.5" />
+      <line x1="220" y1="244" x2="630" y2="244" stroke="#d97706" stroke-width="1" />
+
+      <!-- Document Title -->
+      <rect x="180" y="260" width="490" height="48" rx="8" fill="url(#blueHeader)" filter="url(#shadow)" />
+      <text x="425" y="292" font-size="22" font-weight="900" fill="#ffffff" letter-spacing="3">MAYOR'S BUSINESS PERMIT</text>
+      <text x="425" y="326" font-size="11.5" font-weight="700" fill="#b45309" letter-spacing="1.5">MUNICIPAL TAX ORDINANCE &amp; COMMERCIAL REGULATORY ACT</text>
+    </g>
+
+    <!-- Permit Badge Numbers Bar -->
+    <g transform="translate(70, 350)">
+      <rect x="0" y="0" width="710" height="42" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+      <text x="20" y="26" font-size="12" font-weight="700" fill="#475569">PERMIT NO: <tspan font-weight="900" fill="#0f172a">BP-2026-084920</tspan></text>
+      <text x="370" y="26" font-size="12" font-weight="700" fill="#475569">PLATE / REG ID: <tspan font-weight="900" fill="#0f172a">BPLO-2026-X49</tspan></text>
+      <text x="590" y="26" font-size="12" font-weight="800" fill="#15803d">TAX YEAR: 2026</text>
+    </g>
+
+    <!-- Preamble Notice -->
+    <text x="70" y="420" font-size="12" fill="#334155" font-style="italic">
+      TO WHOM IT MAY CONCERN:
+    </text>
+    <text x="70" y="440" font-size="12" fill="#334155" width="710">
+      Pursuant to the provisions of the Local Government Code and Existing Revenue Ordinances, permission is hereby granted to:
+    </text>
+
+    <!-- Main Permittee Information Card -->
+    <g transform="translate(70, 460)">
+      <rect x="0" y="0" width="710" height="260" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)" />
+      
+      <!-- Field 1: Business Name -->
+      <rect x="18" y="16" width="674" height="48" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1" />
+      <text x="32" y="33" font-size="10" font-weight="700" fill="#1e40af" text-transform="uppercase">Registered Business Trade Name</text>
+      <text x="32" y="53" font-size="18" font-weight="900" fill="#0f172a">CHiCHa Lights and Sounds</text>
+
+      <!-- Field 2: Owner Name -->
+      <g transform="translate(18, 76)">
+        <text x="0" y="14" font-size="10.5" font-weight="700" fill="#64748b" text-transform="uppercase">Proprietor / Authorized Representative:</text>
+        <text x="0" y="35" font-size="14.5" font-weight="800" fill="#0f172a">Denver Cabrera</text>
+        <line x1="0" y1="42" x2="320" y2="42" stroke="#e2e8f0" />
+      </g>
+
+      <!-- Field 3: Category / Line of Business -->
+      <g transform="translate(360, 76)">
+        <text x="0" y="14" font-size="10.5" font-weight="700" fill="#64748b" text-transform="uppercase">Line of Business &amp; Operations:</text>
+        <text x="0" y="35" font-size="14" font-weight="800" fill="#0f172a">Audio-Visual, Lights &amp; Event Equipment Rentals</text>
+        <line x1="0" y1="42" x2="332" y2="42" stroke="#e2e8f0" />
+      </g>
+
+      <!-- Field 4: Business Address -->
+      <g transform="translate(18, 136)">
+        <text x="0" y="14" font-size="10.5" font-weight="700" fill="#64748b" text-transform="uppercase">Business Establishment Address:</text>
+        <text x="0" y="34" font-size="13.5" font-weight="700" fill="#334155">Commercial Center, Metro Manila, Philippines</text>
+        <line x1="0" y1="42" x2="674" y2="42" stroke="#e2e8f0" />
+      </g>
+
+      <!-- Field 5: Issued Date & Expiry Date Box -->
+      <g transform="translate(18, 194)">
+        <rect x="0" y="0" width="320" height="50" rx="6" fill="#f8fafc" stroke="#cbd5e1" />
+        <text x="14" y="20" font-size="10" font-weight="700" fill="#64748b">DATE OF ISSUANCE:</text>
+        <text x="14" y="38" font-size="13" font-weight="800" fill="#0f172a">January 15, 2026</text>
+
+        <rect x="340" y="0" width="334" height="50" rx="6" fill="#fef2f2" stroke="#fecaca" />
+        <text x="354" y="20" font-size="10" font-weight="800" fill="#dc2626">EXPIRATION DATE:</text>
+        <text x="354" y="39" font-size="14.5" font-weight="900" fill="#b91c1c">December 31, 2026</text>
+      </g>
+    </g>
+
+    <!-- Terms and Regulatory Note -->
+    <g transform="translate(70, 745)">
+      <text x="0" y="0" font-size="10.5" fill="#475569" font-weight="600">IMPORTANT CONDITIONS:</text>
+      <text x="0" y="18" font-size="9.5" fill="#64748b">1. This permit must be posted conspicuously at the place of business and surrendered upon revocation or cessation.</text>
+      <text x="0" y="34" font-size="9.5" fill="#64748b">2. Valid only for the specific line of business stated herein and subject to platform safety compliance verification.</text>
+      <text x="0" y="50" font-size="9.5" fill="#64748b">3. Non-transferable. Any falsification or unauthorized alteration shall void this document immediately.</text>
+    </g>
+
+    <!-- Signatures and Official Verification Stamp -->
+    <g transform="translate(70, 830)">
+      <!-- Left Signature: BPLO Officer -->
+      <g transform="translate(40, 60)">
+        <path d="M0,0 Q30,-20 60,-5 Q90,15 120,-15 Q140,-5 160,-25" fill="none" stroke="#1e3a8a" stroke-width="2" />
+        <line x1="0" y1="10" x2="200" y2="10" stroke="#0f172a" stroke-width="1.2" />
+        <text x="100" y="26" font-size="12" font-weight="800" fill="#0f172a" text-anchor="middle">ATTY. CARLOS M. VALDEZ</text>
+        <text x="100" y="40" font-size="10" font-weight="600" fill="#64748b" text-anchor="middle">Chief, Business Permits &amp; Licensing</text>
+      </g>
+
+      <!-- Center Official Stamp -->
+      <g transform="translate(355, 65)">
+        <circle cx="0" cy="0" r="48" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="4,2" />
+        <circle cx="0" cy="0" r="43" fill="#fee2e2" fill-opacity="0.25" stroke="#dc2626" stroke-width="1.2" />
+        <text x="0" y="-18" font-size="9.5" font-weight="900" fill="#dc2626" text-anchor="middle" letter-spacing="1">CITY GOVERNMENT</text>
+        <text x="0" y="-3" font-size="13" font-weight="900" fill="#dc2626" text-anchor="middle">APPROVED</text>
+        <text x="0" y="14" font-size="9.5" font-weight="900" fill="#dc2626" text-anchor="middle">COMMERCIAL REG.</text>
+        <text x="0" y="28" font-size="8.5" font-weight="700" fill="#dc2626" text-anchor="middle">BPLO VERIFIED 2026</text>
+      </g>
+
+      <!-- Right Signature: City Mayor -->
+      <g transform="translate(470, 60)">
+        <path d="M0,-10 Q40,-35 80,-5 Q110,20 150,-20 Q170,-10 190,-30" fill="none" stroke="#0f172a" stroke-width="2.2" />
+        <line x1="0" y1="10" x2="200" y2="10" stroke="#0f172a" stroke-width="1.2" />
+        <text x="100" y="26" font-size="12" font-weight="900" fill="#0f172a" text-anchor="middle">HON. MARIA E. SANTOS</text>
+        <text x="100" y="40" font-size="10" font-weight="700" fill="#b45309" text-anchor="middle">City Mayor</text>
+      </g>
+    </g>
+
+    <!-- Bottom Barcode & Security Stripe -->
+    <g transform="translate(70, 980)">
+      <line x1="0" y1="0" x2="710" y2="0" stroke="#cbd5e1" stroke-width="1" />
+      <g transform="translate(10, 14)">
+        <!-- Barcode lines -->
+        <line x1="0" y1="0" x2="0" y2="28" stroke="#0f172a" stroke-width="2" />
+        <line x1="4" y1="0" x2="4" y2="28" stroke="#0f172a" stroke-width="3" />
+        <line x1="10" y1="0" x2="10" y2="28" stroke="#0f172a" stroke-width="1.5" />
+        <line x1="14" y1="0" x2="14" y2="28" stroke="#0f172a" stroke-width="4" />
+        <line x1="22" y1="0" x2="22" y2="28" stroke="#0f172a" stroke-width="1.5" />
+        <line x1="26" y1="0" x2="26" y2="28" stroke="#0f172a" stroke-width="3" />
+        <line x1="32" y1="0" x2="32" y2="28" stroke="#0f172a" stroke-width="1.5" />
+        <line x1="36" y1="0" x2="36" y2="28" stroke="#0f172a" stroke-width="5" />
+        <line x1="44" y1="0" x2="44" y2="28" stroke="#0f172a" stroke-width="2" />
+        <line x1="48" y1="0" x2="48" y2="28" stroke="#0f172a" stroke-width="3.5" />
+        <line x1="54" y1="0" x2="54" y2="28" stroke="#0f172a" stroke-width="1.5" />
+        <line x1="58" y1="0" x2="58" y2="28" stroke="#0f172a" stroke-width="4" />
+        <line x1="66" y1="0" x2="66" y2="28" stroke="#0f172a" stroke-width="2" />
+        <line x1="72" y1="0" x2="72" y2="28" stroke="#0f172a" stroke-width="4" />
+        <line x1="80" y1="0" x2="80" y2="28" stroke="#0f172a" stroke-width="1.5" />
+        <line x1="84" y1="0" x2="84" y2="28" stroke="#0f172a" stroke-width="3" />
+        <line x1="90" y1="0" x2="90" y2="28" stroke="#0f172a" stroke-width="2" />
+        <text x="0" y="42" font-size="9" font-family="Courier, monospace" font-weight="bold" fill="#64748b">*BP-2026-CHICHA-84920*</text>
+      </g>
+      <text x="700" y="32" font-size="9" fill="#94a3b8" text-anchor="end">Official Document Seal • SoundSphere Merchant Regulatory Compliance</text>
+    </g>
+  </svg>

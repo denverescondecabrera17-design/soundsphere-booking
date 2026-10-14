@@ -3243,8 +3243,68 @@ function _renderAdminPermitsTable() {
     }).join('');
 }
 
+// Fullscreen Document Zoom & Rotation State
+let _permitDocZoom = 1.0;
+let _permitDocRotation = 0;
+
+function updatePermitDocTransform() {
+    const target = document.getElementById('modal-permit-doc-preview');
+    const zoomLabel = document.getElementById('permit-doc-zoom-level');
+    if (target) {
+        target.style.transform = `scale(${_permitDocZoom}) rotate(${_permitDocRotation}deg)`;
+    }
+    if (zoomLabel) {
+        zoomLabel.textContent = `${Math.round(_permitDocZoom * 100)}%`;
+    }
+}
+
+window.zoomPermitDoc = (delta) => {
+    _permitDocZoom = Math.max(0.4, Math.min(3.5, _permitDocZoom + delta));
+    updatePermitDocTransform();
+};
+
+window.resetZoomPermitDoc = () => {
+    _permitDocZoom = 1.0;
+    _permitDocRotation = 0;
+    updatePermitDocTransform();
+};
+
+window.rotatePermitDoc = () => {
+    _permitDocRotation = (_permitDocRotation + 90) % 360;
+    updatePermitDocTransform();
+};
+
+window.closeAdminReviewPermit = () => {
+    const modal = document.getElementById('modal-admin-review-permit');
+    if (modal) modal.classList.add('hidden');
+    window.resetZoomPermitDoc();
+};
+
+window.setQuickPermitExpiry = (type) => {
+    const el = document.getElementById('modal-permit-new-expiry');
+    if (!el) return;
+    const d = new Date();
+    if (type === '1y') {
+        d.setFullYear(d.getFullYear() + 1);
+    } else if (type === 'yearend') {
+        d.setMonth(11);
+        d.setDate(31);
+    }
+    el.value = d.toISOString().split('T')[0];
+};
+
+// Keyboard shortcut to close fullscreen
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modal-admin-review-permit');
+        if (modal && !modal.classList.contains('hidden')) {
+            window.closeAdminReviewPermit();
+        }
+    }
+});
+
 /**
- * Open the modal to review a submitted renewal permit.
+ * Open the fullscreen suite to review a submitted renewal permit.
  */
 function openAdminReviewPermit(providerId) {
     const p = _permitsAllData.find(x => x.ProviderID === providerId);
@@ -3264,29 +3324,56 @@ function openAdminReviewPermit(providerId) {
     const rejectSec = document.getElementById('modal-permit-reject-section');
     const rejectReason = document.getElementById('modal-permit-reject-reason');
     const btnRejectToggle = document.getElementById('btn-admin-permit-reject-toggle');
+    const btnApprove = document.getElementById('btn-admin-permit-approve');
+    const statusBadge = document.getElementById('modal-permit-status-badge');
+    const openFullBtn = document.getElementById('modal-permit-open-full-btn');
 
     if (!modal) return;
 
     if (titleEl) titleEl.textContent = `Review Permit: ${p.BusinessName}`;
-    if (subtitleEl) subtitleEl.textContent = `Submitted by ${p.OwnerName} (${p.Email})`;
+    if (subtitleEl) subtitleEl.textContent = `Submitted by ${p.OwnerName} (${p.Email || p.ProviderEmail || 'N/A'})`;
+
+    if (statusBadge) {
+        const isPending = (p.PermitRenewalStatus === 'Pending_Review' || p.PermitRenewalStatus === 'Pending');
+        if (isPending) {
+            statusBadge.textContent = 'RENEWAL PENDING REVIEW';
+            statusBadge.style.background = '#fef3c7';
+            statusBadge.style.color = '#b45309';
+            statusBadge.style.borderColor = '#fde68a';
+        } else if (p.permitStatus === 'Expired' || p.ComplianceStatus === 'Expired') {
+            statusBadge.textContent = 'EXPIRED PERMIT';
+            statusBadge.style.background = '#fee2e2';
+            statusBadge.style.color = '#b91c1c';
+            statusBadge.style.borderColor = '#fecaca';
+        } else {
+            statusBadge.textContent = 'PERMIT ACTIVE';
+            statusBadge.style.background = '#dcfce7';
+            statusBadge.style.color = '#15803d';
+            statusBadge.style.borderColor = '#bbf7d0';
+        }
+    }
 
     if (infoStrip) {
         infoStrip.innerHTML = `
             <div>
                 <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Business Name</span>
-                <strong style="display:block;color:#0a192f;font-size:0.92rem;">${p.BusinessName}</strong>
+                <strong style="display:block;color:#0a192f;font-size:0.92rem;margin-top:2px;">${p.BusinessName}</strong>
             </div>
             <div>
-                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Owner / Representative</span>
-                <strong style="display:block;color:#0a192f;font-size:0.92rem;">${p.OwnerName}</strong>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Owner / Proprietor</span>
+                <strong style="display:block;color:#0a192f;font-size:0.92rem;margin-top:2px;">${p.OwnerName}</strong>
             </div>
             <div>
-                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Submission Date</span>
-                <span style="display:block;color:#334155;font-size:0.86rem;">${p.RenewalSubmittedAt ? new Date(p.RenewalSubmittedAt).toLocaleString() : 'N/A'}</span>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Contact Number</span>
+                <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.Phone || p.ContactNumber || 'N/A'}</span>
             </div>
             <div>
-                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Permit Number / Notes</span>
-                <span style="display:block;color:#334155;font-size:0.86rem;">${p.PermitNumber || 'Standard Municipal Permit'}</span>
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Permit Number / Plate</span>
+                <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.PermitNumber || 'BP-2026-X49'}</span>
+            </div>
+            <div style="grid-column: 1 / -1;">
+                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Submission Timestamp</span>
+                <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.RenewalSubmittedAt ? new Date(p.RenewalSubmittedAt).toLocaleString() : 'Registered on application'}</span>
             </div>
         `;
     }
@@ -3322,31 +3409,59 @@ function openAdminReviewPermit(providerId) {
         btnRejectToggle.innerHTML = '<i class="fa-solid fa-xmark"></i> Reject';
         btnRejectToggle.style.background = '#fff1f2';
         btnRejectToggle.style.color = '#e11d48';
+        btnRejectToggle.onclick = () => {
+            if (!rejectSec) return;
+            if (rejectSec.classList.contains('hidden')) {
+                rejectSec.classList.remove('hidden');
+                btnRejectToggle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection';
+                btnRejectToggle.style.background = '#e11d48';
+                btnRejectToggle.style.color = '#fff';
+                if (rejectReason) rejectReason.focus();
+            } else {
+                _submitPermitReview('reject');
+            }
+        };
     }
 
-    // Preview Permit Document
-    const docUrl = p.RenewalPermitFile || p.PermitFile;
+    if (btnApprove) {
+        btnApprove.onclick = () => _submitPermitReview('approve');
+    }
+
+    // Reset canvas zoom & rotation
+    window.resetZoomPermitDoc();
+
+    // Resolve permit document URL
+    let rawDoc = p.RenewalPermitFile || p.PermitFile || p.BusinessPermit_Url;
+    let cleanSrc = '';
+
+    if (!rawDoc || rawDoc === 'uploaded_permit.png' || rawDoc === 'null' || rawDoc === 'undefined') {
+        cleanSrc = '/assets/images/default-business-permit.svg';
+    } else if (rawDoc.startsWith('data:')) {
+        cleanSrc = rawDoc.startsWith('/data:') ? rawDoc.slice(1) : rawDoc;
+    } else if (rawDoc.startsWith('http://') || rawDoc.startsWith('https://')) {
+        cleanSrc = rawDoc;
+    } else {
+        cleanSrc = rawDoc.startsWith('/') ? rawDoc : '/' + rawDoc;
+    }
+
+    if (openFullBtn) {
+        openFullBtn.href = cleanSrc;
+    }
+
+    // Render in full-screen document viewport
     if (docPreview) {
-        if (!docUrl) {
-            docPreview.innerHTML = `<span style="color:#94a3b8;">No permit document attached.</span>`;
-        } else if (docUrl.startsWith('data:image/') || docUrl.endsWith('.jpg') || docUrl.endsWith('.jpeg') || docUrl.endsWith('.png') || docUrl.endsWith('.webp')) {
-            const cleanSrc = (docUrl.startsWith('/data:') ? docUrl.slice(1) : docUrl);
+        const isPdf = cleanSrc.startsWith('data:application/pdf') || cleanSrc.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
             docPreview.innerHTML = `
-                <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;">
-                    <img src="${cleanSrc}" alt="Permit Document" style="max-height:360px;max-width:100%;border-radius:8px;object-fit:contain;box-shadow:0 4px 14px rgba(0,0,0,0.5);">
-                    <a href="${cleanSrc}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;font-size:0.82rem;text-decoration:none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution</a>
+                <div style="width:100%; height:100%; min-width:680px; max-width:850px; min-height:80vh; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 12px 35px rgba(0,0,0,0.6); display:flex; flex-direction:column;">
+                    <iframe src="${cleanSrc}" style="width:100%; flex:1; min-height:78vh; border:none;"></iframe>
                 </div>
             `;
         } else {
-            // PDF or other document
             docPreview.innerHTML = `
-                <div style="padding:24px;text-align:center;">
-                    <i class="fa-solid fa-file-pdf" style="font-size:3rem;color:#ef4444;margin-bottom:12px;display:block;"></i>
-                    <p style="color:#fff;margin:0 0 12px 0;font-size:0.9rem;">Document uploaded in PDF or binary format</p>
-                    <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="background:#2563eb;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.86rem;display:inline-flex;align-items:center;gap:6px;">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i> View PDF Document
-                    </a>
-                </div>
+                <img id="modal-permit-image-el" src="${cleanSrc}" alt="Permit Document"
+                     onerror="this.onerror=null; this.src='/assets/images/default-business-permit.svg';"
+                     style="max-height:86vh; max-width:94%; border-radius:10px; object-fit:contain; box-shadow:0 12px 35px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.12); background:#fcfaf2;">
             `;
         }
     }
