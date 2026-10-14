@@ -1538,9 +1538,9 @@ const getAdminPermits = async (req, res) => {
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_NAME IN ('ServiceProviders', 'ProviderApplications')
         `);
-        const existingCols = new Set(colCheck.recordset.map(c => `${c.TABLE_NAME}.${c.COLUMN_NAME}`));
-        const hasSpCol = (col) => existingCols.has(`ServiceProviders.${col}`);
-        const hasPaCol = (col) => existingCols.has(`ProviderApplications.${col}`);
+        const existingCols = new Set(colCheck.recordset.map(c => `${c.TABLE_NAME}.${c.COLUMN_NAME}`.toLowerCase()));
+        const hasSpCol = (col) => existingCols.has(`serviceproviders.${col}`.toLowerCase());
+        const hasPaCol = (col) => existingCols.has(`providerapplications.${col}`.toLowerCase());
 
         const spExp = hasSpCol('PermitExpiryDate') ? "TRY_CAST(NULLIF(sp.PermitExpiryDate, '') AS DATE)" : "NULL";
         const spRenewExp = hasSpCol('PermitRenewalExpiryDate') ? "TRY_CAST(NULLIF(sp.PermitRenewalExpiryDate, '') AS DATE)" : "NULL";
@@ -1570,7 +1570,7 @@ const getAdminPermits = async (req, res) => {
                 COALESCE(${spExp}, ${spRenewExp}, ${paExp}) AS PermitExpiryDate,
                 COALESCE(${spIssued}, ${spRenewIssued}, ${paIssued}) AS PermitIssuedDate,
                 ${spNotice === 'NULL AS PermitNoticeSentAt' ? 'NULL AS PermitNoticeSentAt' : 'sp.PermitNoticeSentAt'},
-                ${spRenewDoc === 'NULL AS PermitRenewalDoc' ? 'NULL AS PermitRenewalDoc' : 'sp.PermitRenewalDoc'},
+                ${spRenewDoc === 'NULL AS PermitRenewalDoc' ? 'NULL AS PermitRenewalDoc' : 'sp.PermitRenewalDoc AS PermitRenewalDoc'},
                 ${spRenewExp} AS PermitRenewalExpiryDate,
                 ${spRenewSub === 'NULL AS PermitRenewalSubmittedAt' ? 'NULL AS PermitRenewalSubmittedAt' : 'sp.PermitRenewalSubmittedAt'},
                 ${spRenewStat === 'NULL AS PermitRenewalStatus' ? 'NULL AS PermitRenewalStatus' : 'sp.PermitRenewalStatus'},

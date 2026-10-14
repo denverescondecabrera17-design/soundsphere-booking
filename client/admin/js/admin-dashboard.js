@@ -3430,11 +3430,11 @@ function openAdminReviewPermit(providerId) {
     // Reset canvas zoom & rotation
     window.resetZoomPermitDoc();
 
-    // Resolve permit document URL
-    let rawDoc = p.RenewalPermitFile || p.PermitFile || p.BusinessPermit_Url;
+    // Resolve permit document URL from all potential fields
+    let rawDoc = p.RenewalPermitFile || p.PermitRenewalDoc || p.RenewalPermitDoc || p.PermitFile || p.BusinessPermit_Url || p.BusinessPermitDoc;
     let cleanSrc = '';
 
-    if (!rawDoc || rawDoc === 'uploaded_permit.png' || rawDoc === 'null' || rawDoc === 'undefined') {
+    if (!rawDoc || rawDoc === 'uploaded_permit.png' || rawDoc === 'null' || rawDoc === 'undefined' || rawDoc.trim() === '') {
         cleanSrc = '/assets/images/default-business-permit.svg';
     } else if (rawDoc.startsWith('data:')) {
         cleanSrc = rawDoc.startsWith('/data:') ? rawDoc.slice(1) : rawDoc;
@@ -3448,20 +3448,32 @@ function openAdminReviewPermit(providerId) {
         openFullBtn.href = cleanSrc;
     }
 
-    // Render in full-screen document viewport
+    // Render in full-screen document viewport with guaranteed visible dimensions
     if (docPreview) {
         const isPdf = cleanSrc.startsWith('data:application/pdf') || cleanSrc.toLowerCase().endsWith('.pdf');
         if (isPdf) {
             docPreview.innerHTML = `
-                <div style="width:100%; height:100%; min-width:680px; max-width:850px; min-height:80vh; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 12px 35px rgba(0,0,0,0.6); display:flex; flex-direction:column;">
+                <div style="width:100%; height:100%; min-width:680px; max-width:920px; min-height:80vh; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 16px 45px rgba(0,0,0,0.7); display:flex; flex-direction:column;">
                     <iframe src="${cleanSrc}" style="width:100%; flex:1; min-height:78vh; border:none;"></iframe>
                 </div>
             `;
         } else {
             docPreview.innerHTML = `
-                <img id="modal-permit-image-el" src="${cleanSrc}" alt="Permit Document"
-                     onerror="this.onerror=null; this.src='/assets/images/default-business-permit.svg';"
-                     style="max-height:86vh; max-width:94%; border-radius:10px; object-fit:contain; box-shadow:0 12px 35px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.12); background:#fcfaf2;">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; max-width:100%; max-height:100%;">
+                    <img id="modal-permit-image-el" 
+                         src="${cleanSrc}" 
+                         alt="Submitted Permit Document"
+                         onerror="this.onerror=null; this.src='/assets/images/default-business-permit.svg';"
+                         style="width:auto; height:auto; max-width:min(920px, 90vw); max-height:82vh; min-width:380px; min-height:260px; object-fit:contain; border-radius:12px; box-shadow:0 16px 45px rgba(0,0,0,0.75); border:1px solid rgba(255,255,255,0.15); background:#ffffff; display:block; cursor:zoom-in;"
+                         onclick="window.zoomPermitDoc(0.25)"
+                         title="Click to Zoom In">
+                    <div style="margin-top:12px; display:flex; gap:16px; align-items:center; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:700;"><i class="fa-solid fa-file-image"></i> Provider Submitted Permit Photo</span>
+                        <a href="${cleanSrc}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.78rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution
+                        </a>
+                    </div>
+                </div>
             `;
         }
     }
