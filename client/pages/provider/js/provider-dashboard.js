@@ -1125,26 +1125,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     const getBookingPaymentInfo = (b) => {
         const totalAmt = parseFloat(b.TotalAmount || 0);
         const amtPaid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
-        const remBal = (b.RemainingBalance != null && !isNaN(b.RemainingBalance)) 
-            ? parseFloat(b.RemainingBalance) 
-            : Math.max(0, totalAmt - amtPaid);
+        const statusLower = String(b.BookingStatus || '').toLowerCase();
+        const isCancelled = (statusLower === 'cancelled' || statusLower === 'rejected');
 
         const payStatus = String(b.PaymentStatus || '').toLowerCase();
         const payType = String(b.PaymentType || '').toLowerCase();
 
-        // Check if fully paid
-        const isFull = (remBal <= 0 && amtPaid > 0) || 
-                       (totalAmt > 0 && amtPaid >= totalAmt) || 
-                       (payStatus === 'paid' && remBal <= 0) || 
-                       (payType === 'full' && remBal <= 0);
+        // The unpaid portion based on the package total and amount paid
+        const unpaidPortion = Math.max(0, totalAmt - amtPaid);
 
-        // Check if partial (downpayment)
-        const isPartial = !isFull && (
-            payStatus === 'partial' ||
-            payType === 'downpayment' ||
-            payType === 'partial' ||
-            (amtPaid > 0 && remBal > 0) ||
-            (amtPaid > 0 && amtPaid < totalAmt)
+        // For cancelled bookings, the DB sets RemainingBalance = 0 upon cancellation/refund,
+        // but the original balance was unpaidPortion.
+        const remBal = (isCancelled && unpaidPortion > 0)
+            ? unpaidPortion
+            : ((b.RemainingBalance != null && !isNaN(b.RemainingBalance)) 
+                ? parseFloat(b.RemainingBalance) 
+                : unpaidPortion);
+
+        // A booking is genuinely a Partial Payment if:
+        // 1. It was booked as downpayment/partial and total amount was not fully settled (amtPaid < totalAmt - 0.01)
+        // 2. OR the amount paid is greater than 0 but less than the total booking amount (e.g., 750 paid out of 1500)
+        // 3. OR there is an active remaining balance
+        const isPartial = (
+            (payType === 'downpayment' || payType === 'partial' || payStatus === 'partial') && (totalAmt <= 0 || amtPaid < (totalAmt - 0.01))
+        ) || (
+            amtPaid > 0 && totalAmt > 0 && amtPaid < (totalAmt - 0.01)
+        ) || (
+            amtPaid > 0 && remBal > 0 && !isCancelled
+        );
+
+        // Check if fully paid (ONLY if not partial, and paid covers total or type is explicitly full)
+        const isFull = !isPartial && (
+            (totalAmt > 0 && amtPaid >= (totalAmt - 0.01)) ||
+            (payType === 'full' && (amtPaid > 0 || remBal <= 0)) ||
+            (payStatus === 'paid' && remBal <= 0 && amtPaid > 0)
         );
 
         let badgeText = 'Unpaid';
