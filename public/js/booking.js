@@ -124,9 +124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const provId = (packageData && (packageData.ProviderID || packageData.providerId)) 
             || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') 
-            || (sessionSelected && (sessionSelected.providerId || sessionSelected.ProviderID)) || 13;
+            || (sessionSelected && (sessionSelected.providerId || sessionSelected.ProviderID)) || 1;
 
         const pkgTitle = (packageData && (packageData.PackageName || packageData.title || packageData.name)) 
+            || urlParams.get('package_name')
             || (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName || sessionSelected.PackageName))
             || (summaryPkgName && summaryPkgName.textContent) || 'Event Service Package';
 
@@ -135,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             || (basePackagePrice || 15000);
 
         const provName = (packageData && (packageData.ProviderName || packageData.BusinessName))
+            || urlParams.get('provider_name')
             || (sessionSelected && (sessionSelected.providerName || sessionSelected.ProviderName))
             || (summaryProviderName && summaryProviderName.textContent && summaryProviderName.textContent !== 'Service Provider' ? summaryProviderName.textContent : 'SoundSphere Provider');
 
@@ -161,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startTime: curTime
             });
         } else if (provId) {
-            window.location.href = `provider-detail.html?id=${provId}&packageId=${pkgId}`;
+            window.location.href = `provider-detail.html?id=${provId}&packageId=${pkgId}&openCalendar=true`;
         } else {
             window.location.href = 'marketplace.html';
         }
@@ -174,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e && e.preventDefault) e.preventDefault();
         const urlParams = new URLSearchParams(window.location.search);
         const provId = (packageData && (packageData.ProviderID || packageData.providerId)) 
-            || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') || 13;
+            || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') || 1;
         const pkgId = (packageData && (packageData.PackageID || packageData.id)) 
             || urlParams.get('package_id') || urlParams.get('packageId') || urlParams.get('pkgId') || 1;
         
@@ -193,8 +195,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnPageBack = document.getElementById('btn-page-back-to-calendar');
     const btnChangeSchedule = document.getElementById('btn-change-selected-schedule');
 
-    if (btnHeaderBack) btnHeaderBack.addEventListener('click', handleBookingBackNav);
-    if (btnPageBack) btnPageBack.addEventListener('click', handleBookingBackNav);
+    if (btnHeaderBack) btnHeaderBack.addEventListener('click', handleBackToCalendarSelection);
+    if (btnPageBack) btnPageBack.addEventListener('click', handleBackToCalendarSelection);
     if (btnChangeSchedule) btnChangeSchedule.addEventListener('click', handleBackToCalendarSelection);
 
     // Auto-populate Logged-In Client Information
@@ -867,6 +869,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (summaryTableDate) summaryTableDate.textContent = formattedDateText;
         if (summaryTableTime) summaryTableTime.textContent = formattedStartTimeOnly;
     };
+    updatePriceBreakdown();
 
     if (planDownpaymentCard && planFullCard) {
         planDownpaymentCard.addEventListener('click', () => {
