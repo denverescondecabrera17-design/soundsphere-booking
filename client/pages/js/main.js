@@ -66,13 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             pkg: pkg
                         });
                     });
-                } else {
-                    packageItems.push({
-                        provider: p,
-                        pkg: { id: null, name: p.name, price: p.startingPrice || 15000, images: [] }
-                    });
                 }
             });
+
+            if (packageItems.length === 0) {
+                packagesGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; padding: 40px; text-align: center; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1;">
+                        <i class="fa-solid fa-sliders" style="font-size: 2.5rem; color: #94a3b8;"></i>
+                        <h4 style="margin-top: 12px; color: #0a192f; font-weight: 700;">No Available Packages Currently Listed</h4>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-top: 4px;">Service packages created by providers will automatically appear here once published.</p>
+                    </div>
+                `;
+                return;
+            }
 
             // Render Dynamic Real Package Cards
             packagesGrid.innerHTML = packageItems.map((item, index) => {
