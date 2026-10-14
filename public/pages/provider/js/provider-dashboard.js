@@ -393,6 +393,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Helper to pick contextual icons, tags, and targets
                 const getNotifMeta = (n) => {
                     const text = `${n.Title || ''} ${n.Message || ''} ${n.NotificationType || ''} ${n.RelatedType || ''}`.toLowerCase();
+                    const typeStr = `${n.NotificationType || ''} ${n.RelatedType || ''}`.toLowerCase();
+                    const titleStr = `${n.Title || ''}`.toLowerCase();
+
+                    if (typeStr.includes('permit') || titleStr.includes('permit') || text.includes('business permit') || text.includes('permit expired') || text.includes('permit expiring') || text.includes('permit compliance') || text.includes('renew permit')) {
+                        return { icon: 'fa-file-signature', color: '#e11d48', bg: '#fff1f2', target: 'modal-permit', label: 'Upload Permit' };
+                    }
                     if (text.includes('booking') || text.includes('booked') || text.includes('reservation')) {
                         return { icon: 'fa-calendar-check', color: '#2563eb', bg: '#eff6ff', target: '#bookings-section', label: 'View Booking' };
                     }
@@ -477,7 +483,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </div>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                                        <button type="button" style="padding:6px 14px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                        <button type="button" 
+                                                onclick="event.stopPropagation(); window.handleNotificationClick(${n.NotificationID || n.id}, '${escapeJs(n.RelatedType || n.NotificationType || '')}', ${n.RelatedID || 'null'}, '${escapeJs(n.Title || '')}', '${escapeJs(n.Message || '')}')"
+                                                style="padding:6px 14px; border:1px solid ${meta.target === 'modal-permit' ? '#fecdd3' : '#bfdbfe'}; border-radius:8px; background:${meta.target === 'modal-permit' ? '#fff1f2' : '#eff6ff'}; color:${meta.target === 'modal-permit' ? '#e11d48' : '#2563eb'}; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                                             ${meta.label} <i class="fa-solid fa-arrow-right" style="font-size:0.72rem;"></i>
                                         </button>
                                     </div>
@@ -524,6 +532,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 4. Intelligent Navigation based on notification topic
         const str = `${relatedType || ''} ${title || ''} ${message || ''}`.toLowerCase();
+        const typeStr = `${relatedType || ''}`.toLowerCase();
+        const titleStr = `${title || ''}`.toLowerCase();
+
+        if (typeStr.includes('permit') || titleStr.includes('permit') || str.includes('business permit') || str.includes('permit expired') || str.includes('permit expiring') || str.includes('permit compliance') || str.includes('renew permit')) {
+            if (typeof window.openUploadPermitModal === 'function') {
+                window.openUploadPermitModal();
+            } else {
+                const modal = document.getElementById('modal-provider-upload-permit');
+                if (modal) modal.classList.remove('hidden');
+            }
+            return;
+        }
+
         if (str.includes('booking') || str.includes('booked') || str.includes('reservation')) {
             window.location.hash = '#bookings-section';
             switchProviderView('#bookings-section');
