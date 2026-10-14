@@ -1836,7 +1836,7 @@ const reviewPermitRenewal = async (req, res) => {
             .input('ProviderID', sql.Int, providerId)
             .query(`
                 SELECT sp.ProviderID, sp.UserID, sp.BusinessName, sp.PermitRenewalExpiryDate, sp.PermitRenewalDoc,
-                       u.Email, u.FirstName, u.LastName
+                       u.Email
                 FROM dbo.ServiceProviders sp
                 JOIN dbo.Users u ON sp.UserID = u.UserID
                 WHERE sp.ProviderID = @ProviderID;
