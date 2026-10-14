@@ -1,4 +1,5 @@
 const { connectDB, sql } = require('../config/db');
+const notificationModel = require('../models/notificationModel');
 
 /**
  * Helper: Log Activity into dbo.ActivityLogs
@@ -1795,7 +1796,30 @@ const sendPermitNotice = async (req, res) => {
 };
 
 /**
- * POST /api/admin/permits/:id/review-renewal
+ * Helper: Parse permit date from ISO or formatted date strings safely
+ */
+const parseSafePermitDate = (val) => {
+    if (!val) return null;
+    if (val instanceof Date && !isNaN(val.getTime())) return val;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        // Check DD/MM/YYYY or DD-MM-YYYY
+        const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (dmyMatch) {
+            const day = parseInt(dmyMatch[1], 10);
+            const month = parseInt(dmyMatch[2], 10) - 1;
+            const year = parseInt(dmyMatch[3], 10);
+            const d = new Date(year, month, day);
+            if (!isNaN(d.getTime())) return d;
+        }
+        const parsed = new Date(trimmed);
+        if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return null;
+};
+
+/**
+ * POST /api/admin/permits/:id/review
  * Approve or Reject submitted renewal permit
  */
 const reviewPermitRenewal = async (req, res) => {
@@ -1825,14 +1849,15 @@ const reviewPermitRenewal = async (req, res) => {
         const prov = provRes.recordset[0];
 
         if (action === 'approve') {
-            const finalExpiry = newExpiryDate || expirationDate || prov.PermitRenewalExpiryDate;
-            if (!finalExpiry) {
-                return res.status(400).json({ success: false, message: 'New permit expiration date is required to approve renewal.' });
+            const rawExpiry = newExpiryDate || expirationDate || prov.PermitRenewalExpiryDate;
+            const parsedExpiry = parseSafePermitDate(rawExpiry);
+            if (!parsedExpiry) {
+                return res.status(400).json({ success: false, message: 'A valid permit expiration date is required to approve renewal.' });
             }
 
             await pool.request()
                 .input('ProviderID', sql.Int, providerId)
-                .input('PermitExpiryDate', sql.Date, new Date(finalExpiry))
+                .input('PermitExpiryDate', sql.Date, parsedExpiry)
                 .query(`
                     UPDATE dbo.ServiceProviders
                     SET PermitExpiryDate = @PermitExpiryDate,
@@ -1840,25 +1865,44 @@ const reviewPermitRenewal = async (req, res) => {
                         PermitRenewalNotes = NULL,
                         PermitStatus = 'Active'
                     WHERE ProviderID = @ProviderID;
+
+                    -- Sync linked provider application if present
+                    UPDATE pa
+                    SET pa.PermitExpiryDate = @PermitExpiryDate
+                    FROM dbo.ProviderApplications pa
+                    JOIN dbo.ServiceProviders sp ON (sp.ApplicationID = pa.ApplicationID OR sp.UserID = pa.UserID)
+                    WHERE sp.ProviderID = @ProviderID;
                 `);
 
-            await notificationModel.createNotification({
-                userId: prov.UserID,
-                type: 'PermitCompliance',
-                title: 'Business Permit Renewal Approved',
-                message: `Congratulations! Your renewed business permit has been approved. Your expiration date is updated to ${new Date(finalExpiry).toLocaleDateString()}. New booking reception is fully active.`,
-                relatedId: providerId,
-                relatedType: 'ProviderPermit'
-            });
+            // Safe notification dispatch
+            try {
+                if (notificationModel && typeof notificationModel.createNotification === 'function') {
+                    await notificationModel.createNotification({
+                        userId: prov.UserID,
+                        type: 'PermitCompliance',
+                        title: 'Business Permit Renewal Approved',
+                        message: `Congratulations! Your renewed business permit has been approved. Your expiration date is updated to ${parsedExpiry.toLocaleDateString()}. New booking reception is fully active.`,
+                        relatedId: providerId,
+                        relatedType: 'ProviderPermit'
+                    });
+                }
+            } catch (notifErr) {
+                console.warn('Permit approval notification dispatch notice:', notifErr.message);
+            }
 
-            await logActivity(
-                pool,
-                req.user?.userId || null,
-                'Permit Renewal Approved',
-                `Approved permit renewal for "${prov.BusinessName}". Valid until ${new Date(finalExpiry).toLocaleDateString()}`,
-                'ServiceProvider',
-                providerId
-            );
+            // Safe activity logging
+            try {
+                await logActivity(
+                    pool,
+                    req.user?.userId || null,
+                    'Permit Renewal Approved',
+                    `Approved permit renewal for "${prov.BusinessName}". Valid until ${parsedExpiry.toLocaleDateString()}`,
+                    'ServiceProvider',
+                    providerId
+                );
+            } catch (logErr) {
+                console.warn('Permit approval logActivity notice:', logErr.message);
+            }
 
             return res.status(200).json({
                 success: true,
@@ -1876,23 +1920,35 @@ const reviewPermitRenewal = async (req, res) => {
                     WHERE ProviderID = @ProviderID;
                 `);
 
-            await notificationModel.createNotification({
-                userId: prov.UserID,
-                type: 'PermitCompliance',
-                title: 'Business Permit Renewal Rejected',
-                message: `Your business permit renewal was not approved. Reason: ${rejectionReason || 'Document verification failed.'}. Please re-upload a valid document.`,
-                relatedId: providerId,
-                relatedType: 'ProviderPermit'
-            });
+            // Safe notification dispatch
+            try {
+                if (notificationModel && typeof notificationModel.createNotification === 'function') {
+                    await notificationModel.createNotification({
+                        userId: prov.UserID,
+                        type: 'PermitCompliance',
+                        title: 'Business Permit Renewal Rejected',
+                        message: `Your business permit renewal was not approved. Reason: ${rejectionReason || 'Document verification failed.'}. Please re-upload a valid document.`,
+                        relatedId: providerId,
+                        relatedType: 'ProviderPermit'
+                    });
+                }
+            } catch (notifErr) {
+                console.warn('Permit rejection notification dispatch notice:', notifErr.message);
+            }
 
-            await logActivity(
-                pool,
-                req.user?.userId || null,
-                'Permit Renewal Rejected',
-                `Rejected permit renewal for "${prov.BusinessName}". Reason: ${rejectionReason || 'Invalid document'}`,
-                'ServiceProvider',
-                providerId
-            );
+            // Safe activity logging
+            try {
+                await logActivity(
+                    pool,
+                    req.user?.userId || null,
+                    'Permit Renewal Rejected',
+                    `Rejected permit renewal for "${prov.BusinessName}". Reason: ${rejectionReason || 'Invalid document'}`,
+                    'ServiceProvider',
+                    providerId
+                );
+            } catch (logErr) {
+                console.warn('Permit rejection logActivity notice:', logErr.message);
+            }
 
             return res.status(200).json({
                 success: true,
@@ -1901,7 +1957,7 @@ const reviewPermitRenewal = async (req, res) => {
         }
     } catch (error) {
         console.error('Review Permit Renewal Error:', error);
-        return res.status(500).json({ success: false, message: 'Failed to process permit review.', error: error.message });
+        return res.status(500).json({ success: false, message: 'Failed to process permit review: ' + error.message, error: error.message });
     }
 };
 

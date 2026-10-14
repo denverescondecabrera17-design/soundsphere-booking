@@ -3474,6 +3474,8 @@ async function _submitPermitReview(action) {
     const providerId = _currentReviewPermit.ProviderID;
     const newExpEl = document.getElementById('modal-permit-new-expiry');
     const rejectReasonEl = document.getElementById('modal-permit-reject-reason');
+    const btnApprove = document.getElementById('btn-admin-permit-approve');
+    const btnRejectToggle = document.getElementById('btn-admin-permit-reject-toggle');
 
     let payload = { action };
 
@@ -3492,6 +3494,18 @@ async function _submitPermitReview(action) {
             return;
         }
         payload.rejectionReason = reason;
+    }
+
+    const origApproveHtml = btnApprove?.innerHTML;
+    const origRejectHtml = btnRejectToggle?.innerHTML;
+
+    if (btnApprove) btnApprove.disabled = true;
+    if (btnRejectToggle) btnRejectToggle.disabled = true;
+
+    if (action === 'approve' && btnApprove) {
+        btnApprove.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving...';
+    } else if (action === 'reject' && btnRejectToggle) {
+        btnRejectToggle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
     }
 
     try {
@@ -3513,6 +3527,15 @@ async function _submitPermitReview(action) {
     } catch (err) {
         console.error('Error reviewing permit:', err);
         showToast(err.message || 'Error processing permit review', 'error');
+    } finally {
+        if (btnApprove) {
+            btnApprove.disabled = false;
+            btnApprove.innerHTML = origApproveHtml;
+        }
+        if (btnRejectToggle) {
+            btnRejectToggle.disabled = false;
+            btnRejectToggle.innerHTML = origRejectHtml;
+        }
     }
 }
 
