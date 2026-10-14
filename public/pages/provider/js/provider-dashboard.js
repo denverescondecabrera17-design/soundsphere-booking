@@ -2626,35 +2626,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         grid.innerHTML = '';
 
         // Permit Expired Alert Banner on Provider Calendar
-        let calPermitBanner = document.getElementById('prov-cal-permit-alert-banner');
-        if (provCalData && provCalData.isPermitExpired) {
-            if (!calPermitBanner) {
-                calPermitBanner = document.createElement('div');
-                calPermitBanner.id = 'prov-cal-permit-alert-banner';
-                calPermitBanner.style.cssText = 'background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:16px;';
-                calPermitBanner.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div style="width:38px; height:38px; border-radius:10px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <strong style="color:#991b1b; font-size:0.9rem; display:block;">Calendar Locked — Business Permit Expired</strong>
-                            <p style="margin:2px 0 0 0; color:#b91c1c; font-size:0.78rem; line-height:1.4;">
-                                Your municipal business permit has expired. All future dates are locked from accepting new bookings. Ongoing bookings remain active for fulfillment. Please submit your renewed business permit to restore calendar bookings once approved by the administrator.
-                            </p>
-                        </div>
-                    </div>
-                    <button type="button" onclick="window.openUploadPermitModal()" style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-weight:700; font-size:0.8rem; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
-                        <i class="fa-solid fa-file-arrow-up"></i> Upload Permit
-                    </button>
-                `;
-                const calContainer = grid.closest('.prov-cal-container') || grid.parentElement;
-                if (calContainer && calContainer.parentElement) {
-                    calContainer.parentElement.insertBefore(calPermitBanner, calContainer);
-                }
-            }
-        } else if (calPermitBanner) {
-            calPermitBanner.remove();
+        const calPermitBanner = document.getElementById('prov-cal-permit-alert-banner');
+        if (calPermitBanner) {
+            calPermitBanner.style.display = (provCalData && provCalData.isPermitExpired) ? 'flex' : 'none';
         }
 
         const firstDayIndex = new Date(provCalYear, provCalMonth, 1).getDay();
