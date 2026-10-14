@@ -97,6 +97,7 @@
     transition: all 0.2s ease !important;
     box-sizing: border-box !important;
     -webkit-appearance: none !important;
+    appearance: none !important;
 }
 
 .otp-digit-input:focus {
