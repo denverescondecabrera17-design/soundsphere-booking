@@ -1033,13 +1033,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (r.Status === 'Approved') statusBadge = 'badge-approved';
             if (r.Status === 'Rejected') statusBadge = 'badge-rejected';
 
-            const isPending = (r.Status || 'Pending') === 'Pending';
             const actionHtml = isPending ? `
-                <div style="display:flex; gap:6px; justify-content:flex-end;" onclick="event.stopPropagation();">
-                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation();" title="Manually Send Refund & Mark as Refunded">
+                <div style="display:flex; gap:6px; justify-content:flex-end;" class="refund-actions-cell">
+                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.executeMarkRefundAsRefunded && window.executeMarkRefundAsRefunded('${r.RefundRequestID}', this);" title="Manually Send Refund & Mark as Refunded">
                         <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation();" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.openCashierRejectModal && window.openCashierRejectModal('${r.RefundRequestID}');" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
                         <i class="fa-solid fa-xmark"></i> Reject
                     </button>
                 </div>
@@ -1055,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `);
 
             return `
-                <tr class="refund-row-item" data-id="${r.RefundRequestID}" onclick="window.openClientBookingDetailsFullScreen && window.openClientBookingDetailsFullScreen('${r.RefundRequestID}')" title="Click this line to view client booking information">
+                <tr class="refund-row-item" data-id="${r.RefundRequestID}" title="Click this line to view client booking information">
                     <td><strong>#REF-${r.RefundRequestID}</strong></td>
                     <td>
                         <div>
@@ -1078,6 +1077,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
+
+        // Direct event listeners for refund action buttons
+        tbody.querySelectorAll('.btn-disburse-refund').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const reqId = btn.getAttribute('data-id');
+                executeMarkRefundAsRefunded(reqId, btn);
+            });
+        });
+
+        tbody.querySelectorAll('.btn-reject-refund').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const reqId = btn.getAttribute('data-id');
+                openCashierRejectModal(reqId);
+            });
+        });
+
+        // Row click opens the full booking/refund details, but ignore if action buttons were clicked
+        tbody.querySelectorAll('.refund-row-item').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-disburse-refund') || e.target.closest('.btn-reject-refund') || e.target.closest('.btn-view-client-booking') || e.target.closest('.refund-actions-cell')) {
+                    return;
+                }
+                const reqId = row.getAttribute('data-id');
+                if (reqId) openClientBookingDetailsFullScreen(reqId);
+            });
+        });
     }
 
     // Filter pill clicks
@@ -1094,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refund-search-input')?.addEventListener('input', renderRefundsTable);
     document.getElementById('btn-refresh-refunds')?.addEventListener('click', loadClientRefundsList);
 
-    // Table click delegation for View Booking, Disburse & Reject
+    // Table click delegation fallback for Disburse & Reject
     document.getElementById('refunds-table-body')?.addEventListener('click', (e) => {
         const disburseBtn = e.target.closest('.btn-disburse-refund');
         if (disburseBtn) {
@@ -1109,14 +1136,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             const reqId = rejectBtn.getAttribute('data-id');
             openCashierRejectModal(reqId);
-            return;
-        }
-
-        // When you click this line (table row or client button)
-        const row = e.target.closest('.refund-row-item');
-        if (row) {
-            const reqId = row.getAttribute('data-id');
-            openClientBookingDetailsFullScreen(reqId);
             return;
         }
     });
@@ -1335,34 +1354,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Modal: Reject Client Refund
-    const modalCashierReject = document.getElementById('modal-cashier-reject-refund');
-    const formCashierReject = document.getElementById('form-cashier-reject-refund');
-
     function openCashierRejectModal(reqId) {
         const item = currentRefundsList.find(r => String(r.RefundRequestID) === String(reqId));
         if (!item) return;
 
-        document.getElementById('cashier-reject-request-id').value = item.RefundRequestID;
-        document.getElementById('cashier-reject-client-name').textContent = item.ClientName || 'Client';
-        document.getElementById('cashier-reject-amount').textContent = formatPHP(item.Amount);
-        document.getElementById('cashier-reject-reason').value = '';
+        const reqIdInput = document.getElementById('cashier-reject-request-id');
+        const clientNameSpan = document.getElementById('cashier-reject-client-name');
+        const amountSpan = document.getElementById('cashier-reject-amount');
+        const reasonInput = document.getElementById('cashier-reject-reason');
+        const modal = document.getElementById('modal-cashier-reject-refund');
 
-        modalCashierReject.classList.add('active');
+        if (reqIdInput) reqIdInput.value = item.RefundRequestID;
+        if (clientNameSpan) clientNameSpan.textContent = item.ClientName || 'Client';
+        if (amountSpan) amountSpan.textContent = formatPHP(item.Amount);
+        if (reasonInput) reasonInput.value = '';
+
+        if (modal) modal.classList.add('active');
     }
 
     function closeCashierRejectModal() {
-        if (!modalCashierReject) return;
-        modalCashierReject.classList.remove('active');
+        const modal = document.getElementById('modal-cashier-reject-refund');
+        if (modal) modal.classList.remove('active');
     }
 
-    document.getElementById('btn-close-cashier-reject')?.addEventListener('click', closeCashierRejectModal);
-    document.getElementById('btn-cancel-cashier-reject')?.addEventListener('click', closeCashierRejectModal);
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#btn-close-cashier-reject') || e.target.closest('#btn-cancel-cashier-reject')) {
+            closeCashierRejectModal();
+        }
+    });
 
-    if (formCashierReject) {
-        formCashierReject.addEventListener('submit', async (e) => {
+    document.addEventListener('submit', async (e) => {
+        if (e.target && e.target.id === 'form-cashier-reject-refund') {
             e.preventDefault();
-            const reqId = document.getElementById('cashier-reject-request-id').value;
-            const reason = document.getElementById('cashier-reject-reason').value.trim();
+            const reqId = document.getElementById('cashier-reject-request-id')?.value;
+            const reason = document.getElementById('cashier-reject-reason')?.value.trim();
 
             if (!reason) {
                 alert('Please state a reason for rejecting the refund request.');
@@ -1370,9 +1395,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const submitBtn = document.getElementById('btn-submit-cashier-reject');
-            const origHtml = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+            const origHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+            }
 
             try {
                 const res = await fetch(`/api/cashier/refund-requests/${reqId}/reject`, {
@@ -1391,17 +1418,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 alert(`Refund Request #${reqId} Rejected.\n\nThe funds have been automatically returned to the client's wallet balance.`);
                 closeCashierRejectModal();
-                loadClientRefundsList();
+                await loadClientRefundsList();
                 loadCashierSummary();
             } catch (err) {
                 console.error('Error rejecting refund:', err);
                 alert(`⚠️ Error: ${err.message}`);
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = origHtml;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origHtml;
+                }
             }
-        });
-    }
+        }
+    });
+
+    // Expose helpers globally to ensure inline onclick handlers always function
+    window.executeMarkRefundAsRefunded = executeMarkRefundAsRefunded;
+    window.openCashierRejectModal = openCashierRejectModal;
+    window.closeCashierRejectModal = closeCashierRejectModal;
+    window.openClientBookingDetailsFullScreen = openClientBookingDetailsFullScreen;
+    window.closeClientBookingDetailsFullScreen = closeClientBookingDetailsFullScreen;
 
     // ----------------------------------------------------
     // 5. Provider Subscriptions Management & Cashier Payments
