@@ -301,7 +301,8 @@ const approveRefundPayout = async ({ refundRequestId, cashierUserId, referenceNu
     if (reqData.Status === 'Approved') throw new Error('Refund request has already been approved and disbursed.');
 
     const refNo = referenceNumber || `REF-CASHIER-${Date.now().toString().slice(-6)}`;
-    const finalNotes = adminNotes || `Manually disbursed by Cashier via ${reqData.PayoutMethod}`;
+    const sanitizedNotes = adminNotes ? adminNotes.replace(/\s*outside system by cashier\s*/gi, '').trim() : '';
+    const finalNotes = sanitizedNotes || `Manually disbursed via ${reqData.PayoutMethod}`;
 
     // 1. Update status in dbo.RefundRequests
     await pool.request()

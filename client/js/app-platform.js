@@ -3160,7 +3160,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                         const dateStr = r.RequestedAt ? new Date(r.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
                                         const refLine = r.ReferenceNumber ? `<div style="font-weight:800; color:#0a192f;"><i class="fa-solid fa-receipt" style="color:#2563eb;"></i> Ref: ${r.ReferenceNumber}</div>` : '';
-                                        const notesLine = r.AdminNotes ? `<div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${r.AdminNotes}</div>` : '<div style="color:#94a3b8; font-size:0.8rem;">Awaiting manual transfer</div>';
+                                        const cleanNotes = (r.AdminNotes || '').replace(/\s*outside system by cashier\s*/gi, '').trim();
+                                        const notesLine = cleanNotes ? `<div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${cleanNotes}</div>` : '<div style="color:#94a3b8; font-size:0.8rem;">Awaiting manual transfer</div>';
 
                                         return `
                                             <tr style="border-bottom:1px solid #f1f5f9;">

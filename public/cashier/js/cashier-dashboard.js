@@ -1046,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ` : (r.Status === 'Approved' ? `
                 <div style="text-align:right;" onclick="event.stopPropagation();">
                     <strong style="color:#059669; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Ref: ${r.ReferenceNumber || 'Manual'}</strong>
-                    ${r.AdminNotes ? `<div style="font-size:0.75rem; color:#64748b;">${r.AdminNotes}</div>` : ''}
+                    ${r.AdminNotes ? `<div style="font-size:0.75rem; color:#64748b;">${(r.AdminNotes || '').replace(/\s*outside system by cashier\s*/gi, '').trim()}</div>` : ''}
                 </div>
             ` : `
                 <div style="text-align:right;" onclick="event.stopPropagation();">
@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const accNum = item ? (item.AccountNumber || '-') : '-';
 
         const confirmed = confirm(
-            `Confirm Manual Refund Sent Outside System:\n\n` +
+            `Confirm Manual Refund Sent:\n\n` +
             `• Client: ${clientName}\n` +
             `• Amount to Refund: ${amountStr}\n` +
             `• Payout Method: ${methodStr}\n` +
@@ -1326,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({
                     referenceNumber: `MANUAL-${reqId}`,
-                    notes: `Manually transferred via ${methodStr} outside system by Cashier`
+                    notes: `Manually transferred via ${methodStr}`
                 })
             });
 
