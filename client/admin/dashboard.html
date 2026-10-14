@@ -781,74 +781,6 @@
                         </div>
                     </div>
 
-                    <!-- KPI Metric Cards -->
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:18px; margin-bottom:28px;">
-                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">Total Monitored</div>
-                                    <strong id="permit-stat-total" style="font-size:1.65rem; color:#0a192f; display:block; margin-top:6px;">0</strong>
-                                </div>
-                                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1rem;">
-                                    <i class="fa-solid fa-store"></i>
-                                </div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#64748b; display:block; margin-top:6px;">All approved service providers</span>
-                        </div>
-
-                        <div style="background:#ffffff; border:1px solid #bbf7d0; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:0.05em;">Valid (&gt;30 Days)</div>
-                                    <strong id="permit-stat-valid" style="font-size:1.65rem; color:#10b981; display:block; margin-top:6px;">0</strong>
-                                </div>
-                                <div style="width:36px; height:36px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1rem;">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                </div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#15803d; display:block; margin-top:6px;">Compliant and operational</span>
-                        </div>
-
-                        <div style="background:#ffffff; border:1px solid #fef3c7; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#d97706; text-transform:uppercase; letter-spacing:0.05em;">Expiring Soon (&le;30d)</div>
-                                    <strong id="permit-stat-expiring-soon" style="font-size:1.65rem; color:#d97706; display:block; margin-top:6px;">0</strong>
-                                </div>
-                                <div style="width:36px; height:36px; border-radius:8px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1rem;">
-                                    <i class="fa-solid fa-triangle-exclamation"></i>
-                                </div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#b45309; display:block; margin-top:6px;">Notice recommended</span>
-                        </div>
-
-                        <div style="background:#ffffff; border:1px solid #fecdd3; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#e11d48; text-transform:uppercase; letter-spacing:0.05em;">Expired Permits</div>
-                                    <strong id="permit-stat-expired" style="font-size:1.65rem; color:#e11d48; display:block; margin-top:6px;">0</strong>
-                                </div>
-                                <div style="width:36px; height:36px; border-radius:8px; background:#fee2e2; color:#e11d48; display:flex; align-items:center; justify-content:center; font-size:1rem;">
-                                    <i class="fa-solid fa-ban"></i>
-                                </div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#be123c; display:block; margin-top:6px;">Booking acceptance blocked</span>
-                        </div>
-
-                        <div style="background:#ffffff; border:1px solid #bfdbfe; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <div style="font-size:0.75rem; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.05em;">Renewal Pending</div>
-                                    <strong id="permit-stat-pending-renewal" style="font-size:1.65rem; color:#2563eb; display:block; margin-top:6px;">0</strong>
-                                </div>
-                                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1rem;">
-                                    <i class="fa-solid fa-file-signature"></i>
-                                </div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#1d4ed8; display:block; margin-top:6px;">Submitted for verification</span>
-                        </div>
-                    </div>
-
                     <!-- Table Panel -->
                     <div class="panel">
                         <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -1288,11 +1220,10 @@
             </aside>
         </div>
     </div>
-    </div>
 
     <!-- Scripts -->
     <script src="../js/api.js?v=3.5"></script>
     <script src="/js/notifications.js?v=3.5"></script>
-    <script src="js/admin-dashboard.js?v=5.0"></script>
+    <script src="js/admin-dashboard.js?v=6.0"></script>
 </body>
 </html>
