@@ -791,20 +791,29 @@ const acceptBooking = async (req, res) => {
         // Check Business Permit Validity Guard
         const permitCheck = await pool.request()
             .input('UID', userId)
-            .query("SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE UserID = @UID OR ProviderID = @UID;");
+            .query("SELECT PermitExpiryDate, BusinessName, PermitRenewalStatus, PermitStatus FROM dbo.ServiceProviders WHERE UserID = @UID OR ProviderID = @UID;");
         if (permitCheck.recordset && permitCheck.recordset[0]) {
             const provRow = permitCheck.recordset[0];
+            let isExpired = false;
+            let expiryDateStr = '';
             if (provRow.PermitExpiryDate) {
                 const expiry = new Date(provRow.PermitExpiryDate);
+                expiryDateStr = expiry.toLocaleDateString();
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                if (expiry < today) {
-                    return res.status(403).json({
-                        success: false,
-                        isPermitExpired: true,
-                        message: `Cannot accept new bookings. Your business permit expired on ${expiry.toLocaleDateString()}. Please submit a renewed business permit for administrator verification.`
-                    });
+                if (expiry < today && provRow.PermitRenewalStatus !== 'Approved') {
+                    isExpired = true;
                 }
+            } else if (provRow.PermitStatus === 'Expired' && provRow.PermitRenewalStatus !== 'Approved') {
+                isExpired = true;
+            }
+
+            if (isExpired) {
+                return res.status(403).json({
+                    success: false,
+                    isPermitExpired: true,
+                    message: `Cannot accept new bookings. Your business permit expired${expiryDateStr ? ' on ' + expiryDateStr : ''}. All calendar bookings are locked until a renewed business permit is approved by the administrator.`
+                });
             }
         }
 

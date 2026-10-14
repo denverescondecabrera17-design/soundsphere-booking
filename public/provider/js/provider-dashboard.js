@@ -1007,7 +1007,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (typeof showToast === 'function') showToast(`✓ Booking #${bookingId} accepted successfully!`, 'success');
                 loadDashboardData();
             } else {
-                if (typeof showToast === 'function') showToast(data.message || 'Failed to accept booking.', 'error');
+                if (data && data.isPermitExpired) {
+                    alert(`⚠️ Booking Acceptance Blocked\n\n${data.message || 'Your municipal business permit has expired. You cannot accept new bookings until your business permit renewal is approved by the administrator.'}\n\nPlease submit your renewed business permit in the Permit Compliance section.`);
+                    if (typeof window.openUploadPermitModal === 'function') {
+                        window.openUploadPermitModal();
+                    }
+                } else {
+                    if (typeof showToast === 'function') showToast(data.message || 'Failed to accept booking.', 'error');
+                }
             }
         } catch (err) {
             console.error('Error accepting booking:', err);
@@ -2570,11 +2577,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     provCalData = {
                         defaultCapacity: data.defaultCapacity || 1,
                         bookings: data.bookings || [],
-                        capacities: data.capacities || []
+                        capacities: data.capacities || [],
+                        isPermitExpired: !!(data.isPermitExpired || data.isLocked),
+                        permitExpiryDate: data.permitExpiryDate
                     };
 
                     const defInput = document.getElementById('prov-default-daily-capacity-input');
-                    if (defInput) defInput.value = provCalData.defaultCapacity;
+                    if (defInput) {
+                        defInput.value = provCalData.defaultCapacity;
+                        if (provCalData.isPermitExpired) {
+                            defInput.disabled = true;
+                            defInput.title = 'Calendar is locked due to expired business permit';
+                        }
+                    }
+
+                    const btnSaveCap = document.getElementById('btn-save-default-daily-capacity');
+                    if (btnSaveCap && provCalData.isPermitExpired) {
+                        btnSaveCap.disabled = true;
+                        btnSaveCap.title = 'Calendar is locked due to expired business permit';
+                    }
                 }
             }
         } catch (err) {
@@ -2603,6 +2624,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!grid) return;
         grid.innerHTML = '';
+
+        // Permit Expired Alert Banner on Provider Calendar
+        let calPermitBanner = document.getElementById('prov-cal-permit-alert-banner');
+        if (provCalData && provCalData.isPermitExpired) {
+            if (!calPermitBanner) {
+                calPermitBanner = document.createElement('div');
+                calPermitBanner.id = 'prov-cal-permit-alert-banner';
+                calPermitBanner.style.cssText = 'background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:16px;';
+                calPermitBanner.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:38px; height:38px; border-radius:10px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div>
+                            <strong style="color:#991b1b; font-size:0.9rem; display:block;">Calendar Locked — Business Permit Expired</strong>
+                            <p style="margin:2px 0 0 0; color:#b91c1c; font-size:0.78rem; line-height:1.4;">
+                                Your municipal business permit has expired. All future dates are locked from accepting new bookings. Ongoing bookings remain active for fulfillment. Please submit your renewed business permit to restore calendar bookings once approved by the administrator.
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="window.openUploadPermitModal()" style="background:#dc2626; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-weight:700; font-size:0.8rem; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-file-arrow-up"></i> Upload Permit
+                    </button>
+                `;
+                const calContainer = grid.closest('.prov-cal-container') || grid.parentElement;
+                if (calContainer && calContainer.parentElement) {
+                    calContainer.parentElement.insertBefore(calPermitBanner, calContainer);
+                }
+            }
+        } else if (calPermitBanner) {
+            calPermitBanner.remove();
+        }
 
         const firstDayIndex = new Date(provCalYear, provCalMonth, 1).getDay();
         const totalDaysInMonth = new Date(provCalYear, provCalMonth + 1, 0).getDate();
@@ -2655,6 +2708,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cell.classList.add('is-past');
                 const bookedTxt = bookingCount > 0 ? ` (${bookingCount})` : '';
                 badgeHtml = `<span class="prov-day-badge badge-status-past" title="Closed${bookedTxt}"><i class="fa-solid fa-lock"></i> Closed${bookedTxt}</span>`;
+            } else if (provCalData && provCalData.isPermitExpired) {
+                cell.classList.add('is-permit-locked');
+                if (bookingCount > 0) {
+                    badgeHtml = `<span class="prov-day-badge" style="background:#eff6ff;color:#1e40af;font-size:0.68rem;font-weight:700;" title="Ongoing booking active"><i class="fa-solid fa-calendar-check"></i> ${bookingCount} Ongoing</span>`;
+                } else {
+                    badgeHtml = `<span class="prov-day-badge" style="background:#fee2e2;color:#b91c1c;font-size:0.68rem;font-weight:700;" title="Calendar Locked: Business permit is expired"><i class="fa-solid fa-lock"></i> Locked</span>`;
+                }
             } else if (isBlocked) {
                 cell.classList.add('is-blocked');
                 badgeHtml = `<span class="prov-day-badge badge-status-blocked" title="Blocked"><i class="fa-solid fa-ban"></i> Blocked</span>`;

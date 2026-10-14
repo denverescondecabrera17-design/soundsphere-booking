@@ -259,14 +259,52 @@ const getProviderAvailability = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Valid Provider ID is required.' });
         }
 
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+
+        let isPermitExpired = false;
+        let permitExpiryDate = null;
+        let businessName = '';
+        if (pool) {
+            const permitCheck = await pool.request()
+                .input('ProviderID', sql.Int, providerId)
+                .query(`
+                    SELECT PermitExpiryDate, BusinessName, PermitRenewalStatus, PermitStatus 
+                    FROM dbo.ServiceProviders 
+                    WHERE ProviderID = @ProviderID OR UserID = @ProviderID;
+                `);
+            if (permitCheck.recordset && permitCheck.recordset[0]) {
+                const provRow = permitCheck.recordset[0];
+                businessName = provRow.BusinessName;
+                if (provRow.PermitExpiryDate) {
+                    permitExpiryDate = provRow.PermitExpiryDate;
+                    const expiry = new Date(provRow.PermitExpiryDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (expiry < today && provRow.PermitRenewalStatus !== 'Approved') {
+                        isPermitExpired = true;
+                    }
+                } else if (provRow.PermitStatus === 'Expired' && provRow.PermitRenewalStatus !== 'Approved') {
+                    isPermitExpired = true;
+                }
+            }
+        }
+
         const availData = await bookingModel.getProviderAvailabilitySlots(providerId);
 
         return res.status(200).json({
             success: true,
             providerId,
+            isPermitExpired,
+            isLocked: isPermitExpired,
+            permitExpiryDate,
+            businessName,
             bookedSlots: availData.slots || [],
             dateCapacities: availData.dateCapacities || [],
-            defaultMaxDailyBookings: availData.defaultMaxDailyBookings || 1
+            defaultMaxDailyBookings: availData.defaultMaxDailyBookings || 1,
+            message: isPermitExpired 
+                ? `Booking unavailable. The business permit of ${businessName || 'this service provider'} has expired. All calendar dates are locked until renewal is approved by administrator.`
+                : 'Availability loaded successfully.'
         });
     } catch (error) {
         console.error('Get Provider Availability Error:', error);
@@ -282,8 +320,44 @@ const getProviderCalendarSchedule = async (req, res) => {
     try {
         const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.query.userId || 13);
         const data = await bookingModel.getProviderCalendarSchedule(userId);
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+
+        let isPermitExpired = false;
+        let permitExpiryDate = null;
+        let permitRenewalStatus = null;
+        if (pool) {
+            const permitCheck = await pool.request()
+                .input('UID', sql.Int, userId)
+                .query(`
+                    SELECT PermitExpiryDate, BusinessName, PermitRenewalStatus, PermitStatus 
+                    FROM dbo.ServiceProviders 
+                    WHERE UserID = @UID OR ProviderID = @UID;
+                `);
+            if (permitCheck.recordset && permitCheck.recordset[0]) {
+                const provRow = permitCheck.recordset[0];
+                permitRenewalStatus = provRow.PermitRenewalStatus;
+                if (provRow.PermitExpiryDate) {
+                    permitExpiryDate = provRow.PermitExpiryDate;
+                    const expiry = new Date(provRow.PermitExpiryDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (expiry < today && permitRenewalStatus !== 'Approved') {
+                        isPermitExpired = true;
+                    }
+                } else if (provRow.PermitStatus === 'Expired' && permitRenewalStatus !== 'Approved') {
+                    isPermitExpired = true;
+                }
+            }
+        }
+
         return res.status(200).json({
             success: true,
+            isPermitExpired,
+            isLocked: isPermitExpired,
+            permitExpiryDate,
+            permitRenewalStatus,
             ...data
         });
     } catch (error) {
