@@ -12,6 +12,30 @@ const { checkAndAutoAcceptCompletions } = require('../services/autoCompletionSer
 const { getPool, getOrConnectPool, sql } = require('../config/db');
 
 /**
+ * Helper: Check if service provider currently has an active subscription
+ * Providers without an active subscription cannot accept bookings and their calendar is locked.
+ */
+const checkProviderSubscriptionActive = async (pool, providerIdOrUserId) => {
+    if (!pool || !providerIdOrUserId) return true;
+    try {
+        const subRes = await pool.request()
+            .input('PID', sql.Int, parseInt(providerIdOrUserId, 10))
+            .query(`
+                SELECT TOP 1 SubscriptionID, PlanType, PlanName, Status, EndDate
+                FROM dbo.ProviderSubscriptions
+                WHERE (ProviderID = @PID OR UserID = @PID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @PID))
+                  AND Status = 'Active'
+                  AND EndDate >= GETDATE()
+                ORDER BY EndDate DESC, SubscriptionID DESC;
+            `);
+        return Boolean(subRes.recordset && subRes.recordset.length > 0);
+    } catch (err) {
+        console.warn('Subscription check notice:', err.message);
+        return false;
+    }
+};
+
+/**
  * GET /api/packages/:id
  * Retrieve specific Package details directly from SQL Server Database
  */
@@ -210,9 +234,22 @@ const checkAvailability = async (req, res) => {
                     success: true,
                     isAvailable: false,
                     isPermitExpired: true,
+                    isLocked: true,
                     message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has not been approved or has expired. All calendar bookings are locked until verified by admin.`
                 });
             }
+        }
+
+        // Check Subscription Active Guard
+        const isSubscriptionActive = await checkProviderSubscriptionActive(pool, parsedProvId);
+        if (!isSubscriptionActive) {
+            return res.status(200).json({
+                success: true,
+                isAvailable: false,
+                isSubscriptionInactive: true,
+                isLocked: true,
+                message: 'Booking unavailable. This service provider does not have an active subscription. All calendar bookings are locked until subscribed.'
+            });
         }
 
         const result = await bookingModel.checkProviderAvailability({
@@ -291,23 +328,32 @@ const getProviderAvailability = async (req, res) => {
             } else {
                 isPermitExpired = true;
             }
+
+            isSubscriptionActive = await checkProviderSubscriptionActive(pool, providerId);
         }
 
+        const isLocked = isPermitExpired || !isSubscriptionActive;
         const availData = await bookingModel.getProviderAvailabilitySlots(providerId);
+
+        let lockMessage = 'Availability loaded successfully.';
+        if (!isSubscriptionActive) {
+            lockMessage = `Booking unavailable. ${businessName || 'This service provider'} does not have an active subscription. All calendar dates are locked until subscribed.`;
+        } else if (isPermitExpired) {
+            lockMessage = `Booking unavailable. The business permit of ${businessName || 'this service provider'} has not been approved or has expired. All calendar dates are locked until renewal is approved by administrator.`;
+        }
 
         return res.status(200).json({
             success: true,
             providerId,
             isPermitExpired,
-            isLocked: isPermitExpired,
+            isSubscriptionActive,
+            isLocked,
             permitExpiryDate,
             businessName,
             bookedSlots: availData.slots || [],
             dateCapacities: availData.dateCapacities || [],
             defaultMaxDailyBookings: availData.defaultMaxDailyBookings || 1,
-            message: isPermitExpired 
-                ? `Booking unavailable. The business permit of ${businessName || 'this service provider'} has not been approved or has expired. All calendar dates are locked until renewal is approved by administrator.`
-                : 'Availability loaded successfully.'
+            message: lockMessage
         });
     } catch (error) {
         console.error('Get Provider Availability Error:', error);
@@ -355,12 +401,15 @@ const getProviderCalendarSchedule = async (req, res) => {
             } else {
                 isPermitExpired = true;
             }
+
+            isSubscriptionActive = await checkProviderSubscriptionActive(pool, userId);
         }
 
         return res.status(200).json({
             success: true,
             isPermitExpired,
-            isLocked: isPermitExpired,
+            isSubscriptionActive,
+            isLocked: isPermitExpired || !isSubscriptionActive,
             permitExpiryDate,
             permitRenewalStatus,
             ...data
@@ -676,6 +725,16 @@ const createBooking = async (req, res) => {
                         message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has not been approved or has expired. New bookings are disabled until approved by the administrator.`
                     });
                 }
+            }
+
+            // Check Provider Subscription Active Guard
+            const isSubscriptionActive = await checkProviderSubscriptionActive(pool, actualProviderId);
+            if (!isSubscriptionActive) {
+                return res.status(403).json({
+                    success: false,
+                    isSubscriptionActive: false,
+                    message: 'Booking unavailable. This service provider does not have an active subscription. New bookings cannot be accepted until they subscribe.'
+                });
             }
         }
 

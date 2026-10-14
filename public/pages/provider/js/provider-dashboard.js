@@ -2578,23 +2578,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                         defaultCapacity: data.defaultCapacity || 1,
                         bookings: data.bookings || [],
                         capacities: data.capacities || [],
-                        isPermitExpired: !!(data.isPermitExpired || data.isLocked),
-                        permitExpiryDate: data.permitExpiryDate
+                        isPermitExpired: !!(data.isPermitExpired),
+                        isSubscriptionActive: data.isSubscriptionActive !== false,
+                        isLocked: !!(data.isLocked || data.isPermitExpired || data.isSubscriptionActive === false),
+                        permitExpiryDate: data.permitExpiryDate,
+                        subscriptionMessage: data.subscriptionMessage || ''
                     };
+
+                    const isCalLocked = provCalData.isPermitExpired || !provCalData.isSubscriptionActive;
 
                     const defInput = document.getElementById('prov-default-daily-capacity-input');
                     if (defInput) {
                         defInput.value = provCalData.defaultCapacity;
-                        if (provCalData.isPermitExpired) {
+                        if (isCalLocked) {
                             defInput.disabled = true;
-                            defInput.title = 'Calendar is locked due to expired business permit';
+                            defInput.title = !provCalData.isSubscriptionActive
+                                ? 'Calendar is locked due to inactive subscription'
+                                : 'Calendar is locked due to expired business permit';
+                        } else {
+                            defInput.disabled = false;
+                            defInput.title = '';
                         }
                     }
 
-                    const btnSaveCap = document.getElementById('btn-save-default-daily-capacity');
-                    if (btnSaveCap && provCalData.isPermitExpired) {
-                        btnSaveCap.disabled = true;
-                        btnSaveCap.title = 'Calendar is locked due to expired business permit';
+                    const btnSaveCap = document.getElementById('btn-save-default-capacity') || document.getElementById('btn-save-default-daily-capacity');
+                    if (btnSaveCap) {
+                        if (isCalLocked) {
+                            btnSaveCap.disabled = true;
+                            btnSaveCap.style.opacity = '0.5';
+                            btnSaveCap.title = !provCalData.isSubscriptionActive
+                                ? 'Calendar is locked due to inactive subscription'
+                                : 'Calendar is locked due to expired business permit';
+                        } else {
+                            btnSaveCap.disabled = false;
+                            btnSaveCap.style.opacity = '1';
+                            btnSaveCap.title = '';
+                        }
                     }
                 }
             }
@@ -2629,6 +2648,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const calPermitBanner = document.getElementById('prov-cal-permit-alert-banner');
         if (calPermitBanner) {
             calPermitBanner.style.display = (provCalData && provCalData.isPermitExpired) ? 'flex' : 'none';
+        }
+
+        // Subscription Inactive Alert Banner on Provider Calendar
+        const calSubBanner = document.getElementById('prov-cal-sub-alert-banner');
+        if (calSubBanner) {
+            calSubBanner.style.display = (provCalData && !provCalData.isSubscriptionActive) ? 'flex' : 'none';
         }
 
         const firstDayIndex = new Date(provCalYear, provCalMonth, 1).getDay();
@@ -2682,6 +2707,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cell.classList.add('is-past');
                 const bookedTxt = bookingCount > 0 ? ` (${bookingCount})` : '';
                 badgeHtml = `<span class="prov-day-badge badge-status-past" title="Closed${bookedTxt}"><i class="fa-solid fa-lock"></i> Closed${bookedTxt}</span>`;
+            } else if (provCalData && !provCalData.isSubscriptionActive) {
+                cell.classList.add('is-subscription-locked');
+                if (bookingCount > 0) {
+                    badgeHtml = `<span class="prov-day-badge" style="background:#eff6ff;color:#1e40af;font-size:0.68rem;font-weight:700;" title="Ongoing booking active"><i class="fa-solid fa-calendar-check"></i> ${bookingCount} Ongoing</span>`;
+                } else {
+                    badgeHtml = `<span class="prov-day-badge" style="background:#fef3c7;color:#92400e;font-size:0.68rem;font-weight:700;border:1px solid #fde68a;" title="Calendar Locked: Active subscription required"><i class="fa-solid fa-lock"></i> Locked</span>`;
+                }
             } else if (provCalData && provCalData.isPermitExpired) {
                 cell.classList.add('is-permit-locked');
                 if (bookingCount > 0) {
@@ -2810,6 +2842,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 statusBadge.textContent = 'Closed (Past Date)';
                 statusBadge.style.background = '#64748b';
                 summaryText.innerHTML = `Past date &bull; Booking window is closed (${activeBookings.length} booking${activeBookings.length === 1 ? '' : 's'} recorded).`;
+            } else if (provCalData && !provCalData.isSubscriptionActive) {
+                if (activeBookings.length > 0) {
+                    statusBadge.textContent = 'Ongoing Booking Active';
+                    statusBadge.style.background = '#2563eb';
+                    summaryText.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#3b82f6;"></i> ${activeBookings.length} ongoing booking(s) scheduled. New bookings are locked until subscription is activated.`;
+                } else {
+                    statusBadge.textContent = 'Calendar Locked';
+                    statusBadge.style.background = '#d97706';
+                    summaryText.innerHTML = `<i class="fa-solid fa-crown" style="color:#d97706;"></i> Active subscription required. All calendar dates are locked until you subscribe to a plan.`;
+                }
             } else if (provCalData && provCalData.isPermitExpired) {
                 if (activeBookings.length > 0) {
                     statusBadge.textContent = 'Ongoing Booking Active';
@@ -2879,8 +2921,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Disable controls for past dates
-        if (isPast) {
+        // Disable controls for past dates or locked calendars
+        const isLockedFromEdits = isPast || (provCalData && (!provCalData.isSubscriptionActive || provCalData.isPermitExpired));
+        if (isLockedFromEdits) {
             if (capacityInput) capacityInput.disabled = true;
             if (saveDateCapBtn) {
                 saveDateCapBtn.disabled = true;
@@ -2899,6 +2942,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (customCapNotice) {
                 customCapNotice.style.display = 'block';
+                if (!provCalData?.isSubscriptionActive) {
+                    customCapNotice.innerHTML = '<i class="fa-solid fa-crown" style="margin-right:4px; color:#d97706;"></i> Subscription required. Calendar modifications are locked.';
+                } else if (provCalData?.isPermitExpired) {
+                    customCapNotice.innerHTML = '<i class="fa-solid fa-lock" style="margin-right:4px; color:#ef4444;"></i> Business permit expired. Calendar modifications are locked.';
+                } else {
+                    customCapNotice.innerHTML = '<i class="fa-solid fa-lock" style="margin-right:4px; color:#475569;"></i> This is a past date. Capacity modifications and new bookings are closed.';
+                }
             }
         } else {
             if (capacityInput) capacityInput.disabled = false;
@@ -3032,6 +3082,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveDefaultCapBtn = document.getElementById('btn-save-default-capacity');
     if (saveDefaultCapBtn) {
         saveDefaultCapBtn.addEventListener('click', async () => {
+            if (provCalData && !provCalData.isSubscriptionActive) {
+                showToast('Calendar is locked. An active subscription is required to update availability.', 'warning');
+                return;
+            }
             const input = document.getElementById('prov-default-daily-capacity-input');
             const val = parseInt(input.value, 10);
             if (isNaN(val) || val < 1) {
@@ -3091,6 +3145,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (saveDateCapBtn) {
         saveDateCapBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
+            if (provCalData && !provCalData.isSubscriptionActive) {
+                showToast('Calendar is locked. An active subscription is required to update availability.', 'warning');
+                return;
+            }
             const input = document.getElementById('prov-date-capacity-input');
             const val = parseInt(input.value, 10);
             if (isNaN(val) || val < 0) {
@@ -3149,6 +3207,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (toggleBlockBtn) {
         toggleBlockBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
+            if (provCalData && !provCalData.isSubscriptionActive) {
+                showToast('Calendar is locked. An active subscription is required to update availability.', 'warning');
+                return;
+            }
             const activeBookings = (provCalData.bookings || []).filter(b => {
                 const sDate = b.ServiceStartDate ? b.ServiceStartDate.split('T')[0] : (b.EventDate ? b.EventDate.split('T')[0] : '');
                 const eDate = b.ServiceEndDate ? b.ServiceEndDate.split('T')[0] : sDate;
@@ -3200,6 +3262,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (resetDateCapBtn) {
         resetDateCapBtn.addEventListener('click', async () => {
             if (!provCalSelectedDate) return;
+            if (provCalData && !provCalData.isSubscriptionActive) {
+                showToast('Calendar is locked. An active subscription is required to update availability.', 'warning');
+                return;
+            }
             const activeBookings = (provCalData.bookings || []).filter(b => {
                 const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
                 const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];

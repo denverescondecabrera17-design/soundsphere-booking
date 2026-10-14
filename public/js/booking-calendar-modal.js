@@ -25,6 +25,7 @@
     let calDefaultMaxDailyBookings = 1;
     let calIsPermitExpired = false;
     let calPermitExpiryDate = null;
+    let calIsSubscriptionInactive = false;
 
     const MONTH_NAMES = [
         "January", "February", "March", "April", "May", "June",
@@ -73,6 +74,15 @@
                                 <div style="font-size:0.78rem; line-height:1.4;">
                                     <strong style="color:#7f1d1d; display:block;">Calendar Locked — Business Permit Expired</strong>
                                     <span>This service provider's municipal business permit has expired. All calendar dates are locked and cannot accept new bookings until renewed by admin.</span>
+                                </div>
+                            </div>
+
+                            <!-- Subscription Inactive Lock Alert -->
+                            <div id="cal-sub-locked-alert" style="display:none; background:#fffbeb; border:1.5px solid #fde68a; border-radius:10px; padding:10px 14px; margin-bottom:12px; align-items:center; gap:10px; color:#92400e;">
+                                <i class="fa-solid fa-crown" style="font-size:1.15rem; color:#d97706; flex-shrink:0;"></i>
+                                <div style="font-size:0.78rem; line-height:1.4;">
+                                    <strong style="color:#78350f; display:block;">Calendar Locked — Active Subscription Required</strong>
+                                    <span>This service provider does not currently have an active subscription. All calendar dates are locked and cannot accept new bookings until subscribed.</span>
                                 </div>
                             </div>
 
@@ -271,7 +281,8 @@
                 if (data.success) {
                     calDateCapacities = data.dateCapacities || [];
                     calDefaultMaxDailyBookings = data.defaultMaxDailyBookings || 1;
-                    calIsPermitExpired = !!(data.isPermitExpired || data.isLocked);
+                    calIsSubscriptionInactive = (data.isSubscriptionActive === false);
+                    calIsPermitExpired = !!(data.isPermitExpired);
                     calPermitExpiryDate = data.permitExpiryDate || null;
                     if (Array.isArray(data.bookedSlots)) {
                         return data.bookedSlots;
@@ -286,8 +297,8 @@
 
     // Check if a date is booked or blocked according to provider capacity rules
     function isDateBooked(dateIso) {
-        // If business permit is expired, ALL calendar dates are locked
-        if (calIsPermitExpired) return true;
+        // If business permit is expired or subscription is inactive, ALL calendar dates are locked
+        if (calIsPermitExpired || calIsSubscriptionInactive) return true;
 
         // 1. Check custom capacity override
         const override = (calDateCapacities || []).find(c => c.SpecificDate === dateIso);
@@ -336,9 +347,13 @@
         const prevBtn = document.getElementById('cal-btn-prev');
         const todayLabel = document.getElementById('cal-today-label');
         const permitAlert = document.getElementById('cal-permit-locked-alert');
+        const subAlert = document.getElementById('cal-sub-locked-alert');
 
         if (permitAlert) {
             permitAlert.style.display = calIsPermitExpired ? 'flex' : 'none';
+        }
+        if (subAlert) {
+            subAlert.style.display = calIsSubscriptionInactive ? 'flex' : 'none';
         }
 
         if (monthTitle) {
@@ -391,6 +406,15 @@
             if (isPast) {
                 cell.classList.add('past', 'unavailable');
                 cell.title = 'Past date (Unavailable)';
+            } else if (calIsSubscriptionInactive) {
+                cell.classList.add('blocked');
+                cell.style.background = '#fefce8';
+                cell.style.color = '#94a3b8';
+                cell.style.cursor = 'not-allowed';
+                cell.title = 'Calendar Locked: Provider does not have an active subscription';
+                cell.onclick = () => {
+                    alert('⚠️ Calendar Locked\n\nThis service provider cannot accept new bookings because they do not have an active SoundSphere subscription.\n\nThe calendar will be automatically unlocked once the provider subscribes.');
+                };
             } else if (calIsPermitExpired) {
                 cell.classList.add('blocked');
                 cell.style.background = '#f1f5f9';
@@ -433,6 +457,19 @@
         const summaryTimeText = document.getElementById('cal-summary-time-text');
         const summaryPackageNote = document.getElementById('cal-summary-package-note');
         const confirmBtn = document.getElementById('cal-btn-confirm-action');
+
+        if (calIsSubscriptionInactive) {
+            if (headerDate) headerDate.innerHTML = '<span style="color:#d97706;"><i class="fa-solid fa-lock"></i> Calendar Locked</span>';
+            if (summaryDateText) summaryDateText.textContent = 'Unavailable (Subscription Required)';
+            if (summaryTimeText) summaryTimeText.textContent = 'Bookings Disabled';
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Calendar Locked (Subscription Required)';
+                confirmBtn.style.background = '#94a3b8';
+                confirmBtn.style.cursor = 'not-allowed';
+            }
+            return;
+        }
 
         if (calIsPermitExpired) {
             if (headerDate) headerDate.innerHTML = '<span style="color:#dc2626;"><i class="fa-solid fa-lock"></i> Calendar Locked</span>';

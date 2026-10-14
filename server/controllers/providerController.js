@@ -817,6 +817,26 @@ const acceptBooking = async (req, res) => {
             }
         }
 
+        // Check Active Subscription Guard
+        const subCheck = await pool.request()
+            .input('UID', userId)
+            .query(`
+                SELECT TOP 1 SubscriptionID, PlanType, PlanName, Status, EndDate
+                FROM dbo.ProviderSubscriptions
+                WHERE (ProviderID = @UID OR UserID = @UID OR ProviderID IN (SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID))
+                  AND Status = 'Active'
+                  AND EndDate >= GETDATE()
+                ORDER BY EndDate DESC, SubscriptionID DESC;
+            `);
+
+        if (!subCheck.recordset || subCheck.recordset.length === 0) {
+            return res.status(403).json({
+                success: false,
+                isSubscriptionActive: false,
+                message: 'Cannot accept bookings. You do not have an active subscription. All calendar bookings are locked until you subscribe to a plan.'
+            });
+        }
+
         await pool.request()
             .input('BID', id)
             .input('UID', userId)
