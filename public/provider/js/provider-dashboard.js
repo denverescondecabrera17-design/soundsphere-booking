@@ -2242,6 +2242,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
+                    const cleanPlanTitle = (name) => {
+                        if (!name) return 'Monthly Plan';
+                        return String(name).replace(/\s*\(\?[0-9,]+\)|\s*\(₱[0-9,]+\)|\s*\(\?\d+\)|\s*\(\d+\)/gi, '').trim();
+                    };
+
                     // 2. Update Status Card
                     if (currentProviderSubscription) {
                         const s = currentProviderSubscription;
@@ -2262,7 +2267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
 
-                        if (elPlanTitle) elPlanTitle.textContent = s.PlanName || 'Monthly Plan';
+                        if (elPlanTitle) elPlanTitle.textContent = cleanPlanTitle(s.PlanName);
                         if (elExpiryDate) elExpiryDate.textContent = endStr;
                         if (elDaysRemaining) {
                             if (daysLeft > 0) {
@@ -2306,7 +2311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <tr style="border-bottom:1px solid #f1f5f9;">
                                         <td style="padding:14px 16px; font-weight:700; color:#0a192f;">
                                             <i class="fa-solid fa-crown" style="color:#f59e0b; margin-right:6px;"></i>
-                                            ${p.PlanName || p.PlanType}
+                                            ${cleanPlanTitle(p.PlanName || p.PlanType)}
                                         </td>
                                         <td style="padding:14px 16px; font-weight:800; color:#0a192f;">${amtDisplay}</td>
                                         <td style="padding:14px 16px; color:#475569; font-weight:600;">${p.PaymentMethod || 'PayMongo'}</td>

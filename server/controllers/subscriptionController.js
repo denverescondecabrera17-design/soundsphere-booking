@@ -319,8 +319,8 @@ exports.confirmSubscriptionPayment = async (req, res) => {
         const price = (targetPlan === 'yearly') ? 1990.00 : 199.00;
         const durationDays = (targetPlan === 'yearly') ? 365 : 30;
         const planName = (targetPlan === 'yearly') 
-            ? 'Yearly Plan (₱1,990)' 
-            : 'Monthly Plan (₱199)';
+            ? 'Yearly Plan' 
+            : 'Monthly Plan';
 
         // 1. Idempotency check: Ensure session hasn't already been processed
         const existingPayment = await pool.request()
