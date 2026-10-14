@@ -3368,10 +3368,6 @@ function openAdminReviewPermit(providerId) {
                 <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.Phone || p.ContactNumber || 'N/A'}</span>
             </div>
             <div>
-                <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Permit Number / Plate</span>
-                <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.PermitNumber || 'BP-2026-X49'}</span>
-            </div>
-            <div style="grid-column: 1 / -1;">
                 <span style="font-size:0.75rem;color:#64748b;font-weight:700;text-transform:uppercase;">Submission Timestamp</span>
                 <span style="display:block;color:#334155;font-size:0.86rem;margin-top:2px;">${p.RenewalSubmittedAt ? new Date(p.RenewalSubmittedAt).toLocaleString() : 'Registered on application'}</span>
             </div>
@@ -3467,12 +3463,7 @@ function openAdminReviewPermit(providerId) {
                          style="width:auto; height:auto; max-width:min(920px, 90vw); max-height:82vh; min-width:380px; min-height:260px; object-fit:contain; border-radius:12px; box-shadow:0 16px 45px rgba(0,0,0,0.75); border:1px solid rgba(255,255,255,0.15); background:#ffffff; display:block; cursor:zoom-in;"
                          onclick="window.zoomPermitDoc(0.25)"
                          title="Click to Zoom In">
-                    <div style="margin-top:12px; display:flex; gap:16px; align-items:center; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:700;"><i class="fa-solid fa-file-image"></i> Provider Submitted Permit Photo</span>
-                        <a href="${cleanSrc}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.78rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution
-                        </a>
-                    </div>
+
                 </div>
             `;
         }
