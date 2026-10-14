@@ -1,22 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *; worker-src * blob: data:;">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *; worker-src * blob: data:;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SoundSphere - Book Professional Lights & Sounds Services with Ease. Browse top rated audio-visual service providers, concert sound systems, and wedding lighting packages.">
+    <meta name="description"
+        content="SoundSphere - Book Professional Lights & Sounds Services with Ease. Browse top rated audio-visual service providers, concert sound systems, and wedding lighting packages.">
     <title>SoundSphere | Book Professional Lights & Sounds Services with Ease</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
     <!-- Immediate Auth Redirect for Logged-In Users -->
     <script>
-        (function() {
+        (function () {
             try {
                 var token = localStorage.getItem('soundsphere_auth_token') || localStorage.getItem('soundsphere_jwt_token');
                 var userRaw = localStorage.getItem('soundsphere_user');
@@ -24,15 +28,16 @@
                     var user = JSON.parse(userRaw);
                     var role = ((user && (user.role || user.RoleName || user.roleName)) || '').toLowerCase();
                     var target = (role === 'admin' || role === 'administrator') ? '/admin/dashboard.html' :
-                                 (role === 'cashier') ? '/cashier/dashboard.html' :
-                                 (role === 'serviceprovider' || role === 'provider') ? '/provider/dashboard.html' :
-                                 '/marketplace.html';
+                        (role === 'cashier') ? '/cashier/dashboard.html' :
+                            (role === 'serviceprovider' || role === 'provider') ? '/provider/dashboard.html' :
+                                '/marketplace.html';
                     window.location.replace(target);
                 }
-            } catch(e) {}
+            } catch (e) { }
         })();
     </script>
 </head>
+
 <body>
 
     <!-- ==================== 1. SHOPEE-STYLE HEADER ==================== -->
@@ -67,7 +72,8 @@
 
                 <!-- Big Central Search Bar -->
                 <div class="shopee-search-container">
-                    <input type="text" class="search-input" placeholder="Search sound systems, stage lights, DJ gear, event packages...">
+                    <input type="text" class="search-input"
+                        placeholder="Search sound systems, stage lights, DJ gear, event packages...">
                     <button type="button" class="btn-search" aria-label="Search">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
@@ -82,24 +88,26 @@
         </div>
     </header>
 
-    <!-- ==================== 2. SHOPEE HERO BANNER SECTION ==================== -->
     <section class="shopee-hero-section">
         <div class="container">
             <div class="hero-grid">
                 <!-- Main Promo Banner -->
                 <div class="hero-main-banner">
-                    <img src="assets/images/banner.png" alt="SoundSphere Stage Lights and Sounds Setup" onerror="this.src='../assets/images/banner.png'">
+                    <img src="assets/images/banner.png" alt="SoundSphere Stage Lights and Sounds Setup"
+                        onerror="this.src='../assets/images/banner.png'">
                     <div class="banner-overlay">
                         <span class="banner-badge">SoundSphere Choice</span>
                         <h2 class="banner-title">Premier Concert Lights & Sounds Systems</h2>
-                        <p class="banner-sub">Compare verified audio-visual service providers for weddings, concerts & corporate events.</p>
+                        <p class="banner-sub">Compare verified audio-visual service providers for weddings, concerts &
+                            corporate events.</p>
                     </div>
                 </div>
 
                 <!-- Stacked Side Banners -->
                 <div class="hero-side-banners">
                     <div class="side-banner-card">
-                        <img src="assets/images/wedding.png" alt="Wedding Lights Package" onerror="this.src='../assets/images/wedding.png'">
+                        <img src="assets/images/wedding.png" alt="Wedding Lights Package"
+                            onerror="this.src='../assets/images/wedding.png'">
                         <div class="side-banner-overlay">
                             <h4>Wedding Lighting Packages</h4>
                             <p>Up to 20% OFF ambient & fairy lights</p>
@@ -119,19 +127,6 @@
     <!-- ==================== 3. FLASH DEALS / HOT PACKAGES ==================== -->
     <section class="container">
         <div class="flash-deals-section">
-            <div class="flash-header">
-                <div class="flash-title">
-                    <i class="fa-solid fa-bolt-lightning" style="color: #f97316; font-size: 1.4rem;"></i>
-                    <h3>Flash Deals & Trending Packages</h3>
-                    <div class="countdown-timer">
-                        <span>Ends in</span>
-                        <span class="time-box">04</span> :
-                        <span class="time-box">22</span> :
-                        <span class="time-box">15</span>
-                    </div>
-                </div>
-                <a href="/login.html" style="font-size: 0.85rem; font-weight: 700; color: #2563eb;">View All Deals <i class="fa-solid fa-chevron-right"></i></a>
-            </div>
 
             <!-- Dynamic Product Card Grid (Loaded directly from SQL Server Database) -->
             <div class="product-cards-grid" id="public-packages-grid">
@@ -183,7 +178,8 @@
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.</p>
+                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.
+                </p>
             </div>
         </div>
     </footer>
@@ -193,4 +189,5 @@
     <script src="js/auth-modal.js?v=7.0"></script>
     <script src="js/main.js?v=7.0"></script>
 </body>
+
 </html>
