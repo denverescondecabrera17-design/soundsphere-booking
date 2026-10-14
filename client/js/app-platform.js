@@ -863,17 +863,75 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
-                        // 3-Hour Cancellation Calculation
+                        // Cancellation Policy Evaluation
+                        // 1. Bookings made 2+ days before event: Can cancel up to 1 day before the event
+                        // 2. Same-day / short-notice bookings: Can cancel within 1 hour of reservation
                         const createdAtRaw = b.CreatedAt;
-                        const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : Date.now();
-                        const nowMs = Date.now();
-                        const elapsedMinutes = Math.max(0, (nowMs - createdAtMs) / (1000 * 60));
-                        const maxAllowedMinutes = 180; // 3 hours
-                        const isWithin3Hours = elapsedMinutes <= maxAllowedMinutes;
-                        const remainingMinutes = Math.max(0, Math.floor(maxAllowedMinutes - elapsedMinutes));
-                        const remHours = Math.floor(remainingMinutes / 60);
-                        const remMins = remainingMinutes % 60;
-                        const timeRemainingText = remHours > 0 ? `${remHours}h ${remMins}m left` : `${remMins}m left`;
+                        const createdAtDate = createdAtRaw ? new Date(createdAtRaw) : new Date();
+                        const now = new Date();
+                        const eventDateRaw = b.EventDate || b.ServiceStartDate || sDate;
+
+                        let canCancel = false;
+                        let cancelBadgeText = 'Cancel Closed';
+                        let cancelTitle = 'Cancellation window closed.';
+                        let timeRemainingText = '';
+
+                        if (eventDateRaw && eventDateRaw !== 'N/A') {
+                            let eventMidnight;
+                            const match = String(eventDateRaw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                            if (match) {
+                                eventMidnight = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 0, 0, 0);
+                            } else {
+                                const parsed = new Date(eventDateRaw);
+                                eventMidnight = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0);
+                            }
+
+                            const createdMidnight = new Date(createdAtDate.getFullYear(), createdAtDate.getMonth(), createdAtDate.getDate(), 0, 0, 0);
+                            const daysBetweenBookingAndEvent = Math.round((eventMidnight.getTime() - createdMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+                            if (daysBetweenBookingAndEvent >= 2) {
+                                // 2+ days before event: can cancel up to 1 day before the event
+                                const cutoffTime = eventMidnight.getTime();
+                                const oneDayBefore = new Date(cutoffTime - (24 * 60 * 60 * 1000));
+                                const deadlineFormatted = oneDayBefore.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                                if (now.getTime() < cutoffTime) {
+                                    canCancel = true;
+                                    timeRemainingText = `Available until ${deadlineFormatted}`;
+                                    cancelTitle = `You can cancel this booking up to 1 day before the event (${deadlineFormatted}).`;
+                                } else {
+                                    canCancel = false;
+                                    cancelBadgeText = 'Cancel Closed';
+                                    cancelTitle = `Cancellation closed. Bookings made in advance can only be cancelled up to 1 day before the event (${deadlineFormatted}).`;
+                                }
+                            } else {
+                                // Same-day / short-notice bookings: can cancel within 1 hour
+                                const elapsedMinutes = Math.max(0, (now.getTime() - createdAtDate.getTime()) / (1000 * 60));
+                                const maxAllowedMinutes = 60; // 1 hour
+                                if (elapsedMinutes <= maxAllowedMinutes) {
+                                    canCancel = true;
+                                    const remMins = Math.max(0, Math.floor(maxAllowedMinutes - elapsedMinutes));
+                                    timeRemainingText = `${remMins}m left`;
+                                    cancelTitle = `Same-day booking: You have ${remMins}m left to cancel (1-hour grace period).`;
+                                } else {
+                                    canCancel = false;
+                                    cancelBadgeText = 'Cancel Closed (>1h)';
+                                    cancelTitle = `Cancellation window closed. Same-day bookings can only be cancelled within 1 hour of reservation.`;
+                                }
+                            }
+                        } else {
+                            const elapsedMinutes = Math.max(0, (now.getTime() - createdAtDate.getTime()) / (1000 * 60));
+                            if (elapsedMinutes <= 60) {
+                                canCancel = true;
+                                const remMins = Math.max(0, Math.floor(60 - elapsedMinutes));
+                                timeRemainingText = `${remMins}m left`;
+                                cancelTitle = `You have ${remMins}m left to cancel (1-hour grace period).`;
+                            } else {
+                                canCancel = false;
+                                cancelBadgeText = 'Cancel Closed (>1h)';
+                                cancelTitle = 'Cancellation window closed.';
+                            }
+                        }
 
                         let cancelBtnHtml = '';
                         if (statusLower === 'cancelled' || statusLower === 'rejected') {
@@ -884,16 +942,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             `;
                         } else if (statusLower === 'completed') {
                             cancelBtnHtml = '';
-                        } else if (isWithin3Hours) {
+                        } else if (canCancel) {
                             cancelBtnHtml = `
-                                <button type="button" class="btn-cancel-marketplace-booking" data-id="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" data-booking-id="${b.BookingID}" data-time-remaining="${timeRemainingText}" style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #fecdd3; background:#fff1f2; color:#be123c; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;" title="You have ${timeRemainingText} left to cancel this booking">
+                                <button type="button" class="btn-cancel-marketplace-booking" data-id="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}" data-booking-id="${b.BookingID}" data-time-remaining="${timeRemainingText}" style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #fecdd3; background:#fff1f2; color:#be123c; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;" title="${cancelTitle}">
                                     <i class="fa-solid fa-ban" style="color:#e11d48;"></i> Cancel Booking
                                 </button>
                             `;
                         } else {
                             cancelBtnHtml = `
-                                <button type="button" disabled style="padding:10px 18px; font-size:0.95rem; font-weight:700; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#94a3b8; cursor:not-allowed; opacity:0.6; display:inline-flex; align-items:center; gap:8px;" title="Cancellation window closed. Bookings can only be cancelled within 3 hours of reservation.">
-                                    <i class="fa-solid fa-lock" style="color:#94a3b8;"></i> Cancel Closed (>3h)
+                                <button type="button" disabled style="padding:10px 18px; font-size:0.95rem; font-weight:700; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#94a3b8; cursor:not-allowed; opacity:0.6; display:inline-flex; align-items:center; gap:8px;" title="${cancelTitle}">
+                                    <i class="fa-solid fa-lock" style="color:#94a3b8;"></i> ${cancelBadgeText}
                                 </button>
                             `;
                         }
@@ -1067,7 +1125,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 cancelForm.dataset.bookingRef = bRef;
                             }
                             if (cancelRefSpan) cancelRefSpan.textContent = bRef;
-                            if (cancelTimerSpan) cancelTimerSpan.textContent = `${timeRem} left to cancel (3-hour limit)`;
+                            if (cancelTimerSpan) {
+                                cancelTimerSpan.textContent = timeRem.includes('left')
+                                    ? `${timeRem} left to cancel (1-hour same-day limit)`
+                                    : `${timeRem} (1 day before event)`;
+                            }
                             if (cancelModal) cancelModal.classList.remove('hidden');
                         });
                     });

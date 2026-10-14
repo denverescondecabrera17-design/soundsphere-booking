@@ -861,20 +861,66 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
         return { success: false, code: 'COMPLETED', message: 'Completed event bookings cannot be cancelled.' };
     }
 
-    // Check 3-hour (180 minutes) limit from CreatedAt
-    const createdAtTime = new Date(booking.CreatedAt).getTime();
-    const nowTime = Date.now();
-    const elapsedMinutes = Math.max(0, (nowTime - createdAtTime) / (1000 * 60));
-    const maxAllowedMinutes = 180; // 3 hours
+    // Cancellation Policy Evaluation:
+    // 1. Bookings made 2 or more days before event: Can cancel up to 1 day before the event.
+    // 2. Same-day / short-notice bookings: Can cancel within 1 hour of making the reservation.
+    const createdAtTime = new Date(booking.CreatedAt);
+    const nowTime = new Date();
+    const eventDateRaw = booking.EventDate || booking.ServiceStartDate;
 
-    if (elapsedMinutes > maxAllowedMinutes) {
-        const elapsedHours = (elapsedMinutes / 60).toFixed(1);
+    let canCancel = false;
+    let policyMessage = '';
+
+    if (eventDateRaw) {
+        let eventMidnight;
+        const match = String(eventDateRaw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            eventMidnight = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 0, 0, 0);
+        } else {
+            const parsed = new Date(eventDateRaw);
+            eventMidnight = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0);
+        }
+
+        const createdMidnight = new Date(createdAtTime.getFullYear(), createdAtTime.getMonth(), createdAtTime.getDate(), 0, 0, 0);
+        const daysBetweenBookingAndEvent = Math.round((eventMidnight.getTime() - createdMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysBetweenBookingAndEvent >= 2) {
+            // Bookings made 2 or more days before event: Can cancel up to 1 day before the event
+            // Cutoff is event day start (i.e. up to 23:59:59 of day before event)
+            const cutoffTime = eventMidnight.getTime();
+            if (nowTime.getTime() < cutoffTime) {
+                canCancel = true;
+            } else {
+                const oneDayBefore = new Date(cutoffTime - (24 * 60 * 60 * 1000));
+                const deadlineFormatted = oneDayBefore.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                policyMessage = `Cancellation closed. Bookings made in advance can only be cancelled up to 1 day before the event (${deadlineFormatted}).`;
+            }
+        } else {
+            // Same-day / short-notice bookings: Can cancel within 1 hour of making the reservation
+            const elapsedMinutes = Math.max(0, (nowTime.getTime() - createdAtTime.getTime()) / (1000 * 60));
+            const maxAllowedMinutes = 60; // 1 hour
+            if (elapsedMinutes <= maxAllowedMinutes) {
+                canCancel = true;
+            } else {
+                policyMessage = `Cancellation window expired. Same-day bookings can only be cancelled within 1 hour of reservation (${Math.round(elapsedMinutes)} minutes have passed).`;
+            }
+        }
+    } else {
+        // Fallback if event date is missing: Allow within 1 hour
+        const elapsedMinutes = Math.max(0, (nowTime.getTime() - createdAtTime.getTime()) / (1000 * 60));
+        if (elapsedMinutes <= 60) {
+            canCancel = true;
+        } else {
+            policyMessage = 'Cancellation window expired. Bookings can only be cancelled within 1 hour of reservation.';
+        }
+    }
+
+    if (!canCancel) {
         return {
             success: false,
             code: 'TIME_LIMIT_EXCEEDED',
             expired: true,
-            elapsedMinutes: Math.round(elapsedMinutes),
-            message: `Cancellation window expired. Bookings can only be cancelled within 3 hours of reservation (${elapsedHours} hours have passed).`
+            message: policyMessage || 'Cancellation window has expired for this booking.'
         };
     }
 
@@ -918,7 +964,7 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
         success: true,
         message: refundAmount > 0 
             ? `Booking cancelled. A refund of ₱${refundAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been automatically credited to your Wallet!` 
-            : 'Booking successfully cancelled within the 3-hour grace period.',
+            : 'Booking successfully cancelled.',
         bookingId,
         cancelledAt: new Date(),
         reason: reason || 'Cancelled by client',
