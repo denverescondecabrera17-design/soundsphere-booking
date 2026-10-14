@@ -2262,11 +2262,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
 
-                        if (elPlanTitle) elPlanTitle.textContent = s.PlanName || 'Standard Membership';
+                        if (elPlanTitle) elPlanTitle.textContent = s.PlanName || 'Monthly Plan';
                         if (elExpiryDate) elExpiryDate.textContent = endStr;
                         if (elDaysRemaining) {
                             if (daysLeft > 0) {
-                                elDaysRemaining.textContent = `${daysLeft} Days Remaining`;
+                                elDaysRemaining.textContent = `${daysLeft} Day${daysLeft === 1 ? '' : 's'}`;
                                 elDaysRemaining.style.color = '#ffffff';
                             } else if (daysLeft === 0) {
                                 elDaysRemaining.textContent = 'Expires Today';
