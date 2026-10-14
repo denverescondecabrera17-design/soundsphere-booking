@@ -2836,6 +2836,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 statusBadge.textContent = 'Closed (Past Date)';
                 statusBadge.style.background = '#64748b';
                 summaryText.innerHTML = `Past date &bull; Booking window is closed (${activeBookings.length} booking${activeBookings.length === 1 ? '' : 's'} recorded).`;
+            } else if (provCalData && provCalData.isPermitExpired) {
+                if (activeBookings.length > 0) {
+                    statusBadge.textContent = 'Ongoing Booking Active';
+                    statusBadge.style.background = '#2563eb';
+                    summaryText.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#3b82f6;"></i> ${activeBookings.length} ongoing booking(s) scheduled. New booking acceptance is locked until permit approval.`;
+                } else {
+                    statusBadge.textContent = 'Calendar Locked';
+                    statusBadge.style.background = '#ef4444';
+                    summaryText.innerHTML = `<i class="fa-solid fa-lock" style="color:#ef4444;"></i> Business permit not approved by admin. New bookings are disabled.`;
+                }
             } else if (isBlocked) {
                 statusBadge.textContent = 'Blocked / Closed';
                 statusBadge.style.background = '#64748b';

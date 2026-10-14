@@ -196,21 +196,22 @@ const checkAvailability = async (req, res) => {
         // Check Business Permit Validity Guard
         const permitCheck = await pool.request()
             .input('ProviderID', sql.Int, parsedProvId)
-            .query(`SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID OR UserID = @ProviderID;`);
+            .query(`SELECT PermitExpiryDate, BusinessName, PermitRenewalStatus, PermitStatus FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID OR UserID = @ProviderID;`);
         if (permitCheck.recordset && permitCheck.recordset[0]) {
             const provRow = permitCheck.recordset[0];
-            if (provRow.PermitExpiryDate) {
-                const expiry = new Date(provRow.PermitExpiryDate);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                if (expiry < today) {
-                    return res.status(200).json({
-                        success: true,
-                        isAvailable: false,
-                        isPermitExpired: true,
-                        message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has expired. New bookings are currently disabled.`
-                    });
-                }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const hasFutureExpiry = provRow.PermitExpiryDate && (new Date(provRow.PermitExpiryDate) >= today);
+            const isRenewalPending = (provRow.PermitRenewalStatus === 'Pending' || provRow.PermitRenewalStatus === 'Pending_Review');
+
+            if (!hasFutureExpiry || isRenewalPending || provRow.PermitStatus === 'Expired' || provRow.PermitRenewalStatus === 'Rejected') {
+                return res.status(200).json({
+                    success: true,
+                    isAvailable: false,
+                    isPermitExpired: true,
+                    message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has not been approved or has expired. All calendar bookings are locked until verified by admin.`
+                });
             }
         }
 
@@ -276,17 +277,19 @@ const getProviderAvailability = async (req, res) => {
             if (permitCheck.recordset && permitCheck.recordset[0]) {
                 const provRow = permitCheck.recordset[0];
                 businessName = provRow.BusinessName;
-                if (provRow.PermitExpiryDate) {
-                    permitExpiryDate = provRow.PermitExpiryDate;
-                    const expiry = new Date(provRow.PermitExpiryDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (expiry < today && provRow.PermitRenewalStatus !== 'Approved') {
-                        isPermitExpired = true;
-                    }
-                } else if (provRow.PermitStatus === 'Expired' && provRow.PermitRenewalStatus !== 'Approved') {
+                permitExpiryDate = provRow.PermitExpiryDate;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const hasFutureExpiry = provRow.PermitExpiryDate && (new Date(provRow.PermitExpiryDate) >= today);
+                const isRenewalPending = (provRow.PermitRenewalStatus === 'Pending' || provRow.PermitRenewalStatus === 'Pending_Review');
+
+                if (!hasFutureExpiry || isRenewalPending || provRow.PermitStatus === 'Expired' || provRow.PermitRenewalStatus === 'Rejected') {
                     isPermitExpired = true;
                 }
+            } else {
+                isPermitExpired = true;
             }
         }
 
@@ -303,7 +306,7 @@ const getProviderAvailability = async (req, res) => {
             dateCapacities: availData.dateCapacities || [],
             defaultMaxDailyBookings: availData.defaultMaxDailyBookings || 1,
             message: isPermitExpired 
-                ? `Booking unavailable. The business permit of ${businessName || 'this service provider'} has expired. All calendar dates are locked until renewal is approved by administrator.`
+                ? `Booking unavailable. The business permit of ${businessName || 'this service provider'} has not been approved or has expired. All calendar dates are locked until renewal is approved by administrator.`
                 : 'Availability loaded successfully.'
         });
     } catch (error) {
@@ -338,17 +341,19 @@ const getProviderCalendarSchedule = async (req, res) => {
             if (permitCheck.recordset && permitCheck.recordset[0]) {
                 const provRow = permitCheck.recordset[0];
                 permitRenewalStatus = provRow.PermitRenewalStatus;
-                if (provRow.PermitExpiryDate) {
-                    permitExpiryDate = provRow.PermitExpiryDate;
-                    const expiry = new Date(provRow.PermitExpiryDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (expiry < today && permitRenewalStatus !== 'Approved') {
-                        isPermitExpired = true;
-                    }
-                } else if (provRow.PermitStatus === 'Expired' && permitRenewalStatus !== 'Approved') {
+                permitExpiryDate = provRow.PermitExpiryDate;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const hasFutureExpiry = provRow.PermitExpiryDate && (new Date(provRow.PermitExpiryDate) >= today);
+                const isRenewalPending = (provRow.PermitRenewalStatus === 'Pending' || provRow.PermitRenewalStatus === 'Pending_Review');
+
+                if (!hasFutureExpiry || isRenewalPending || provRow.PermitStatus === 'Expired' || provRow.PermitRenewalStatus === 'Rejected') {
                     isPermitExpired = true;
                 }
+            } else {
+                isPermitExpired = true;
             }
         }
 
@@ -655,20 +660,21 @@ const createBooking = async (req, res) => {
         if (actualProviderId) {
             const permitCheck = await pool.request()
                 .input('ProviderID', sql.Int, actualProviderId)
-                .query(`SELECT PermitExpiryDate, BusinessName FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;`);
+                .query(`SELECT PermitExpiryDate, BusinessName, PermitRenewalStatus, PermitStatus FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;`);
             if (permitCheck.recordset && permitCheck.recordset[0]) {
                 const provRow = permitCheck.recordset[0];
-                if (provRow.PermitExpiryDate) {
-                    const expiry = new Date(provRow.PermitExpiryDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (expiry < today) {
-                        return res.status(403).json({
-                            success: false,
-                            isPermitExpired: true,
-                            message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} expired on ${expiry.toLocaleDateString()}. New bookings are disabled until a renewed business permit is submitted and verified.`
-                        });
-                    }
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const hasFutureExpiry = provRow.PermitExpiryDate && (new Date(provRow.PermitExpiryDate) >= today);
+                const isRenewalPending = (provRow.PermitRenewalStatus === 'Pending' || provRow.PermitRenewalStatus === 'Pending_Review');
+
+                if (!hasFutureExpiry || isRenewalPending || provRow.PermitStatus === 'Expired' || provRow.PermitRenewalStatus === 'Rejected') {
+                    return res.status(403).json({
+                        success: false,
+                        isPermitExpired: true,
+                        message: `Booking unavailable. The business permit of ${provRow.BusinessName || 'this service provider'} has not been approved or has expired. New bookings are disabled until approved by the administrator.`
+                    });
                 }
             }
         }
