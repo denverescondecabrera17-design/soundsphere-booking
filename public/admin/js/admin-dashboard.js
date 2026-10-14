@@ -3207,14 +3207,7 @@ function _renderAdminPermitsTable() {
             actionButtons += `<button type="button" onclick="openAdminReviewPermit(${p.ProviderID})" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(37,99,235,0.3);"><i class="fa-solid fa-file-signature"></i> Review Renewal</button>`;
         }
         
-        actionButtons += `<button type="button" onclick="openAdminEditPermitExpiry(${p.ProviderID})" style="background:#f8fafc;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Set or edit permit expiration date"><i class="fa-solid fa-calendar-days"></i> Edit Date</button>`;
         actionButtons += `<button type="button" onclick="sendAdminPermitNotice(${p.ProviderID}, '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Send Renewal Reminder Notice to Provider"><i class="fa-solid fa-paper-plane" style="color:#0284c7;"></i> Notice</button>`;
-
-        // Document preview action
-        const activeDoc = p.RenewalPermitFile || p.PermitFile;
-        if (activeDoc) {
-            actionButtons += `<button type="button" onclick="previewPermitDoc('${encodeURIComponent(activeDoc)}', '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#64748b;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;cursor:pointer;" title="View Attached Permit File"><i class="fa-solid fa-file"></i></button>`;
-        }
 
         actionButtons += `</div>`;
 
