@@ -1567,7 +1567,7 @@ const getAdminPermits = async (req, res) => {
                 COALESCE(NULLIF(sp.OwnerName, ''), CONCAT(sp.OwnerFirstName, ' ', sp.OwnerLastName), u.Email) AS OwnerName,
                 u.Email AS ProviderEmail,
                 COALESCE(sp.ContactNumber, ${paContact}, u.Phone, 'N/A') AS ContactNumber,
-                COALESCE(sp.ProfilePicture, u.ProfilePicture, NULL) AS Avatar,
+                ${hasSpCol('ProfilePicture') ? 'sp.ProfilePicture' : 'NULL'} AS Avatar,
                 COALESCE(${spExp}, ${spRenewExp}, ${paExp}) AS PermitExpiryDate,
                 COALESCE(${spIssued}, ${spRenewIssued}, ${paIssued}) AS PermitIssuedDate,
                 ${spNotice === 'NULL AS PermitNoticeSentAt' ? 'NULL AS PermitNoticeSentAt' : 'sp.PermitNoticeSentAt'},
