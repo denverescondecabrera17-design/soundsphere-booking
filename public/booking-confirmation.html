@@ -321,7 +321,7 @@
                 }
 
                 if (confirmTransportFee) {
-                    confirmTransportFee.textContent = distKm > 0 ? `${formatMoney(transportFee)} (${distKm} km)` : formatMoney(transportFee);
+                    confirmTransportFee.textContent = distKm > 0 ? `${formatMoney(transportFee)} (${distKm} km @ ₱20/km)` : formatMoney(transportFee);
                 }
                 if (confirmTotalPrice) confirmTotalPrice.textContent = formatMoney(totalPrice);
 

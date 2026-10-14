@@ -456,7 +456,7 @@ const getTransportationFees = async () => {
 
     try {
         const res = await pool.request().query(`
-            SELECT FeeID, MinDistanceKm, MaxDistanceKm, ServiceFee, IsActive
+            SELECT FeeID, MinDistanceKm, MaxDistanceKm, ServiceFee, RatePerKm, IsActive
             FROM dbo.TransportationFees
             WHERE IsActive = 1
             ORDER BY MinDistanceKm ASC;
@@ -465,12 +465,12 @@ const getTransportationFees = async () => {
     } catch (err) {
         console.warn('Query dbo.TransportationFees notice:', err.message);
         return [
-            { FeeID: 1, MinDistanceKm: 0.00, MaxDistanceKm: 10.00, ServiceFee: 500.00, IsActive: 1 },
-            { FeeID: 2, MinDistanceKm: 10.01, MaxDistanceKm: 20.00, ServiceFee: 750.00, IsActive: 1 },
-            { FeeID: 3, MinDistanceKm: 20.01, MaxDistanceKm: 30.00, ServiceFee: 1000.00, IsActive: 1 },
-            { FeeID: 4, MinDistanceKm: 30.01, MaxDistanceKm: 40.00, ServiceFee: 1250.00, IsActive: 1 },
-            { FeeID: 5, MinDistanceKm: 40.01, MaxDistanceKm: 50.00, ServiceFee: 1500.00, IsActive: 1 },
-            { FeeID: 6, MinDistanceKm: 50.01, MaxDistanceKm: 999.00, ServiceFee: 2000.00, IsActive: 1 }
+            { FeeID: 1, MinDistanceKm: 0.00, MaxDistanceKm: 10.00, ServiceFee: 200.00, RatePerKm: 20.00, IsActive: 1 },
+            { FeeID: 2, MinDistanceKm: 10.01, MaxDistanceKm: 20.00, ServiceFee: 400.00, RatePerKm: 20.00, IsActive: 1 },
+            { FeeID: 3, MinDistanceKm: 20.01, MaxDistanceKm: 30.00, ServiceFee: 600.00, RatePerKm: 20.00, IsActive: 1 },
+            { FeeID: 4, MinDistanceKm: 30.01, MaxDistanceKm: 40.00, ServiceFee: 800.00, RatePerKm: 20.00, IsActive: 1 },
+            { FeeID: 5, MinDistanceKm: 40.01, MaxDistanceKm: 50.00, ServiceFee: 1000.00, RatePerKm: 20.00, IsActive: 1 },
+            { FeeID: 6, MinDistanceKm: 50.01, MaxDistanceKm: 999.00, ServiceFee: 2000.00, RatePerKm: 20.00, IsActive: 1 }
         ];
     }
 };

@@ -275,7 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let basePackagePrice = 0;
     let additionalDayPercentage = 20.00;
     let additionalDayCharges = 0;
-    let transportFee = 1000;
+    let transportRatePerKm = 20.00; // ₱20 per km from service provider to client location
+    let transportFee = 200; // Default for 10km initial distance (10 * 20 = 200)
     let calculatedDistanceKm = 10.0;
     let totalCost = 0;
     let selectedPaymentPlan = 'downpayment'; // 'downpayment' or 'full'
@@ -519,39 +520,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         return Math.round((R * c) * 10) / 10;
     };
 
-    // Fetch Distance-Based Transportation Fee Tiers from Database
+    // Fetch Distance-Based Transportation Fee Configuration from Database
     const fetchTransportationFeeTiers = async () => {
         try {
             const res = await fetch('/api/bookings/transportation-fees');
             if (res.ok) {
                 const data = await res.json();
+                if (data.ratePerKm) {
+                    transportRatePerKm = parseFloat(data.ratePerKm) || 20.00;
+                }
                 if (data.success && Array.isArray(data.fees)) {
                     transportationFeeTiers = data.fees;
                 }
+                if (typeof updatePriceBreakdown === 'function') {
+                    updatePriceBreakdown();
+                }
             }
         } catch (e) {
-            console.warn('Transport fee tiers fetch notice:', e.message);
+            console.warn('Transport fee rate fetch notice:', e.message);
         }
     };
     fetchTransportationFeeTiers();
 
-    // Match distance (km) against database transportation fee tiers
+    // Calculate Transportation / Service Fee at 20 pesos per km from service provider location to client location
     const getTransportFeeForDistance = (distKm) => {
-        if (!transportationFeeTiers || transportationFeeTiers.length === 0) {
-            if (distKm <= 10) return 500;
-            if (distKm <= 20) return 750;
-            if (distKm <= 30) return 1000;
-            if (distKm <= 40) return 1250;
-            if (distKm <= 50) return 1500;
-            return 2000;
-        }
-        for (const tier of transportationFeeTiers) {
-            if (distKm >= parseFloat(tier.MinDistanceKm) && distKm <= parseFloat(tier.MaxDistanceKm)) {
-                return parseFloat(tier.ServiceFee);
-            }
-        }
-        const lastTier = transportationFeeTiers[transportationFeeTiers.length - 1];
-        return parseFloat(lastTier ? lastTier.ServiceFee : 2000);
+        const km = Math.max(0, parseFloat(distKm) || 0);
+        const rate = (typeof transportRatePerKm === 'number' && transportRatePerKm > 0) ? transportRatePerKm : 20.00;
+        return Math.round(km * rate);
     };
 
     // Set Event Dates & Times (Start & End) from URL params, session selected package, or Default Tomorrow

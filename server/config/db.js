@@ -902,22 +902,32 @@ const autoSeedDatabase = async (activePool) => {
             -- Auto-Migrate dbo.TransportationFees Table
             IF OBJECT_ID('dbo.TransportationFees', 'U') IS NULL
             BEGIN
-                CREATE TABLE dbo.TransportationFees (
-                    FeeID INT IDENTITY(1,1) PRIMARY KEY,
-                    MinDistanceKm DECIMAL(18,2) NOT NULL,
-                    MaxDistanceKm DECIMAL(18,2) NOT NULL,
-                    ServiceFee DECIMAL(18,2) NOT NULL,
-                    IsActive BIT DEFAULT 1,
-                    CreatedAt DATETIME DEFAULT GETDATE()
-                );
-
-                INSERT INTO dbo.TransportationFees (MinDistanceKm, MaxDistanceKm, ServiceFee, IsActive) VALUES
-                (0.00, 10.00, 500.00, 1),
-                (10.01, 20.00, 750.00, 1),
-                (20.01, 30.00, 1000.00, 1),
-                (30.01, 40.00, 1250.00, 1),
-                (40.01, 50.00, 1500.00, 1),
-                (50.01, 999.00, 2000.00, 1);
+                EXEC('
+                    CREATE TABLE dbo.TransportationFees (
+                        FeeID INT IDENTITY(1,1) PRIMARY KEY,
+                        MinDistanceKm DECIMAL(18,2) NOT NULL,
+                        MaxDistanceKm DECIMAL(18,2) NOT NULL,
+                        ServiceFee DECIMAL(18,2) NOT NULL,
+                        RatePerKm DECIMAL(18,2) NULL DEFAULT 20.00,
+                        IsActive BIT DEFAULT 1,
+                        CreatedAt DATETIME DEFAULT GETDATE()
+                    );
+                    INSERT INTO dbo.TransportationFees (MinDistanceKm, MaxDistanceKm, ServiceFee, RatePerKm, IsActive) VALUES
+                    (0.00, 10.00, 200.00, 20.00, 1),
+                    (10.01, 20.00, 400.00, 20.00, 1),
+                    (20.01, 30.00, 600.00, 20.00, 1),
+                    (30.01, 40.00, 800.00, 20.00, 1),
+                    (40.01, 50.00, 1000.00, 20.00, 1),
+                    (50.01, 999.00, 2000.00, 20.00, 1);
+                ');
+            END
+            ELSE
+            BEGIN
+                IF COL_LENGTH('dbo.TransportationFees', 'RatePerKm') IS NULL
+                BEGIN
+                    EXEC('ALTER TABLE dbo.TransportationFees ADD RatePerKm DECIMAL(18,2) NULL DEFAULT 20.00;');
+                    EXEC('UPDATE dbo.TransportationFees SET RatePerKm = 20.00;');
+                END;
             END;
 
             -- Auto-Migrate dbo.ClientWallets Table

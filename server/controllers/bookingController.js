@@ -174,24 +174,25 @@ const getPackageById = async (req, res) => {
 
 /**
  * GET /api/bookings/transportation-fees
- * Get active distance-based transportation fee tiers
+ * Get active distance-based transportation fee rate (₱20/km) and tiers
  */
 const getTransportationFees = async (req, res) => {
     try {
         const fees = await bookingModel.getTransportationFees();
-        return res.status(200).json({ success: true, fees });
+        return res.status(200).json({ 
+            success: true, 
+            ratePerKm: 20.00,
+            pricingType: 'per_km',
+            description: '₱20 per km from service provider location to client location',
+            fees 
+        });
     } catch (error) {
         console.error('Get Transportation Fees Error:', error);
         return res.status(200).json({
             success: true,
-            fees: [
-                { FeeID: 1, MinDistanceKm: 0, MaxDistanceKm: 10, ServiceFee: 500, IsActive: true },
-                { FeeID: 2, MinDistanceKm: 10.01, MaxDistanceKm: 20, ServiceFee: 750, IsActive: true },
-                { FeeID: 3, MinDistanceKm: 20.01, MaxDistanceKm: 30, ServiceFee: 1000, IsActive: true },
-                { FeeID: 4, MinDistanceKm: 30.01, MaxDistanceKm: 40, ServiceFee: 1250, IsActive: true },
-                { FeeID: 5, MinDistanceKm: 40.01, MaxDistanceKm: 50, ServiceFee: 1500, IsActive: true },
-                { FeeID: 6, MinDistanceKm: 50.01, MaxDistanceKm: 999, ServiceFee: 2000, IsActive: true }
-            ]
+            ratePerKm: 20.00,
+            pricingType: 'per_km',
+            fees: []
         });
     }
 };
@@ -763,8 +764,10 @@ const createBooking = async (req, res) => {
         const reqTransportFee = parseFloat(req.body.transportationFee);
         const reqDistanceKm = parseFloat(req.body.distanceKm);
 
-        const transportationFee = !isNaN(reqTransportFee) ? reqTransportFee : 1000.00;
-        const distanceKm = !isNaN(reqDistanceKm) ? reqDistanceKm : 15.0;
+        const distanceKm = !isNaN(reqDistanceKm) ? reqDistanceKm : 0;
+        const transportationFee = !isNaN(reqTransportFee) 
+            ? reqTransportFee 
+            : Math.round(distanceKm * 20.00);
 
         // Total Booking Price Formula: Package Price + Additional Day Charges + Transportation Fee
         const totalAmount = actualPackagePrice + additionalDayCharges + transportationFee;

@@ -60,6 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bookingData.title || bookingData.packageName) currentBookingMeta.packageName = bookingData.title || bookingData.packageName;
         if (bookingData.date || bookingData.eventDate) currentBookingMeta.eventDate = bookingData.date || bookingData.eventDate;
         if (bookingData.timeSlot || bookingData.eventTime) currentBookingMeta.eventTime = bookingData.timeSlot || bookingData.eventTime;
+        if (bookingData.transportationFee !== undefined) {
+            transportFee = parseFloat(bookingData.transportationFee) || 0;
+        } else if (bookingData.distanceKm !== undefined) {
+            transportFee = Math.round(parseFloat(bookingData.distanceKm) * 20);
+        }
 
         totalCost = basePackagePrice + transportFee;
 
