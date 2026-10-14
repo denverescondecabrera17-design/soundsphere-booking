@@ -3333,10 +3333,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const permitStatus = p.permitStatus || 'Not_Set';
             const daysRemaining = p.daysRemaining;
             const isRenewalPending = (p.PermitRenewalStatus === 'Pending_Review' || p.PermitRenewalStatus === 'Pending');
-            const hasAdminNotice = !!p.PermitNoticeSentAt;
+            const isApprovedAndValid = (p.PermitRenewalStatus === 'Approved' || permitStatus === 'Valid');
+            const hasAdminNotice = !!p.PermitNoticeSentAt && !isApprovedAndValid;
 
-            // AUTO POP-UP MODAL: If admin sent a compliance notice (or expired) and renewal is not pending
-            if ((hasAdminNotice || permitStatus === 'Expired') && !isRenewalPending) {
+            // AUTO POP-UP MODAL: If admin sent a compliance notice (or expired) and renewal is not pending and not already valid
+            if ((hasAdminNotice || permitStatus === 'Expired') && !isRenewalPending && !isApprovedAndValid) {
                 setTimeout(() => {
                     if (typeof window.openUploadPermitModal === 'function') {
                         window.openUploadPermitModal();
@@ -3366,7 +3367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         bannerBtn.style.background = '#2563eb';
                         bannerBtn.style.color = '#fff';
                     }
-                } else if (hasAdminNotice || permitStatus === 'Expired') {
+                } else if ((hasAdminNotice || permitStatus === 'Expired') && !isApprovedAndValid) {
                     banner.classList.remove('hidden');
                     banner.style.background = '#fef2f2';
                     banner.style.borderColor = '#fecaca';

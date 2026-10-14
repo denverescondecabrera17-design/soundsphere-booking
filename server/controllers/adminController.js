@@ -1863,7 +1863,8 @@ const reviewPermitRenewal = async (req, res) => {
                     SET PermitExpiryDate = @PermitExpiryDate,
                         PermitRenewalStatus = 'Approved',
                         PermitRenewalNotes = NULL,
-                        PermitStatus = 'Active'
+                        PermitStatus = 'Active',
+                        PermitNoticeSentAt = NULL
                     WHERE ProviderID = @ProviderID;
 
                     -- Sync linked provider application if present
