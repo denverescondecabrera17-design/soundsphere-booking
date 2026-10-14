@@ -970,8 +970,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateRefundFilterCounts();
             renderRefundsTable();
         } catch (err) {
-            console.error('Error fetching refund requests:', err);
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:28px; color:#ef4444;">Network error loading refund requests.</td></tr>`;
+            console.error('Error fetching/rendering refund requests:', err);
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:28px; color:#ef4444;">Error loading refund requests: ${err.message || 'Network error'}</td></tr>`;
         }
     }
 
@@ -1033,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (r.Status === 'Approved') statusBadge = 'badge-approved';
             if (r.Status === 'Rejected') statusBadge = 'badge-rejected';
 
+            const isPending = (r.Status || 'Pending') === 'Pending';
             const actionHtml = isPending ? `
                 <div style="display:flex; gap:6px; justify-content:flex-end;" class="refund-actions-cell">
                     <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.executeMarkRefundAsRefunded && window.executeMarkRefundAsRefunded('${r.RefundRequestID}', this);" title="Manually Send Refund & Mark as Refunded">
