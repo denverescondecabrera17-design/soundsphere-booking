@@ -244,8 +244,16 @@ exports.createSubscriptionCheckout = async (req, res) => {
             : 'SoundSphere Provider Monthly Subscription (₱199 / Month)';
         const reference = `SUB-${provider.ProviderID}-${Date.now()}`;
 
-        // Get Host base URL for callbacks
-        const originHost = `${req.protocol}://${req.get('host')}`;
+        // Get Host base URL for callbacks (handles proxies and Vercel cleanly)
+        const forwardedProto = req.headers['x-forwarded-proto'];
+        const proto = forwardedProto ? forwardedProto.split(',')[0].trim() : (req.protocol || 'https');
+        const host = req.headers['x-forwarded-host'] || req.get('host');
+        const rawOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : '');
+        const originHost = rawOrigin || `${proto}://${host}`;
+
+        // Subscription Return URLs: When clicking back arrow or on success, return straight to subscription section
+        const cancelUrl = `${originHost}/provider/dashboard.html?cancelled_subscription=1&view=subscription#subscription-section`;
+        const successUrl = `${originHost}/provider/dashboard.html?subscription_status=success&session_id={CHECKOUT_SESSION_ID}&plan=${targetPlan}&amount=${price}&view=subscription#subscription-section`;
 
         // Create Checkout Session via PayMongo Service
         const sessionResult = await paymongoService.createCheckoutSession({
@@ -256,7 +264,9 @@ exports.createSubscriptionCheckout = async (req, res) => {
             paymentMethod: 'all',
             clientEmail: req.user.email || '',
             clientName: provider.BusinessName || provider.OwnerName || 'Service Provider',
-            originHost
+            originHost,
+            cancelUrl,
+            successUrl
         });
 
         if (!sessionResult || !sessionResult.success) {

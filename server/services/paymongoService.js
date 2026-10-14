@@ -29,7 +29,9 @@ const createCheckoutSession = async ({
     clientEmail = '',
     clientName = '',
     clientPhone = '',
-    originHost = 'http://localhost:5000'
+    originHost = 'http://localhost:5000',
+    successUrl = null,
+    cancelUrl = null
 }) => {
     // Amount in cents (PayMongo requires centavos, e.g., 14750 PHP = 1475000 centavos)
     const amountInCents = Math.round(parseFloat(amount) * 100);
@@ -72,8 +74,8 @@ const createCheckoutSession = async ({
                     }
                 ],
                 payment_method_types: allowedPaymentTypes,
-                success_url: `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success${balanceQuery}`,
-                cancel_url: `${originHost}/booking.html?cancelled=1`,
+                success_url: successUrl || `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success${balanceQuery}`,
+                cancel_url: cancelUrl || `${originHost}/booking.html?cancelled=1`,
                 ...(Object.keys(billingObj).length > 0 ? { billing: billingObj } : {}),
                 metadata: {
                     bookingReference,

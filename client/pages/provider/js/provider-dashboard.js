@@ -2495,6 +2495,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const subStatus = urlParams.get('subscription_status');
         const sessionId = urlParams.get('session_id');
         const plan = urlParams.get('plan') || 'monthly';
+        const isCancelled = urlParams.get('cancelled_subscription') || urlParams.get('cancelled');
+        const viewParam = urlParams.get('view');
 
         if (subStatus === 'success' && sessionId) {
             try {
@@ -2520,6 +2522,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 switchProviderView('#subscription-section');
                 await loadProviderSubscriptionData();
             }
+        } else if (isCancelled || viewParam === 'subscription' || window.location.hash === '#subscription-section' || window.location.hash === '#subscription') {
+            const cleanUrl = window.location.pathname + '#subscription-section';
+            window.history.replaceState({}, document.title, cleanUrl);
+            switchProviderView('#subscription-section');
+            await loadProviderSubscriptionData();
         }
     };
 
