@@ -1585,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#64748b;">No subscription payments found for this filter.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#64748b;">No subscription payments found for this filter.</td></tr>`;
             return;
         }
 
@@ -1607,12 +1607,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><span class="badge" style="background:#f8fafc; border:1px solid #cbd5e1; color:#0a192f;">${item.PaymentMethod || 'Cash'}</span></td>
                     <td><span style="font-size:0.85rem; color:#475569;">${formatDateTime(item.PaymentDate)}</span></td>
                     <td><span class="badge badge-approved">${item.PaymentStatus || 'Paid'}</span></td>
-                    <td><span style="font-size:0.82rem; color:#64748b;">${item.Notes || item.PayMongoSessionID || '-'}</span></td>
-                    <td style="text-align:right;">
-                        <button type="button" class="btn btn-outline btn-sm btn-print-sub-receipt" data-pid="${item.PaymentID}" title="Print Receipt">
-                            <i class="fa-solid fa-receipt"></i>
-                        </button>
-                    </td>
                 </tr>
             `;
         }).join('');
