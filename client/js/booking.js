@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const summaryProviderImg = document.getElementById('summary-provider-img');
     const summaryProviderName = document.getElementById('summary-provider-name');
     const summaryProviderArea = document.getElementById('summary-provider-area');
+    const summaryProviderAddress = document.getElementById('summary-provider-address-text');
     const summaryPkgName = document.getElementById('summary-pkg-name');
     const summaryPkgPrice = document.getElementById('summary-pkg-price');
     const summaryInclusionsList = document.getElementById('summary-inclusions-list');
@@ -716,7 +717,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (summaryProviderArea) {
                 const cov = packageData.CoverageArea || urlParams.get('coverage_area') || (sessionSelected && sessionSelected.coverageArea);
-                summaryProviderArea.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${cov || 'Lian, Balayan, Nasugbu'}`;
+                summaryProviderArea.innerHTML = `<i class="fa-solid fa-location-dot"></i> Coverage: ${cov || 'Lian, Balayan, Nasugbu'}`;
+            }
+            if (summaryProviderAddress) {
+                const bAddr = (packageData && (packageData.BusinessAddress || packageData.businessAddress || packageData.address)) || 'Balayan, Batangas';
+                summaryProviderAddress.textContent = bAddr;
             }
             if (summaryPkgName) {
                 const pTitle = packageData.PackageName || urlParams.get('package_name') || (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName));

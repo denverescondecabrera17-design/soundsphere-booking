@@ -439,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ${offer.providerName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.6875rem; color:#2563eb; margin-left:2px;"></i>
                                         </a>
                                         <span style="font-size:0.8125rem; color:#64748b; font-weight:500; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">
-                                            <i class="fa-solid fa-location-dot" style="color:#ef4444; margin-right:4px;"></i> ${offer.coverageArea}
+                                            ${offer.businessAddress ? `<span title="Business Place"><i class="fa-solid fa-store" style="color:#2563eb; margin-right:3px;"></i>${offer.businessAddress}</span> <span style="margin:0 4px; color:#cbd5e1;">•</span> ` : ''}<span title="Coverage Area"><i class="fa-solid fa-location-dot" style="color:#ef4444; margin-right:3px;"></i>${offer.coverageArea}</span>
                                         </span>
                                     </div>
                                 </div>

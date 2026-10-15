@@ -100,12 +100,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (dropdownStatus) dropdownStatus.textContent = `Approved Service Provider`;
 
                 // Update Card & Modal Header Info
+                const bAddress = data.profile.businessAddress || data.profile.address || 'Balayan, Batangas';
                 const cardProfBizName = document.getElementById('card-prof-biz-name');
                 const cardProfOwnerName = document.getElementById('card-prof-owner-name');
+                const cardProfAddress = document.getElementById('card-prof-address');
                 const cardProfCoverage = document.getElementById('card-prof-coverage');
 
                 if (cardProfBizName) cardProfBizName.textContent = bName;
                 if (cardProfOwnerName) cardProfOwnerName.textContent = oName;
+                if (cardProfAddress) cardProfAddress.textContent = bAddress;
                 if (cardProfCoverage) cardProfCoverage.textContent = covArea;
 
                 // Update Avatar Photo Previews Across Topbar, Dropdown, and Card Header
@@ -144,12 +147,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Update Business Profile View Elements
                 const profBizName = document.getElementById('prof-biz-name');
                 const profOwnerName = document.getElementById('prof-owner-name');
+                const profAddress = document.getElementById('prof-address');
                 const profEmail = document.getElementById('prof-email');
                 const profContact = document.getElementById('prof-contact');
                 const profCoverage = document.getElementById('prof-coverage');
 
                 if (profBizName) profBizName.textContent = bName;
                 if (profOwnerName) profOwnerName.textContent = oName;
+                if (profAddress) profAddress.textContent = bAddress;
                 if (profEmail) profEmail.textContent = data.profile.email || 'N/A';
                 if (profContact) profContact.textContent = data.profile.contactNumber || data.profile.phone || 'N/A';
                 if (profCoverage) profCoverage.textContent = covArea;

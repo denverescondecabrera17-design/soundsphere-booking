@@ -572,8 +572,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 phoneEl.textContent = provider.phone || provider.contactNumber || '+63 951 602 8992';
             }
 
+            const addressEl = document.getElementById('provider-detail-address');
+            const addressWrap = document.getElementById('provider-detail-address-wrap');
+            const addressDivider = document.getElementById('provider-detail-address-divider');
+            const bPlace = provider.businessAddress || provider.address || '';
+
+            if (addressEl) {
+                if (bPlace) {
+                    addressEl.textContent = bPlace;
+                    if (addressWrap) addressWrap.style.display = 'inline-flex';
+                    if (addressDivider) addressDivider.style.display = 'inline';
+                } else {
+                    if (addressWrap) addressWrap.style.display = 'none';
+                    if (addressDivider) addressDivider.style.display = 'none';
+                }
+            }
+
             if (coverageEl) {
-                coverageEl.textContent = provider.coverageArea || provider.businessAddress || 'Lian, Balayan, Nasugbu';
+                coverageEl.textContent = provider.coverageArea || 'Lian, Balayan, Nasugbu';
             }
 
             if (descEl) {
