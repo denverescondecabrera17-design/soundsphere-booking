@@ -678,6 +678,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         let targetViewId = 'view-provider-dashboard';
         if (cleanHash === 'services-section' || cleanHash === 'view-provider-services' || cleanHash === 'packages-section' || cleanHash === 'view-provider-packages') targetViewId = 'view-provider-packages';
         else if (cleanHash === 'bookings-section' || cleanHash === 'view-provider-bookings') targetViewId = 'view-provider-bookings';
+        else if (cleanHash === 'income-report-section' || cleanHash === 'view-provider-income-report') {
+            targetViewId = 'view-provider-income-report';
+            loadProviderIncomeReport();
+        }
         else if (cleanHash === 'calendar-section' || cleanHash === 'view-provider-calendar') {
             targetViewId = 'view-provider-calendar';
             loadProviderCalendarSchedule();
@@ -711,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sidebarNavLinks.forEach(link => {
             const href = link.getAttribute('href');
-            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section')) {
+            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-income-report' && href === '#income-report-section')) {
                 link.classList.add('active');
             } else {
                 link.classList.remove('active');
@@ -846,6 +850,246 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('Withdrawals load notice:', err.message);
         }
     };
+
+    // ------------------------------------------------------------------------
+    // Provider Income Report & Financial Ledger Engine
+    // ------------------------------------------------------------------------
+    let currentIncomeBookings = [];
+
+    const renderIncomeBookingsTable = (filterQuery = '') => {
+        const tableBody = document.getElementById('table-provider-income-list');
+        const badge = document.getElementById('income-bookings-badge');
+        if (!tableBody) return;
+
+        const q = (filterQuery || '').trim().toLowerCase();
+        const filtered = currentIncomeBookings.filter(b => {
+            if (!q) return true;
+            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
+            const client = (b.ClientName || '').toLowerCase();
+            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
+            const evtType = (b.EventType || '').toLowerCase();
+            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
+        });
+
+        if (badge) {
+            badge.textContent = `${filtered.length} Booking${filtered.length === 1 ? '' : 's'}`;
+        }
+
+        if (filtered.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No booking revenue records found matching "${filterQuery}".</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = filtered.map(b => {
+            const bRef = b.BookingReference || `#BK-${b.BookingID}`;
+            const clientName = b.ClientName || 'Client Account';
+            const pkgName = b.PackageName || b.EventName || 'Event Service Package';
+            const eventDate = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
+
+            const gross = parseFloat(b.TotalAmount || 0);
+            const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const commAmt = parseFloat((paid > 0 ? paid * commRate : gross * commRate).toFixed(2));
+            const netEarnings = parseFloat((paid > 0 ? paid * (1 - commRate) : 0).toFixed(2));
+            const fullNetExpected = parseFloat((gross * (1 - commRate)).toFixed(2));
+
+            const paymentInfo = typeof getBookingPaymentInfo === 'function' ? getBookingPaymentInfo(b) : null;
+            const isPartial = paymentInfo ? paymentInfo.isPartial : (paid > 0 && paid < gross);
+            const remBal = paymentInfo ? paymentInfo.remainingBalance : Math.max(0, gross - paid);
+
+            let paymentBadge = '';
+            if (paid <= 0) {
+                paymentBadge = `<span class="status-badge" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2; font-size:0.75rem;"><i class="fa-solid fa-circle-xmark"></i> Unpaid</span>`;
+            } else if (isPartial) {
+                paymentBadge = `<span class="status-badge" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7; font-size:0.75rem;"><i class="fa-solid fa-circle-half-stroke"></i> Partial<br><small style="font-size:0.7rem; color:#b45309;">Bal: ₱${remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</small></span>`;
+            } else {
+                paymentBadge = `<span class="status-badge" style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; font-size:0.75rem;"><i class="fa-solid fa-circle-check"></i> Paid Full</span>`;
+            }
+
+            const bStatus = b.BookingStatus || 'Pending';
+            const bStatusLower = bStatus.toLowerCase();
+            let bStatusBadge = `<span class="status-badge status-${bStatusLower}">${bStatus}</span>`;
+
+            return `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:14px 18px;">
+                        <strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">${bRef}</strong>
+                        <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">#BK-${b.BookingID}</div>
+                    </td>
+                    <td style="padding:14px 18px;">
+                        <div style="font-weight:700; color:#0a192f; font-size:0.9rem;">${clientName}</div>
+                        <div style="font-size:0.78rem; color:#2563eb; font-weight:600; margin-top:2px;">${pkgName}</div>
+                    </td>
+                    <td style="padding:14px 18px;">
+                        <span style="font-size:0.85rem; color:#475569; font-weight:600;"><i class="fa-regular fa-calendar" style="color:#94a3b8; margin-right:4px;"></i>${eventDate}</span>
+                    </td>
+                    <td style="padding:14px 18px; text-align:right;">
+                        <span style="font-weight:700; color:#0a192f; font-size:0.9rem;">₱${gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    <td style="padding:14px 18px; text-align:right;">
+                        <span style="font-weight:800; color:#10b981; font-size:0.92rem;">₱${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    <td style="padding:14px 18px; text-align:right;">
+                        <span style="font-weight:700; color:#7c3aed; font-size:0.88rem;">-₱${commAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        <div style="font-size:0.7rem; color:#94a3b8;">5% Platform</div>
+                    </td>
+                    <td style="padding:14px 18px; text-align:right;">
+                        <strong style="font-weight:800; color:#059669; font-size:0.95rem;">₱${netEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                        ${isPartial ? `<div style="font-size:0.72rem; color:#64748b; margin-top:1px;" title="Total contract net upon full completion">Expected: ₱${fullNetExpected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>` : ''}
+                    </td>
+                    <td style="padding:14px 18px; text-align:center;">
+                        ${paymentBadge}
+                    </td>
+                    <td style="padding:14px 18px; text-align:center;">
+                        ${bStatusBadge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    const loadProviderIncomeReport = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [statsRes, wRes] = await Promise.all([
+                fetch('/api/providers/dashboard-stats', { headers }).catch(e => null),
+                fetch('/api/providers/withdrawals/list', { headers }).catch(e => null)
+            ]);
+
+            let totalContractEarnings = 0;
+            let totalCollectedEarnings = 0;
+            let totalCommissionFee = 0;
+            let validBookings = [];
+
+            if (statsRes && statsRes.ok) {
+                const sData = await statsRes.json();
+                if (sData.success && sData.stats) {
+                    const allBookings = sData.stats.allBookings || [];
+                    validBookings = allBookings.filter(b => {
+                        const st = (b.BookingStatus || '').toLowerCase();
+                        const pSt = (b.PaymentStatus || '').toLowerCase();
+                        return st !== 'cancelled' && st !== 'rejected' && pSt !== 'refunded';
+                    });
+
+                    validBookings.forEach(b => {
+                        const tot = parseFloat(b.TotalAmount || 0);
+                        const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+                        const commRate = parseFloat(b.CommissionRate || 5) / 100;
+                        const isFull = (b.PaymentStatus === 'Paid' || b.BookingStatus === 'Completed');
+
+                        const cNet = tot * (1 - commRate);
+                        const colNet = (isFull ? tot : paid) * (1 - commRate);
+                        const fee = (isFull ? tot : paid) * commRate;
+
+                        totalContractEarnings += cNet;
+                        totalCollectedEarnings += colNet;
+                        totalCommissionFee += fee;
+                    });
+                }
+            }
+
+            let withdrawals = [];
+            let availableWalletBalance = 0;
+            if (wRes && wRes.ok) {
+                const wData = await wRes.json();
+                if (wData.success) {
+                    withdrawals = wData.withdrawals || [];
+                    availableWalletBalance = parseFloat(wData.availableBalance || 0);
+                }
+            }
+
+            // Update KPI Cards
+            const elTotalNet = document.getElementById('inc-stat-total-net');
+            const elCollected = document.getElementById('inc-stat-collected');
+            const elCommission = document.getElementById('inc-stat-commission');
+            const elAvailable = document.getElementById('inc-stat-available');
+
+            if (elTotalNet) elTotalNet.textContent = `₱${totalContractEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elCollected) elCollected.textContent = `₱${totalCollectedEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elCommission) elCommission.textContent = `₱${totalCommissionFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elAvailable) elAvailable.textContent = `₱${availableWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Render Bookings Ledger
+            currentIncomeBookings = validBookings;
+            const searchInput = document.getElementById('input-income-ledger-search');
+            renderIncomeBookingsTable(searchInput ? searchInput.value : '');
+
+            // Render Cashier Disbursements & Withdrawals
+            const wTableBody = document.getElementById('table-provider-income-withdrawals');
+            const wBadge = document.getElementById('income-withdrawals-badge');
+            if (wBadge) wBadge.textContent = `${withdrawals.length} Payout${withdrawals.length === 1 ? '' : 's'}`;
+
+            if (wTableBody) {
+                if (withdrawals.length === 0) {
+                    wTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No cashier payout disbursements recorded yet.</td></tr>`;
+                } else {
+                    wTableBody.innerHTML = withdrawals.map(w => {
+                        const reqDate = w.RequestedAt ? new Date(w.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—';
+                        const procDate = w.ProcessedAt ? new Date(w.ProcessedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '<span style="color:#94a3b8; font-style:italic;">Pending Cashier</span>';
+                        const stLower = (w.Status || 'Pending').toLowerCase();
+                        const isApproved = stLower === 'approved' || stLower === 'completed';
+                        const isRejected = stLower === 'rejected';
+
+                        let statusBadge = '';
+                        if (isApproved) {
+                            statusBadge = `<span class="status-badge status-confirmed" style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5;"><i class="fa-solid fa-circle-check"></i> Paid & Disbursed</span>`;
+                        } else if (isRejected) {
+                            statusBadge = `<span class="status-badge" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2;"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>`;
+                        } else {
+                            statusBadge = `<span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7;"><i class="fa-solid fa-clock"></i> Pending Cashier Payout</span>`;
+                        }
+
+                        return `
+                            <tr style="border-bottom:1px solid #f1f5f9;">
+                                <td style="padding:14px 18px;">
+                                    <strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#WD-${w.WithdrawalID}</strong>
+                                </td>
+                                <td style="padding:14px 18px; text-align:right;">
+                                    <strong style="color:#059669; font-size:0.95rem;">₱${parseFloat(w.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                </td>
+                                <td style="padding:14px 18px;">
+                                    <span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet" style="margin-right:4px;"></i>${w.PayoutMethod || 'GCash / Bank'}</span>
+                                </td>
+                                <td style="padding:14px 18px;">
+                                    <div style="font-weight:600; color:#0a192f; font-size:0.88rem;">${w.AccountReference || 'N/A'}</div>
+                                    <div style="font-size:0.75rem; color:#64748b;">${w.AccountName || 'Account Holder'}</div>
+                                </td>
+                                <td style="padding:14px 18px;">
+                                    <span style="font-size:0.82rem; color:#475569;">${reqDate}</span>
+                                </td>
+                                <td style="padding:14px 18px;">
+                                    <span style="font-size:0.82rem; color:#475569;">${procDate}</span>
+                                </td>
+                                <td style="padding:14px 18px; text-align:center;">
+                                    ${statusBadge}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+        } catch (err) {
+            console.error('Error loading provider income report:', err);
+        }
+    };
+
+    const searchIncomeInput = document.getElementById('input-income-ledger-search');
+    if (searchIncomeInput) {
+        searchIncomeInput.addEventListener('input', (e) => {
+            renderIncomeBookingsTable(e.target.value);
+        });
+    }
+
+    const btnRefreshIncome = document.getElementById('btn-refresh-income-report');
+    if (btnRefreshIncome) {
+        btnRefreshIncome.addEventListener('click', async () => {
+            const icon = btnRefreshIncome.querySelector('i');
+            if (icon) icon.classList.add('fa-spin');
+            await loadProviderIncomeReport();
+            if (icon) icon.classList.remove('fa-spin');
+            if (typeof showToast === 'function') showToast('✓ Income Report refreshed!', 'success');
+        });
+    }
 
     // ------------------------------------------------------------------------
     // Booking Withdrawal Request Modal Logic
