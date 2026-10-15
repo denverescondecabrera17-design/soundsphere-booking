@@ -1964,7 +1964,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             <div style="font-size:1.55rem; font-weight:800; color:#10b981; margin-bottom:14px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                                                 ₱${parseFloat(p.Price || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} 
                                                 <span style="font-size:0.88rem; color:#64748b; font-weight:500;">/ Event Rental</span>
-                                                <span style="font-size:0.82rem; font-weight:700; color:#0284c7; background:#e0f2fe; padding:4px 10px; border-radius:12px;" title="Extra day rate percentage"><i class="fa-solid fa-calendar-plus"></i> +${p.AdditionalDayPercentage != null ? p.AdditionalDayPercentage : 20}% / Extra Day</span>
                                             </div>
 
                                             <p style="font-size:0.96rem; color:#64748b; margin:0 0 16px 0; line-height:1.5;">${p.Description || 'No description provided.'}</p>
