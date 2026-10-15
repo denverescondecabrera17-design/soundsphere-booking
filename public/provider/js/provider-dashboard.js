@@ -855,28 +855,148 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Provider Income Report & Financial Ledger Engine
     // ------------------------------------------------------------------------
     let currentIncomeBookings = [];
+    let allTimeIncomeStats = { totalNet: 0, completedCount: 0 };
 
-    const renderIncomeBookingsTable = (filterQuery = '') => {
+    const getBookingYearMonth = (b) => {
+        const raw = b.ServiceStartDate || b.EventDate || b.CreatedAt;
+        if (!raw) return { year: '', month: '', yearMonth: '' };
+        if (typeof raw === 'string' && /^\d{4}-\d{2}/.test(raw)) {
+            const y = raw.substring(0, 4);
+            const m = raw.substring(5, 7);
+            return { year: y, month: m, yearMonth: `${y}-${m}` };
+        }
+        const d = new Date(raw);
+        if (isNaN(d.getTime())) return { year: '', month: '', yearMonth: '' };
+        const y = String(d.getFullYear());
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return { year: y, month: m, yearMonth: `${y}-${m}` };
+    };
+
+    const formatMonthLabel = (yearMonthStr) => {
+        if (!yearMonthStr) return '';
+        const parts = yearMonthStr.split('-');
+        if (parts.length < 2) return yearMonthStr;
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = new Date(y, m, 1);
+        return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    };
+
+    const getActiveIncomePeriodInfo = () => {
+        const periodSelect = document.getElementById('select-income-period');
+        const period = periodSelect ? periodSelect.value : 'all';
+        const monthInput = document.getElementById('input-income-month');
+        const selectedMonth = monthInput ? monthInput.value : '';
+        const yearSelect = document.getElementById('select-income-year');
+        const selectedYear = yearSelect ? yearSelect.value : '';
+
+        let label = 'All Time';
+        let slug = 'AllTime';
+        if (period === 'monthly' && selectedMonth) {
+            label = formatMonthLabel(selectedMonth);
+            slug = `Monthly_${selectedMonth}`;
+        } else if (period === 'yearly' && selectedYear) {
+            label = `Year ${selectedYear}`;
+            slug = `Yearly_${selectedYear}`;
+        }
+        return { period, selectedMonth, selectedYear, label, slug };
+    };
+
+    const populateIncomeYears = () => {
+        const yearSelect = document.getElementById('select-income-year');
+        if (!yearSelect) return;
+        const yearsSet = new Set();
+        const currentYear = String(new Date().getFullYear());
+        yearsSet.add(currentYear);
+
+        currentIncomeBookings.forEach(b => {
+            const ym = getBookingYearMonth(b);
+            if (ym.year) yearsSet.add(ym.year);
+        });
+
+        const sortedYears = Array.from(yearsSet).sort().reverse();
+        const curVal = yearSelect.value || currentYear;
+        yearSelect.innerHTML = sortedYears.map(y => `<option value="${y}" ${y === curVal ? 'selected' : ''}>Year ${y}</option>`).join('');
+    };
+
+    const getFilteredIncomeBookings = (filterQuery = null) => {
+        const searchInput = document.getElementById('input-income-ledger-search');
+        const q = (filterQuery != null ? filterQuery : (searchInput ? searchInput.value : '')).trim().toLowerCase();
+        const periodInfo = getActiveIncomePeriodInfo();
+
+        return currentIncomeBookings.filter(b => {
+            // 1. Period filter (Monthly or Yearly)
+            if (periodInfo.period === 'monthly' && periodInfo.selectedMonth) {
+                const ym = getBookingYearMonth(b);
+                if (ym.yearMonth !== periodInfo.selectedMonth) return false;
+            } else if (periodInfo.period === 'yearly' && periodInfo.selectedYear) {
+                const ym = getBookingYearMonth(b);
+                if (ym.year !== periodInfo.selectedYear) return false;
+            }
+
+            // 2. Search query filter
+            if (q) {
+                const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
+                const client = (b.ClientName || '').toLowerCase();
+                const pkg = (b.PackageName || b.EventName || '').toLowerCase();
+                const evtType = (b.EventType || '').toLowerCase();
+                if (!ref.includes(q) && !client.includes(q) && !pkg.includes(q) && !evtType.includes(q)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    };
+
+    const renderIncomeBookingsTable = (filterQuery = null) => {
         const tableBody = document.getElementById('table-provider-income-list');
         const badge = document.getElementById('income-bookings-badge');
         if (!tableBody) return;
 
-        const q = (filterQuery || '').trim().toLowerCase();
-        const filtered = currentIncomeBookings.filter(b => {
-            if (!q) return true;
-            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
-            const client = (b.ClientName || '').toLowerCase();
-            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
-            const evtType = (b.EventType || '').toLowerCase();
-            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
-        });
+        const periodInfo = getActiveIncomePeriodInfo();
+        const filtered = getFilteredIncomeBookings(filterQuery);
 
         if (badge) {
-            badge.textContent = `${filtered.length} Booking${filtered.length === 1 ? '' : 's'}`;
+            badge.textContent = `${filtered.length} Booking${filtered.length === 1 ? '' : 's'} (${periodInfo.label})`;
+        }
+
+        // Dynamically update the Stat Cards for the selected period
+        let periodIncome = 0;
+        let periodCompleted = 0;
+        filtered.forEach(b => {
+            const gross = parseFloat(b.TotalAmount || 0);
+            const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const isFull = (b.PaymentStatus === 'Paid' || b.BookingStatus === 'Completed');
+            const net = (isFull ? gross : paid) * (1 - commRate);
+            periodIncome += net;
+            if ((b.BookingStatus || '').toLowerCase() === 'completed') {
+                periodCompleted++;
+            }
+        });
+
+        const elTotalNet = document.getElementById('inc-stat-total-net');
+        const elCompletedCount = document.getElementById('inc-stat-completed-count');
+        const elNetDesc = document.getElementById('inc-stat-total-net-desc');
+        const elCompletedDesc = document.getElementById('inc-stat-completed-desc');
+
+        if (periodInfo.period === 'all') {
+            if (elTotalNet) elTotalNet.textContent = `₱${allTimeIncomeStats.totalNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elCompletedCount) elCompletedCount.textContent = allTimeIncomeStats.completedCount;
+            if (elNetDesc) elNetDesc.textContent = 'Total net earnings from all confirmed & completed bookings';
+            if (elCompletedDesc) elCompletedDesc.textContent = 'Total reservations successfully serviced & completed';
+        } else {
+            if (elTotalNet) elTotalNet.textContent = `₱${periodIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elCompletedCount) elCompletedCount.textContent = periodCompleted;
+            if (elNetDesc) elNetDesc.textContent = `Net earnings for ${periodInfo.label}`;
+            if (elCompletedDesc) elCompletedDesc.textContent = `Completed reservations in ${periodInfo.label}`;
         }
 
         if (filtered.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No booking revenue records found matching "${filterQuery}".</td></tr>`;
+            const searchInput = document.getElementById('input-income-ledger-search');
+            const q = searchInput ? searchInput.value.trim() : '';
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No booking revenue records found for ${periodInfo.label}${q ? ` matching "${q}"` : ''}.</td></tr>`;
             return;
         }
 
@@ -1000,8 +1120,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Update 3 KPI Cards: Total Income, Completed Bookings, Total Received (Withdrawal Amount)
+            // Store All-Time KPI stats
             const completedBookingsCount = validBookings.filter(b => (b.BookingStatus || '').toLowerCase() === 'completed').length;
+            allTimeIncomeStats = {
+                totalNet: totalContractEarnings,
+                completedCount: completedBookingsCount
+            };
 
             const elTotalNet = document.getElementById('inc-stat-total-net');
             const elCompletedCount = document.getElementById('inc-stat-completed-count');
@@ -1011,10 +1135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (elCompletedCount) elCompletedCount.textContent = completedBookingsCount;
             if (elWithdrawn) elWithdrawn.textContent = `₱${totalWithdrawn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-            // Render Bookings Ledger
+            // Populate Years & Initialize Month Picker
             currentIncomeBookings = validBookings;
-            const searchInput = document.getElementById('input-income-ledger-search');
-            renderIncomeBookingsTable(searchInput ? searchInput.value : '');
+            populateIncomeYears();
+
+            const monthInput = document.getElementById('input-income-month');
+            if (monthInput && !monthInput.value) {
+                const now = new Date();
+                monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+
+            renderIncomeBookingsTable();
         } catch (err) {
             console.error('Error loading provider income report:', err);
         }
@@ -1024,6 +1155,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (searchIncomeInput) {
         searchIncomeInput.addEventListener('input', (e) => {
             renderIncomeBookingsTable(e.target.value);
+        });
+    }
+
+    const selectIncomePeriod = document.getElementById('select-income-period');
+    const filterCtrlMonthly = document.getElementById('filter-ctrl-income-monthly');
+    const filterCtrlYearly = document.getElementById('filter-ctrl-income-yearly');
+    const inputIncomeMonth = document.getElementById('input-income-month');
+    const selectIncomeYear = document.getElementById('select-income-year');
+
+    if (selectIncomePeriod) {
+        selectIncomePeriod.addEventListener('change', () => {
+            const val = selectIncomePeriod.value;
+            if (filterCtrlMonthly) filterCtrlMonthly.style.display = (val === 'monthly' ? 'flex' : 'none');
+            if (filterCtrlYearly) filterCtrlYearly.style.display = (val === 'yearly' ? 'flex' : 'none');
+            renderIncomeBookingsTable();
+        });
+    }
+
+    if (inputIncomeMonth) {
+        inputIncomeMonth.addEventListener('change', () => {
+            renderIncomeBookingsTable();
+        });
+    }
+
+    if (selectIncomeYear) {
+        selectIncomeYear.addEventListener('change', () => {
+            renderIncomeBookingsTable();
         });
     }
 
@@ -1039,23 +1197,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ------------------------------------------------------------------------
-    // Export Income Report to Excel (.csv) & PDF
+    // Export Income Report to Excel (.csv) & PDF (Supports All Time, Monthly, Yearly)
     // ------------------------------------------------------------------------
     const exportIncomeToExcel = () => {
-        const searchInput = document.getElementById('input-income-ledger-search');
-        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-        const listToExport = currentIncomeBookings.filter(b => {
-            if (!q) return true;
-            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
-            const client = (b.ClientName || '').toLowerCase();
-            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
-            const evtType = (b.EventType || '').toLowerCase();
-            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
-        });
+        const periodInfo = getActiveIncomePeriodInfo();
+        const listToExport = getFilteredIncomeBookings();
 
         if (!listToExport || listToExport.length === 0) {
-            showToast('No booking income records to export.', 'error');
+            showToast(`No booking income records to export for ${periodInfo.label}.`, 'error');
             return;
         }
 
@@ -1100,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const csvRows = [
             ['SOUNDSPHERE - PROVIDER INCOME REPORT'],
+            ['Period:', escapeCsv(periodInfo.label)],
             ['Printed By:', escapeCsv(printedByName)],
             ['Date:', escapeCsv(printDate)],
             [],
@@ -1112,32 +1262,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const todayStr = new Date().toISOString().split('T')[0];
         a.href = url;
-        a.download = `Provider_Income_Report_${todayStr}.csv`;
+        a.download = `Provider_Income_Report_${periodInfo.slug}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast('✓ Income Report exported to Excel (.csv) successfully!', 'success');
+        showToast(`✓ Income Report (${periodInfo.label}) exported to Excel (.csv) successfully!`, 'success');
     };
 
     const exportIncomeToPDF = () => {
-        const searchInput = document.getElementById('input-income-ledger-search');
-        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-        const listToExport = currentIncomeBookings.filter(b => {
-            if (!q) return true;
-            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
-            const client = (b.ClientName || '').toLowerCase();
-            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
-            const evtType = (b.EventType || '').toLowerCase();
-            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
-        });
+        const periodInfo = getActiveIncomePeriodInfo();
+        const listToExport = getFilteredIncomeBookings();
 
         if (!listToExport || listToExport.length === 0) {
-            showToast('No booking income records to print or export.', 'error');
+            showToast(`No booking income records to print or export for ${periodInfo.label}.`, 'error');
             return;
         }
 
@@ -1208,7 +1348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <html>
 <head>
     <meta charset="utf-8">
-    <title>SoundSphere - Provider Income Report</title>
+    <title>SoundSphere - Provider Income Report (${periodInfo.label})</title>
     <style>
         @page {
             size: A4 portrait;
@@ -1258,8 +1398,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             margin: 12px 0 4px 0;
         }
         .report-subtitle {
-            font-size: 8.5pt;
-            color: #64748b;
+            font-size: 9pt;
+            font-weight: 600;
+            color: #2563eb;
             margin-bottom: 14px;
         }
         .kpi-grid {
@@ -1340,6 +1481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${businessName ? `<div style="font-size:9.5pt; font-weight:700; color:#2563eb; margin-top:4px;">${businessName}</div>` : ''}
         </div>
         <div class="meta-box">
+            <div><strong>Period:</strong> ${periodInfo.label}</div>
             <div><strong>Printed By:</strong> ${printedByName}</div>
             <div><strong>Date & Time:</strong> ${printDate}</div>
             <div><strong>Total Records:</strong> ${listToExport.length} Bookings</div>
@@ -1347,11 +1489,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     </div>
 
     <div class="report-title">Provider Income Statement & Earnings Report</div>
-    <div class="report-subtitle">Official verified financial breakdown for completed and confirmed client bookings.</div>
+    <div class="report-subtitle">Official verified financial breakdown • Financial Period: ${periodInfo.label}</div>
 
     <div class="kpi-grid">
         <div class="kpi-card" style="border-left: 4px solid #10b981;">
-            <div class="kpi-label">Total Provider Income</div>
+            <div class="kpi-label">Provider Income (${periodInfo.label})</div>
             <div class="kpi-value" style="color:#059669;">₱${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div class="kpi-card" style="border-left: 4px solid #2563eb;">
@@ -1381,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </tbody>
         <tfoot>
             <tr class="total-row">
-                <td colspan="5" style="text-align:right; font-size:9pt; text-transform:uppercase; letter-spacing:0.5px;">Total Provider Income:</td>
+                <td colspan="5" style="text-align:right; font-size:9pt; text-transform:uppercase; letter-spacing:0.5px;">Total Provider Income (${periodInfo.label}):</td>
                 <td style="text-align:right; font-size:10.5pt; font-weight:900; color:#059669;">₱${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td></td>
             </tr>
@@ -1391,7 +1533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div class="footer-sig">
         <div>
             <div style="font-size:7.5pt; color:#94a3b8; text-transform:uppercase;">System Verification</div>
-            <div style="font-size:8pt; color:#64748b; margin-top:2px;">Generated via SoundSphere Provider Portal</div>
+            <div style="font-size:8pt; color:#64748b; margin-top:2px;">Generated via SoundSphere Provider Portal • ${periodInfo.label}</div>
         </div>
         <div>
             <div class="sig-block">
@@ -1426,7 +1568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 1000);
         }, 350);
 
-        showToast('✓ Opening print dialog — select "Save as PDF" to download PDF.', 'info');
+        showToast(`✓ Opening print dialog for ${periodInfo.label} — select "Save as PDF" to download PDF.`, 'info');
     };
 
     const btnExportExcel = document.getElementById('btn-export-income-excel');

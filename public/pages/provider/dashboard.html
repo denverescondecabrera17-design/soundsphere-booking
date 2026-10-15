@@ -337,7 +337,7 @@
                             <div>
                                 <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Income</span>
                                 <h3 id="inc-stat-total-net" style="font-size:1.55rem; font-weight:800; color:#0a192f; margin:4px 0 2px 0;">₱0.00</h3>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Total net earnings from all confirmed & completed bookings</p>
+                                <p id="inc-stat-total-net-desc" style="font-size:0.78rem; color:#94a3b8; margin:0;">Total net earnings from all confirmed & completed bookings</p>
                             </div>
                         </div>
 
@@ -349,7 +349,7 @@
                             <div>
                                 <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Completed Bookings</span>
                                 <h3 id="inc-stat-completed-count" style="font-size:1.55rem; font-weight:800; color:#2563eb; margin:4px 0 2px 0;">0</h3>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Total reservations successfully serviced & completed</p>
+                                <p id="inc-stat-completed-desc" style="font-size:0.78rem; color:#94a3b8; margin:0;">Total reservations successfully serviced & completed</p>
                             </div>
                         </div>
 
@@ -375,8 +375,36 @@
                                 </h3>
                                 <span id="income-bookings-badge" style="background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.78rem; padding:3px 9px; border-radius:999px;">0 Bookings</span>
                             </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="position:relative; width:260px;">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+                                <!-- Period Selector -->
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <label for="select-income-period" style="font-size:0.8rem; font-weight:700; color:#64748b; white-space:nowrap;">
+                                        <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Period:
+                                    </label>
+                                    <select id="select-income-period" style="padding:7px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.85rem; font-weight:600; color:#0a192f; background:#fff; outline:none; cursor:pointer;">
+                                        <option value="all" selected>All Time</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+
+                                <!-- Month Picker -->
+                                <div id="filter-ctrl-income-monthly" style="display:none; align-items:center; gap:6px;">
+                                    <input type="month" id="input-income-month" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.85rem; font-weight:600; color:#0a192f; background:#fff; outline:none; cursor:pointer;">
+                                </div>
+
+                                <!-- Year Picker -->
+                                <div id="filter-ctrl-income-yearly" style="display:none; align-items:center; gap:6px;">
+                                    <select id="select-income-year" style="padding:7px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.85rem; font-weight:600; color:#0a192f; background:#fff; outline:none; cursor:pointer;">
+                                        <option value="2027">Year 2027</option>
+                                        <option value="2026" selected>Year 2026</option>
+                                        <option value="2025">Year 2025</option>
+                                        <option value="2024">Year 2024</option>
+                                    </select>
+                                </div>
+
+                                <!-- Search Input -->
+                                <div style="position:relative; width:220px;">
                                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.85rem;"></i>
                                     <input type="text" id="input-income-ledger-search" placeholder="Search reference, client..." style="width:100%; padding:7px 12px 7px 32px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.85rem; outline:none;">
                                 </div>
