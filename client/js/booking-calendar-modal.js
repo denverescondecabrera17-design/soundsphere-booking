@@ -149,33 +149,6 @@
                                     <!-- Injected dynamically: badge and reset button -->
                                 </div>
 
-                                <!-- Interactive Start / End Date Selector Tabs -->
-                                <div class="cal-date-tabs-row">
-                                    <button type="button" class="cal-date-tab active" id="cal-tab-start-date" title="Click to choose a start date on the calendar">
-                                        <span class="cal-tab-label"><i class="fa-solid fa-play"></i> START DATE</span>
-                                        <span class="cal-tab-val" id="cal-tab-start-display">Select Start Date</span>
-                                    </button>
-                                    <div class="cal-date-tab-divider"><i class="fa-solid fa-arrow-right"></i></div>
-                                    <button type="button" class="cal-date-tab" id="cal-tab-end-date" title="Click to choose an end date on the calendar">
-                                        <span class="cal-tab-label"><i class="fa-solid fa-flag-checkered"></i> END DATE</span>
-                                        <span class="cal-tab-val" id="cal-tab-end-display">Select End Date</span>
-                                    </button>
-                                </div>
-
-                                <!-- Consecutive Booking Duration Quick Selector -->
-                                <div class="cal-duration-section">
-                                    <div class="cal-duration-header">
-                                        <span class="cal-duration-title"><i class="fa-solid fa-calendar-days"></i> Booking Duration</span>
-                                        <span class="cal-duration-hint">Strictly continuous (no gaps)</span>
-                                    </div>
-                                    <div class="cal-duration-pills" id="cal-duration-pills-wrap">
-                                        <button type="button" class="cal-duration-pill active" data-days="1">1 Day</button>
-                                        <button type="button" class="cal-duration-pill" data-days="2">2 Days</button>
-                                        <button type="button" class="cal-duration-pill" data-days="3">3 Days</button>
-                                        <button type="button" class="cal-duration-pill" data-days="4">4 Days</button>
-                                        <button type="button" class="cal-duration-pill" data-days="5">5 Days</button>
-                                    </div>
-                                </div>
                                 
                                 <!-- Custom Time Picker Controls (Select Time - Start Time Only) -->
                                 <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time</div>
@@ -277,34 +250,6 @@
             changeMonth(1);
         };
 
-        // Date selection tabs
-        const tabStart = document.getElementById('cal-tab-start-date');
-        const tabEnd = document.getElementById('cal-tab-end-date');
-        if (tabStart) {
-            tabStart.onclick = () => {
-                calActiveSelectionMode = 'start';
-                clearCalendarAlert();
-                renderCalendarGrid();
-                updateSelectedSummaryDisplay();
-            };
-        }
-        if (tabEnd) {
-            tabEnd.onclick = () => {
-                calActiveSelectionMode = 'end';
-                clearCalendarAlert();
-                renderCalendarGrid();
-                updateSelectedSummaryDisplay();
-            };
-        }
-
-        // Duration pills
-        const durationPills = document.querySelectorAll('.cal-duration-pill');
-        durationPills.forEach(pill => {
-            pill.onclick = () => {
-                const days = parseInt(pill.getAttribute('data-days'), 10) || 1;
-                handleSelectDurationDays(days);
-            };
-        });
 
         // Start time picker input listener
         const startTimeInput = document.getElementById('cal-start-time-input');
@@ -416,33 +361,6 @@
         };
     }
 
-    // Handle Quick Duration Selection (1 Day, 2 Days, 3 Days, etc.)
-    function handleSelectDurationDays(numDays) {
-        if (!calSelectedStartDate) return;
-
-        if (numDays === 1) {
-            calSelectedEndDate = calSelectedStartDate;
-            calActiveSelectionMode = 'start';
-            clearCalendarAlert();
-            renderCalendarGrid();
-            updateSelectedSummaryDisplay();
-            return;
-        }
-
-        const targetEnd = addDaysToIso(calSelectedStartDate, numDays - 1);
-        const check = checkRangeAvailability(calSelectedStartDate, targetEnd);
-
-        if (!check.available) {
-            showCalendarAlert(`⚠️ Cannot book ${numDays} consecutive days starting from ${formatShortPrettyDate(calSelectedStartDate)}. ${check.message}`);
-            return;
-        }
-
-        calSelectedEndDate = targetEnd;
-        calActiveSelectionMode = 'start';
-        clearCalendarAlert();
-        renderCalendarGrid();
-        updateSelectedSummaryDisplay();
-    }
 
     // Show alert banner on calendar modal
     function showCalendarAlert(message) {
@@ -535,72 +453,47 @@
     function handleDateCellClick(clickedIso) {
         if (isDateBooked(clickedIso)) return;
 
-        // Case A: User is picking a Start Date (or no start date is set yet)
-        if (calActiveSelectionMode === 'start' || !calSelectedStartDate) {
-            const prevDuration = (calSelectedStartDate && calSelectedEndDate && calSelectedStartDate < calSelectedEndDate)
-                ? (getDatesInRange(calSelectedStartDate, calSelectedEndDate).length)
-                : 1;
-
+        // If no start date is selected yet, or if a multi-day range was already established, start fresh on clicked date
+        if (!calSelectedStartDate || (calSelectedStartDate && calSelectedEndDate && calSelectedStartDate !== calSelectedEndDate)) {
             calSelectedStartDate = clickedIso;
-
-            // If user previously selected a multi-day duration, check if that same consecutive duration is available from the new start date
-            if (prevDuration > 1) {
-                const targetEnd = addDaysToIso(clickedIso, prevDuration - 1);
-                const check = checkRangeAvailability(clickedIso, targetEnd);
-                if (check.available) {
-                    calSelectedEndDate = targetEnd;
-                } else {
-                    calSelectedEndDate = clickedIso; // Fall back to 1 day if consecutive gap exists
-                }
-            } else {
-                calSelectedEndDate = clickedIso;
-            }
-
-            // Move mode to 'end' so next click can pick a consecutive end date or stay 1 day
-            calActiveSelectionMode = 'end';
-            clearCalendarAlert();
-            renderCalendarGrid();
-            updateSelectedSummaryDisplay();
-            return;
-        }
-
-        // Case B: User is picking an End Date (calActiveSelectionMode === 'end')
-        if (calActiveSelectionMode === 'end') {
-            if (clickedIso < calSelectedStartDate) {
-                // User clicked an earlier date: set as the new Start Date
-                calSelectedStartDate = clickedIso;
-                calSelectedEndDate = clickedIso;
-                calActiveSelectionMode = 'end';
-                clearCalendarAlert();
-                renderCalendarGrid();
-                updateSelectedSummaryDisplay();
-                return;
-            }
-
-            if (clickedIso === calSelectedStartDate) {
-                // Clicked same date again: 1-day booking
-                calSelectedEndDate = calSelectedStartDate;
-                calActiveSelectionMode = 'start';
-                clearCalendarAlert();
-                renderCalendarGrid();
-                updateSelectedSummaryDisplay();
-                return;
-            }
-
-            // Clicked a later date: strictly validate continuous range with no gaps
-            const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
-            if (!check.available) {
-                showCalendarAlert(check.message);
-                return;
-            }
-
             calSelectedEndDate = clickedIso;
-            calActiveSelectionMode = 'start'; // completed range selection
             clearCalendarAlert();
             renderCalendarGrid();
             updateSelectedSummaryDisplay();
             return;
         }
+
+        // A single start date is currently selected:
+        if (clickedIso < calSelectedStartDate) {
+            // User clicked an earlier date: set as the new start date
+            calSelectedStartDate = clickedIso;
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        if (clickedIso === calSelectedStartDate) {
+            // Same date clicked: maintain single day
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        // Clicked a later date: validate continuous consecutive booking with no gaps
+        const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
+        if (!check.available) {
+            showCalendarAlert(check.message);
+            return;
+        }
+
+        calSelectedEndDate = clickedIso;
+        clearCalendarAlert();
+        renderCalendarGrid();
+        updateSelectedSummaryDisplay();
     }
 
     // Render Calendar Grid
@@ -693,7 +586,7 @@
                 cell.title = 'Date is already booked by another client';
             } else {
                 cell.classList.add('available');
-                cell.title = (calActiveSelectionMode === 'start') ? 'Click to select this as Start Date' : 'Click to select this date';
+                cell.title = 'Click to select date or extend consecutive booking';
 
                 // Click listener for available dates
                 cell.onclick = () => {
@@ -737,11 +630,6 @@
         const summaryPackageNote = document.getElementById('cal-summary-package-note');
         const confirmBtn = document.getElementById('cal-btn-confirm-action');
         const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
-        const tabStart = document.getElementById('cal-tab-start-date');
-        const tabEnd = document.getElementById('cal-tab-end-date');
-        const tabStartDisplay = document.getElementById('cal-tab-start-display');
-        const tabEndDisplay = document.getElementById('cal-tab-end-display');
-        const durationPills = document.querySelectorAll('.cal-duration-pill');
 
         if (calIsSubscriptionInactive) {
             if (headerDate) headerDate.innerHTML = '<span style="color:#d97706;"><i class="fa-solid fa-lock"></i> Calendar Locked</span>';
@@ -784,39 +672,6 @@
         const dates = getDatesInRange(calSelectedStartDate, calSelectedEndDate || calSelectedStartDate);
         const dayCount = dates.length;
 
-        // Update Start / End Tab Values and Active states
-        if (tabStart && tabStartDisplay) {
-            tabStart.classList.toggle('active', calActiveSelectionMode === 'start');
-            tabStartDisplay.textContent = formatShortPrettyDate(calSelectedStartDate) || 'Select Date';
-        }
-        if (tabEnd && tabEndDisplay) {
-            tabEnd.classList.toggle('active', calActiveSelectionMode === 'end');
-            tabEndDisplay.textContent = isMultiDay ? formatShortPrettyDate(calSelectedEndDate) : (formatShortPrettyDate(calSelectedStartDate) || 'Select Date');
-        }
-
-        // Update Duration Pills active state & availability from current start date
-        if (durationPills && durationPills.length > 0) {
-            durationPills.forEach(pill => {
-                const pDays = parseInt(pill.getAttribute('data-days'), 10) || 1;
-                pill.classList.toggle('active', pDays === dayCount);
-
-                if (pDays > 1) {
-                    const testEnd = addDaysToIso(calSelectedStartDate, pDays - 1);
-                    const check = checkRangeAvailability(calSelectedStartDate, testEnd);
-                    if (!check.available) {
-                        pill.classList.add('disabled');
-                        pill.title = `Unavailable: ${check.message}`;
-                    } else {
-                        pill.classList.remove('disabled');
-                        pill.title = `Book ${pDays} continuous consecutive days`;
-                    }
-                } else {
-                    pill.classList.remove('disabled');
-                    pill.title = 'Single day booking';
-                }
-            });
-        }
-
         if (!isMultiDay) {
             // Single Day
             const pretty = formatPrettyDate(calSelectedStartDate);
@@ -824,9 +679,7 @@
             if (badgeContainer) badgeContainer.style.display = 'none';
             if (summaryDateText) summaryDateText.textContent = `${pretty} (1 Day)`;
             if (subtitleDisplay) {
-                subtitleDisplay.textContent = (calActiveSelectionMode === 'start') 
-                    ? 'Click ANY available date on calendar to change Start Date' 
-                    : 'Choose consecutive days above or click an end date on calendar';
+                subtitleDisplay.textContent = 'Select an available date on the calendar';
             }
         } else {
             // Multi-Day Consecutive Range
@@ -852,7 +705,6 @@
                 if (resetBtn) {
                     resetBtn.onclick = () => {
                         calSelectedEndDate = calSelectedStartDate;
-                        calActiveSelectionMode = 'start';
                         clearCalendarAlert();
                         renderCalendarGrid();
                         updateSelectedSummaryDisplay();
@@ -862,9 +714,7 @@
 
             if (summaryDateText) summaryDateText.textContent = `${startPrettyShort} – ${endPretty} (${dayCount} Consecutive Days)`;
             if (subtitleDisplay) {
-                subtitleDisplay.textContent = (calActiveSelectionMode === 'start')
-                    ? 'Click ANY available date to change Start Date'
-                    : `${dayCount} consecutive days selected • Strictly continuous (no gaps)`;
+                subtitleDisplay.textContent = `${dayCount} consecutive days selected • Strictly continuous (no gaps)`;
             }
         }
 
