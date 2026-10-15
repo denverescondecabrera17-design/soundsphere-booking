@@ -52,6 +52,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Handle PayMongo checkout cancellation (e.g., client clicked Back or Cancel on PayMongo)
+    const bookingUrlParams = new URLSearchParams(window.location.search);
+    if (bookingUrlParams.get('cancelled') === '1') {
+        const cancelledRef = bookingUrlParams.get('ref');
+        if (cancelledRef) {
+            fetch('/api/bookings/cancel-unpaid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingReference: cancelledRef, reason: 'Payment cancelled on checkout' })
+            }).catch(() => {});
+        }
+        setTimeout(() => {
+            if (typeof window.showToast === 'function') {
+                window.showToast('ℹ️ Payment was not completed. Your booking was not confirmed.', 'info');
+            }
+        }, 500);
+    }
+
     // 2. DOM Form & Display Elements
     const form = document.getElementById('booking-main-form');
     const clientFirstNameInput = document.getElementById('booking-client-firstname');

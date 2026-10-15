@@ -74,8 +74,8 @@ const createCheckoutSession = async ({
                     }
                 ],
                 payment_method_types: allowedPaymentTypes,
-                success_url: successUrl || `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success${balanceQuery}`,
-                cancel_url: cancelUrl || `${originHost}/booking.html?cancelled=1`,
+                success_url: successUrl || `${originHost}/booking-confirmation.html?ref=${encodeURIComponent(bookingReference)}&payment_status=success${balanceQuery}&session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: cancelUrl || `${originHost}/booking.html?cancelled=1&ref=${encodeURIComponent(bookingReference)}`,
                 ...(Object.keys(billingObj).length > 0 ? { billing: billingObj } : {}),
                 metadata: {
                     bookingReference,

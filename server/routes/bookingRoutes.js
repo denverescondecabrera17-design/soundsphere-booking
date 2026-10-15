@@ -40,6 +40,9 @@ router.get('/:id', (req, res, next) => {
 router.post('/payments', verifyToken, bookingController.createPayment);
 router.post('/paymongo/checkout', optionalVerifyToken, bookingController.createPayMongoCheckout);
 router.post('/payments/paymongo/checkout', optionalVerifyToken, bookingController.createPayMongoCheckout);
+router.post('/verify-payment', optionalVerifyToken, bookingController.verifyPayMongoPayment);
+router.post('/payments/verify-payment', optionalVerifyToken, bookingController.verifyPayMongoPayment);
+router.post('/cancel-unpaid', optionalVerifyToken, bookingController.cancelUnpaidBooking);
 router.get('/payments/:bookingId', bookingController.getPaymentsByBookingId);
 
 // Review Endpoints

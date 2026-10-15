@@ -254,6 +254,27 @@
                 }
             }
 
+            // Verify and confirm booking payment if returning from initial PayMongo checkout
+            if (paymentStatusParam === 'success' && actionParam !== 'settle_balance' && (refCode || bookingId)) {
+                try {
+                    const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token'));
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                    await fetch('/api/bookings/verify-payment', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            bookingReference: refCode,
+                            bookingId: bookingId,
+                            sessionId: urlParams.get('session_id') || null
+                        })
+                    });
+                } catch (verifyErr) {
+                    console.warn('Booking payment verification notice:', verifyErr);
+                }
+            }
+
             const confirmRefCode = document.getElementById('confirm-ref-code');
             const confirmProviderName = document.getElementById('confirm-provider-name');
             const confirmPkgName = document.getElementById('confirm-pkg-name');

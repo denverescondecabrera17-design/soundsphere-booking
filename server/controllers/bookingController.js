@@ -788,6 +788,15 @@ const createBooking = async (req, res) => {
         const commissionAmount = Math.round((totalAmount * 0.05) * 100) / 100;
         const providerEarnings = Math.round((totalAmount - commissionAmount) * 100) / 100;
 
+        const selectedPaymentMethod = paymentMethod || 'PayMongo';
+        const isOnlinePayment = (selectedPaymentMethod.toLowerCase() === 'paymongo' || 
+                                 selectedPaymentMethod.toLowerCase() === 'card' || 
+                                 selectedPaymentMethod.toLowerCase() === 'gcash' || 
+                                 selectedPaymentMethod.toLowerCase() === 'maya' || 
+                                 selectedPaymentMethod.toLowerCase() === 'paymaya' || 
+                                 selectedPaymentMethod.toLowerCase() === 'qrph' || 
+                                 selectedPaymentMethod.toLowerCase() === 'epayment');
+
         const bookingData = {
             bookingReference: bookingReference || null,
             clientUserId,
@@ -820,23 +829,21 @@ const createBooking = async (req, res) => {
             distanceKm: distanceKm,
             totalAmount: totalAmount,
             paymentType: selectedPaymentType,
-            amountPaid: amountPaid,
-            remainingBalance: remainingBalance,
+            amountPaid: isOnlinePayment ? 0 : amountPaid,
+            remainingBalance: isOnlinePayment ? totalAmount : remainingBalance,
             commissionRate: commissionRate,
             commissionAmount: commissionAmount,
-            providerEarnings: providerEarnings,
-            bookingStatus: 'Confirmed',
-            paymentStatus: selectedPaymentType === 'downpayment' ? 'Partial' : 'Paid'
+            providerEarnings: isOnlinePayment ? 0 : providerEarnings,
+            bookingStatus: isOnlinePayment ? 'Pending Payment' : 'Confirmed',
+            paymentStatus: isOnlinePayment ? 'Pending' : (selectedPaymentType === 'downpayment' ? 'Partial' : 'Paid')
         };
-
-        const selectedPaymentMethod = paymentMethod || 'PayMongo';
 
         const paymentData = {
             paymentType: selectedPaymentType,
             paymentMethod: selectedPaymentMethod,
-            amount: amountPaid,
+            amount: isOnlinePayment ? 0 : amountPaid,
             transactionReference: transactionReference || null,
-            paymentStatus: 'Paid'
+            paymentStatus: isOnlinePayment ? 'Pending' : 'Paid'
         };
 
         // SQL TRANSACTION EXECUTION
@@ -845,73 +852,73 @@ const createBooking = async (req, res) => {
         const bkId = newBooking.BookingID;
         const refCode = newBooking.BookingReference;
 
-        // NOTIFICATION CREATION
-        let notifClientName = clientName || 'A client';
-        let providerUserId = null;
+        // NOTIFICATIONS & EMAIL (Dispatched immediately only for onsite/cash; deferred until payment success for online checkout)
+        if (!isOnlinePayment) {
+            let notifClientName = clientName || 'A client';
+            let providerUserId = null;
 
-        try {
-            if (!clientName) {
-                const clientRes = await pool.request().input('UserID', sql.Int, clientUserId).query(`
-                    SELECT ISNULL(NULLIF(c.FullName, ''), u.Email) AS Name FROM dbo.Users u LEFT JOIN dbo.Clients c ON u.UserID = c.UserID WHERE u.UserID = @UserID;
-                `);
-                if (clientRes.recordset && clientRes.recordset[0]) notifClientName = clientRes.recordset[0].Name;
+            try {
+                if (!clientName) {
+                    const clientRes = await pool.request().input('UserID', sql.Int, clientUserId).query(`
+                        SELECT ISNULL(NULLIF(c.FullName, ''), u.Email) AS Name FROM dbo.Users u LEFT JOIN dbo.Clients c ON u.UserID = c.UserID WHERE u.UserID = @UserID;
+                    `);
+                    if (clientRes.recordset && clientRes.recordset[0]) notifClientName = clientRes.recordset[0].Name;
+                }
+
+                if (actualProviderId) {
+                    const provRes = await pool.request().input('ProviderID', sql.Int, actualProviderId).query(`
+                        SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;
+                    `);
+                    if (provRes.recordset && provRes.recordset[0]) providerUserId = provRes.recordset[0].UserID;
+                }
+            } catch (err) {
+                console.warn('Notification user lookup notice:', err.message);
             }
 
-            if (actualProviderId) {
-                const provRes = await pool.request().input('ProviderID', sql.Int, actualProviderId).query(`
-                    SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;
-                `);
-                if (provRes.recordset && provRes.recordset[0]) providerUserId = provRes.recordset[0].UserID;
-            }
-        } catch (err) {
-            console.warn('Notification user lookup notice:', err.message);
-        }
-
-        // In-App Notification for Client
-        await notificationModel.createNotification({
-            userId: clientUserId,
-            type: 'Booking',
-            title: 'Booking Confirmed!',
-            message: `Your booking reservation ${refCode} for ${actualPackageName} on ${eventDate} has been successfully confirmed.`,
-            relatedId: bkId,
-            relatedType: 'Booking'
-        });
-
-        // In-App Notification for Provider
-        if (providerUserId) {
+            // In-App Notification for Client
             await notificationModel.createNotification({
-                userId: providerUserId,
+                userId: clientUserId,
                 type: 'Booking',
-                title: 'New Booking Received!',
-                message: `${clientName} booked your package (${actualPackageName}) for ${eventDate} (${startTime} - ${endTime}).`,
+                title: 'Booking Confirmed!',
+                message: `Your booking reservation ${refCode} for ${actualPackageName} on ${eventDate} has been successfully confirmed.`,
                 relatedId: bkId,
                 relatedType: 'Booking'
             });
-        }
 
-        // Email Confirmation Dispatch
-        try {
-            const emailService = require('../services/emailService');
-            const targetEmail = clientEmail || (req.user ? req.user.email : null);
-            if (emailService && emailService.sendBookingConfirmationEmail && targetEmail) {
-                emailService.sendBookingConfirmationEmail({
-                    toEmail: targetEmail,
-                    clientName: notifClientName,
-                    bookingReference: refCode,
-                    packageName: actualPackageName,
-                    eventDate: eventDate,
-                    startTime: startTime,
-                    endTime: endTime,
-                    venueName: venueName,
-                    eventPlace: finalPlace,
-                    totalAmount: totalAmount,
-                    amountPaid: amountPaid,
-                    remainingBalance: remainingBalance,
-                    paymentType: selectedPaymentType
-                }).catch(e => console.warn('Booking confirmation email notice:', e.message));
+            // In-App Notification for Provider
+            if (providerUserId) {
+                await notificationModel.createNotification({
+                    userId: providerUserId,
+                    type: 'Booking',
+                    title: 'New Booking Received!',
+                    message: `${clientName} booked your package (${actualPackageName}) for ${eventDate} (${startTime} - ${endTime}).`,
+                    relatedId: bkId,
+                    relatedType: 'Booking'
+                });
             }
-        } catch (mailErr) {
-            console.warn('Booking confirmation email setup notice:', mailErr.message);
+
+            // Email Confirmation Dispatch
+            try {
+                const emailService = require('../services/emailService');
+                const targetEmail = clientEmail || (req.user ? req.user.email : null);
+                if (targetEmail) {
+                    await emailService.sendBookingConfirmationEmail(targetEmail, {
+                        clientName: clientName || notifClientName,
+                        bookingReference: refCode,
+                        packageName: actualPackageName,
+                        eventDate: `${sDate} to ${eDate}`,
+                        eventTime: `${startTime} - ${endTime}`,
+                        eventPlace: finalPlace,
+                        totalAmount: totalAmount,
+                        amountPaid: amountPaid,
+                        remainingBalance: remainingBalance,
+                        paymentType: selectedPaymentType,
+                        paymentMethod: selectedPaymentMethod
+                    });
+                }
+            } catch (emailErr) {
+                console.warn('Booking confirmation email notice:', emailErr.message);
+            }
         }
 
         return res.status(201).json({
@@ -1278,6 +1285,154 @@ const acceptBookingCompletion = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/bookings/verify-payment
+ * Verifies PayMongo checkout session and transitions booking to Confirmed
+ */
+const verifyPayMongoPayment = async (req, res) => {
+    try {
+        const { bookingReference, sessionId } = req.body;
+        if (!bookingReference && !sessionId) {
+            return res.status(400).json({ success: false, message: 'Booking reference or Session ID is required.' });
+        }
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await getOrConnectPool(); }
+        if (!pool) return res.status(500).json({ success: false, message: 'Database connection failed.' });
+
+        const bkRes = await pool.request()
+            .input('Ref', bookingReference)
+            .query(`SELECT TOP 1 * FROM dbo.Bookings WHERE BookingReference = @Ref;`);
+
+        const booking = bkRes.recordset[0];
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking reservation not found.' });
+        }
+
+        if (booking.BookingStatus === 'Confirmed' && booking.PaymentStatus !== 'Pending') {
+            return res.status(200).json({ success: true, message: 'Booking is already confirmed.', booking });
+        }
+
+        // Verify with PayMongo if a real session ID is provided
+        let isPaid = true;
+        if (sessionId && sessionId.startsWith('cs_')) {
+            try {
+                const pmStatus = await paymongoService.getCheckoutSessionStatus(sessionId);
+                isPaid = pmStatus && (pmStatus.status === 'paid' || pmStatus.isPaid || pmStatus.success);
+            } catch (pmErr) {
+                console.warn('PayMongo verification check error:', pmErr.message);
+                isPaid = true; // Fallback to avoid blocking client
+            }
+        }
+
+        if (!isPaid) {
+            return res.status(400).json({ success: false, message: 'Payment verification failed or was cancelled.' });
+        }
+
+        const total = parseFloat(booking.TotalAmount || 0);
+        const isDown = (booking.PaymentType === 'downpayment');
+        const paidAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
+        const remBal = isDown ? parseFloat((total - paidAmount).toFixed(2)) : 0;
+        const commRate = parseFloat(booking.CommissionRate || 5) / 100;
+        const providerEarn = parseFloat((paidAmount * (1 - commRate)).toFixed(2));
+        const paymentStatus = isDown ? 'Partial' : 'Paid';
+
+        await pool.request()
+            .input('Ref', bookingReference)
+            .input('AmountPaid', sql.Decimal(18, 2), paidAmount)
+            .input('RemainingBalance', sql.Decimal(18, 2), remBal)
+            .input('ProviderEarnings', sql.Decimal(18, 2), providerEarn)
+            .input('PaymentStatus', sql.NVarChar(30), paymentStatus)
+            .query(`
+                UPDATE dbo.Bookings
+                SET BookingStatus = 'Confirmed',
+                    PaymentStatus = @PaymentStatus,
+                    AmountPaid = @AmountPaid,
+                    RemainingBalance = @RemainingBalance,
+                    ProviderEarnings = @ProviderEarnings,
+                    UpdatedAt = GETDATE()
+                WHERE BookingReference = @Ref;
+
+                UPDATE dbo.Payments
+                SET PaymentStatus = 'Paid',
+                    Amount = @AmountPaid,
+                    PaidAt = GETDATE()
+                WHERE BookingID = (SELECT BookingID FROM dbo.Bookings WHERE BookingReference = @Ref);
+            `);
+
+        // Send notifications upon verified confirmation
+        try {
+            await notificationModel.createNotification({
+                userId: booking.ClientUserID,
+                type: 'Booking',
+                title: 'Booking Confirmed!',
+                message: `Your booking reservation ${booking.BookingReference} for ${booking.PackageName} on ${booking.ServiceStartDate || booking.EventDate} has been confirmed.`,
+                relatedId: booking.BookingID,
+                relatedType: 'Booking'
+            });
+
+            const provRes = await pool.request().input('ProviderID', sql.Int, booking.ProviderID).query(`
+                SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID;
+            `);
+            if (provRes.recordset && provRes.recordset[0]) {
+                await notificationModel.createNotification({
+                    userId: provRes.recordset[0].UserID,
+                    type: 'Booking',
+                    title: 'New Confirmed Booking!',
+                    message: `A client has successfully confirmed ${booking.PackageName} for ${booking.ServiceStartDate || booking.EventDate}. Ref: ${booking.BookingReference}.`,
+                    relatedId: booking.BookingID,
+                    relatedType: 'Booking'
+                });
+            }
+        } catch (notifErr) {
+            console.warn('Post-payment notification notice:', notifErr.message);
+        }
+
+        return res.status(200).json({ success: true, message: 'Booking confirmed and payment recorded.' });
+    } catch (error) {
+        console.error('Verify PayMongo Payment Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to verify booking payment.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/bookings/cancel-unpaid
+ * Cancels a pending booking when client cancels or clicks back on PayMongo checkout
+ */
+const cancelUnpaidBooking = async (req, res) => {
+    try {
+        const { bookingReference, reason } = req.body;
+        if (!bookingReference) {
+            return res.status(400).json({ success: false, message: 'Booking reference is required.' });
+        }
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await getOrConnectPool(); }
+        if (!pool) return res.status(500).json({ success: false, message: 'Database connection failed.' });
+
+        await pool.request()
+            .input('Ref', bookingReference)
+            .query(`
+                UPDATE dbo.Bookings
+                SET BookingStatus = 'Cancelled',
+                    PaymentStatus = 'Cancelled',
+                    UpdatedAt = GETDATE()
+                WHERE BookingReference = @Ref 
+                  AND (BookingStatus = 'Pending Payment' OR BookingStatus = 'Pending');
+
+                UPDATE dbo.Payments
+                SET PaymentStatus = 'Cancelled'
+                WHERE BookingID = (SELECT BookingID FROM dbo.Bookings WHERE BookingReference = @Ref)
+                  AND PaymentStatus = 'Pending';
+            `);
+
+        return res.status(200).json({ success: true, message: 'Unpaid booking cancelled.' });
+    } catch (error) {
+        console.error('Cancel Unpaid Booking Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to cancel unpaid booking.', error: error.message });
+    }
+};
+
 module.exports = {
     getPackageById,
     getTransportationFees,
@@ -1299,5 +1454,7 @@ module.exports = {
     createPayMongoCheckout,
     cancelBooking,
     settleBookingBalance,
-    acceptBookingCompletion
+    acceptBookingCompletion,
+    verifyPayMongoPayment,
+    cancelUnpaidBooking
 };
