@@ -52,20 +52,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Handle PayMongo checkout cancellation (e.g., client clicked Back or Cancel on PayMongo)
+    // Handle PayMongo checkout return / cancellation (client clicked Back or Cancel on PayMongo)
     const bookingUrlParams = new URLSearchParams(window.location.search);
     if (bookingUrlParams.get('cancelled') === '1') {
-        const cancelledRef = bookingUrlParams.get('ref');
-        if (cancelledRef) {
-            fetch('/api/bookings/cancel-unpaid', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bookingReference: cancelledRef, reason: 'Payment cancelled on checkout' })
-            }).catch(() => {});
-        }
+        const pendingRef = bookingUrlParams.get('ref');
         setTimeout(() => {
             if (typeof window.showToast === 'function') {
-                window.showToast('ℹ️ Payment was not completed. Your booking was not confirmed.', 'info');
+                window.showToast(`ℹ️ Payment was not completed. Your booking ${pendingRef ? `(${pendingRef}) ` : ''}is saved as Pending. You can complete your payment at any time under My Bookings.`, 'info');
             }
         }, 500);
     }

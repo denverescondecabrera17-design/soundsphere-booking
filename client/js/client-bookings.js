@@ -421,6 +421,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ` : ''}
 
                 <div class="booking-card-actions">
+                    ${(b.status === 'Pending' || b.status === 'Pending Payment') ? `
+                        <button type="button" class="btn-action-sm btn-continue-payment" onclick="window.continueBookingPayment('${b.id}', ${b.bookingId})" style="background:#2563eb; color:#fff; border:none; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); display:inline-flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-credit-card"></i> Complete Payment
+                        </button>
+                    ` : ''}
                     ${b.status === 'Awaiting Client Confirmation' ? `
                         <button type="button" class="btn-action-sm btn-accept-completion" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.25);">
                             Accept Completion
@@ -703,6 +708,46 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('Accept completion error:', err);
             showToast('Network error while accepting completion.', 'error');
+        }
+    };
+
+    // Global Client Continue / Complete Payment Handler
+    window.continueBookingPayment = async (bookingRef, bookingId) => {
+        try {
+            if (typeof showToast === 'function') {
+                showToast('Connecting to PayMongo checkout...', 'info');
+            }
+            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+                ? SoundSphereAPI.getAuthToken() 
+                : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch('/api/bookings/paymongo/checkout', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    bookingReference: bookingRef,
+                    bookingId: bookingId
+                })
+            });
+            const data = await res.json();
+            if (res.ok && (data.checkoutUrl || data.url)) {
+                window.location.href = data.checkoutUrl || data.url;
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Unable to open checkout session. Please try again.', 'error');
+                } else {
+                    alert(data.message || 'Unable to open checkout session. Please try again.');
+                }
+            }
+        } catch (err) {
+            console.error('Continue booking payment error:', err);
+            if (typeof showToast === 'function') {
+                showToast('Network error while connecting to payment gateway.', 'error');
+            } else {
+                alert('Network error while connecting to payment gateway.');
+            }
         }
     };
 

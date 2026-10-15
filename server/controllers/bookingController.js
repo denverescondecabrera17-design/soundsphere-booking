@@ -834,7 +834,7 @@ const createBooking = async (req, res) => {
             commissionRate: commissionRate,
             commissionAmount: commissionAmount,
             providerEarnings: isOnlinePayment ? 0 : providerEarnings,
-            bookingStatus: isOnlinePayment ? 'Pending Payment' : 'Confirmed',
+            bookingStatus: isOnlinePayment ? 'Pending' : 'Confirmed',
             paymentStatus: isOnlinePayment ? 'Pending' : (selectedPaymentType === 'downpayment' ? 'Partial' : 'Paid')
         };
 
@@ -1121,21 +1121,53 @@ const submitReview = async (req, res) => {
  */
 const createPayMongoCheckout = async (req, res) => {
     try {
-        const { amount, packageName, bookingReference, paymentType, paymentMethod, clientEmail, clientName, clientPhone } = req.body;
+        const { amount, packageName, bookingReference, paymentType, paymentMethod, clientEmail, clientName, clientPhone, bookingId } = req.body;
         const originHost = `${req.protocol}://${req.get('host')}`;
 
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await getOrConnectPool(); }
+
+        let finalRef = bookingReference;
+        let finalAmount = amount;
+        let finalPkgName = packageName;
+        let finalPaymentType = paymentType;
+        let finalClientEmail = clientEmail || (req.user ? req.user.email : '');
+        let finalClientName = clientName || '';
+        let finalClientPhone = clientPhone || (req.user ? req.user.phone : '');
+
+        // If existing booking is specified, pull accurate details from DB
+        if (pool && (bookingId || bookingReference)) {
+            const lookupRes = await pool.request()
+                .input('BID', sql.Int, bookingId ? parseInt(bookingId, 10) : 0)
+                .input('Ref', sql.NVarChar(50), bookingReference || '')
+                .query(`SELECT TOP 1 * FROM dbo.Bookings WHERE BookingID = @BID OR BookingReference = @Ref;`);
+
+            if (lookupRes.recordset && lookupRes.recordset[0]) {
+                const bk = lookupRes.recordset[0];
+                finalRef = bk.BookingReference || finalRef;
+                finalPkgName = bk.PackageName || finalPkgName;
+                finalPaymentType = bk.PaymentType || finalPaymentType;
+                const total = parseFloat(bk.TotalAmount || 0);
+                const isDown = (finalPaymentType === 'downpayment');
+                finalAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
+                if (!finalClientName && bk.ClientName) finalClientName = bk.ClientName;
+                if (!finalClientEmail && bk.ClientEmail) finalClientEmail = bk.ClientEmail;
+                if (!finalClientPhone && bk.ClientPhone) finalClientPhone = bk.ClientPhone;
+            }
+        }
+
         // Ensure official sequential booking reference is used
-        const ref = bookingReference || await bookingModel.generateBookingReference();
+        const ref = finalRef || await bookingModel.generateBookingReference();
 
         const sessionResult = await paymongoService.createCheckoutSession({
-            amount: amount || 0,
-            packageName: packageName || 'SoundSphere Event Package',
+            amount: finalAmount || 0,
+            packageName: finalPkgName || 'SoundSphere Event Package',
             bookingReference: ref,
-            paymentType: paymentType || 'downpayment',
+            paymentType: finalPaymentType || 'downpayment',
             paymentMethod: paymentMethod || 'all',
-            clientEmail: clientEmail || (req.user ? req.user.email : ''),
-            clientName: clientName || '',
-            clientPhone: clientPhone || (req.user ? req.user.phone : ''),
+            clientEmail: finalClientEmail,
+            clientName: finalClientName,
+            clientPhone: finalClientPhone,
             originHost
         });
 

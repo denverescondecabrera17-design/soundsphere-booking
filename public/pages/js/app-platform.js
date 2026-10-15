@@ -957,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         let statusBadgeClass = 'status-confirmed';
-                        if (statusLower === 'pending') statusBadgeClass = 'status-pending';
+                        if (statusLower === 'pending' || statusLower === 'pending payment') statusBadgeClass = 'status-pending';
                         else if (statusLower === 'awaiting client confirmation') statusBadgeClass = 'status-awaiting';
                         else if (statusLower === 'completed') statusBadgeClass = 'status-completed';
                         else if (statusLower === 'cancelled' || statusLower === 'rejected') statusBadgeClass = 'status-cancelled';
@@ -975,6 +975,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             filterStatus = 'confirmed';
                         } else if (['cancelled', 'rejected'].includes(statusLower)) {
                             filterStatus = 'cancelled';
+                        } else if (['pending', 'pending payment'].includes(statusLower)) {
+                            filterStatus = 'pending';
                         }
 
                         let safeProviderAvatar = b.ProviderAvatar;
@@ -1034,11 +1036,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <div style="font-size:1.65rem; font-weight:900; color:#2563eb;">₱${totalAmountVal.toLocaleString()}</div>
                                         
                                         <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                                            ${(statusLower === 'pending' || statusLower === 'pending payment' || amountPaidVal === 0) ? `
+                                            <span style="font-size:0.84rem; font-weight:800; background:#fffbeb; color:#b45309; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #fef3c7;">
+                                                <i class="fa-solid fa-clock" style="margin-right:5px;"></i> Pending Payment (${isDownpayment ? '50% Deposit Due' : 'Full Payment Due'})
+                                            </span>
+                                            ` : `
                                             <span style="font-size:0.84rem; font-weight:800; background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #a7f3d0;">
                                                 Paid: ₱${amountPaidVal.toLocaleString()} (${isDownpayment ? '50% Deposit' : '100% Full'})
                                             </span>
+                                            `}
                                             
-                                            ${remainingBalVal > 0 ? (isOverdue ? `
+                                            ${remainingBalVal > 0 && amountPaidVal > 0 ? (isOverdue ? `
                                             <span style="font-size:0.82rem; font-weight:800; background:#fee2e2; color:#b91c1c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; border:1.5px solid #f87171;">
                                                 <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Overdue: ₱${remainingBalVal.toLocaleString()} (${daysOverdue}d past due)
                                             </span>` : `
@@ -1092,6 +1100,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </button>
                                     ` : (statusLower === 'cancelled' || statusLower === 'rejected') ? `
                                         ${cancelBtnHtml}
+                                    ` : (statusLower === 'pending' || statusLower === 'pending payment') ? `
+                                        <button type="button" class="btn-card-primary" onclick="window.continueBookingPayment('${b.BookingReference || ''}', ${b.BookingID})" style="background:#2563eb; border-color:#2563eb; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; border-radius:10px; box-shadow:0 3px 10px rgba(37,99,235,0.25); display:inline-flex; align-items:center; gap:8px;">
+                                            <i class="fa-solid fa-credit-card"></i> Complete Payment
+                                        </button>
+                                        ${cancelBtnHtml}
+                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
+                                            <i class="fa-solid fa-comments"></i> Chat Provider
+                                        </a>
                                     ` : `
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
@@ -1239,6 +1255,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch (err) {
                             console.error('Accept completion error:', err);
                             showToast('Network error while accepting completion.', 'error');
+                        }
+                    };
+
+                    // Window Continue / Complete Booking Payment Handler
+                    window.continueBookingPayment = async (bookingRef, bookingId) => {
+                        try {
+                            if (typeof showToast === 'function') {
+                                showToast('Connecting to PayMongo checkout...', 'info');
+                            }
+                            const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+                                ? SoundSphereAPI.getAuthToken() 
+                                : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                            const res = await fetch('/api/bookings/paymongo/checkout', {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify({
+                                    bookingReference: bookingRef,
+                                    bookingId: bookingId
+                                })
+                            });
+                            const data = await res.json();
+                            if (res.ok && (data.checkoutUrl || data.url)) {
+                                window.location.href = data.checkoutUrl || data.url;
+                            } else {
+                                if (typeof showToast === 'function') {
+                                    showToast(data.message || 'Unable to open checkout session. Please try again.', 'error');
+                                } else {
+                                    alert(data.message || 'Unable to open checkout session. Please try again.');
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Continue booking payment error:', err);
+                            if (typeof showToast === 'function') {
+                                showToast('Network error while connecting to payment gateway.', 'error');
+                            } else {
+                                alert('Network error while connecting to payment gateway.');
+                            }
                         }
                     };
 
