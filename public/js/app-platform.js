@@ -2032,7 +2032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentWizardStep = step;
 
         // Hide all panels, show current
-        [1, 2, 3, 4].forEach(s => {
+        [1, 2, 3].forEach(s => {
             const panel = document.getElementById(`app-step-${s}`);
             if (panel) {
                 if (s === step) {
@@ -2090,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Next & Submit buttons
-        if (step === 4) {
+        if (step === 3) {
             if (btnNext) {
                 btnNext.classList.add('hidden');
                 btnNext.style.display = 'none';
@@ -2103,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnSubmit.style.cursor = 'pointer';
             }
 
-            // Populate Step 4 Review Summary
+            // Populate Step 3 Review Summary
             const bizName = document.getElementById('app-biz-name')?.value || 'Cabrera Lights & Sound System';
             const ownerFirst = document.getElementById('app-owner-firstname')?.value.trim() || '';
             const ownerMiddle = document.getElementById('app-owner-middlename')?.value.trim() || '';
@@ -2653,12 +2653,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
             } else if (currentWizardStep === 2) {
-                const selectedServices = document.querySelectorAll('.app-service-chk:checked');
-                if (selectedServices.length === 0) {
-                    showToast('⚠ Please select at least one service package.', 'warning');
-                    return;
-                }
-            } else if (currentWizardStep === 3) {
                 const selectedLocations = document.querySelectorAll('.app-location-chk:checked');
                 if (selectedLocations.length === 0) {
                     showToast('⚠ Please select at least one service area location.', 'warning');
@@ -2666,7 +2660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (currentWizardStep < 4) {
+            if (currentWizardStep < 3) {
                 updateWizardUI(currentWizardStep + 1);
             }
         });
@@ -2682,13 +2676,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Edit Jump Buttons in Step 4 Review
+    // Edit Jump Buttons in Step 3 Review
     document.addEventListener('click', (e) => {
         const jumpBtn = e.target.closest('.btn-wizard-jump');
         if (jumpBtn) {
             e.preventDefault();
             const targetStep = parseInt(jumpBtn.getAttribute('data-targetstep'), 10);
-            if (targetStep >= 1 && targetStep <= 3) {
+            if (targetStep >= 1 && targetStep <= 2) {
                 updateWizardUI(targetStep);
             }
         }
@@ -2795,12 +2789,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.isProviderAppSubmitting = false;
                 return;
             }
-            if (selectedServices.length === 0) {
-                showToast('⚠ Please select at least one Service package.', 'warning');
-                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
-                window.isProviderAppSubmitting = false;
-                return;
-            }
+
             if (selectedLocations.length === 0) {
                 showToast('⚠ Please select at least one Service Area location.', 'warning');
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = originalBtnHTML; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; }
@@ -2853,8 +2842,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Artificial short delay for realistic submission UX
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            // Hide step 1-4 panels
-            [1, 2, 3, 4].forEach(s => {
+            // Hide step 1-3 panels
+            [1, 2, 3].forEach(s => {
                 const panel = document.getElementById(`app-step-${s}`);
                 if (panel) panel.classList.add('hidden');
             });

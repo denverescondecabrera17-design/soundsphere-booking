@@ -398,6 +398,19 @@ if (fs.existsSync(srcClientDashboardJs)) {
     });
 }
 
+// 15h. Sync client dashboard.html
+const srcClientDashboardHtml = path.join(__dirname, '../client/client/dashboard.html');
+const clientDashboardHtmlTargets = [
+    path.join(__dirname, '../public/client/dashboard.html')
+];
+if (fs.existsSync(srcClientDashboardHtml)) {
+    const cdHtmlContent = fs.readFileSync(srcClientDashboardHtml, 'utf8');
+    clientDashboardHtmlTargets.forEach(target => {
+        safeWriteFileSync(target, cdHtmlContent);
+        console.log(`Synced client dashboard.html -> ${target}`);
+    });
+}
+
 // 16. Sync Cashier Portal Files
 const cashierSyncList = [
     { src: '../client/cashier/dashboard.html', targets: ['../public/cashier/dashboard.html', '../client/pages/cashier/dashboard.html'] },
