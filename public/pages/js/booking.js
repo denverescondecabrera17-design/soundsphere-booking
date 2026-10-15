@@ -178,22 +178,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.handleBackToCalendarSelection = handleBackToCalendarSelection;
 
-    // Back navigation to Provider Details / previous page
+    // Back navigation to Dashboard or Home
     const handleBookingBackNav = (e) => {
         if (e && e.preventDefault) e.preventDefault();
-        const urlParams = new URLSearchParams(window.location.search);
-        const provId = (packageData && (packageData.ProviderID || packageData.providerId)) 
-            || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') || 1;
-        const pkgId = (packageData && (packageData.PackageID || packageData.id)) 
-            || urlParams.get('package_id') || urlParams.get('packageId') || urlParams.get('pkgId') || 1;
-        
-        if (window.history.length > 1 && document.referrer && !document.referrer.includes('booking.html')) {
-            window.history.back();
-        } else if (provId) {
-            window.location.href = `/provider-detail.html?id=${provId}&packageId=${pkgId}`;
-        } else {
-            window.location.href = '/marketplace.html';
-        }
+        const targetUrl = (typeof window.getDashboardOrHomeUrl === 'function') 
+            ? window.getDashboardOrHomeUrl() 
+            : ((typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser()) ? '/marketplace.html' : '/index.html');
+        window.location.href = targetUrl;
     };
 
     window.handleBookingBackNav = handleBookingBackNav;
@@ -202,8 +193,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnPageBack = document.getElementById('btn-page-back-to-calendar');
     const btnChangeSchedule = document.getElementById('btn-change-selected-schedule');
 
-    if (btnHeaderBack) btnHeaderBack.addEventListener('click', handleBackToCalendarSelection);
-    if (btnPageBack) btnPageBack.addEventListener('click', handleBackToCalendarSelection);
+    if (btnHeaderBack) btnHeaderBack.addEventListener('click', handleBookingBackNav);
+    if (btnPageBack) btnPageBack.addEventListener('click', handleBookingBackNav);
     if (btnChangeSchedule) btnChangeSchedule.addEventListener('click', handleBackToCalendarSelection);
 
     // Auto-populate Logged-In Client Information

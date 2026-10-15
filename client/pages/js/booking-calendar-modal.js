@@ -202,6 +202,38 @@
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+        // Resolve target Dashboard or Home URL based on user role and auth state
+        const getDashboardOrHomeUrl = () => {
+            try {
+                const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+                    ? SoundSphereAPI.getAuthToken() 
+                    : (localStorage.getItem('soundsphere_auth_token') || localStorage.getItem('soundsphere_jwt_token'));
+                const userRaw = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) 
+                    ? SoundSphereAPI.getAuthUser() 
+                    : (() => {
+                        const u = localStorage.getItem('soundsphere_user') || sessionStorage.getItem('soundsphere_user') || localStorage.getItem('soundsphere_user_info');
+                        try { return u ? JSON.parse(u) : null; } catch (e) { return null; }
+                    })();
+
+                if (token && userRaw) {
+                    const role = ((userRaw.role || userRaw.RoleName || userRaw.roleName) || '').toLowerCase();
+                    if (role === 'admin' || role === 'administrator') {
+                        return '/admin/dashboard.html';
+                    } else if (role === 'cashier') {
+                        return '/cashier/dashboard.html';
+                    } else if (role === 'serviceprovider' || role === 'provider') {
+                        return '/provider/dashboard.html';
+                    } else {
+                        return (window.location.pathname || '').includes('/client/') ? '/client/dashboard.html' : '/marketplace.html';
+                    }
+                }
+            } catch (err) {
+                console.error('Error determining dashboard/home URL:', err);
+            }
+            return '/index.html';
+        };
+        window.getDashboardOrHomeUrl = getDashboardOrHomeUrl;
+
         // Handle back button navigation in calendar header
         const handleCalendarBackNavigation = (e) => {
             if (e && e.preventDefault) e.preventDefault();
@@ -209,17 +241,20 @@
             const isBookingPage = path.includes('booking.html') || path.endsWith('/booking');
 
             if (isBookingPage) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const pId = calProviderId || urlParams.get('provider_id') || urlParams.get('providerId') || urlParams.get('id') || 13;
-                const pkgId = calPackageId || urlParams.get('package_id') || urlParams.get('packageId') || urlParams.get('pkgId') || 1;
+                window.location.href = getDashboardOrHomeUrl();
+            } else {
+                window.closeBookingCalendarModal();
+            }
+        };
 
-                if (window.history.length > 1 && document.referrer && !document.referrer.includes('booking.html')) {
-                    window.history.back();
-                } else if (pId) {
-                    window.location.href = `/provider-detail.html?id=${pId}&packageId=${pkgId}`;
-                } else {
-                    window.location.href = '/marketplace.html';
-                }
+        // Handle cancel button in calendar footer
+        const handleCalendarCancelNavigation = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            const path = (window.location.pathname || '').toLowerCase();
+            const isBookingPage = path.includes('booking.html') || path.endsWith('/booking');
+
+            if (isBookingPage) {
+                window.location.href = getDashboardOrHomeUrl();
             } else {
                 window.closeBookingCalendarModal();
             }
@@ -227,13 +262,19 @@
 
         // Bind events
         const closeBtn = document.getElementById('cal-modal-close-btn');
-        if (closeBtn) closeBtn.onclick = window.closeBookingCalendarModal;
+        if (closeBtn) closeBtn.onclick = handleCalendarCancelNavigation;
         const headerBackBtn = document.getElementById('cal-modal-back-btn');
         if (headerBackBtn) headerBackBtn.onclick = handleCalendarBackNavigation;
-        document.getElementById('cal-btn-cancel-action').onclick = window.closeBookingCalendarModal;
+        const cancelActionBtn = document.getElementById('cal-btn-cancel-action');
+        if (cancelActionBtn) cancelActionBtn.onclick = handleCalendarCancelNavigation;
         document.getElementById('modal-booking-calendar').onclick = (e) => {
             if (e.target === document.getElementById('modal-booking-calendar')) {
-                window.closeBookingCalendarModal();
+                const path = (window.location.pathname || '').toLowerCase();
+                if (path.includes('booking.html') || path.endsWith('/booking')) {
+                    window.location.href = getDashboardOrHomeUrl();
+                } else {
+                    window.closeBookingCalendarModal();
+                }
             }
         };
 
