@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             topbarTitle.textContent = 'Provider Subscription Payments';
             loadCashierSubscriptions();
         } else if (cleanHash === 'revenue') {
-            topbarTitle.textContent = 'Platform Revenue & Provider Breakdown';
+            topbarTitle.textContent = 'Revenue';
             loadCashierRevenueReports();
         } else if (cleanHash === 'reports') {
             topbarTitle.textContent = 'Income & Financial Reports';
