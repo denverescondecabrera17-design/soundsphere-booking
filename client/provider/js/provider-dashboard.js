@@ -895,7 +895,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const paymentInfo = typeof getBookingPaymentInfo === 'function' ? getBookingPaymentInfo(b) : null;
             const isPartial = paymentInfo ? paymentInfo.isPartial : (paid > 0 && paid < gross);
-            const remBal = paymentInfo ? paymentInfo.remainingBalance : Math.max(0, gross - paid);
+            const rawRemBal = (paymentInfo && paymentInfo.remBal != null) ? paymentInfo.remBal : Math.max(0, gross - paid);
+            const remBal = (isNaN(parseFloat(rawRemBal)) ? 0 : parseFloat(rawRemBal));
 
             let paymentBadge = '';
             if (paid <= 0) {
