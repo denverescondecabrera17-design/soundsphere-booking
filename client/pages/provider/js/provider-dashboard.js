@@ -1000,16 +1000,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Update KPI Cards
+            // Update 3 KPI Cards: Total Income, Completed Bookings, Total Received (Withdrawal Amount)
+            const completedBookingsCount = validBookings.filter(b => (b.BookingStatus || '').toLowerCase() === 'completed').length;
+
             const elTotalNet = document.getElementById('inc-stat-total-net');
-            const elCollected = document.getElementById('inc-stat-collected');
+            const elCompletedCount = document.getElementById('inc-stat-completed-count');
             const elWithdrawn = document.getElementById('inc-stat-withdrawn');
-            const elAvailable = document.getElementById('inc-stat-available');
 
             if (elTotalNet) elTotalNet.textContent = `₱${totalContractEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (elCollected) elCollected.textContent = `₱${totalCollectedEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elCompletedCount) elCompletedCount.textContent = completedBookingsCount;
             if (elWithdrawn) elWithdrawn.textContent = `₱${totalWithdrawn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (elAvailable) elAvailable.textContent = `₱${availableWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             // Render Bookings Ledger
             currentIncomeBookings = validBookings;
