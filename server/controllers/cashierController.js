@@ -1112,12 +1112,12 @@ const recordCashierSubscriptionPayment = async (req, res) => {
         const targetPlan = (planType || 'monthly').toLowerCase();
         let planName = 'Pro Monthly Plan';
         let durationDays = 30;
-        let finalAmount = parseFloat(amount || 499);
+        let finalAmount = parseFloat(amount || 199);
 
         if (targetPlan === 'yearly' || targetPlan === 'annual') {
             planName = 'Pro Annual Plan';
             durationDays = 365;
-            if (!amount) finalAmount = 4999;
+            if (!amount) finalAmount = 1990;
         }
 
         const sessionRef = referenceNumber ? `CASHIER-${referenceNumber}` : `CASHIER-REC-${Date.now().toString().slice(-6)}`;

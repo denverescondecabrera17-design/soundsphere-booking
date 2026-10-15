@@ -1467,7 +1467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectSubPlan && inputSubAmount) {
         selectSubPlan.addEventListener('change', () => {
             const selectedOpt = selectSubPlan.options[selectSubPlan.selectedIndex];
-            const defaultAmt = selectedOpt ? selectedOpt.getAttribute('data-amount') : '499.00';
+            const defaultAmt = selectedOpt ? selectedOpt.getAttribute('data-amount') : '199.00';
             inputSubAmount.value = defaultAmt;
         });
     }
@@ -1477,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (formRecordSub) formRecordSub.reset();
         if (selectSubPlan && inputSubAmount) {
             selectSubPlan.value = 'monthly';
-            inputSubAmount.value = '499.00';
+            inputSubAmount.value = '199.00';
         }
         modalRecordSub.classList.add('active');
     }
