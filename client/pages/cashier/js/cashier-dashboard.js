@@ -2010,7 +2010,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (handleCashierAuthError(res, data)) return;
 
             if (!data.success) {
-                if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#ef4444;">${data.message || 'Failed to load revenue summary.'}</td></tr>`;
+                if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">${data.message || 'Failed to load revenue summary.'}</td></tr>`;
                 return;
             }
 
@@ -2028,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Render Provider Revenue Summary Table
             if (tableSummary) {
                 if (providers.length === 0) {
-                    tableSummary.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">No service provider revenue records found.</td></tr>`;
+                    tableSummary.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;">No service provider revenue records found.</td></tr>`;
                 } else {
                     tableSummary.innerHTML = providers.map(p => `
                         <tr>
@@ -2036,7 +2036,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <strong style="color:#0a192f; font-size:0.92rem; display:block;">${p.providerName}</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">${p.providerEmail || ''}</span>
                             </td>
-                            <td><span style="font-size:0.82rem; color:#475569;"><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Verified Provider</span></td>
                             <td><strong style="font-size:0.95rem; color:#0a192f;">${formatPHP(p.grossRevenue)}</strong></td>
                             <td><strong style="font-size:0.95rem; color:#10b981;">${formatPHP(p.netEarnings)}</strong></td>
                             <td><strong style="font-size:0.95rem; color:#8b5cf6;">${formatPHP(p.adminCommission)}</strong></td>
@@ -2060,7 +2059,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error('Error loading revenue reports:', err);
-            if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#ef4444;">Failed to load revenue reports.</td></tr>`;
+            if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">Failed to load revenue reports.</td></tr>`;
         }
     }
 
