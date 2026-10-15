@@ -1157,8 +1157,8 @@ const autoSeedDatabase = async (activePool) => {
         }
 
         // 6. Ensure Default Cashier Account Exists
-        const cashierEmail = 'cashier@soundsphere.com';
-        const cashierPasswordHash = await bcrypt.hash('Cashier@123', 10);
+        const cashierEmail = 'soundsphere.cashier@gmail.com';
+        const cashierPasswordHash = await bcrypt.hash('soundsphere@17', 10);
         const cashierRoleRes = await activePool.request().query("SELECT RoleID FROM dbo.Roles WHERE RoleName = 'Cashier'");
         let cashierRoleId = 4;
         if (cashierRoleRes.recordset.length > 0) {
@@ -1170,7 +1170,7 @@ const autoSeedDatabase = async (activePool) => {
 
         const cashierCheck = await activePool.request()
             .input('Email', sql.NVarChar(255), cashierEmail)
-            .query("SELECT UserID FROM dbo.Users WHERE Email = @Email");
+            .query("SELECT UserID FROM dbo.Users WHERE Email = @Email OR Email = 'cashier@soundsphere.com'");
 
         if (cashierCheck.recordset.length === 0) {
             const insertCashierRes = await activePool.request()
@@ -1199,16 +1199,17 @@ const autoSeedDatabase = async (activePool) => {
                         VALUES (@UserID, @FirstName, @LastName);
                     END
                 `);
-            console.log(' Cashier account created: cashier@soundsphere.com');
+            console.log(' Cashier account created: soundsphere.cashier@gmail.com');
         } else {
-            // Ensure password and role are active
+            // Ensure email, password, and role are active
             const cashierUserId = cashierCheck.recordset[0].UserID;
             await activePool.request()
                 .input('UserID', sql.Int, cashierUserId)
                 .input('RoleID', sql.Int, cashierRoleId)
+                .input('Email', sql.NVarChar(255), cashierEmail)
                 .input('PasswordHash', sql.NVarChar(255), cashierPasswordHash)
-                .query("UPDATE dbo.Users SET RoleID = @RoleID, PasswordHash = @PasswordHash, EmailVerified = 1, IsActive = 1, AccountStatus = 'Active' WHERE UserID = @UserID");
-            console.log(' Cashier account credentials updated: cashier@soundsphere.com');
+                .query("UPDATE dbo.Users SET RoleID = @RoleID, Email = @Email, PasswordHash = @PasswordHash, EmailVerified = 1, IsActive = 1, AccountStatus = 'Active' WHERE UserID = @UserID");
+            console.log(' Cashier account credentials updated: soundsphere.cashier@gmail.com');
         }
     } catch (err) {
         console.warn(' Auto-seed check notice:', err.message);

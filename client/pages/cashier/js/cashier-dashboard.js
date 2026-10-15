@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!token || !userRoleClean || !allowedRoles.includes(userRoleClean)) {
         console.warn(`Access Restricted. Current Role: '${userRoleRaw}'. Redirecting to Cashier Sign In...`);
         if (token && userRoleClean && !allowedRoles.includes(userRoleClean)) {
-            alert(`Cashier Portal Access Restricted:\n\nYou are currently signed in with a '${userRoleRaw}' account.\nThe Cashier Financial Desk requires a Cashier or Admin staff account.\n\nPlease log in with your Cashier credentials:\n• Email: cashier@soundsphere.com\n• Password: Cashier@123`);
+            alert(`Cashier Portal Access Restricted:\n\nYou are currently signed in with a '${userRoleRaw}' account.\nThe Cashier Financial Desk requires a Cashier or Admin staff account.\n\nPlease log in with your Cashier credentials:\n• Email: soundsphere.cashier@gmail.com\n• Password: soundsphere@17`);
         }
         clearCashierSession();
         window.location.href = '/login.html?redirect=/cashier/dashboard.html';
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCashierAuthError(res, data) {
         if (res.status === 401 || res.status === 403) {
             console.warn('Cashier authentication error:', data?.message);
-            alert(`Session Expired or Unauthorized:\n\n${data?.message || 'Access restricted to Cashier and Administrator accounts.'}\n\nPlease sign in with your Cashier account (cashier@soundsphere.com).`);
+            alert(`Session Expired or Unauthorized:\n\n${data?.message || 'Access restricted to Cashier and Administrator accounts.'}\n\nPlease sign in with your Cashier account (soundsphere.cashier@gmail.com).`);
             clearCashierSession();
             window.location.href = '/login.html?redirect=/cashier/dashboard.html';
             return true;

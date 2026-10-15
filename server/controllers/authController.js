@@ -276,7 +276,7 @@ const login = async (req, res) => {
         }
 
         let cleanEmail = (email || '').trim().toLowerCase();
-        if (cleanEmail === 'cashier' || cleanEmail === 'cahier' || cleanEmail === 'cahier@soundsphere.com') cleanEmail = 'cashier@soundsphere.com';
+        if (cleanEmail === 'cashier' || cleanEmail === 'cahier' || cleanEmail === 'cahier@soundsphere.com' || cleanEmail === 'cashier@soundsphere.com') cleanEmail = 'soundsphere.cashier@gmail.com';
         if (cleanEmail === 'admin' || cleanEmail === 'administrator') cleanEmail = 'soundsphere@gmail.com';
         if (cleanEmail === 'client') cleanEmail = 'client@soundsphere.com';
         if (cleanEmail === 'provider') cleanEmail = 'provider@soundsphere.com';
@@ -286,6 +286,9 @@ const login = async (req, res) => {
         let user = null;
         try {
             user = await userModel.findUserByEmail(cleanEmail);
+            if (!user && cleanEmail === 'soundsphere.cashier@gmail.com') {
+                user = await userModel.findUserByEmail('cashier@soundsphere.com');
+            }
         } catch (dbErr) {
             console.warn('DB lookup failed during login:', dbErr.message);
         }
@@ -305,12 +308,12 @@ const login = async (req, res) => {
                     AccountStatus: 'Active',
                     AdminFullName: 'SoundSphere Administrator'
                 };
-            } else if (cleanEmail === 'cashier@soundsphere.com' && (password === 'Cashier@123' || password.toLowerCase() === 'cashier@123' || password.toLowerCase() === 'cashier123' || password.toLowerCase() === 'cashier')) {
+            } else if ((cleanEmail === 'soundsphere.cashier@gmail.com' || cleanEmail === 'cashier@soundsphere.com') && (password === 'soundsphere@17' || password.toLowerCase() === 'soundsphere@17' || password === 'Cashier@123' || password.toLowerCase() === 'cashier@123' || password.toLowerCase() === 'cashier')) {
                 user = {
                     UserID: 35,
                     RoleID: 4,
                     RoleName: 'Cashier',
-                    Email: 'cashier@soundsphere.com',
+                    Email: 'soundsphere.cashier@gmail.com',
                     PasswordHash: '',
                     Phone: '09191234567',
                     EmailVerified: 1,
@@ -415,12 +418,12 @@ const login = async (req, res) => {
             isPasswordValid = true;
         }
 
-        // 2. Cashier credentials fallback (support Cashier@123, cashier@123, Cashier123, cashier123, cashier, trim issues, admin pass)
+        // 2. Cashier credentials fallback (support soundsphere@17, Cashier@123, cashier@123, etc.)
         console.log(`[CASHIER DEBUG] password received: "${password}" (length: ${password ? password.length : 0})`);
         const cleanPassword = (password || '').trim();
-        if (!isPasswordValid && (userEmailLower === 'cashier@soundsphere.com' || cleanEmail === 'cashier@soundsphere.com')) {
+        if (!isPasswordValid && (userEmailLower === 'soundsphere.cashier@gmail.com' || cleanEmail === 'soundsphere.cashier@gmail.com' || userEmailLower === 'cashier@soundsphere.com' || cleanEmail === 'cashier@soundsphere.com')) {
             const pLower = cleanPassword.toLowerCase();
-            if (pLower.includes('cashier') || cleanPassword === 'Cashier@123' || cleanPassword === 'soundsphere@041704' || cleanPassword === '12345678' || cleanPassword === 'admin') {
+            if (cleanPassword === 'soundsphere@17' || pLower === 'soundsphere@17' || pLower.includes('cashier') || cleanPassword === 'Cashier@123' || cleanPassword === 'soundsphere@041704' || cleanPassword === '12345678' || cleanPassword === 'admin') {
                 isPasswordValid = true;
             }
         }
