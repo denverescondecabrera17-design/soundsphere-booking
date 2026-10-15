@@ -1039,6 +1039,407 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ------------------------------------------------------------------------
+    // Export Income Report to Excel (.csv) & PDF
+    // ------------------------------------------------------------------------
+    const exportIncomeToExcel = () => {
+        const searchInput = document.getElementById('input-income-ledger-search');
+        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+        const listToExport = currentIncomeBookings.filter(b => {
+            if (!q) return true;
+            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
+            const client = (b.ClientName || '').toLowerCase();
+            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
+            const evtType = (b.EventType || '').toLowerCase();
+            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
+        });
+
+        if (!listToExport || listToExport.length === 0) {
+            showToast('No booking income records to export.', 'error');
+            return;
+        }
+
+        let printedByName = '';
+        if (currentProviderProfile) {
+            printedByName = currentProviderProfile.ownerName || currentProviderProfile.businessName || '';
+            if (currentProviderProfile.ownerName && currentProviderProfile.businessName && currentProviderProfile.ownerName !== currentProviderProfile.businessName) {
+                printedByName = `${currentProviderProfile.ownerName} (${currentProviderProfile.businessName})`;
+            }
+        }
+        if (!printedByName && user) {
+            printedByName = `${user.FirstName || ''} ${user.LastName || ''}`.trim() || user.Email || '';
+        }
+        if (!printedByName) printedByName = 'Service Provider';
+
+        const printDate = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const escapeCsv = (str) => {
+            const s = String(str ?? '');
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return `"${s.replace(/"/g, '""')}"`;
+            }
+            return s;
+        };
+
+        let totalIncome = 0;
+        const dataRows = listToExport.map(b => {
+            const bRef = b.BookingReference || `#BK-${b.BookingID}`;
+            const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const netEarnings = parseFloat((paid > 0 ? paid * (1 - commRate) : 0).toFixed(2));
+            totalIncome += netEarnings;
+            return [escapeCsv(bRef), netEarnings.toFixed(2)];
+        });
+
+        const csvRows = [
+            ['SOUNDSPHERE - PROVIDER INCOME REPORT'],
+            ['Printed By:', escapeCsv(printedByName)],
+            ['Date:', escapeCsv(printDate)],
+            [],
+            ['Booking Reference', 'Provider Income (PHP)'],
+            ...dataRows,
+            ['Total', totalIncome.toFixed(2)]
+        ];
+
+        const csvString = '\uFEFF' + csvRows.map(r => r.join(',')).join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const todayStr = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `Provider_Income_Report_${todayStr}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('✓ Income Report exported to Excel (.csv) successfully!', 'success');
+    };
+
+    const exportIncomeToPDF = () => {
+        const searchInput = document.getElementById('input-income-ledger-search');
+        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+        const listToExport = currentIncomeBookings.filter(b => {
+            if (!q) return true;
+            const ref = `bk-${b.BookingID} ${b.BookingReference || ''}`.toLowerCase();
+            const client = (b.ClientName || '').toLowerCase();
+            const pkg = (b.PackageName || b.EventName || '').toLowerCase();
+            const evtType = (b.EventType || '').toLowerCase();
+            return ref.includes(q) || client.includes(q) || pkg.includes(q) || evtType.includes(q);
+        });
+
+        if (!listToExport || listToExport.length === 0) {
+            showToast('No booking income records to print or export.', 'error');
+            return;
+        }
+
+        let printedByName = '';
+        let businessName = '';
+        if (currentProviderProfile) {
+            businessName = currentProviderProfile.businessName || '';
+            printedByName = currentProviderProfile.ownerName || currentProviderProfile.businessName || '';
+            if (currentProviderProfile.ownerName && currentProviderProfile.businessName && currentProviderProfile.ownerName !== currentProviderProfile.businessName) {
+                printedByName = `${currentProviderProfile.ownerName} (${currentProviderProfile.businessName})`;
+            }
+        }
+        if (!printedByName && user) {
+            printedByName = `${user.FirstName || ''} ${user.LastName || ''}`.trim() || user.Email || '';
+        }
+        if (!printedByName) printedByName = 'Service Provider';
+
+        const printDate = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        let totalGross = 0;
+        let totalPaid = 0;
+        let totalIncome = 0;
+        let completedCount = 0;
+
+        const tableRowsHtml = listToExport.map(b => {
+            const bRef = b.BookingReference || `#BK-${b.BookingID}`;
+            const clientName = b.ClientName || 'Client Account';
+            const pkgName = b.PackageName || b.EventName || 'Event Service Package';
+            const eventDate = typeof formatEventDisplayDate === 'function' ? formatEventDisplayDate(b.ServiceStartDate || b.EventDate) : (b.ServiceStartDate || b.EventDate || '-');
+
+            const gross = parseFloat(b.TotalAmount || 0);
+            const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const netEarnings = parseFloat((paid > 0 ? paid * (1 - commRate) : 0).toFixed(2));
+
+            totalGross += gross;
+            totalPaid += paid;
+            totalIncome += netEarnings;
+            if ((b.BookingStatus || '').toLowerCase() === 'completed') completedCount++;
+
+            const status = b.BookingStatus || 'Confirmed';
+
+            return `
+                <tr>
+                    <td style="padding:8px 10px; font-weight:700; font-family:monospace; border-bottom:1px solid #e2e8f0;">${bRef}</td>
+                    <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">
+                        <strong>${clientName}</strong><br>
+                        <span style="font-size:8pt; color:#2563eb;">${pkgName}</span>
+                    </td>
+                    <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-size:8.5pt;">${eventDate}</td>
+                    <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">₱${gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">₱${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:800; color:#059669; border-bottom:1px solid #e2e8f0;">₱${netEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0; font-size:8.5pt;">${status}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const printableHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SoundSphere - Provider Income Report</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0a192f;
+            background: #ffffff;
+            margin: 0;
+            padding: 15px;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0a192f;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .brand {
+            font-size: 16pt;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #0a192f;
+        }
+        .subbrand {
+            font-size: 8.5pt;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .meta-box {
+            text-align: right;
+            font-size: 8.5pt;
+            color: #334155;
+            line-height: 1.5;
+        }
+        .report-title {
+            font-size: 13pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0a192f;
+            margin: 12px 0 4px 0;
+        }
+        .report-subtitle {
+            font-size: 8.5pt;
+            color: #64748b;
+            margin-bottom: 14px;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .kpi-card {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 10px 14px;
+        }
+        .kpi-label {
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .kpi-value {
+            font-size: 13pt;
+            font-weight: 800;
+            color: #0a192f;
+            margin-top: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 10px;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 2px solid #cbd5e1;
+            text-align: left;
+        }
+        th.text-right { text-align: right; }
+        th.text-center { text-align: center; }
+        .total-row td {
+            background: #f8fafc;
+            border-top: 2px solid #0a192f;
+            border-bottom: 2px solid #0a192f;
+            font-weight: 800;
+            padding: 10px;
+        }
+        .footer-sig {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            page-break-inside: avoid;
+        }
+        .sig-block {
+            width: 240px;
+            border-top: 1px solid #94a3b8;
+            padding-top: 6px;
+            text-align: center;
+            font-size: 8.5pt;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="brand">SOUNDSPHERE</div>
+            <div class="subbrand">Lights & Sounds Service Provider Platform</div>
+            ${businessName ? `<div style="font-size:9.5pt; font-weight:700; color:#2563eb; margin-top:4px;">${businessName}</div>` : ''}
+        </div>
+        <div class="meta-box">
+            <div><strong>Printed By:</strong> ${printedByName}</div>
+            <div><strong>Date & Time:</strong> ${printDate}</div>
+            <div><strong>Total Records:</strong> ${listToExport.length} Bookings</div>
+        </div>
+    </div>
+
+    <div class="report-title">Provider Income Statement & Earnings Report</div>
+    <div class="report-subtitle">Official verified financial breakdown for completed and confirmed client bookings.</div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card" style="border-left: 4px solid #10b981;">
+            <div class="kpi-label">Total Provider Income</div>
+            <div class="kpi-value" style="color:#059669;">₱${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #2563eb;">
+            <div class="kpi-label">Completed Bookings</div>
+            <div class="kpi-value" style="color:#2563eb;">${completedCount}</div>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #7c3aed;">
+            <div class="kpi-label">Total Amount Paid by Clients</div>
+            <div class="kpi-value" style="color:#7c3aed;">₱${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Booking Ref</th>
+                <th>Client & Event</th>
+                <th>Event Date</th>
+                <th class="text-right">Gross Amount</th>
+                <th class="text-right">Amount Paid</th>
+                <th class="text-right">Provider Income</th>
+                <th class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${tableRowsHtml}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="5" style="text-align:right; font-size:9pt; text-transform:uppercase; letter-spacing:0.5px;">Total Provider Income:</td>
+                <td style="text-align:right; font-size:10.5pt; font-weight:900; color:#059669;">₱${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer-sig">
+        <div>
+            <div style="font-size:7.5pt; color:#94a3b8; text-transform:uppercase;">System Verification</div>
+            <div style="font-size:8pt; color:#64748b; margin-top:2px;">Generated via SoundSphere Provider Portal</div>
+        </div>
+        <div>
+            <div class="sig-block">
+                <strong>${printedByName}</strong><br>
+                <span style="font-size:7.5pt; color:#64748b;">Printed By / Authorized Provider</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const printIframe = document.createElement('iframe');
+        printIframe.style.position = 'fixed';
+        printIframe.style.right = '0';
+        printIframe.style.bottom = '0';
+        printIframe.style.width = '0';
+        printIframe.style.height = '0';
+        printIframe.style.border = '0';
+        document.body.appendChild(printIframe);
+
+        const frameDoc = printIframe.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(printableHtml);
+        frameDoc.close();
+
+        printIframe.contentWindow.focus();
+        setTimeout(() => {
+            printIframe.contentWindow.print();
+            setTimeout(() => {
+                if (printIframe.parentNode) printIframe.parentNode.removeChild(printIframe);
+            }, 1000);
+        }, 350);
+
+        showToast('✓ Opening print dialog — select "Save as PDF" to download PDF.', 'info');
+    };
+
+    const btnExportExcel = document.getElementById('btn-export-income-excel');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', exportIncomeToExcel);
+    }
+
+    const btnExportPDF = document.getElementById('btn-export-income-pdf');
+    if (btnExportPDF) {
+        btnExportPDF.addEventListener('click', exportIncomeToPDF);
+    }
+
+    // ------------------------------------------------------------------------
     // Booking Withdrawal Request Modal Logic
     // ------------------------------------------------------------------------
     window.openBookingWithdrawalModal = (bookingId, totalAmount, bookingRef) => {
