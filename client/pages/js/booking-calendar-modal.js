@@ -9,7 +9,8 @@
     // State
     let calCurrentMonth = new Date().getMonth();
     let calCurrentYear = new Date().getFullYear();
-    let calSelectedDate = null; // YYYY-MM-DD
+    let calSelectedStartDate = null; // YYYY-MM-DD
+    let calSelectedEndDate = null; // YYYY-MM-DD
     let calSelectedSlot = 'Full day';
     let calSelectedStartTime = '08:00';
     let calSelectedEndTime = '22:00';
@@ -51,7 +52,7 @@
                         </button>
                         <div class="cal-modal-header-titles">
                             <h2>Select Date & Time</h2>
-                            <p>Choose your preferred appointment date and available hourly slot.</p>
+                            <p>Choose your preferred appointment date or consecutive date range (continuous with no gaps).</p>
                         </div>
                     </div>
                     <div class="cal-modal-header-right">
@@ -92,7 +93,7 @@
                                 </button>
                                 <div class="cal-month-title-wrap">
                                     <h3 class="cal-month-title" id="cal-month-year-display">October 2026</h3>
-                                    <div class="cal-month-subtitle">Select an available date</div>
+                                    <div class="cal-month-subtitle" id="cal-month-subtitle-display">Select an available date or consecutive days</div>
                                 </div>
                                 <button type="button" class="cal-nav-btn" id="cal-btn-next" title="Next Month">
                                     <i class="fa-solid fa-chevron-right"></i>
@@ -109,11 +110,21 @@
                                 <!-- Injected dynamically -->
                             </div>
 
+                            <!-- Consecutive Booking Rule Hint & Conflict Alert -->
+                            <div id="cal-range-alert-box" style="display:none; background:#fff1f2; border:1.5px solid #fecdd3; border-radius:10px; padding:10px 14px; margin-bottom:12px; color:#be123c; font-size:0.82rem; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-triangle-exclamation" style="font-size:1.1rem; color:#e11d48; flex-shrink:0;"></i>
+                                <span id="cal-range-alert-text" style="flex:1; font-weight:600; line-height:1.4;"></span>
+                                <button type="button" id="cal-range-alert-close" style="background:none; border:none; color:#be123c; cursor:pointer; font-size:1.1rem; padding:0 4px; font-weight:bold;" title="Dismiss">&times;</button>
+                            </div>
+
                             <!-- Legend -->
                             <div class="cal-legend-row">
                                 <div class="cal-legend-items">
                                     <div class="cal-legend-item">
                                         <span class="cal-legend-dot available"></span> Available
+                                    </div>
+                                    <div class="cal-legend-item">
+                                        <span class="cal-legend-dot in-range"></span> In Range
                                     </div>
                                     <div class="cal-legend-item">
                                         <span class="cal-legend-dot unavailable"></span> Unavailable
@@ -132,7 +143,10 @@
                         <!-- Right: Select Time & Summary -->
                         <div class="cal-right-box">
                             <div>
-                                <h3 class="cal-selected-day-header" id="cal-selected-header-date">Fri, October 23, 2026</h3>
+                                <h3 class="cal-selected-day-header" id="cal-selected-header-date" style="margin-bottom: 6px;">Fri, October 23, 2026</h3>
+                                <div id="cal-consecutive-badge-container" style="display:none; margin-bottom: 14px;">
+                                    <!-- Injected dynamically: badge and reset button -->
+                                </div>
                                 
                                 <!-- Custom Time Picker Controls (Select Time - Start Time Only) -->
                                 <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time</div>
@@ -221,6 +235,11 @@
             }
         };
 
+        const alertCloseBtn = document.getElementById('cal-range-alert-close');
+        if (alertCloseBtn) {
+            alertCloseBtn.onclick = clearCalendarAlert;
+        }
+
         document.getElementById('cal-btn-prev').onclick = () => {
             changeMonth(-1);
         };
@@ -265,10 +284,87 @@
     function formatPrettyDate(dateStr) {
         if (!dateStr) return 'Select Date';
         const parts = dateStr.split('-');
-        const d = new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2]);
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
         const dayName = DAY_NAMES[d.getDay()];
         const monthName = MONTH_NAMES[d.getMonth()];
         return `${dayName}, ${monthName} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    // Format Short Date: "Wed, Oct 28"
+    function formatShortPrettyDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const dayName = DAY_NAMES[d.getDay()];
+        const monthShort = MONTH_NAMES[d.getMonth()].slice(0, 3);
+        return `${dayName}, ${monthShort} ${d.getDate()}`;
+    }
+
+    // Generate list of all consecutive dates between start and end (inclusive)
+    function getDatesInRange(startDateIso, endDateIso) {
+        if (!startDateIso || !endDateIso) return [];
+        const [sY, sM, sD] = startDateIso.split('-').map(Number);
+        const [eY, eM, eD] = endDateIso.split('-').map(Number);
+        let cur = new Date(sY, sM - 1, sD);
+        const end = new Date(eY, eM - 1, eD);
+        const list = [];
+        while (cur <= end) {
+            list.push(formatDateIso(cur.getFullYear(), cur.getMonth(), cur.getDate()));
+            cur.setDate(cur.getDate() + 1);
+        }
+        return list;
+    }
+
+    // Check if consecutive range is continuous with no gaps or booked dates
+    function checkRangeAvailability(startDateIso, endDateIso) {
+        if (!startDateIso || !endDateIso) {
+            return { available: false, message: 'Please select valid dates.' };
+        }
+        if (endDateIso < startDateIso) {
+            return { available: false, message: 'End date cannot be earlier than start date.' };
+        }
+
+        const dates = getDatesInRange(startDateIso, endDateIso);
+        if (dates.length === 0) {
+            return { available: false, message: 'No dates in range.' };
+        }
+
+        // Validate each date in the range: must be continuous with no gaps
+        for (let i = 0; i < dates.length; i++) {
+            const dIso = dates[i];
+            if (isDateBooked(dIso)) {
+                const pretty = formatPrettyDate(dIso);
+                return {
+                    available: false,
+                    blockedDate: dIso,
+                    message: `Bookings must be continuous with no gaps between dates. Date ${pretty} is already booked or unavailable.`
+                };
+            }
+        }
+
+        return {
+            available: true,
+            dates,
+            count: dates.length
+        };
+    }
+
+    // Show alert banner on calendar modal
+    function showCalendarAlert(message) {
+        const box = document.getElementById('cal-range-alert-box');
+        const text = document.getElementById('cal-range-alert-text');
+        if (box && text) {
+            text.textContent = message;
+            box.style.display = 'flex';
+        }
+    }
+
+    // Clear alert banner
+    function clearCalendarAlert() {
+        const box = document.getElementById('cal-range-alert-box');
+        if (box) {
+            box.style.display = 'none';
+        }
     }
 
     // Fetch availability for provider
@@ -340,6 +436,88 @@
         renderCalendarGrid();
     }
 
+    // Handle Date Cell Click (Consecutive Booking with No Gaps)
+    function handleDateCellClick(clickedIso) {
+        if (isDateBooked(clickedIso)) return;
+
+        // Case 1: No date selected yet, or clicking earlier than current start date
+        if (!calSelectedStartDate || clickedIso < calSelectedStartDate) {
+            calSelectedStartDate = clickedIso;
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        // Case 2: Currently 1 day selected (start === end)
+        if (calSelectedStartDate === calSelectedEndDate) {
+            if (clickedIso === calSelectedStartDate) {
+                // Clicked same date again: remains 1 day
+                return;
+            }
+
+            // Clicked a later date: validate that all intermediate dates are continuous and available
+            const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
+            if (!check.available) {
+                showCalendarAlert(check.message);
+                return;
+            }
+
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        // Case 3: Multi-day range already selected (start < end)
+        if (clickedIso === calSelectedStartDate) {
+            // Clicked start date: collapse range back to 1 day
+            calSelectedEndDate = calSelectedStartDate;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        if (clickedIso === calSelectedEndDate) {
+            // Clicked end date: collapse range back to 1 day at end date
+            calSelectedStartDate = calSelectedEndDate;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        if (clickedIso > calSelectedStartDate && clickedIso < calSelectedEndDate) {
+            // Clicked inside existing range: shorten range to this date
+            const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
+            if (check.available) {
+                calSelectedEndDate = clickedIso;
+                clearCalendarAlert();
+                renderCalendarGrid();
+                updateSelectedSummaryDisplay();
+                return;
+            }
+        }
+
+        if (clickedIso > calSelectedEndDate) {
+            // Extend the continuous range further
+            const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
+            if (check.available) {
+                calSelectedEndDate = clickedIso;
+                clearCalendarAlert();
+                renderCalendarGrid();
+                updateSelectedSummaryDisplay();
+                return;
+            } else {
+                showCalendarAlert(check.message);
+                return;
+            }
+        }
+    }
+
     // Render Calendar Grid
     function renderCalendarGrid() {
         const monthTitle = document.getElementById('cal-month-year-display');
@@ -386,6 +564,8 @@
             grid.appendChild(blank);
         }
 
+        const isMultiDay = calSelectedStartDate && calSelectedEndDate && (calSelectedStartDate < calSelectedEndDate);
+
         // Add day cells
         for (let d = 1; d <= totalDaysInMonth; d++) {
             const cellDateIso = formatDateIso(calCurrentYear, calCurrentMonth, d);
@@ -397,7 +577,6 @@
             const isPast = (cellDateIso < todayIso);
             const isToday = (cellDateIso === todayIso);
             const isBooked = isDateBooked(cellDateIso);
-            const isSelected = (calSelectedDate === cellDateIso);
 
             if (isToday) {
                 cell.classList.add('today-marker');
@@ -429,19 +608,32 @@
                 cell.title = 'Date is already booked by another client';
             } else {
                 cell.classList.add('available');
-                cell.title = 'Available for booking';
+                cell.title = isMultiDay ? 'Click to adjust consecutive date range' : 'Available for booking (Click to select)';
 
                 // Click listener for available dates
                 cell.onclick = () => {
-                    calSelectedDate = cellDateIso;
-                    document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
-                    cell.classList.add('selected');
-                    updateSelectedSummaryDisplay();
+                    handleDateCellClick(cellDateIso);
                 };
             }
 
-            if (isSelected) {
-                cell.classList.add('selected');
+            // Apply Selection / Range highlighting
+            if (calSelectedStartDate) {
+                if (!isMultiDay) {
+                    if (cellDateIso === calSelectedStartDate) {
+                        cell.classList.add('selected');
+                    }
+                } else {
+                    if (cellDateIso === calSelectedStartDate) {
+                        cell.classList.add('selected', 'selected-range-start');
+                        cell.title = 'Booking Start Date';
+                    } else if (cellDateIso === calSelectedEndDate) {
+                        cell.classList.add('selected', 'selected-range-end');
+                        cell.title = 'Booking End Date';
+                    } else if (cellDateIso > calSelectedStartDate && cellDateIso < calSelectedEndDate) {
+                        cell.classList.add('selected-range-mid');
+                        cell.title = 'Included in continuous booking';
+                    }
+                }
             }
 
             grid.appendChild(cell);
@@ -453,13 +645,16 @@
     // Update the Right Summary Box
     function updateSelectedSummaryDisplay() {
         const headerDate = document.getElementById('cal-selected-header-date');
+        const badgeContainer = document.getElementById('cal-consecutive-badge-container');
         const summaryDateText = document.getElementById('cal-summary-date-text');
         const summaryTimeText = document.getElementById('cal-summary-time-text');
         const summaryPackageNote = document.getElementById('cal-summary-package-note');
         const confirmBtn = document.getElementById('cal-btn-confirm-action');
+        const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
 
         if (calIsSubscriptionInactive) {
             if (headerDate) headerDate.innerHTML = '<span style="color:#d97706;"><i class="fa-solid fa-lock"></i> Calendar Locked</span>';
+            if (badgeContainer) badgeContainer.style.display = 'none';
             if (summaryDateText) summaryDateText.textContent = 'Unavailable (Subscription Required)';
             if (summaryTimeText) summaryTimeText.textContent = 'Bookings Disabled';
             if (confirmBtn) {
@@ -473,6 +668,7 @@
 
         if (calIsPermitExpired) {
             if (headerDate) headerDate.innerHTML = '<span style="color:#dc2626;"><i class="fa-solid fa-lock"></i> Calendar Locked</span>';
+            if (badgeContainer) badgeContainer.style.display = 'none';
             if (summaryDateText) summaryDateText.textContent = 'Unavailable (Permit Expired)';
             if (summaryTimeText) summaryTimeText.textContent = 'Bookings Disabled';
             if (confirmBtn) {
@@ -484,23 +680,72 @@
             return;
         }
 
-        if (!calSelectedDate) {
+        if (!calSelectedStartDate) {
             if (headerDate) headerDate.textContent = 'Select an available date';
+            if (badgeContainer) badgeContainer.style.display = 'none';
             if (summaryDateText) summaryDateText.textContent = 'No date selected';
             if (summaryTimeText) summaryTimeText.textContent = 'Select a date and time';
             if (confirmBtn) confirmBtn.disabled = true;
             return;
         }
 
-        const pretty = formatPrettyDate(calSelectedDate);
-        if (headerDate) headerDate.textContent = pretty;
-        if (summaryDateText) summaryDateText.textContent = pretty;
+        const isMultiDay = calSelectedEndDate && (calSelectedStartDate < calSelectedEndDate);
+        const dates = getDatesInRange(calSelectedStartDate, calSelectedEndDate || calSelectedStartDate);
+        const dayCount = dates.length;
+
+        if (!isMultiDay) {
+            // Single Day
+            const pretty = formatPrettyDate(calSelectedStartDate);
+            if (headerDate) headerDate.textContent = pretty;
+            if (badgeContainer) badgeContainer.style.display = 'none';
+            if (summaryDateText) summaryDateText.textContent = `${pretty} (1 Day)`;
+            if (subtitleDisplay) subtitleDisplay.textContent = 'Click another date to book consecutive days (continuous with no gaps)';
+        } else {
+            // Multi-Day Consecutive Range
+            const startPrettyShort = formatShortPrettyDate(calSelectedStartDate);
+            const endPretty = formatPrettyDate(calSelectedEndDate);
+            if (headerDate) headerDate.textContent = `${startPrettyShort} – ${endPretty}`;
+            
+            if (badgeContainer) {
+                badgeContainer.style.display = 'flex';
+                badgeContainer.style.alignItems = 'center';
+                badgeContainer.style.gap = '8px';
+                badgeContainer.style.flexWrap = 'wrap';
+                badgeContainer.innerHTML = `
+                    <span class="cal-days-count-badge">
+                        <i class="fa-solid fa-link"></i> ${dayCount} Consecutive Days (Continuous)
+                    </span>
+                    <button type="button" class="cal-btn-reset-days" id="cal-btn-reset-range-action" title="Reset to single day booking">
+                        <i class="fa-solid fa-rotate-left"></i> Reset to 1 Day
+                    </button>
+                `;
+
+                const resetBtn = document.getElementById('cal-btn-reset-range-action');
+                if (resetBtn) {
+                    resetBtn.onclick = () => {
+                        calSelectedEndDate = calSelectedStartDate;
+                        clearCalendarAlert();
+                        renderCalendarGrid();
+                        updateSelectedSummaryDisplay();
+                    };
+                }
+            }
+
+            if (summaryDateText) summaryDateText.textContent = `${startPrettyShort} – ${endPretty} (${dayCount} Consecutive Days)`;
+            if (subtitleDisplay) subtitleDisplay.textContent = `${dayCount} consecutive days selected • Strictly continuous (no gaps)`;
+        }
 
         const start12 = formatTime12h(calSelectedStartTime || '08:00');
-        if (summaryTimeText) summaryTimeText.textContent = start12 || '08:00 AM';
+        if (summaryTimeText) {
+            summaryTimeText.textContent = isMultiDay ? `${start12 || '08:00 AM'} (Daily Start Time)` : (start12 || '08:00 AM');
+        }
 
         if (summaryPackageNote) {
-            summaryPackageNote.textContent = `Reserves ${calPackageTitle} with ${calProviderName} for the selected date.`;
+            if (isMultiDay) {
+                summaryPackageNote.textContent = `Reserves ${calPackageTitle} with ${calProviderName} for ${dayCount} consecutive days (continuous setup, no gaps).`;
+            } else {
+                summaryPackageNote.textContent = `Reserves ${calPackageTitle} with ${calProviderName} for the selected date.`;
+            }
         }
 
         if (confirmBtn) confirmBtn.disabled = false;
@@ -508,7 +753,7 @@
 
     // Handle Confirm Booking Click
     function handleCalendarBookingConfirm() {
-        if (!calSelectedDate) {
+        if (!calSelectedStartDate) {
             if (typeof showToast === 'function') {
                 showToast('⚠ Please select an available date on the calendar first.', 'warning');
             } else {
@@ -516,6 +761,19 @@
             }
             return;
         }
+
+        // Validate continuous consecutive booking
+        const effectiveEndDate = calSelectedEndDate || calSelectedStartDate;
+        const validation = checkRangeAvailability(calSelectedStartDate, effectiveEndDate);
+        if (!validation.available) {
+            showCalendarAlert(validation.message);
+            if (typeof showToast === 'function') {
+                showToast(`⚠️ ${validation.message}`, 'warning');
+            }
+            return;
+        }
+
+        const totalDays = validation.count || 1;
 
         const token = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthToken() : localStorage.getItem('soundsphere_jwt_token');
         const user = typeof SoundSphereAPI !== 'undefined' ? SoundSphereAPI.getAuthUser() : null;
@@ -552,9 +810,11 @@
             providerName: (calProviderName && calProviderName !== 'SoundSphere Service Provider' && calProviderName !== 'Service Provider') ? calProviderName : 'CHiCHa Lights and Sounds',
             providerAvatar: calProviderAvatar || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg',
             coverageArea: calCoverageArea || 'Lian, Balayan, Nasugbu',
-            eventDate: calSelectedDate,
-            serviceStartDate: calSelectedDate,
-            serviceEndDate: calSelectedDate,
+            eventDate: calSelectedStartDate,
+            serviceStartDate: calSelectedStartDate,
+            serviceEndDate: effectiveEndDate,
+            serviceHireDays: totalDays,
+            numberOfDays: totalDays,
             startTime: calSelectedStartTime || '08:00',
             endTime: calSelectedEndTime || '22:00',
             slotName: calSelectedSlot
@@ -562,7 +822,7 @@
 
         sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(selectedPkgInfo));
 
-        const targetUrl = `/booking.html?package_id=${selectedPkgInfo.packageId}&provider_id=${selectedPkgInfo.providerId}&date=${calSelectedDate}&startTime=${calSelectedStartTime}&endTime=${calSelectedEndTime}&provider_name=${encodeURIComponent(selectedPkgInfo.providerName)}&package_name=${encodeURIComponent(selectedPkgInfo.packageTitle)}`;
+        const targetUrl = `/booking.html?package_id=${selectedPkgInfo.packageId}&provider_id=${selectedPkgInfo.providerId}&date=${calSelectedStartDate}&startDate=${calSelectedStartDate}&endDate=${effectiveEndDate}&days=${totalDays}&startTime=${calSelectedStartTime}&endTime=${calSelectedEndTime}&provider_name=${encodeURIComponent(selectedPkgInfo.providerName)}&package_name=${encodeURIComponent(selectedPkgInfo.packageTitle)}`;
 
         if (!token || !user) {
             const pendingBooking = {
@@ -595,34 +855,45 @@
         const startTimeInput = document.getElementById('cal-start-time-input');
         if (startTimeInput) startTimeInput.value = calSelectedStartTime;
 
-        // Set default calendar month to current date or initial preselected date
-        const initialDate = options.defaultDate ? new Date(options.defaultDate) : new Date();
-        calCurrentMonth = initialDate.getMonth();
-        calCurrentYear = initialDate.getFullYear();
+        // Initial dates from options
+        const initialStartDate = options.defaultStartDate || options.defaultDate || options.startDate || options.eventDate || null;
+        const initialEndDate = options.defaultEndDate || options.endDate || initialStartDate;
 
-        // Set default selected date to tomorrow (or initialDate if future)
+        const initialDateObj = initialStartDate ? new Date(initialStartDate) : new Date();
+        calCurrentMonth = initialDateObj.getMonth();
+        calCurrentYear = initialDateObj.getFullYear();
+
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        calSelectedDate = options.defaultDate || formatDateIso(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+        calSelectedStartDate = initialStartDate || formatDateIso(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+        calSelectedEndDate = initialEndDate || calSelectedStartDate;
 
         // Fetch provider's active bookings
         calBookedSlots = await fetchProviderBookings(calProviderId);
 
-        // If default selected date is booked, find the next available date
-        if (isDateBooked(calSelectedDate)) {
+        // If default selected start date is booked, find the next available date
+        if (isDateBooked(calSelectedStartDate)) {
             for (let offset = 1; offset <= 30; offset++) {
                 const nextD = new Date();
                 nextD.setDate(nextD.getDate() + offset);
                 const testIso = formatDateIso(nextD.getFullYear(), nextD.getMonth(), nextD.getDate());
                 if (!isDateBooked(testIso)) {
-                    calSelectedDate = testIso;
+                    calSelectedStartDate = testIso;
+                    calSelectedEndDate = testIso;
                     calCurrentMonth = nextD.getMonth();
                     calCurrentYear = nextD.getFullYear();
                     break;
                 }
             }
+        } else {
+            // Verify continuous range if initialEndDate was provided
+            const check = checkRangeAvailability(calSelectedStartDate, calSelectedEndDate);
+            if (!check.available) {
+                calSelectedEndDate = calSelectedStartDate;
+            }
         }
 
+        clearCalendarAlert();
         renderCalendarGrid();
         updateSelectedSummaryDisplay();
 

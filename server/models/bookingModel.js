@@ -87,13 +87,48 @@ const checkProviderAvailability = async ({ providerId, serviceStartDate, service
 
     const conflicts = result.recordset || [];
     
-    // Check if the number of overlapping bookings meets or exceeds capacity for this date
-    const allowedLimit = (overrides[startDate] !== undefined) ? overrides[startDate] : defaultCapacity;
-    const isAvailable = (allowedLimit > 0) && (conflicts.length < allowedLimit);
+    // Check if any date in the continuous range [startDate ... endDate] meets or exceeds capacity
+    const [sY, sM, sD] = startDate.split('-').map(Number);
+    const [eY, eM, eD] = endDate.split('-').map(Number);
+    let curDate = new Date(sY, sM - 1, sD);
+    const endDateObj = new Date(eY, eM - 1, eD);
+
+    while (curDate <= endDateObj) {
+        const y = curDate.getFullYear();
+        const m = String(curDate.getMonth() + 1).padStart(2, '0');
+        const d = String(curDate.getDate()).padStart(2, '0');
+        const dStr = `${y}-${m}-${d}`;
+
+        const limit = (overrides[dStr] !== undefined) ? overrides[dStr] : defaultCapacity;
+        if (limit === 0) {
+            return {
+                isAvailable: false,
+                isBlocked: true,
+                message: `Date ${dStr} is marked as unavailable/blocked by the provider.`,
+                conflictingBookings: []
+            };
+        }
+
+        const dateConflicts = conflicts.filter(b => {
+            const bStart = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
+            const bEnd = String(b.ServiceEndDate || bStart).trim().split('T')[0];
+            return (dStr >= bStart && dStr <= bEnd);
+        });
+
+        if (dateConflicts.length >= limit) {
+            return {
+                isAvailable: false,
+                message: `Date ${dStr} is already booked or at maximum capacity. Bookings must be continuous with no gaps.`,
+                conflictingBookings: dateConflicts
+            };
+        }
+
+        curDate.setDate(curDate.getDate() + 1);
+    }
 
     return {
-        isAvailable,
-        allowedLimit,
+        isAvailable: true,
+        allowedLimit: defaultCapacity,
         currentBookingsCount: conflicts.length,
         conflictingBookings: conflicts
     };

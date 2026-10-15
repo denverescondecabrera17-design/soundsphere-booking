@@ -340,6 +340,109 @@
     display: none;
 }
 
+/* Multi-Day Consecutive Range Styles (Strictly Continuous, No Gaps) */
+.cal-cell.selected-range-start {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    position: relative;
+    z-index: 2;
+}
+
+.cal-cell.selected-range-start::after {
+    content: "START";
+    display: block !important;
+    position: absolute;
+    bottom: 3px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.95);
+    text-transform: uppercase;
+}
+
+.cal-cell.selected-range-mid {
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
+    color: #1d4ed8 !important;
+    font-weight: 800;
+    border-radius: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.cal-cell.selected-range-mid::after {
+    content: "IN RANGE";
+    display: block !important;
+    position: absolute;
+    bottom: 3px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #3b82f6;
+    text-transform: uppercase;
+}
+
+.cal-cell.selected-range-end {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    position: relative;
+    z-index: 2;
+}
+
+.cal-cell.selected-range-end::after {
+    content: "END";
+    display: block !important;
+    position: absolute;
+    bottom: 3px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.95);
+    text-transform: uppercase;
+}
+
+.cal-days-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.cal-btn-reset-days {
+    background: none;
+    border: none;
+    color: #dc2626;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    transition: opacity 0.15s ease;
+}
+
+.cal-btn-reset-days:hover {
+    opacity: 0.8;
+}
+
 /* Legend Row */
 .cal-legend-row {
     display: flex;
@@ -374,6 +477,7 @@
 }
 
 .cal-legend-dot.available { background: #f8fafc; border: 1.5px solid #cbd5e1; }
+.cal-legend-dot.in-range { background: #eff6ff; border: 1.5px solid #93c5fd; }
 .cal-legend-dot.unavailable { background: #cbd5e1; }
 .cal-legend-dot.blocked { background: #f87171; }
 .cal-legend-dot.selected { background: #2563eb; }

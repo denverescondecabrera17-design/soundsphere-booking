@@ -140,10 +140,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             || (sessionSelected && (sessionSelected.providerName || sessionSelected.ProviderName))
             || (summaryProviderName && summaryProviderName.textContent && summaryProviderName.textContent !== 'Service Provider' ? summaryProviderName.textContent : 'SoundSphere Provider');
 
-        const curDate = (startDateInput && startDateInput.value) 
-            || urlParams.get('date') || urlParams.get('eventDate') 
-            || (sessionSelected && (sessionSelected.eventDate || sessionSelected.date || sessionSelected.serviceStartDate))
+        const curStartDate = (startDateInput && startDateInput.value) 
+            || urlParams.get('startDate') || urlParams.get('date') || urlParams.get('eventDate') 
+            || (sessionSelected && (sessionSelected.serviceStartDate || sessionSelected.eventDate || sessionSelected.date))
             || new Date().toISOString().split('T')[0];
+
+        const curEndDate = (endDateInput && endDateInput.value)
+            || urlParams.get('endDate')
+            || (sessionSelected && sessionSelected.serviceEndDate)
+            || curStartDate;
 
         const curTime = (startTimeInput && startTimeInput.value) 
             || urlParams.get('startTime') || urlParams.get('start_time') 
@@ -159,7 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 price: pkgPrice,
                 packagePrice: pkgPrice,
                 providerName: provName,
-                defaultDate: curDate,
+                defaultStartDate: curStartDate,
+                defaultEndDate: curEndDate,
+                defaultDate: curStartDate,
                 startTime: curTime
             });
         } else if (provId) {
@@ -560,7 +567,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tomorrowStr = `${yyyy}-${mm}-${dd}`;
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const prefilledDate = urlParams.get('date') || urlParams.get('eventDate') || (sessionSelected && (sessionSelected.eventDate || sessionSelected.date || sessionSelected.serviceStartDate));
+    const prefilledDate = urlParams.get('startDate') || urlParams.get('date') || urlParams.get('eventDate') || (sessionSelected && (sessionSelected.serviceStartDate || sessionSelected.eventDate || sessionSelected.date));
     const prefilledEndDate = urlParams.get('endDate') || (sessionSelected && sessionSelected.serviceEndDate) || prefilledDate;
     const prefilledStartTime = urlParams.get('startTime') || urlParams.get('start_time') || (sessionSelected && (sessionSelected.startTime || sessionSelected.start_time));
     const prefilledEndTime = urlParams.get('endTime') || urlParams.get('end_time') || (sessionSelected && (sessionSelected.endTime || sessionSelected.end_time));
