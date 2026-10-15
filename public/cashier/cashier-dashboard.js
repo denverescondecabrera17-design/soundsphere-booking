@@ -1992,7 +1992,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadCashierRevenueReports() {
         const tableSummary = document.getElementById('table-cashier-provider-revenue');
-        const tablePayouts = document.getElementById('table-cashier-revenue-payouts');
         const grossVal = document.getElementById('cashier-revenue-gross-val');
         const completedVal = document.getElementById('cashier-revenue-completed-val');
         const commissionVal = document.getElementById('cashier-revenue-commission-val');
@@ -2054,58 +2053,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.addEventListener('click', () => {
                             const pName = decodeURIComponent(btn.getAttribute('data-prov-name'));
                             openCashierProviderRevenueDetail(pName);
-                        });
-                    });
-                }
-            }
-
-            // 2. Render Provider Payout Requests Table
-            if (tablePayouts) {
-                const payouts = data.payoutRequests || [];
-                if (payouts.length === 0) {
-                    tablePayouts.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:28px; color:#64748b;">No provider payout requests submitted.</td></tr>`;
-                } else {
-                    tablePayouts.innerHTML = payouts.map(w => {
-                        const isApproved = w.status === 'Approved' || w.status === 'Processed';
-                        const isPending = w.status === 'Pending';
-                        const reqDate = w.dateRequested ? new Date(w.dateRequested).toLocaleDateString() : 'N/A';
-
-                        const statusBadge = isApproved
-                            ? `<span class="badge badge-approved"><i class="fa-solid fa-check"></i> Paid &amp; Sent</span>`
-                            : (isPending 
-                                ? `<span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending Manual Payout</span>`
-                                : `<span class="badge badge-rejected"><i class="fa-solid fa-ban"></i> Rejected</span>`);
-
-                        const actionBtn = isApproved
-                            ? `<span style="font-size:0.8rem; color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Paid &amp; Sent</span>`
-                            : (isPending 
-                                ? `<button type="button" class="btn btn-success btn-sm btn-revenue-disburse" data-wid="${w.withdrawalId}">
-                                     <i class="fa-solid fa-paper-plane"></i> Disburse
-                                   </button>`
-                                : `<span style="font-size:0.8rem; color:#ef4444; font-weight:600;">Closed</span>`);
-
-                        return `
-                            <tr>
-                                <td><strong style="color:#2563eb; font-size:0.88rem;">${w.requestId}</strong></td>
-                                <td>
-                                    <strong style="color:#0a192f; font-size:0.88rem; display:block;">${w.providerName}</strong>
-                                    <span style="font-size:0.75rem; color:#64748b;">${w.providerEmail}</span>
-                                </td>
-                                <td><strong style="font-size:0.95rem; color:#10b981;">${formatPHP(w.amountRequested)}</strong></td>
-                                <td><span style="font-size:0.84rem; color:#0a192f; font-weight:700;"><i class="fa-solid fa-wallet" style="color:#2563eb;"></i> ${w.payoutChannel}</span></td>
-                                <td><strong style="font-size:0.88rem; color:#0a192f;">${w.accountHolderName}</strong></td>
-                                <td><span style="font-size:0.88rem; color:#2563eb; font-weight:700; background:#eff6ff; padding:3px 8px; border-radius:6px;">${w.receiverAccount}</span></td>
-                                <td><span style="font-size:0.84rem; color:#64748b;">${reqDate}</span></td>
-                                <td>${statusBadge}</td>
-                                <td style="text-align:right;">${actionBtn}</td>
-                            </tr>
-                        `;
-                    }).join('');
-
-                    tablePayouts.querySelectorAll('.btn-revenue-disburse').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const wid = btn.getAttribute('data-wid');
-                            executeDisbursePayout(wid, btn);
                         });
                     });
                 }
