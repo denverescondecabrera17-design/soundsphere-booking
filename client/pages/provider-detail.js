@@ -684,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (uniqueOffers.length === 0) {
+                    pkgGrid.removeAttribute('data-count');
                     pkgGrid.innerHTML = `
                         <div style="grid-column:1/-1; text-align:center; padding:48px 24px; background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; margin:12px 0;">
                             <i class="fa-solid fa-box-open" style="font-size:2.8rem; color:#94a3b8; margin-bottom:14px; display:block;"></i>
@@ -692,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                 } else {
+                    pkgGrid.setAttribute('data-count', String(uniqueOffers.length));
                     pkgGrid.innerHTML = uniqueOffers.map((pkg, idx) => {
                         const offerId = pkg.id || pkg.package_id || pkg.service_id || pkg.PackageID || pkg.ServiceID;
                         const isTarget = targetPkgId && String(offerId) === String(targetPkgId);
