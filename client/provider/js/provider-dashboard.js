@@ -1714,9 +1714,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
                     if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
 
+                    // Filter out any unpaid pending bookings
+                    const isPaidBooking = (b) => {
+                        const st = (b.BookingStatus || '').toLowerCase();
+                        const pSt = (b.PaymentStatus || '').toLowerCase();
+                        const paid = parseFloat(b.AmountPaid || 0);
+                        return st !== 'pending' && pSt !== 'pending' && paid > 0;
+                    };
+
                     // Render Upcoming Event Reservations Table
-                    renderUpcomingReservations(s.upcomingBookings || []);
-                    renderBookingsTable(s.allBookings || []);
+                    renderUpcomingReservations((s.upcomingBookings || []).filter(isPaidBooking));
+                    renderBookingsTable((s.allBookings || []).filter(isPaidBooking));
                     renderRecentReviews(s.reviewsList || []);
                 }
             }
@@ -1942,12 +1950,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tableBody = document.getElementById('table-upcoming-reservations');
         if (!tableBody) return;
 
-        if (!bookings || bookings.length === 0) {
+        const paidBookings = (bookings || []).filter(b => {
+            const st = (b.BookingStatus || '').toLowerCase();
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            const paid = parseFloat(b.AmountPaid || 0);
+            return st !== 'pending' && pSt !== 'pending' && paid > 0;
+        });
+
+        if (!paidBookings || paidBookings.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No upcoming events reserved.</td></tr>`;
             return;
         }
 
-        tableBody.innerHTML = bookings.map(b => {
+        tableBody.innerHTML = paidBookings.map(b => {
             const clientNameStr = b.ClientName || b.clientName || b.ClientEmail || 'Client Account';
             const packageNameStr = b.PackageName || b.packageName || b.EventName || 'Event Service Package';
             const dateStr = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
@@ -2022,16 +2037,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tableBody = document.getElementById('table-provider-bookings-list');
         if (!tableBody) return;
 
-        if (Array.isArray(bookings)) {
-            currentLoadedBookings = bookings;
+        const paidBookings = (bookings || []).filter(b => {
+            const st = (b.BookingStatus || '').toLowerCase();
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            const paid = parseFloat(b.AmountPaid || 0);
+            return st !== 'pending' && pSt !== 'pending' && paid > 0;
+        });
+
+        if (Array.isArray(paidBookings)) {
+            currentLoadedBookings = paidBookings;
         }
 
-        if (!bookings || bookings.length === 0) {
+        if (!paidBookings || paidBookings.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:1.02rem;">No bookings yet.</td></tr>`;
             return;
         }
 
-        tableBody.innerHTML = bookings.map(b => {
+        tableBody.innerHTML = paidBookings.map(b => {
             const clientNameStr = b.ClientName || b.clientName || b.ClientEmail || 'Client Account';
             const packageNameStr = b.PackageName || b.packageName || b.EventName || 'Event Service Package';
             const rawStartDate = b.ServiceStartDate || b.EventDate;

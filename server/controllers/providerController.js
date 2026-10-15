@@ -548,7 +548,9 @@ const getDashboardStats = async (req, res) => {
                 LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
                 LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-                WHERE b.ProviderID = @UID OR sp.UserID = @UID
+                WHERE (b.ProviderID = @UID OR sp.UserID = @UID)
+                  AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
+                  AND ISNULL(b.BookingStatus, '') != 'Pending'
                 ORDER BY b.CreatedAt DESC;
             `);
             allBookings = bkRes.recordset || [];
@@ -582,24 +584,25 @@ const getDashboardStats = async (req, res) => {
             return null;
         };
 
-        // Active bookings (excluding cancelled, rejected, or refunded)
+        // Active bookings (excluding cancelled, rejected, refunded, or unpaid pending)
         const activeBookings = allBookings.filter(b => {
             const st = (b.BookingStatus || '').toLowerCase();
             const pSt = (b.PaymentStatus || '').toLowerCase();
-            return st !== 'cancelled' && st !== 'rejected' && pSt !== 'refunded';
+            const paid = parseFloat(b.AmountPaid || 0);
+            return st !== 'cancelled' && st !== 'rejected' && st !== 'pending' && pSt !== 'pending' && pSt !== 'refunded' && paid > 0;
         });
 
-        // 1. TODAY'S SCHEDULE: Non-cancelled bookings on today's Manila date
+        // 1. TODAY'S SCHEDULE: Non-cancelled, paid bookings on today's Manila date
         const todaysEvents = activeBookings.filter(b => {
             const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
             return bDate === nowManilaStr;
         });
 
-        // 2. UPCOMING BOOKINGS: Future confirmed/pending bookings strictly AFTER today
+        // 2. UPCOMING BOOKINGS: Future confirmed/paid bookings strictly AFTER today
         const upcomingBookings = activeBookings.filter(b => {
             const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
-            const isConfirmedOrPending = (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Pending');
-            return bDate && bDate > nowManilaStr && isConfirmedOrPending;
+            const isConfirmed = (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation');
+            return bDate && bDate > nowManilaStr && isConfirmed;
         });
 
         // 3. AVAILABLE BALANCE & EARNINGS: Strictly calculated from collected funds minus commission and withdrawals
@@ -765,8 +768,9 @@ const getProviderBookings = async (req, res) => {
                 FROM dbo.Bookings b
                 LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
                 LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
-                LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
-                WHERE b.ProviderID = @UID OR sp.UserID = @UID
+                WHERE (b.ProviderID = @UID OR sp.UserID = @UID)
+                  AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
+                  AND ISNULL(b.BookingStatus, '') != 'Pending'
                 ORDER BY b.CreatedAt DESC;
             `);
             return res.status(200).json({ success: true, data: result.recordset || [] });
