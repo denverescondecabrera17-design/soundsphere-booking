@@ -53,14 +53,14 @@ const getCashierSummary = async (req, res) => {
         // 2. Booking & Revenue Stats
         const bResult = await pool.request().query(`
             SELECT
-                ISNULL(SUM(CASE WHEN CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE) THEN TotalAmount ELSE 0 END), 0) AS TodayGrossVolume,
+                ISNULL(SUM(CASE WHEN CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE) THEN CASE WHEN PaymentStatus = 'Partial' THEN COALESCE(NULLIF(AmountPaid, 0), TotalAmount * 0.5) ELSE TotalAmount END ELSE 0 END), 0) AS TodayGrossVolume,
                 ISNULL(SUM(CASE WHEN CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE) THEN ISNULL(CommissionAmount, TotalAmount * 0.05) ELSE 0 END), 0) AS TodayCommission,
-                ISNULL(SUM(TotalAmount), 0) AS TotalGrossVolume,
+                ISNULL(SUM(CASE WHEN PaymentStatus = 'Partial' THEN COALESCE(NULLIF(AmountPaid, 0), TotalAmount * 0.5) ELSE TotalAmount END), 0) AS TotalGrossVolume,
                 ISNULL(SUM(ISNULL(CommissionAmount, TotalAmount * 0.05)), 0) AS TotalCommission,
                 COUNT(BookingID) AS TotalBookingsCount,
                 COUNT(CASE WHEN CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE) THEN 1 END) AS TodayBookingsCount
             FROM dbo.Bookings
-            WHERE PaymentStatus = 'Paid' OR BookingStatus IN ('Confirmed', 'Completed', 'Approved');
+            WHERE PaymentStatus IN ('Paid', 'Partial') OR BookingStatus IN ('Confirmed', 'Completed', 'Approved');
         `);
         const bStats = bResult.recordset[0] || {};
 
@@ -126,7 +126,10 @@ const getCashierSummary = async (req, res) => {
                     COALESCE(w.ProcessedAt, w.RequestedAt) AS Date,
                     w.PayoutMethod AS Method,
                     ISNULL(sp.BusinessName, 'Provider') AS Recipient,
-                    'Outflow' AS Flow
+                    'Outflow' AS Flow,
+                    w.Amount AS TotalAmount,
+                    w.Amount AS AmountPaid,
+                    0 AS RemainingBalance
                 FROM dbo.Withdrawals w
                 LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
                 UNION ALL
@@ -139,21 +142,31 @@ const getCashierSummary = async (req, res) => {
                     COALESCE(rr.ProcessedAt, rr.RequestedAt) AS Date,
                     rr.PayoutMethod AS Method,
                     rr.ClientName AS Recipient,
-                    'Outflow' AS Flow
+                    'Outflow' AS Flow,
+                    rr.Amount AS TotalAmount,
+                    rr.Amount AS AmountPaid,
+                    0 AS RemainingBalance
                 FROM dbo.RefundRequests rr
                 UNION ALL
                 SELECT
                     'Booking Payment' AS Type,
                     b.BookingID AS ID,
                     ISNULL(b.BookingReference, CONCAT('BK-', b.BookingID)) AS Reference,
-                    b.TotalAmount AS Amount,
+                    CASE 
+                        WHEN b.PaymentStatus = 'Partial' THEN COALESCE(NULLIF(b.AmountPaid, 0), b.TotalAmount * 0.5)
+                        WHEN ISNULL(b.AmountPaid, 0) > 0 THEN b.AmountPaid
+                        ELSE b.TotalAmount 
+                    END AS Amount,
                     b.PaymentStatus AS Status,
                     b.CreatedAt AS Date,
                     'PayMongo / Online' AS Method,
                     b.PackageName AS Recipient,
-                    'Inflow' AS Flow
+                    'Inflow' AS Flow,
+                    b.TotalAmount AS TotalAmount,
+                    COALESCE(NULLIF(b.AmountPaid, 0), b.TotalAmount * 0.5) AS AmountPaid,
+                    ISNULL(b.RemainingBalance, b.TotalAmount * 0.5) AS RemainingBalance
                 FROM dbo.Bookings b
-                WHERE b.PaymentStatus = 'Paid' OR b.BookingStatus IN ('Confirmed', 'Completed')
+                WHERE b.PaymentStatus IN ('Paid', 'Partial') OR b.BookingStatus IN ('Confirmed', 'Completed')
                 UNION ALL
                 SELECT
                     'Subscription' AS Type,
@@ -164,7 +177,10 @@ const getCashierSummary = async (req, res) => {
                     spay.PaymentDate AS Date,
                     spay.PaymentMethod AS Method,
                     ISNULL(sp.BusinessName, 'Provider') AS Recipient,
-                    'Inflow' AS Flow
+                    'Inflow' AS Flow,
+                    spay.Amount AS TotalAmount,
+                    spay.Amount AS AmountPaid,
+                    0 AS RemainingBalance
                 FROM dbo.SubscriptionPayments spay
                 LEFT JOIN dbo.ServiceProviders sp ON spay.ProviderID = sp.ProviderID
                 WHERE spay.PaymentStatus = 'Paid'
@@ -662,7 +678,7 @@ const getIncomeReport = async (req, res) => {
                 LEFT JOIN dbo.Users uClient ON b.ClientUserID = uClient.UserID
                 LEFT JOIN dbo.Clients cClient ON uClient.UserID = cClient.UserID
                 LEFT JOIN dbo.ServiceProviders sp ON (b.ProviderID = sp.ProviderID OR b.ProviderID = sp.UserID)
-                WHERE (b.PaymentStatus = 'Paid' OR b.BookingStatus IN ('Confirmed', 'Completed', 'Approved'))
+                WHERE (b.PaymentStatus IN ('Paid', 'Partial') OR b.BookingStatus IN ('Confirmed', 'Completed', 'Approved'))
                   AND b.CreatedAt >= @Start AND b.CreatedAt <= @End
                 ORDER BY b.CreatedAt ASC;
             `);
@@ -727,8 +743,15 @@ const getIncomeReport = async (req, res) => {
         const bookings = bookingsRes.recordset || [];
         const withdrawals = withdrawalsRes.recordset || [];
 
+        const getBookingInflow = (b) => {
+            if (b.PaymentStatus === 'Partial') {
+                return parseFloat(b.AmountPaid || (b.TotalAmount * 0.5) || 0);
+            }
+            return parseFloat(b.AmountPaid || b.TotalAmount || 0);
+        };
+
         // Totals calculation
-        const grossBookingRevenue = bookings.reduce((sum, b) => sum + parseFloat(b.TotalAmount || 0), 0);
+        const grossBookingRevenue = bookings.reduce((sum, b) => sum + getBookingInflow(b), 0);
         const totalCommissionIncome = bookings.reduce((sum, b) => sum + parseFloat(b.CommissionAmount || 0), 0);
         const totalDisbursedPayouts = withdrawals.reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
         const totalSubscriptionRevenue = subscriptionsList.reduce((sum, s) => sum + parseFloat(s.Price || 0), 0);
@@ -755,7 +778,7 @@ const getIncomeReport = async (req, res) => {
             bookings.forEach(b => {
                 const h = new Date(b.CreatedAt).getHours();
                 if (hoursMap[h]) {
-                    hoursMap[h].grossVolume += parseFloat(b.TotalAmount || 0);
+                    hoursMap[h].grossVolume += getBookingInflow(b);
                     hoursMap[h].commission += parseFloat(b.CommissionAmount || 0);
                     hoursMap[h].transactionCount += 1;
                 }
@@ -803,7 +826,7 @@ const getIncomeReport = async (req, res) => {
             bookings.forEach(b => {
                 const dStr = new Date(b.CreatedAt).toISOString().split('T')[0];
                 if (daysMap[dStr]) {
-                    daysMap[dStr].grossVolume += parseFloat(b.TotalAmount || 0);
+                    daysMap[dStr].grossVolume += getBookingInflow(b);
                     daysMap[dStr].commission += parseFloat(b.CommissionAmount || 0);
                     daysMap[dStr].transactionCount += 1;
                 }
@@ -836,7 +859,7 @@ const getIncomeReport = async (req, res) => {
                 const day = new Date(b.CreatedAt).getDate();
                 const weekIdx = Math.min(5, Math.ceil(day / 7));
                 if (weeksMap[weekIdx]) {
-                    weeksMap[weekIdx].grossVolume += parseFloat(b.TotalAmount || 0);
+                    weeksMap[weekIdx].grossVolume += getBookingInflow(b);
                     weeksMap[weekIdx].commission += parseFloat(b.CommissionAmount || 0);
                     weeksMap[weekIdx].transactionCount += 1;
                 }
@@ -876,7 +899,7 @@ const getIncomeReport = async (req, res) => {
             bookings.forEach(b => {
                 const m = new Date(b.CreatedAt).getMonth();
                 if (monthsMap[m]) {
-                    monthsMap[m].grossVolume += parseFloat(b.TotalAmount || 0);
+                    monthsMap[m].grossVolume += getBookingInflow(b);
                     monthsMap[m].commission += parseFloat(b.CommissionAmount || 0);
                     monthsMap[m].netIncome += parseFloat(b.CommissionAmount || 0);
                     monthsMap[m].transactionCount += 1;
@@ -908,10 +931,12 @@ const getIncomeReport = async (req, res) => {
                 date: b.CreatedAt,
                 reference: b.Reference,
                 type: 'Booking Payment',
-                category: 'Client Payment (Inflow)',
+                category: b.PaymentStatus === 'Partial' ? 'Partial Downpayment (Inflow)' : 'Client Payment (Inflow)',
                 party: `${b.ClientName} → ${b.ProviderName}`,
-                itemDescription: b.PackageName,
-                inflow: parseFloat(b.TotalAmount || 0),
+                itemDescription: b.PaymentStatus === 'Partial'
+                    ? `${b.PackageName} (Deposit of ₱${parseFloat(b.TotalAmount || 0).toLocaleString('en-US', {minimumFractionDigits:2})})`
+                    : b.PackageName,
+                inflow: getBookingInflow(b),
                 outflow: 0,
                 commission: parseFloat(b.CommissionAmount || 0),
                 providerCut: parseFloat(b.ProviderEarnings || 0),

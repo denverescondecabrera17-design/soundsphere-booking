@@ -333,7 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const isOutflow = item.Flow === 'Outflow' || item.Type === 'Withdrawal';
                         const flowClass = isOutflow ? 'flow-outflow' : 'flow-inflow';
                         const flowSign = isOutflow ? '-' : '+';
-                        const statusBadge = item.Status === 'Approved' || item.Status === 'Paid' ? 'badge-approved' : (item.Status === 'Pending' ? 'badge-pending' : 'badge-rejected');
+                        const isPartial = item.Status === 'Partial';
+                        const statusBadge = item.Status === 'Approved' || item.Status === 'Paid' 
+                            ? 'badge-approved' 
+                            : (isPartial ? 'badge-partial' : (item.Status === 'Pending' ? 'badge-pending' : 'badge-rejected'));
                         const isWdr = item.Type === 'Withdrawal';
                         const isRef = item.Type === 'Client Refund';
 
@@ -345,7 +348,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td>${item.Recipient || 'N/A'}</td>
                                 <td>${item.Method || 'Online'}</td>
                                 <td><span class="${flowClass}">${isOutflow ? 'Outflow (Payout)' : 'Inflow (Payment)'}</span></td>
-                                <td class="${flowClass}"><strong>${flowSign}${formatPHP(item.Amount)}</strong></td>
+                                <td class="${flowClass}">
+                                    <strong>${flowSign}${formatPHP(item.Amount)}</strong>
+                                    ${isPartial && item.TotalAmount && item.TotalAmount > item.Amount ? `
+                                        <div style="font-size:0.75rem; color:#64748b; font-weight:600; white-space:nowrap; margin-top:2px;">
+                                            Partial (Total: ${formatPHP(item.TotalAmount)})
+                                        </div>
+                                    ` : ''}
+                                </td>
                                 <td><span class="badge ${statusBadge}">${item.Status}</span></td>
                             </tr>
                         `;
