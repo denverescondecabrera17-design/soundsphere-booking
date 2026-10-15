@@ -1651,6 +1651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ` : `
                         <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedDateModal})" style="padding:10px 22px; font-size:0.92rem; border:1.5px solid #cbd5e1; border-radius:8px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.8;" onclick="event.stopPropagation();">Complete Event (${formattedDateModal})</button>
                     `}
+                    <button type="button" onclick="${hideFullscreen} window.cancelProviderBooking(${booking.BookingID})" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Cancel Booking</button>
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
             } else if (statusLower === 'awaiting client confirmation') {
