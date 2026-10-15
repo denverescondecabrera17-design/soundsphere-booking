@@ -370,6 +370,34 @@ if (fs.existsSync(srcMarketplaceJs)) {
     });
 }
 
+// 15f. Sync app-platform.js
+const srcAppPlatformJs = path.join(__dirname, '../client/js/app-platform.js');
+const appPlatformJsTargets = [
+    path.join(__dirname, '../client/pages/js/app-platform.js'),
+    path.join(__dirname, '../public/js/app-platform.js'),
+    path.join(__dirname, '../public/pages/js/app-platform.js')
+];
+if (fs.existsSync(srcAppPlatformJs)) {
+    const apJsContent = fs.readFileSync(srcAppPlatformJs, 'utf8');
+    appPlatformJsTargets.forEach(target => {
+        safeWriteFileSync(target, apJsContent);
+        console.log(`Synced app-platform.js -> ${target}`);
+    });
+}
+
+// 15g. Sync client-dashboard.js
+const srcClientDashboardJs = path.join(__dirname, '../client/client/js/client-dashboard.js');
+const clientDashboardJsTargets = [
+    path.join(__dirname, '../public/client/js/client-dashboard.js')
+];
+if (fs.existsSync(srcClientDashboardJs)) {
+    const cdJsContent = fs.readFileSync(srcClientDashboardJs, 'utf8');
+    clientDashboardJsTargets.forEach(target => {
+        safeWriteFileSync(target, cdJsContent);
+        console.log(`Synced client-dashboard.js -> ${target}`);
+    });
+}
+
 // 16. Sync Cashier Portal Files
 const cashierSyncList = [
     { src: '../client/cashier/dashboard.html', targets: ['../public/cashier/dashboard.html', '../client/pages/cashier/dashboard.html'] },

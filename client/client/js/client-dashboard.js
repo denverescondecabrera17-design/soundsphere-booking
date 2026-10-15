@@ -122,7 +122,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     body: JSON.stringify(payload)
                 });
 
-                const data = await response.json();
+                let data = {};
+                const rawText = await response.text();
+                try {
+                    data = rawText ? JSON.parse(rawText) : {};
+                } catch (jsonErr) {
+                    throw new Error(rawText.length < 150 ? rawText : `Server returned ${response.status} ${response.statusText}`);
+                }
 
                 if (!response.ok) {
                     showToast(`✕ ${data.message || 'Submission failed.'}`, 'error');

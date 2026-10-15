@@ -2194,73 +2194,114 @@ document.addEventListener('DOMContentLoaded', () => {
         if (placeholder) placeholder.style.display = 'block';
     };
 
+    // Client-side document image downsampling to optimize speed and payload size
+    const compressImageFile = (file, maxWidth = 1600, maxHeight = 1600, quality = 0.82) => {
+        return new Promise((resolve) => {
+            if (!file || !file.type || !file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+                return;
+            }
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                let width = img.naturalWidth || img.width;
+                let height = img.naturalHeight || img.height;
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / maxWidth > height / maxHeight) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+            };
+            img.src = objectUrl;
+        });
+    };
+
     // Document file change listeners
-    document.addEventListener('change', (e) => {
+    document.addEventListener('change', async (e) => {
         if (e.target && e.target.id === 'app-govt-id-front-input') {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('⚠ Valid ID (Front) image file must be less than 5MB.', 'warning');
+                if (file.size > 15 * 1024 * 1024) {
+                    showToast('⚠ Valid ID (Front) file must be less than 15MB.', 'warning');
                     e.target.value = '';
                     return;
                 }
-                const reader = new FileReader();
-                reader.onload = (re) => {
-                    window.providerAppGovtIdFrontData = re.target.result;
+                const dataUrl = await compressImageFile(file);
+                if (dataUrl) {
+                    window.providerAppGovtIdFrontData = dataUrl;
                     const previewImg = document.getElementById('govt-id-front-preview-img');
                     const fileName = document.getElementById('govt-id-front-filename');
                     const previewWrap = document.getElementById('govt-id-front-preview-wrap');
                     const placeholder = document.getElementById('govt-id-front-placeholder');
-                    if (previewImg) previewImg.src = re.target.result;
+                    if (previewImg) previewImg.src = dataUrl;
                     if (fileName) fileName.textContent = file.name;
                     if (previewWrap) previewWrap.style.display = 'flex';
                     if (placeholder) placeholder.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
+                }
             }
         } else if (e.target && e.target.id === 'app-govt-id-back-input') {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('⚠ Valid ID (Back) image file must be less than 5MB.', 'warning');
+                if (file.size > 15 * 1024 * 1024) {
+                    showToast('⚠ Valid ID (Back) file must be less than 15MB.', 'warning');
                     e.target.value = '';
                     return;
                 }
-                const reader = new FileReader();
-                reader.onload = (re) => {
-                    window.providerAppGovtIdBackData = re.target.result;
+                const dataUrl = await compressImageFile(file);
+                if (dataUrl) {
+                    window.providerAppGovtIdBackData = dataUrl;
                     const previewImg = document.getElementById('govt-id-back-preview-img');
                     const fileName = document.getElementById('govt-id-back-filename');
                     const previewWrap = document.getElementById('govt-id-back-preview-wrap');
                     const placeholder = document.getElementById('govt-id-back-placeholder');
-                    if (previewImg) previewImg.src = re.target.result;
+                    if (previewImg) previewImg.src = dataUrl;
                     if (fileName) fileName.textContent = file.name;
                     if (previewWrap) previewWrap.style.display = 'flex';
                     if (placeholder) placeholder.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
+                }
             }
         } else if (e.target && e.target.id === 'app-permit-input') {
             const file = e.target.files && e.target.files[0];
             if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('⚠ Business Permit image must be less than 5MB.', 'warning');
+                if (file.size > 15 * 1024 * 1024) {
+                    showToast('⚠ Business Permit file must be less than 15MB.', 'warning');
                     e.target.value = '';
                     return;
                 }
-                const reader = new FileReader();
-                reader.onload = (re) => {
-                    window.providerAppPermitData = re.target.result;
+                const dataUrl = await compressImageFile(file);
+                if (dataUrl) {
+                    window.providerAppPermitData = dataUrl;
                     const previewImg = document.getElementById('permit-preview-img');
                     const fileName = document.getElementById('permit-filename');
                     const previewWrap = document.getElementById('permit-preview-wrap');
                     const placeholder = document.getElementById('permit-placeholder');
-                    if (previewImg) previewImg.src = re.target.result;
+                    if (previewImg) previewImg.src = dataUrl;
                     if (fileName) fileName.textContent = file.name;
                     if (previewWrap) previewWrap.style.display = 'flex';
                     if (placeholder) placeholder.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
+                }
             }
         }
     });
@@ -2791,7 +2832,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
 
-            const resData = await response.json();
+            let resData = {};
+            const rawText = await response.text();
+            try {
+                resData = rawText ? JSON.parse(rawText) : {};
+            } catch (jsonErr) {
+                console.error('Non-JSON server response:', rawText);
+                throw new Error(rawText.length < 150 ? rawText : `Server returned ${response.status} ${response.statusText}`);
+            }
 
             if (!response.ok || !resData.success) {
                 if (resData.duplicate) {
