@@ -311,7 +311,7 @@
                                 <i class="fa-solid fa-file-invoice-dollar" style="color:#10b981;"></i> Income Report & Financial Ledger
                             </h2>
                             <p style="color:#64748b; margin:0; font-size:0.9rem;">
-                                Complete overview of your gross bookings, 5% SoundSphere platform commission deductions, net collected earnings, and disbursement status.
+                                Complete overview of your total provider income, collected earnings, disbursed payouts, and available balance.
                             </p>
                         </div>
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -323,39 +323,39 @@
 
                     <!-- 4 Financial Summary Stat Cards -->
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:28px;">
-                        <!-- Total Contract Net (95%) -->
+                        <!-- Total Expected Income -->
                         <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
                             <div style="width:48px; height:48px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0;">
                                 <i class="fa-solid fa-coins"></i>
                             </div>
                             <div>
-                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Contract Net (95%)</span>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Expected Income</span>
                                 <h3 id="inc-stat-total-net" style="font-size:1.55rem; font-weight:800; color:#0a192f; margin:4px 0 2px 0;">₱0.00</h3>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Expected earnings from all confirmed & completed bookings</p>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Expected net earnings from all confirmed & completed bookings</p>
                             </div>
                         </div>
 
-                        <!-- Net Collected Earnings -->
+                        <!-- Net Collected Income -->
                         <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
                             <div style="width:48px; height:48px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0;">
                                 <i class="fa-solid fa-hand-holding-dollar"></i>
                             </div>
                             <div>
-                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Net Collected Earnings</span>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Collected Income</span>
                                 <h3 id="inc-stat-collected" style="font-size:1.55rem; font-weight:800; color:#2563eb; margin:4px 0 2px 0;">₱0.00</h3>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Client deposits & payments collected after 5% platform fee</p>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Client payments collected to date for your services</p>
                             </div>
                         </div>
 
-                        <!-- SoundSphere Commission (5%) -->
+                        <!-- Total Withdrawn / Disbursed Payouts -->
                         <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
                             <div style="width:48px; height:48px; border-radius:12px; background:#faf5ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0;">
-                                <i class="fa-solid fa-percent"></i>
+                                <i class="fa-solid fa-money-bill-transfer"></i>
                             </div>
                             <div>
-                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">SoundSphere Fee (5%)</span>
-                                <h3 id="inc-stat-commission" style="font-size:1.55rem; font-weight:800; color:#7c3aed; margin:4px 0 2px 0;">₱0.00</h3>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Platform service commission deducted on client payments</p>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Withdrawn</span>
+                                <h3 id="inc-stat-withdrawn" style="font-size:1.55rem; font-weight:800; color:#7c3aed; margin:4px 0 2px 0;">₱0.00</h3>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:0;">Total payouts successfully disbursed to your account</p>
                             </div>
                         </div>
 
@@ -397,14 +397,13 @@
                                         <th style="padding:14px 18px;">Event Date</th>
                                         <th style="padding:14px 18px; text-align:right;">Gross Amount</th>
                                         <th style="padding:14px 18px; text-align:right;">Amount Paid</th>
-                                        <th style="padding:14px 18px; text-align:right;">Fee (5%)</th>
-                                        <th style="padding:14px 18px; text-align:right;">Net Provider Earnings</th>
+                                        <th style="padding:14px 18px; text-align:right;">Provider Income</th>
                                         <th style="padding:14px 18px; text-align:center;">Payment</th>
                                         <th style="padding:14px 18px; text-align:center;">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-provider-income-list">
-                                    <tr><td colspan="9" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">Loading financial ledger...</td></tr>
+                                    <tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">Loading financial ledger...</td></tr>
                                 </tbody>
                             </table>
                         </div>

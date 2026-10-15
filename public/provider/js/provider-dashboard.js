@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (filtered.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No booking revenue records found matching "${filterQuery}".</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No booking revenue records found matching "${filterQuery}".</td></tr>`;
             return;
         }
 
@@ -889,7 +889,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gross = parseFloat(b.TotalAmount || 0);
             const paid = (b.AmountPaid != null && !isNaN(b.AmountPaid)) ? parseFloat(b.AmountPaid) : 0;
             const commRate = parseFloat(b.CommissionRate || 5) / 100;
-            const commAmt = parseFloat((paid > 0 ? paid * commRate : gross * commRate).toFixed(2));
             const netEarnings = parseFloat((paid > 0 ? paid * (1 - commRate) : 0).toFixed(2));
             const fullNetExpected = parseFloat((gross * (1 - commRate)).toFixed(2));
 
@@ -929,10 +928,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                     <td style="padding:14px 18px; text-align:right;">
                         <span style="font-weight:800; color:#10b981; font-size:0.92rem;">₱${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                    </td>
-                    <td style="padding:14px 18px; text-align:right;">
-                        <span style="font-weight:700; color:#7c3aed; font-size:0.88rem;">-₱${commAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        <div style="font-size:0.7rem; color:#94a3b8;">5% Platform</div>
                     </td>
                     <td style="padding:14px 18px; text-align:right;">
                         <strong style="font-weight:800; color:#059669; font-size:0.95rem;">₱${netEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
@@ -991,23 +986,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let withdrawals = [];
             let availableWalletBalance = 0;
+            let totalWithdrawn = 0;
             if (wRes && wRes.ok) {
                 const wData = await wRes.json();
                 if (wData.success) {
                     withdrawals = wData.withdrawals || [];
                     availableWalletBalance = parseFloat(wData.availableBalance || 0);
+                    totalWithdrawn = parseFloat(wData.totalWithdrawn != null ? wData.totalWithdrawn : (
+                        withdrawals
+                            .filter(w => (w.Status || '').toLowerCase() === 'approved' || (w.Status || '').toLowerCase() === 'completed')
+                            .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0)
+                    ));
                 }
             }
 
             // Update KPI Cards
             const elTotalNet = document.getElementById('inc-stat-total-net');
             const elCollected = document.getElementById('inc-stat-collected');
-            const elCommission = document.getElementById('inc-stat-commission');
+            const elWithdrawn = document.getElementById('inc-stat-withdrawn');
             const elAvailable = document.getElementById('inc-stat-available');
 
             if (elTotalNet) elTotalNet.textContent = `₱${totalContractEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (elCollected) elCollected.textContent = `₱${totalCollectedEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (elCommission) elCommission.textContent = `₱${totalCommissionFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (elWithdrawn) elWithdrawn.textContent = `₱${totalWithdrawn.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (elAvailable) elAvailable.textContent = `₱${availableWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             // Render Bookings Ledger
