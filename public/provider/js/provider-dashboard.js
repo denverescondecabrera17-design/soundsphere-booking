@@ -1015,61 +1015,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentIncomeBookings = validBookings;
             const searchInput = document.getElementById('input-income-ledger-search');
             renderIncomeBookingsTable(searchInput ? searchInput.value : '');
-
-            // Render Cashier Disbursements & Withdrawals
-            const wTableBody = document.getElementById('table-provider-income-withdrawals');
-            const wBadge = document.getElementById('income-withdrawals-badge');
-            if (wBadge) wBadge.textContent = `${withdrawals.length} Payout${withdrawals.length === 1 ? '' : 's'}`;
-
-            if (wTableBody) {
-                if (withdrawals.length === 0) {
-                    wTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">No cashier payout disbursements recorded yet.</td></tr>`;
-                } else {
-                    wTableBody.innerHTML = withdrawals.map(w => {
-                        const reqDate = w.RequestedAt ? new Date(w.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—';
-                        const procDate = w.ProcessedAt ? new Date(w.ProcessedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '<span style="color:#94a3b8; font-style:italic;">Pending Cashier</span>';
-                        const stLower = (w.Status || 'Pending').toLowerCase();
-                        const isApproved = stLower === 'approved' || stLower === 'completed';
-                        const isRejected = stLower === 'rejected';
-
-                        let statusBadge = '';
-                        if (isApproved) {
-                            statusBadge = `<span class="status-badge status-confirmed" style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5;"><i class="fa-solid fa-circle-check"></i> Paid & Disbursed</span>`;
-                        } else if (isRejected) {
-                            statusBadge = `<span class="status-badge" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2;"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>`;
-                        } else {
-                            statusBadge = `<span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7;"><i class="fa-solid fa-clock"></i> Pending Cashier Payout</span>`;
-                        }
-
-                        return `
-                            <tr style="border-bottom:1px solid #f1f5f9;">
-                                <td style="padding:14px 18px;">
-                                    <strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#WD-${w.WithdrawalID}</strong>
-                                </td>
-                                <td style="padding:14px 18px; text-align:right;">
-                                    <strong style="color:#059669; font-size:0.95rem;">₱${parseFloat(w.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
-                                </td>
-                                <td style="padding:14px 18px;">
-                                    <span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet" style="margin-right:4px;"></i>${w.PayoutMethod || 'GCash / Bank'}</span>
-                                </td>
-                                <td style="padding:14px 18px;">
-                                    <div style="font-weight:600; color:#0a192f; font-size:0.88rem;">${w.AccountReference || 'N/A'}</div>
-                                    <div style="font-size:0.75rem; color:#64748b;">${w.AccountName || 'Account Holder'}</div>
-                                </td>
-                                <td style="padding:14px 18px;">
-                                    <span style="font-size:0.82rem; color:#475569;">${reqDate}</span>
-                                </td>
-                                <td style="padding:14px 18px;">
-                                    <span style="font-size:0.82rem; color:#475569;">${procDate}</span>
-                                </td>
-                                <td style="padding:14px 18px; text-align:center;">
-                                    ${statusBadge}
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
-                }
-            }
         } catch (err) {
             console.error('Error loading provider income report:', err);
         }
