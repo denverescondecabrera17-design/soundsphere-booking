@@ -78,6 +78,7 @@ const checkProviderAvailability = async ({ providerId, serviceStartDate, service
         FROM dbo.Bookings b
         WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
           AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+          AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
           AND (
               ISNULL(b.ServiceStartDate, b.EventDate) <= @EndDate 
               AND ISNULL(b.ServiceEndDate, b.EventDate) >= @StartDate
@@ -165,6 +166,7 @@ const getProviderAvailabilitySlots = async (providerId) => {
                 FROM dbo.Bookings b
                 WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
                   AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+                  AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
                 ORDER BY ISNULL(b.ServiceStartDate, b.EventDate) ASC;
             `),
         pool.request()
