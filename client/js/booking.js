@@ -758,15 +758,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Dynamic Real-Time Price & Payment Plan Breakdown Calculation
     const updatePriceBreakdown = () => {
-        // 1. Base Package Price & Provider Percentage
+        // 1. Base Package Price
         basePackagePrice = packageData ? parseFloat(packageData.Price || 0) : basePackagePrice;
-        additionalDayPercentage = packageData ? parseFloat(packageData.AdditionalDayPercentage || 20.00) : 20.00;
 
-        // 2. Additional Day Charges Calculation: Package Price * (AdditionalDayPercentage / 100) * (ServiceHireDays - 1)
-        const additionalDayRate = basePackagePrice * (additionalDayPercentage / 100);
-        additionalDayCharges = calculatedDays > 1 ? Math.round(additionalDayRate * (calculatedDays - 1)) : 0;
+        // 2. Multi-Day Package Calculation: Package price multiplies by the number of days booked, but transportation is NOT multiplied
+        // Day 1 is basePackagePrice; each additional day is also charged at full daily basePackagePrice
+        additionalDayCharges = calculatedDays > 1 ? Math.round(basePackagePrice * (calculatedDays - 1)) : 0;
 
-        // 3. Distance & Transportation Fee Calculation
+        // 3. Distance & Transportation Fee Calculation (One-time fee, not multiplied by days)
         let pLat = (packageData && packageData.ProviderLatitude) ? parseFloat(packageData.ProviderLatitude) : null;
         let pLng = (packageData && packageData.ProviderLongitude) ? parseFloat(packageData.ProviderLongitude) : null;
 
@@ -790,7 +789,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         calculatedDistanceKm = calculateHaversineDistance(pLat, pLng, eLat, eLng);
         transportFee = getTransportFeeForDistance(calculatedDistanceKm);
 
-        // 4. Total Booking Price: Base Package Price + Additional Day Charges + Transportation Fee
+        // 4. Total Booking Price: (Base Package Price * Days) + One-Time Transportation Fee
         totalCost = basePackagePrice + additionalDayCharges + transportFee;
 
         // 5. Payment Plan Amounts
@@ -808,8 +807,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const summaryValAddDays = document.getElementById('summary-val-adddays');
 
         if (calculatedDays > 1) {
+            const addDaysCount = calculatedDays - 1;
             if (summaryRowAddDays) summaryRowAddDays.style.display = 'table-row';
-            if (summaryLblAddDays) summaryLblAddDays.textContent = `${calculatedDays - 1} add'l day${calculatedDays - 1 > 1 ? 's' : ''} @ ${additionalDayPercentage}%`;
+            if (summaryLblAddDays) summaryLblAddDays.textContent = `${addDaysCount} add'l day${addDaysCount > 1 ? 's' : ''}`;
             if (summaryValAddDays) summaryValAddDays.textContent = `+₱${additionalDayCharges.toLocaleString()}`;
         } else {
             if (summaryRowAddDays) summaryRowAddDays.style.display = 'none';

@@ -757,9 +757,8 @@ const createBooking = async (req, res) => {
         }
 
         // SERVER-SIDE DYNAMIC PRICING CALCULATIONS
-        const addDayPct = targetPkg ? parseFloat(targetPkg.AdditionalDayPercentage || 20.00) : 20.00;
-        const additionalDayRate = actualPackagePrice * (addDayPct / 100);
-        const additionalDayCharges = calculatedHireDays > 1 ? Math.round(additionalDayRate * (calculatedHireDays - 1)) : 0;
+        // Multi-day booking: package price multiplies by the number of hire days, but transportation fee is NOT multiplied (one-time fee)
+        const additionalDayCharges = calculatedHireDays > 1 ? Math.round(actualPackagePrice * (calculatedHireDays - 1)) : 0;
 
         const reqTransportFee = parseFloat(req.body.transportationFee);
         const reqDistanceKm = parseFloat(req.body.distanceKm);
@@ -769,7 +768,7 @@ const createBooking = async (req, res) => {
             ? reqTransportFee 
             : Math.round(distanceKm * 20.00);
 
-        // Total Booking Price Formula: Package Price + Additional Day Charges + Transportation Fee
+        // Total Booking Price Formula: (Package Price * Number of Days) + One-Time Transportation Fee
         const totalAmount = actualPackagePrice + additionalDayCharges + transportationFee;
 
         const selectedPaymentType = (paymentType === 'full' || paymentType === 'Full Payment') ? 'full' : 'downpayment';
