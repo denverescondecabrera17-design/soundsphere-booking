@@ -996,6 +996,32 @@ const getIncomeReport = async (req, res) => {
             }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        const commissionRecords = bookings.map(b => ({
+            id: b.BookingID,
+            date: b.CreatedAt,
+            reference: b.Reference || `BK-${b.BookingID}`,
+            providerName: b.ProviderName || 'Service Provider',
+            clientName: b.ClientName || 'Client',
+            packageName: b.PackageName || 'Booking Service',
+            bookingAmount: parseFloat(b.TotalAmount || 0),
+            amountPaid: getBookingInflow(b),
+            commissionRate: '5%',
+            commissionEarned: parseFloat(b.CommissionAmount || (b.TotalAmount * 0.05) || 0),
+            providerEarnings: parseFloat(b.ProviderEarnings || (b.TotalAmount * 0.95) || 0),
+            status: b.PaymentStatus || b.BookingStatus || 'Paid'
+        }));
+
+        const subscriptionRecords = subscriptionsList.map(s => ({
+            id: s.SubscriptionID,
+            date: s.CreatedAt,
+            reference: s.Reference || `SUB-${s.SubscriptionID}`,
+            providerName: s.ProviderName || 'Service Provider',
+            planName: s.PlanName || 'Pro Subscription',
+            amount: parseFloat(s.Price || 0),
+            paymentMethod: s.PaymentMethod || 'GCash',
+            status: s.Status || 'Paid'
+        }));
+
         return res.status(200).json({
             success: true,
             report: {
@@ -1016,8 +1042,12 @@ const getIncomeReport = async (req, res) => {
                     netCashierSurplus: parseFloat(netCashierSurplus.toFixed(2)),
                     totalBookingsCount: bookings.length,
                     totalWithdrawalsCount: withdrawals.length,
-                    totalTransactionsCount: detailedLedger.length
+                    totalTransactionsCount: detailedLedger.length,
+                    totalCommissionCount: commissionRecords.length,
+                    totalSubscriptionCount: subscriptionRecords.length
                 },
+                commissionRecords,
+                subscriptionRecords,
                 breakdownBuckets,
                 detailedLedger
             }

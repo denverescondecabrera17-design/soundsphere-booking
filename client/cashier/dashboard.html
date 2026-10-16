@@ -639,7 +639,7 @@
                                     <div class="metric-body">
                                         <div class="metric-label">Commission Income</div>
                                         <div class="metric-value" id="report-kpi-commission">₱0.00</div>
-                                        <div class="metric-subtext">5% Booking Commission</div>
+                                        <div class="metric-subtext" id="report-kpi-commission-count">From Service Providers</div>
                                     </div>
                                 </div>
 
@@ -650,7 +650,7 @@
                                     <div class="metric-body">
                                         <div class="metric-label">Subscription Income</div>
                                         <div class="metric-value" id="report-kpi-subscription">₱0.00</div>
-                                        <div class="metric-subtext">Provider Pro Plans</div>
+                                        <div class="metric-subtext" id="report-kpi-subscription-count">Provider Pro Plans</div>
                                     </div>
                                 </div>
 
@@ -664,82 +664,66 @@
                                         <div class="metric-subtext">Commission + Subscriptions</div>
                                     </div>
                                 </div>
-
-                                <div class="metric-card">
-                                    <div class="metric-icon-box icon-blue" style="background:#f0f9ff; color:#0284c7;">
-                                        <i class="fa-solid fa-arrow-down-left"></i>
-                                    </div>
-                                    <div class="metric-body">
-                                        <div class="metric-label">Gross Booking Volume</div>
-                                        <div class="metric-value" id="report-kpi-gross">₱0.00</div>
-                                        <div class="metric-subtext" id="report-kpi-bookings-count">0 Bookings Paid</div>
-                                    </div>
-                                </div>
-
-                                <div class="metric-card">
-                                    <div class="metric-icon-box icon-amber">
-                                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                                    </div>
-                                    <div class="metric-body">
-                                        <div class="metric-label">Disbursed Payouts</div>
-                                        <div class="metric-value" id="report-kpi-disbursed">₱0.00</div>
-                                        <div class="metric-subtext" id="report-kpi-withdrawals-count">0 Withdrawals Paid</div>
-                                    </div>
-                                </div>
                             </div>
 
-                            <!-- Categorized Timeline Breakdown Section -->
-                            <div style="margin-bottom:28px;">
-                                <h4 style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                                    <i class="fa-solid fa-calendar-check" style="color:#2563eb;"></i>
-                                    <span id="breakdown-section-title">Timeline Category Breakdown</span>
-                                </h4>
+                            <!-- 1. Commission Income from Service Providers -->
+                            <div style="margin-bottom:32px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <h4 style="font-size:1.05rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px; margin:0;">
+                                        <i class="fa-solid fa-percent" style="color:#2563eb;"></i>
+                                        <span>Commission Income Report (Service Providers)</span>
+                                    </h4>
+                                    <span class="badge" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700;" id="badge-commission-count">0 Bookings</span>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
-                                                <th id="th-breakdown-interval">Time Interval</th>
-                                                <th>Gross Inflow (₱)</th>
-                                                <th>Commission (₱)</th>
-                                                <th>Subscriptions (₱)</th>
-                                                <th>Total Income (₱)</th>
-                                                <th>Payouts Disbursed (₱)</th>
-                                                <th>Transactions</th>
+                                                <th>Date & Time</th>
+                                                <th>Booking Ref</th>
+                                                <th>Service Provider</th>
+                                                <th>Client / Event</th>
+                                                <th>Package / Service</th>
+                                                <th>Booking Amount (₱)</th>
+                                                <th>Commission Rate</th>
+                                                <th>Platform Commission (₱)</th>
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="report-breakdown-table-body">
+                                        <tbody id="report-commission-table-body">
                                             <tr>
-                                                <td colspan="7" style="text-align:center; padding:18px; color:#64748b;">No interval data available.</td>
+                                                <td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No commission earnings recorded for this period.</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
 
-                            <!-- Detailed Itemized Ledger for Period -->
+                            <!-- 2. Subscription Income from Service Providers -->
                             <div>
-                                <h4 style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                                    <i class="fa-solid fa-receipt" style="color:#2563eb;"></i>
-                                    <span>Itemized Transaction Ledger</span>
-                                </h4>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <h4 style="font-size:1.05rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px; margin:0;">
+                                        <i class="fa-solid fa-crown" style="color:#8b5cf6;"></i>
+                                        <span>Subscription Income Report (Service Providers)</span>
+                                    </h4>
+                                    <span class="badge" style="background:#f5f3ff; color:#8b5cf6; border:1px solid #ddd6fe; font-weight:700;" id="badge-subscription-count">0 Subscriptions</span>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
                                                 <th>Date & Time</th>
-                                                <th>Reference</th>
-                                                <th>Category</th>
-                                                <th>Client / Provider / Recipient</th>
-                                                <th>Description</th>
-                                                <th>Inflow (+)</th>
-                                                <th>Outflow (-)</th>
-                                                <th>Net Platform</th>
+                                                <th>Payment Ref</th>
+                                                <th>Service Provider</th>
+                                                <th>Subscription Plan</th>
+                                                <th>Subscription Fee (₱)</th>
+                                                <th>Payment Method</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="report-ledger-table-body">
+                                        <tbody id="report-subscription-table-body">
                                             <tr>
-                                                <td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No transactions recorded for this period.</td>
+                                                <td colspan="7" style="text-align:center; padding:24px; color:#64748b;">No subscription payments recorded for this period.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -786,51 +770,42 @@
                 <div class="print-summary-label">Total Platform Income</div>
                 <div class="print-summary-val" id="print-val-total-income">₱0.00</div>
             </div>
-            <div class="print-summary-card">
-                <div class="print-summary-label">Gross Bookings Volume</div>
-                <div class="print-summary-val" id="print-val-gross">₱0.00</div>
-            </div>
-            <div class="print-summary-card">
-                <div class="print-summary-label">Disbursed Payouts</div>
-                <div class="print-summary-val" id="print-val-payouts">₱0.00</div>
-            </div>
         </div>
 
-        <!-- Category / Interval Breakdown Table -->
-        <h4 style="font-size:10pt; font-weight:700; margin-bottom:6px; color:#0a192f; text-transform:uppercase;">1. Periodic Breakdown Summary</h4>
-        <table class="print-table">
-            <thead>
-                <tr>
-                    <th id="print-th-interval">Interval / Category</th>
-                    <th>Gross Volume (₱)</th>
-                    <th>Commission (₱)</th>
-                    <th>Subscriptions (₱)</th>
-                    <th>Total Income (₱)</th>
-                    <th>Payouts Disbursed (₱)</th>
-                    <th>Transactions</th>
-                </tr>
-            </thead>
-            <tbody id="print-breakdown-body">
-                <!-- Injected dynamically -->
-            </tbody>
-        </table>
-
-        <!-- Itemized Ledger Table -->
-        <h4 style="font-size:10pt; font-weight:700; margin-bottom:6px; color:#0a192f; text-transform:uppercase;">2. Detailed Transaction Ledger</h4>
+        <!-- 1. Commission Income from Service Providers -->
+        <h4 style="font-size:10pt; font-weight:700; margin-bottom:6px; color:#0a192f; text-transform:uppercase;">1. Booking Commission Income (From Service Providers)</h4>
         <table class="print-table">
             <thead>
                 <tr>
                     <th>Date & Time</th>
-                    <th>Reference</th>
-                    <th>Category</th>
-                    <th>Party / Recipient</th>
-                    <th>Inflow (₱)</th>
-                    <th>Outflow (₱)</th>
-                    <th>Net Platform (₱)</th>
+                    <th>Booking Ref</th>
+                    <th>Service Provider</th>
+                    <th>Client / Event</th>
+                    <th>Booking Amount (₱)</th>
+                    <th>Commission (5%) (₱)</th>
                     <th>Status</th>
                 </tr>
             </thead>
-            <tbody id="print-ledger-body">
+            <tbody id="print-commission-body">
+                <!-- Injected dynamically -->
+            </tbody>
+        </table>
+
+        <!-- 2. Subscription Income from Service Providers -->
+        <h4 style="font-size:10pt; font-weight:700; margin-bottom:6px; color:#0a192f; text-transform:uppercase;">2. Subscription Income (From Service Providers)</h4>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Payment Ref</th>
+                    <th>Service Provider</th>
+                    <th>Subscription Plan</th>
+                    <th>Subscription Fee (₱)</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="print-subscription-body">
                 <!-- Injected dynamically -->
             </tbody>
         </table>

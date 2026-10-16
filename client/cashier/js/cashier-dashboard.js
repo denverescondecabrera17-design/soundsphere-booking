@@ -2485,92 +2485,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // KPI Summary
         const s = rep.summary || {};
-        const kpiGrossEl = document.getElementById('report-kpi-gross');
-        const kpiBookingsEl = document.getElementById('report-kpi-bookings-count');
-        const kpiSubEl = document.getElementById('report-kpi-subscription');
         const kpiCommEl = document.getElementById('report-kpi-commission');
+        const kpiCommCountEl = document.getElementById('report-kpi-commission-count');
+        const kpiSubEl = document.getElementById('report-kpi-subscription');
+        const kpiSubCountEl = document.getElementById('report-kpi-subscription-count');
         const kpiTotalIncomeEl = document.getElementById('report-kpi-total-income');
-        const kpiDisbursedEl = document.getElementById('report-kpi-disbursed');
-        const kpiWithCountEl = document.getElementById('report-kpi-withdrawals-count');
+        const badgeCommCount = document.getElementById('badge-commission-count');
+        const badgeSubCount = document.getElementById('badge-subscription-count');
+
+        // Extract or fallback commission records
+        const commRecords = rep.commissionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Booking Payment').map(i => ({
+            date: i.date,
+            reference: i.reference,
+            providerName: i.party?.includes('→') ? i.party.split('→')[1].trim() : i.party || 'Service Provider',
+            clientName: i.party?.includes('→') ? i.party.split('→')[0].trim() : 'Client',
+            packageName: i.itemDescription || 'Booking Service',
+            bookingAmount: i.inflow || 0,
+            amountPaid: i.inflow || 0,
+            commissionRate: '5%',
+            commissionEarned: i.commission || 0,
+            status: i.status || 'Paid'
+        }));
+
+        // Extract or fallback subscription records
+        const subRecords = rep.subscriptionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Subscription Payment').map(i => ({
+            date: i.date,
+            reference: i.reference,
+            providerName: i.party || 'Service Provider',
+            planName: i.itemDescription || 'Pro Plan',
+            amount: i.inflow || i.commission || 0,
+            paymentMethod: i.method || 'Online',
+            status: i.status || 'Paid'
+        }));
 
         if (kpiCommEl) kpiCommEl.textContent = formatPHP(s.totalCommissionIncome || 0);
+        if (kpiCommCountEl) kpiCommCountEl.textContent = `${commRecords.length} Bookings Paid`;
+        if (badgeCommCount) badgeCommCount.textContent = `${commRecords.length} Bookings`;
+
         if (kpiSubEl) kpiSubEl.textContent = formatPHP(s.totalSubscriptionRevenue || 0);
+        if (kpiSubCountEl) kpiSubCountEl.textContent = `${subRecords.length} Subscriptions Paid`;
+        if (badgeSubCount) badgeSubCount.textContent = `${subRecords.length} Subscriptions`;
+
         if (kpiTotalIncomeEl) kpiTotalIncomeEl.textContent = formatPHP(s.netPlatformIncome || 0);
-        if (kpiGrossEl) kpiGrossEl.textContent = formatPHP(s.grossBookingRevenue || 0);
-        if (kpiBookingsEl) kpiBookingsEl.textContent = `${s.totalBookingsCount || 0} Bookings Paid`;
-        if (kpiDisbursedEl) kpiDisbursedEl.textContent = formatPHP(s.totalDisbursedPayouts || 0);
-        if (kpiWithCountEl) kpiWithCountEl.textContent = `${s.totalWithdrawalsCount || 0} Withdrawals Paid`;
 
-        // Breakdown Table
-        const breakdownTitle = document.getElementById('breakdown-section-title');
-        const thInterval = document.getElementById('th-breakdown-interval');
-        const breakdownTbody = document.getElementById('report-breakdown-table-body');
-
-        if (rep.period === 'daily') {
-            breakdownTitle.textContent = 'Daily Timeframe Category Breakdown';
-            thInterval.textContent = 'Hour / Time Interval';
-        } else if (rep.period === 'weekly') {
-            breakdownTitle.textContent = 'Day-by-Day Weekly Breakdown';
-            thInterval.textContent = 'Day of the Week';
-        } else if (rep.period === 'monthly') {
-            breakdownTitle.textContent = 'Weekly Monthly Breakdown';
-            thInterval.textContent = 'Week Period';
-        } else if (rep.period === 'yearly') {
-            breakdownTitle.textContent = 'Annual Month-by-Month Breakdown';
-            thInterval.textContent = 'Month';
-        }
-
-        const buckets = rep.breakdownBuckets || [];
-        if (buckets.length === 0) {
-            breakdownTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:#64748b;">No interval transactions recorded.</td></tr>`;
-        } else {
-            breakdownTbody.innerHTML = buckets.map(b => {
-                const comm = b.commissionIncome !== undefined ? b.commissionIncome : (b.commission || 0);
-                const sub = b.subscriptionIncome !== undefined ? b.subscriptionIncome : 0;
-                const totalInc = b.totalPlatformIncome !== undefined ? b.totalPlatformIncome : (comm + sub);
-                return `
-                <tr>
-                    <td><strong>${b.label}</strong></td>
-                    <td class="flow-inflow">${formatPHP(b.grossVolume)}</td>
-                    <td><strong style="color:#2563eb;">${formatPHP(comm)}</strong></td>
-                    <td><strong style="color:#8b5cf6;">${formatPHP(sub)}</strong></td>
-                    <td><strong style="color:#10b981;">${formatPHP(totalInc)}</strong></td>
-                    <td class="flow-outflow">${formatPHP(b.payouts)}</td>
-                    <td><span class="badge" style="background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1;">${b.transactionCount || 0} entries</span></td>
-                </tr>
-            `;
-            }).join('');
-        }
-
-        // Detailed Ledger Table
-        const ledgerTbody = document.getElementById('report-ledger-table-body');
-        const ledger = rep.detailedLedger || [];
-
-        if (ledger.length === 0) {
-            ledgerTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No individual transactions recorded in this period.</td></tr>`;
-        } else {
-            ledgerTbody.innerHTML = ledger.map(item => {
-                const isInflow = item.inflow > 0;
-                const flowClass = isInflow ? 'flow-inflow' : 'flow-outflow';
-                const sign = isInflow ? '+' : '-';
-                const amt = isInflow ? item.inflow : item.outflow;
-
-                return `
+        // 1. Render Commission Income Table
+        const commTbody = document.getElementById('report-commission-table-body');
+        if (commTbody) {
+            if (commRecords.length === 0) {
+                commTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No commission earnings recorded for this period.</td></tr>`;
+            } else {
+                commTbody.innerHTML = commRecords.map(item => `
                     <tr>
                         <td><span style="font-size:0.8rem; color:#475569;">${formatDateTime(item.date)}</span></td>
                         <td><strong>${item.reference}</strong></td>
-                        <td><span class="badge" style="background:#f8fafc; border:1px solid #cbd5e1; color:#0a192f;">${item.type}</span></td>
                         <td>
-                            <div style="font-weight:600; color:#0a192f;">${item.party}</div>
+                            <div style="font-weight:700; color:#0a192f;">${item.providerName}</div>
                         </td>
-                        <td><span style="font-size:0.82rem; color:#475569;">${item.itemDescription || '-'}</span></td>
-                        <td class="flow-inflow">${item.inflow > 0 ? '+' + formatPHP(item.inflow) : '-'}</td>
-                        <td class="flow-outflow">${item.outflow > 0 ? '-' + formatPHP(item.outflow) : '-'}</td>
-                        <td>${item.commission > 0 ? formatPHP(item.commission) : '-'}</td>
-                        <td><span class="badge ${item.status === 'Approved' || item.status === 'Paid' ? 'badge-approved' : 'badge-pending'}">${item.status}</span></td>
+                        <td><span style="font-size:0.85rem; color:#334155;">${item.clientName || 'Client'}</span></td>
+                        <td><span style="font-size:0.82rem; color:#475569;">${item.packageName || 'Booking Service'}</span></td>
+                        <td class="flow-inflow">${formatPHP(item.bookingAmount || item.amountPaid)}</td>
+                        <td><span class="badge" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">5%</span></td>
+                        <td><strong style="color:#2563eb; font-size:0.95rem;">+${formatPHP(item.commissionEarned)}</strong></td>
+                        <td><span class="badge badge-approved">${item.status || 'Paid'}</span></td>
                     </tr>
-                `;
-            }).join('');
+                `).join('');
+            }
+        }
+
+        // 2. Render Subscription Income Table (Under Commission Table)
+        const subTbody = document.getElementById('report-subscription-table-body');
+        if (subTbody) {
+            if (subRecords.length === 0) {
+                subTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">No subscription payments recorded for this period.</td></tr>`;
+            } else {
+                subTbody.innerHTML = subRecords.map(item => `
+                    <tr>
+                        <td><span style="font-size:0.8rem; color:#475569;">${formatDateTime(item.date)}</span></td>
+                        <td><strong>${item.reference}</strong></td>
+                        <td>
+                            <div style="font-weight:700; color:#0a192f;">${item.providerName}</div>
+                        </td>
+                        <td><span class="badge" style="background:#f5f3ff; color:#8b5cf6; border:1px solid #ddd6fe; font-weight:700;">${item.planName || 'Pro Plan'}</span></td>
+                        <td><strong style="color:#8b5cf6; font-size:0.95rem;">+${formatPHP(item.amount)}</strong></td>
+                        <td><span style="font-size:0.84rem; color:#475569;">${item.paymentMethod || 'Online'}</span></td>
+                        <td><span class="badge badge-approved">${item.status || 'Paid'}</span></td>
+                    </tr>
+                `).join('');
+            }
         }
     }
 
@@ -2586,6 +2587,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const rep = currentLoadedReport;
         const s = rep.summary || {};
 
+        // Extract or fallback commission records
+        const commRecords = rep.commissionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Booking Payment').map(i => ({
+            date: i.date,
+            reference: i.reference,
+            providerName: i.party?.includes('→') ? i.party.split('→')[1].trim() : i.party || 'Service Provider',
+            clientName: i.party?.includes('→') ? i.party.split('→')[0].trim() : 'Client',
+            bookingAmount: i.inflow || 0,
+            amountPaid: i.inflow || 0,
+            commissionEarned: i.commission || 0,
+            status: i.status || 'Paid'
+        }));
+
+        // Extract or fallback subscription records
+        const subRecords = rep.subscriptionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Subscription Payment').map(i => ({
+            date: i.date,
+            reference: i.reference,
+            providerName: i.party || 'Service Provider',
+            planName: i.itemDescription || 'Pro Plan',
+            amount: i.inflow || i.commission || 0,
+            paymentMethod: i.method || 'Online',
+            status: i.status || 'Paid'
+        }));
+
         // Populate Printable template elements
         const docId = `REP-${Date.now().toString().slice(-6)}`;
         document.getElementById('print-doc-id').textContent = docId;
@@ -2594,56 +2618,53 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('print-subtitle').textContent = `Financial Period: ${rep.filterLabel || ''} (${rep.startDate ? rep.startDate.substring(0, 10) : ''} to ${rep.endDate ? rep.endDate.substring(0, 10) : ''})`;
 
         // KPIs
-        const printValGross = document.getElementById('print-val-gross');
-        const printValSub = document.getElementById('print-val-sub');
         const printValComm = document.getElementById('print-val-commission');
+        const printValSub = document.getElementById('print-val-sub');
         const printValTotalIncome = document.getElementById('print-val-total-income');
-        const printValPayouts = document.getElementById('print-val-payouts');
 
         if (printValComm) printValComm.textContent = formatPHP(s.totalCommissionIncome || 0);
         if (printValSub) printValSub.textContent = formatPHP(s.totalSubscriptionRevenue || 0);
         if (printValTotalIncome) printValTotalIncome.textContent = formatPHP(s.netPlatformIncome || 0);
-        if (printValGross) printValGross.textContent = formatPHP(s.grossBookingRevenue || 0);
-        if (printValPayouts) printValPayouts.textContent = formatPHP(s.totalDisbursedPayouts || 0);
 
-        // Periodic Breakdown
-        const printBreakdownBody = document.getElementById('print-breakdown-body');
-        const printThInterval = document.getElementById('print-th-interval');
-        printThInterval.textContent = rep.period === 'daily' ? 'Hour Interval' : (rep.period === 'weekly' ? 'Day of Week' : (rep.period === 'monthly' ? 'Week' : 'Month'));
+        // 1. Commission Income Print Table
+        const printCommBody = document.getElementById('print-commission-body');
+        if (printCommBody) {
+            if (commRecords.length === 0) {
+                printCommBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">No commission earnings recorded for this period.</td></tr>`;
+            } else {
+                printCommBody.innerHTML = commRecords.map(item => `
+                    <tr>
+                        <td>${formatDateTime(item.date)}</td>
+                        <td><strong>${item.reference}</strong></td>
+                        <td>${item.providerName}</td>
+                        <td>${item.clientName || 'Client'}</td>
+                        <td>${formatPHP(item.bookingAmount || item.amountPaid)}</td>
+                        <td><strong>+${formatPHP(item.commissionEarned)}</strong></td>
+                        <td>${item.status || 'Paid'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
 
-        const buckets = rep.breakdownBuckets || [];
-        printBreakdownBody.innerHTML = buckets.map(b => {
-            const comm = b.commissionIncome !== undefined ? b.commissionIncome : (b.commission || 0);
-            const sub = b.subscriptionIncome !== undefined ? b.subscriptionIncome : 0;
-            const totalInc = b.totalPlatformIncome !== undefined ? b.totalPlatformIncome : (comm + sub);
-            return `
-            <tr>
-                <td><strong>${b.label}</strong></td>
-                <td>${formatPHP(b.grossVolume)}</td>
-                <td>${formatPHP(comm)}</td>
-                <td>${formatPHP(sub)}</td>
-                <td>${formatPHP(totalInc)}</td>
-                <td>${formatPHP(b.payouts)}</td>
-                <td>${b.transactionCount || 0}</td>
-            </tr>
-        `;
-        }).join('');
-
-        // Ledger Table
-        const printLedgerBody = document.getElementById('print-ledger-body');
-        const ledger = rep.detailedLedger || [];
-        printLedgerBody.innerHTML = ledger.slice(0, 100).map(item => `
-            <tr>
-                <td>${formatDateTime(item.date)}</td>
-                <td><strong>${item.reference}</strong></td>
-                <td>${item.type}</td>
-                <td>${item.party}</td>
-                <td>${item.inflow > 0 ? formatPHP(item.inflow) : '-'}</td>
-                <td>${item.outflow > 0 ? formatPHP(item.outflow) : '-'}</td>
-                <td>${item.commission > 0 ? formatPHP(item.commission) : '-'}</td>
-                <td>${item.status}</td>
-            </tr>
-        `).join('');
+        // 2. Subscription Income Print Table
+        const printSubBody = document.getElementById('print-subscription-body');
+        if (printSubBody) {
+            if (subRecords.length === 0) {
+                printSubBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">No subscription payments recorded for this period.</td></tr>`;
+            } else {
+                printSubBody.innerHTML = subRecords.map(item => `
+                    <tr>
+                        <td>${formatDateTime(item.date)}</td>
+                        <td><strong>${item.reference}</strong></td>
+                        <td>${item.providerName}</td>
+                        <td>${item.planName || 'Pro Plan'}</td>
+                        <td><strong>+${formatPHP(item.amount)}</strong></td>
+                        <td>${item.paymentMethod || 'Online'}</td>
+                        <td>${item.status || 'Paid'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
 
         // Execute print
         window.print();
