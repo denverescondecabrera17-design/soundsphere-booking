@@ -473,28 +473,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render Active Service Providers Table
     const renderActiveProvidersTable = (providers) => {
         const html = (!providers || providers.length === 0)
-            ? `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No active service providers.</td></tr>`
+            ? `<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">No active service providers.</td></tr>`
             : providers.map(p => {
                 const isSuspended = p.AccountStatus === 'Suspended';
                 const statusBadge = isSuspended 
                     ? '<span class="status-badge status-cancelled">Suspended</span>' 
                     : '<span class="status-badge status-confirmed">Active</span>';
 
-                const actionBtn = isSuspended
-                    ? `<button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="padding:5px 12px; font-size:0.78rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-check"></i> Reactivate</button>`
-                    : `<button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="padding:5px 12px; font-size:0.78rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;"><i class="fa-solid fa-ban"></i> Suspend</button>`;
-
                 const ownerNameDisplay = (!p.OwnerName || p.OwnerName === 'null') ? 'Service Provider Owner' : p.OwnerName;
                 const coverageDisplay = (!p.CoverageArea || p.CoverageArea === 'null') ? 'Batangas' : p.CoverageArea;
 
                 return `
-                    <tr>
-                        <td><strong style="color:#0a192f; font-size:0.9rem;">${ownerNameDisplay}</strong></td>
+                    <tr onclick="window.viewProviderDetails(${p.ProviderID})" style="cursor:pointer; transition:background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" title="Click to view provider information & manage account">
+                        <td>
+                            <strong style="color:#0a192f; font-size:0.9rem;">${ownerNameDisplay}</strong>
+                            ${p.ProviderEmail ? `<div style="font-size:0.78rem; color:#64748b;">${p.ProviderEmail}</div>` : ''}
+                        </td>
                         <td><strong style="color:#2563eb; font-size:0.92rem;">${p.BusinessName}</strong></td>
                         <td><span style="font-size:0.84rem; color:#0a192f;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${coverageDisplay}</span></td>
                         <td><span style="font-size:0.82rem; color:#64748b;">📞 ${p.ContactNumber}</span></td>
                         <td>${statusBadge}</td>
-                        <td><div style="display:flex; gap:6px;">${actionBtn}</div></td>
                     </tr>
                 `;
             }).join('');
@@ -1422,6 +1420,163 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // View Provider Information Fullscreen Modal Handler
+    window.currentViewingProviderId = null;
+
+    window.viewProviderDetails = (providerId) => {
+        window.currentViewingProviderId = providerId;
+        const modal = document.getElementById('modal-admin-view-provider');
+        const modalBody = document.getElementById('admin-view-prov-body');
+        const titleEl = document.getElementById('admin-view-prov-title');
+        const subEl = document.getElementById('admin-view-prov-subtitle');
+        const badgeEl = document.getElementById('admin-view-prov-status-badge');
+        const headerActionsEl = document.getElementById('admin-view-prov-header-actions');
+
+        if (!modal || !modalBody) return;
+
+        const p = (globalActiveProvidersList || []).find(x => String(x.ProviderID) === String(providerId));
+        if (!p) {
+            showToast('Provider record not found.', 'error');
+            return;
+        }
+
+        const isSuspended = (p.AccountStatus === 'Suspended');
+        const ownerNameDisplay = (!p.OwnerName || p.OwnerName === 'null') ? 'Service Provider Owner' : p.OwnerName;
+        const coverageDisplay = (!p.CoverageArea || p.CoverageArea === 'null') ? 'Batangas' : p.CoverageArea;
+        const approvedDate = p.ApprovedAt ? new Date(p.ApprovedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Verified Partner';
+        const permitExpiry = p.PermitExpiryDate ? new Date(p.PermitExpiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified';
+        
+        // Find provider bookings from globalBookingsList
+        const provBookings = (globalBookingsList || []).filter(b => String(b.ProviderID) === String(p.ProviderID) || b.ProviderName === p.BusinessName);
+        const totalEarnings = provBookings.reduce((sum, b) => sum + parseFloat(b.TotalAmount || 0), 0);
+
+        if (titleEl) titleEl.textContent = p.BusinessName || 'Provider Details';
+        if (subEl) subEl.textContent = `Provider ID #SP-${p.ProviderID} • Approved on ${approvedDate}`;
+        if (badgeEl) {
+            badgeEl.textContent = isSuspended ? 'Suspended' : 'Active Account';
+            badgeEl.className = `status-badge ${isSuspended ? 'status-cancelled' : 'status-confirmed'}`;
+        }
+
+        if (headerActionsEl) {
+            headerActionsEl.innerHTML = isSuspended
+                ? `<button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="padding:9px 20px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'"><i class="fa-solid fa-check"></i> Reactivate Provider</button>`
+                : `<button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="padding:9px 20px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 8px rgba(239,68,68,0.3); transition:0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'"><i class="fa-solid fa-ban"></i> Suspend Provider</button>`;
+        }
+
+        modalBody.innerHTML = `
+            <!-- Top Status & Summary Card -->
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div style="display:flex; align-items:center; gap:18px;">
+                    <div style="width:64px; height:64px; border-radius:14px; background:#eff6ff; border:2px solid #bfdbfe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <span style="font-size:0.78rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Business Profile Overview</span>
+                        <h3 style="margin:4px 0 0 0; font-size:1.45rem; color:#0a192f; font-weight:800;">${p.BusinessName}</h3>
+                        <div style="font-size:0.88rem; color:#475569; margin-top:4px;">
+                            Owned by <strong style="color:#0a192f;">${ownerNameDisplay}</strong> • 
+                            <span style="color:#2563eb;">${p.ProviderEmail || 'No email registered'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="status-badge ${isSuspended ? 'status-cancelled' : 'status-confirmed'}" style="font-size:0.92rem; padding:8px 18px;">
+                        ${isSuspended ? '<i class="fa-solid fa-ban"></i> Account Suspended' : '<i class="fa-solid fa-circle-check"></i> Account Active'}
+                    </span>
+                </div>
+            </div>
+
+            <!-- 3-Column Quick Metrics -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.78rem; font-weight:800; color:#64748b; text-transform:uppercase;">TOTAL BOOKINGS</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#2563eb; margin-top:4px;">${provBookings.length} Bookings</div>
+                    <span style="font-size:0.75rem; color:#64748b;">Scheduled platform bookings</span>
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.78rem; font-weight:800; color:#64748b; text-transform:uppercase;">TOTAL GROSS VOLUME</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#10b981; margin-top:4px;">₱${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                    <span style="font-size:0.75rem; color:#64748b;">Client payments</span>
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.78rem; font-weight:800; color:#64748b; text-transform:uppercase;">PERMIT EXPIRY</div>
+                    <div style="font-size:1.15rem; font-weight:800; color:#0a192f; margin-top:6px;">${permitExpiry}</div>
+                    <span style="font-size:0.75rem; color:#64748b;">Municipal business permit</span>
+                </div>
+            </div>
+
+            <!-- Two-Column Information Details -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap:20px;">
+                <!-- Column 1: Contact & Coverage -->
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <h4 style="margin:0 0 16px 0; font-size:1rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-address-card" style="color:#2563eb;"></i> Contact & Service Coverage
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:14px; font-size:0.9rem;">
+                        <div>
+                            <span style="font-size:0.76rem; font-weight:700; color:#64748b; text-transform:uppercase; display:block;">Email Address</span>
+                            <strong style="color:#0a192f;">${p.ProviderEmail || 'None'}</strong>
+                        </div>
+                        <div>
+                            <span style="font-size:0.76rem; font-weight:700; color:#64748b; text-transform:uppercase; display:block;">Contact Phone Number</span>
+                            <strong style="color:#0a192f;">${p.ContactNumber || 'None'}</strong>
+                        </div>
+                        <div>
+                            <span style="font-size:0.76rem; font-weight:700; color:#64748b; text-transform:uppercase; display:block;">Service Coverage Area</span>
+                            <strong style="color:#0a192f;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${coverageDisplay}</strong>
+                        </div>
+                        <div>
+                            <span style="font-size:0.76rem; font-weight:700; color:#64748b; text-transform:uppercase; display:block;">Account Joined Date</span>
+                            <span style="color:#475569;">${approvedDate}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Account Actions & Status Management -->
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <h4 style="margin:0 0 16px 0; font-size:1rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-shield-halved" style="color:#2563eb;"></i> Account Management Controls
+                        </h4>
+                        
+                        ${isSuspended ? `
+                            <div style="background:#fef2f2; border:1.5px solid #fecaca; border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+                                <strong style="color:#991b1b; font-size:0.9rem; display:block;"><i class="fa-solid fa-triangle-exclamation"></i> Account is currently Suspended</strong>
+                                <p style="margin:4px 0 0 0; color:#b91c1c; font-size:0.8rem; line-height:1.4;">
+                                    This service provider cannot accept new client bookings. All dates on their calendar are locked. Ongoing bookings remain active.
+                                </p>
+                            </div>
+                        ` : `
+                            <div style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+                                <strong style="color:#166534; font-size:0.9rem; display:block;"><i class="fa-solid fa-circle-check"></i> Account is Active &amp; Verified</strong>
+                                <p style="margin:4px 0 0 0; color:#15803d; font-size:0.8rem; line-height:1.4;">
+                                    This service provider is publicly visible on SoundSphere, can accept bookings, and receive client payments.
+                                </p>
+                            </div>
+                        `}
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
+                        ${isSuspended ? `
+                            <button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="flex:1; padding:10px 16px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:0.2s;">
+                                <i class="fa-solid fa-check"></i> Reactivate Provider Account
+                            </button>
+                        ` : `
+                            <button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="flex:1; padding:10px 16px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(239,68,68,0.3); transition:0.2s;">
+                                <i class="fa-solid fa-ban"></i> Suspend Provider Account
+                            </button>
+                        `}
+                        <a href="/pages/provider-profile.html?id=${p.ProviderID}" target="_blank" style="padding:10px 16px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0a192f; font-weight:700; font-size:0.88rem; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
+                            <i class="fa-solid fa-arrow-up-right-from-square" style="color:#2563eb;"></i> View Public Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+    };
+
     // Suspend Provider Handler
     window.suspendProvider = async (providerId) => {
         try {
@@ -1431,6 +1586,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (res.ok && data.success) {
                 showToast(`✓ Provider #${providerId} has been suspended successfully.`, 'info');
+                const prov = (globalActiveProvidersList || []).find(p => String(p.ProviderID) === String(providerId));
+                if (prov) prov.AccountStatus = 'Suspended';
+                renderActiveProvidersTable(globalActiveProvidersList);
+                if (window.currentViewingProviderId && String(window.currentViewingProviderId) === String(providerId)) {
+                    window.viewProviderDetails(providerId);
+                }
                 await loadDashboardData();
             } else {
                 showToast(`✕ ${data.message || 'Failed to suspend provider.'}`, 'error');
@@ -1449,6 +1610,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (res.ok && data.success) {
                 showToast(`✓ Provider #${providerId} reactivated successfully.`, 'success');
+                const prov = (globalActiveProvidersList || []).find(p => String(p.ProviderID) === String(providerId));
+                if (prov) prov.AccountStatus = 'Active';
+                renderActiveProvidersTable(globalActiveProvidersList);
+                if (window.currentViewingProviderId && String(window.currentViewingProviderId) === String(providerId)) {
+                    window.viewProviderDetails(providerId);
+                }
                 await loadDashboardData();
             } else {
                 showToast(`✕ ${data.message || 'Failed to reactivate provider.'}`, 'error');
