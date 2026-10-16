@@ -888,30 +888,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
-                    // Render Cashier Withdrawals Table (Past History)
+                    // Render Transactional History of All Disbursed
                     const tableBody = document.getElementById('table-provider-withdrawals-list');
                     if (tableBody) {
                         const withdrawals = data.withdrawals || [];
-                        if (withdrawals.length === 0) {
-                            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;">No payout requests submitted yet.</td></tr>`;
-                        } else {
-                            tableBody.innerHTML = withdrawals.map(w => {
-                                const reqDate = new Date(w.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-                                const stLower = (w.Status || 'Pending').toLowerCase();
-                                const isApproved = stLower === 'approved' || stLower === 'completed';
+                        const disbursedList = withdrawals.filter(w => {
+                            const stLower = (w.Status || '').toLowerCase();
+                            return stLower === 'approved' || stLower === 'completed';
+                        });
 
-                                const statusHtml = isApproved
-                                    ? `<span class="status-badge status-confirmed" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;"><i class="fa-solid fa-circle-check"></i> Disbursed by Cashier</span>`
-                                    : `<span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7;"><i class="fa-solid fa-clock"></i> Pending Cashier Payout</span>`;
+                        if (disbursedList.length === 0) {
+                            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:#64748b;">No disbursed transactions recorded yet. Once the Cashier releases your payout, it will appear in this ledger.</td></tr>`;
+                        } else {
+                            tableBody.innerHTML = disbursedList.map(w => {
+                                const disbDate = new Date(w.ProcessedAt || w.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                                const amt = parseFloat(w.Amount || 0);
 
                                 return `
                                     <tr>
                                         <td><strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#WD-${w.WithdrawalID}</strong></td>
-                                        <td><strong style="color:#10b981; font-size:0.95rem;">₱${parseFloat(w.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                                        <td><span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet"></i> ${w.PayoutMethod || 'GCash / Maya'}</span></td>
+                                        <td><strong style="color:#059669; font-size:0.95rem; font-weight:800;">₱${amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                        <td><span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet"></i> ${w.PayoutMethod || 'GCash'}</span></td>
                                         <td><span style="font-size:0.85rem; color:#475569; font-weight:600;">${w.AccountReference} <span style="color:#64748b; font-weight:400;">(${w.AccountName || 'Account'})</span></span></td>
-                                        <td><span style="font-size:0.82rem; color:#64748b;">${reqDate}</span></td>
-                                        <td>${statusHtml}</td>
+                                        <td><span style="font-size:0.82rem; color:#64748b; font-weight:600;">${disbDate}</span></td>
+                                        <td>
+                                            <span class="status-badge status-confirmed" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                                <i class="fa-solid fa-circle-check"></i> Disbursed by Cashier
+                                            </span>
+                                        </td>
                                     </tr>
                                 `;
                             }).join('');
