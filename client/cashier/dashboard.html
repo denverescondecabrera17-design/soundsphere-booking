@@ -56,7 +56,7 @@
                 </a>
                 <a href="#reports" class="nav-link" id="nav-reports">
                     <i class="fa-solid fa-file-invoice-dollar"></i>
-                    <span>Income Statements</span>
+                    <span>Income Report</span>
                 </a>
 
             </nav>
@@ -142,7 +142,7 @@
                                 <i class="fa-solid fa-shield-check"></i> SoundSphere Financial Desk
                             </div>
                             <h1>Cashier & Payout Management</h1>
-                            <p>Disburse service provider withdrawal requests, collect subscription payments, reconcile booking payments, and generate comprehensive daily, weekly, monthly, and yearly income statements.</p>
+                            <p>Disburse service provider withdrawal requests, collect subscription payments, reconcile booking payments, and generate comprehensive daily, weekly, monthly, and yearly income reports.</p>
                         </div>
                     </section>
 
@@ -565,7 +565,7 @@
                     <div class="panel-card">
                         <div class="panel-card-header">
                             <h3 class="panel-title">
-                                <i class="fa-solid fa-chart-line"></i> Income & Financial Reports
+                                <i class="fa-solid fa-chart-line"></i> Income Report
                             </h3>
                             <button type="button" class="btn btn-primary" id="btn-trigger-print-report">
                                 <i class="fa-solid fa-print"></i>
@@ -621,7 +621,7 @@
                             <!-- Report Headline Banner -->
                             <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:18px 24px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                                 <div>
-                                    <h2 id="report-display-title" style="font-size:1.35rem; font-weight:800; color:#0a192f; margin-bottom:4px;">Daily Income Statement</h2>
+                                    <h2 id="report-display-title" style="font-size:1.35rem; font-weight:800; color:#0a192f; margin-bottom:4px;">Daily Income Report</h2>
                                     <p id="report-display-subtitle" style="font-size:0.9rem; color:#64748b;">Financial period: Loading...</p>
                                 </div>
                                 <div style="text-align:right;">
@@ -633,13 +633,13 @@
                             <!-- Financial Summary KPI Cards for Selected Period -->
                             <div class="metrics-grid">
                                 <div class="metric-card">
-                                    <div class="metric-icon-box icon-emerald">
-                                        <i class="fa-solid fa-arrow-down-left"></i>
+                                    <div class="metric-icon-box icon-blue">
+                                        <i class="fa-solid fa-percent"></i>
                                     </div>
                                     <div class="metric-body">
-                                        <div class="metric-label">Gross Booking Volume</div>
-                                        <div class="metric-value" id="report-kpi-gross">₱0.00</div>
-                                        <div class="metric-subtext" id="report-kpi-bookings-count">0 Bookings Paid</div>
+                                        <div class="metric-label">Commission Income</div>
+                                        <div class="metric-value" id="report-kpi-commission">₱0.00</div>
+                                        <div class="metric-subtext">5% Booking Commission</div>
                                     </div>
                                 </div>
 
@@ -648,20 +648,31 @@
                                         <i class="fa-solid fa-crown"></i>
                                     </div>
                                     <div class="metric-body">
-                                        <div class="metric-label">Subscription Revenue</div>
+                                        <div class="metric-label">Subscription Income</div>
                                         <div class="metric-value" id="report-kpi-subscription">₱0.00</div>
                                         <div class="metric-subtext">Provider Pro Plans</div>
                                     </div>
                                 </div>
 
                                 <div class="metric-card">
-                                    <div class="metric-icon-box icon-blue">
+                                    <div class="metric-icon-box icon-emerald">
                                         <i class="fa-solid fa-coins"></i>
                                     </div>
                                     <div class="metric-body">
-                                        <div class="metric-label">Platform Net Income</div>
-                                        <div class="metric-value" id="report-kpi-commission">₱0.00</div>
+                                        <div class="metric-label">Total Platform Income</div>
+                                        <div class="metric-value" id="report-kpi-total-income">₱0.00</div>
                                         <div class="metric-subtext">Commission + Subscriptions</div>
+                                    </div>
+                                </div>
+
+                                <div class="metric-card">
+                                    <div class="metric-icon-box icon-blue" style="background:#f0f9ff; color:#0284c7;">
+                                        <i class="fa-solid fa-arrow-down-left"></i>
+                                    </div>
+                                    <div class="metric-body">
+                                        <div class="metric-label">Gross Booking Volume</div>
+                                        <div class="metric-value" id="report-kpi-gross">₱0.00</div>
+                                        <div class="metric-subtext" id="report-kpi-bookings-count">0 Bookings Paid</div>
                                     </div>
                                 </div>
 
@@ -689,14 +700,16 @@
                                             <tr>
                                                 <th id="th-breakdown-interval">Time Interval</th>
                                                 <th>Gross Inflow (₱)</th>
-                                                <th>Platform Revenue (₱)</th>
+                                                <th>Commission (₱)</th>
+                                                <th>Subscriptions (₱)</th>
+                                                <th>Total Income (₱)</th>
                                                 <th>Payouts Disbursed (₱)</th>
                                                 <th>Transactions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="report-breakdown-table-body">
                                             <tr>
-                                                <td colspan="5" style="text-align:center; padding:18px; color:#64748b;">No interval data available.</td>
+                                                <td colspan="7" style="text-align:center; padding:18px; color:#64748b;">No interval data available.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -747,7 +760,7 @@
         <div class="print-header">
             <div>
                 <div class="print-brand-name">SOUNDSPHERE</div>
-                <div class="print-brand-sub">Audio & Event Booking Platform • Official Cashier Financial Statement</div>
+                <div class="print-brand-sub">Audio & Event Booking Platform • Official Cashier Financial Income Report</div>
             </div>
             <div class="print-meta">
                 <div><strong>Report No:</strong> <span id="print-doc-id">REP-2026-001</span></div>
@@ -756,22 +769,26 @@
             </div>
         </div>
 
-        <div class="print-report-title" id="print-title">DAILY INCOME STATEMENT</div>
+        <div class="print-report-title" id="print-title">DAILY INCOME REPORT</div>
         <div class="print-report-subtitle" id="print-subtitle">Period: October 9, 2026</div>
 
         <!-- Summary KPI Row -->
         <div class="print-summary-grid">
             <div class="print-summary-card">
-                <div class="print-summary-label">Gross Bookings Volume</div>
-                <div class="print-summary-val" id="print-val-gross">₱0.00</div>
+                <div class="print-summary-label">Commission Income</div>
+                <div class="print-summary-val" id="print-val-commission">₱0.00</div>
             </div>
             <div class="print-summary-card">
-                <div class="print-summary-label">Subscription Revenue</div>
+                <div class="print-summary-label">Subscription Income</div>
                 <div class="print-summary-val" id="print-val-sub">₱0.00</div>
             </div>
             <div class="print-summary-card">
-                <div class="print-summary-label">Platform Net Income</div>
-                <div class="print-summary-val" id="print-val-commission">₱0.00</div>
+                <div class="print-summary-label">Total Platform Income</div>
+                <div class="print-summary-val" id="print-val-total-income">₱0.00</div>
+            </div>
+            <div class="print-summary-card">
+                <div class="print-summary-label">Gross Bookings Volume</div>
+                <div class="print-summary-val" id="print-val-gross">₱0.00</div>
             </div>
             <div class="print-summary-card">
                 <div class="print-summary-label">Disbursed Payouts</div>
@@ -786,7 +803,9 @@
                 <tr>
                     <th id="print-th-interval">Interval / Category</th>
                     <th>Gross Volume (₱)</th>
-                    <th>Platform Net (₱)</th>
+                    <th>Commission (₱)</th>
+                    <th>Subscriptions (₱)</th>
+                    <th>Total Income (₱)</th>
                     <th>Payouts Disbursed (₱)</th>
                     <th>Transactions</th>
                 </tr>

@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             topbarTitle.textContent = 'Revenue';
             loadCashierRevenueReports();
         } else if (cleanHash === 'reports') {
-            topbarTitle.textContent = 'Income & Financial Reports';
+            topbarTitle.textContent = 'Income Report';
             loadIncomeReport();
         }
     }
@@ -2479,7 +2479,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!rep) return;
 
         // Headline & subtext
-        document.getElementById('report-display-title').textContent = rep.periodTitle || 'Income Statement';
+        document.getElementById('report-display-title').textContent = rep.periodTitle || 'Income Report';
         document.getElementById('report-display-subtitle').textContent = `Financial Period: ${rep.filterLabel || ''}`;
         document.getElementById('report-generated-timestamp').textContent = formatDateTime(rep.generatedAt);
 
@@ -2489,14 +2489,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const kpiBookingsEl = document.getElementById('report-kpi-bookings-count');
         const kpiSubEl = document.getElementById('report-kpi-subscription');
         const kpiCommEl = document.getElementById('report-kpi-commission');
+        const kpiTotalIncomeEl = document.getElementById('report-kpi-total-income');
         const kpiDisbursedEl = document.getElementById('report-kpi-disbursed');
         const kpiWithCountEl = document.getElementById('report-kpi-withdrawals-count');
 
-        if (kpiGrossEl) kpiGrossEl.textContent = formatPHP(s.grossBookingRevenue);
-        if (kpiBookingsEl) kpiBookingsEl.textContent = `${s.totalBookingsCount || 0} Bookings Paid`;
+        if (kpiCommEl) kpiCommEl.textContent = formatPHP(s.totalCommissionIncome || 0);
         if (kpiSubEl) kpiSubEl.textContent = formatPHP(s.totalSubscriptionRevenue || 0);
-        if (kpiCommEl) kpiCommEl.textContent = formatPHP(s.netPlatformIncome);
-        if (kpiDisbursedEl) kpiDisbursedEl.textContent = formatPHP(s.totalDisbursedPayouts);
+        if (kpiTotalIncomeEl) kpiTotalIncomeEl.textContent = formatPHP(s.netPlatformIncome || 0);
+        if (kpiGrossEl) kpiGrossEl.textContent = formatPHP(s.grossBookingRevenue || 0);
+        if (kpiBookingsEl) kpiBookingsEl.textContent = `${s.totalBookingsCount || 0} Bookings Paid`;
+        if (kpiDisbursedEl) kpiDisbursedEl.textContent = formatPHP(s.totalDisbursedPayouts || 0);
         if (kpiWithCountEl) kpiWithCountEl.textContent = `${s.totalWithdrawalsCount || 0} Withdrawals Paid`;
 
         // Breakdown Table
@@ -2520,17 +2522,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const buckets = rep.breakdownBuckets || [];
         if (buckets.length === 0) {
-            breakdownTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:#64748b;">No interval transactions recorded.</td></tr>`;
+            breakdownTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:#64748b;">No interval transactions recorded.</td></tr>`;
         } else {
-            breakdownTbody.innerHTML = buckets.map(b => `
+            breakdownTbody.innerHTML = buckets.map(b => {
+                const comm = b.commissionIncome !== undefined ? b.commissionIncome : (b.commission || 0);
+                const sub = b.subscriptionIncome !== undefined ? b.subscriptionIncome : 0;
+                const totalInc = b.totalPlatformIncome !== undefined ? b.totalPlatformIncome : (comm + sub);
+                return `
                 <tr>
                     <td><strong>${b.label}</strong></td>
                     <td class="flow-inflow">${formatPHP(b.grossVolume)}</td>
-                    <td><strong>${formatPHP(b.commission || b.netIncome)}</strong></td>
+                    <td><strong style="color:#2563eb;">${formatPHP(comm)}</strong></td>
+                    <td><strong style="color:#8b5cf6;">${formatPHP(sub)}</strong></td>
+                    <td><strong style="color:#10b981;">${formatPHP(totalInc)}</strong></td>
                     <td class="flow-outflow">${formatPHP(b.payouts)}</td>
                     <td><span class="badge" style="background:#f1f5f9; color:#0a192f; border:1px solid #cbd5e1;">${b.transactionCount || 0} entries</span></td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
 
         // Detailed Ledger Table
@@ -2581,15 +2590,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const docId = `REP-${Date.now().toString().slice(-6)}`;
         document.getElementById('print-doc-id').textContent = docId;
         document.getElementById('print-timestamp').textContent = new Date().toLocaleString();
-        document.getElementById('print-title').textContent = (rep.periodTitle || 'INCOME STATEMENT').toUpperCase();
+        document.getElementById('print-title').textContent = (rep.periodTitle || 'INCOME REPORT').toUpperCase();
         document.getElementById('print-subtitle').textContent = `Financial Period: ${rep.filterLabel || ''} (${rep.startDate ? rep.startDate.substring(0, 10) : ''} to ${rep.endDate ? rep.endDate.substring(0, 10) : ''})`;
 
         // KPIs
-        document.getElementById('print-val-gross').textContent = formatPHP(s.grossBookingRevenue);
+        const printValGross = document.getElementById('print-val-gross');
         const printValSub = document.getElementById('print-val-sub');
+        const printValComm = document.getElementById('print-val-commission');
+        const printValTotalIncome = document.getElementById('print-val-total-income');
+        const printValPayouts = document.getElementById('print-val-payouts');
+
+        if (printValComm) printValComm.textContent = formatPHP(s.totalCommissionIncome || 0);
         if (printValSub) printValSub.textContent = formatPHP(s.totalSubscriptionRevenue || 0);
-        document.getElementById('print-val-commission').textContent = formatPHP(s.netPlatformIncome);
-        document.getElementById('print-val-payouts').textContent = formatPHP(s.totalDisbursedPayouts);
+        if (printValTotalIncome) printValTotalIncome.textContent = formatPHP(s.netPlatformIncome || 0);
+        if (printValGross) printValGross.textContent = formatPHP(s.grossBookingRevenue || 0);
+        if (printValPayouts) printValPayouts.textContent = formatPHP(s.totalDisbursedPayouts || 0);
 
         // Periodic Breakdown
         const printBreakdownBody = document.getElementById('print-breakdown-body');
@@ -2597,15 +2612,22 @@ document.addEventListener('DOMContentLoaded', () => {
         printThInterval.textContent = rep.period === 'daily' ? 'Hour Interval' : (rep.period === 'weekly' ? 'Day of Week' : (rep.period === 'monthly' ? 'Week' : 'Month'));
 
         const buckets = rep.breakdownBuckets || [];
-        printBreakdownBody.innerHTML = buckets.map(b => `
+        printBreakdownBody.innerHTML = buckets.map(b => {
+            const comm = b.commissionIncome !== undefined ? b.commissionIncome : (b.commission || 0);
+            const sub = b.subscriptionIncome !== undefined ? b.subscriptionIncome : 0;
+            const totalInc = b.totalPlatformIncome !== undefined ? b.totalPlatformIncome : (comm + sub);
+            return `
             <tr>
                 <td><strong>${b.label}</strong></td>
                 <td>${formatPHP(b.grossVolume)}</td>
-                <td>${formatPHP(b.commission || b.netIncome)}</td>
+                <td>${formatPHP(comm)}</td>
+                <td>${formatPHP(sub)}</td>
+                <td>${formatPHP(totalInc)}</td>
                 <td>${formatPHP(b.payouts)}</td>
                 <td>${b.transactionCount || 0}</td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         // Ledger Table
         const printLedgerBody = document.getElementById('print-ledger-body');

@@ -615,7 +615,7 @@ const getIncomeReport = async (req, res) => {
         if (period === 'daily') {
             startDate = `${selectedDateStr} 00:00:00`;
             endDate = `${selectedDateStr} 23:59:59`;
-            periodTitle = `Daily Income Statement`;
+            periodTitle = `Daily Income Report`;
             filterLabel = new Date(selectedDateStr).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         } else if (period === 'weekly') {
             // Find Monday of the selected date's week
@@ -631,7 +631,7 @@ const getIncomeReport = async (req, res) => {
 
             startDate = `${monStr} 00:00:00`;
             endDate = `${sunStr} 23:59:59`;
-            periodTitle = `Weekly Income Statement`;
+            periodTitle = `Weekly Income Report`;
             filterLabel = `Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
         } else if (period === 'monthly') {
             const [y, m] = selectedMonthStr.split('-');
@@ -643,12 +643,12 @@ const getIncomeReport = async (req, res) => {
             endDate = `${y}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')} 23:59:59`;
             
             const monthDate = new Date(yearNum, monthNum - 1, 1);
-            periodTitle = `Monthly Income Statement`;
+            periodTitle = `Monthly Income Report`;
             filterLabel = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         } else if (period === 'yearly') {
             startDate = `${selectedYear}-01-01 00:00:00`;
             endDate = `${selectedYear}-12-31 23:59:59`;
-            periodTitle = `Annual Financial Income Statement`;
+            periodTitle = `Annual Financial Income Report`;
             filterLabel = `Full Year ${selectedYear}`;
         } else {
             return res.status(400).json({ success: false, message: 'Invalid period parameter. Use daily, weekly, monthly, or yearly.' });
@@ -773,13 +773,16 @@ const getIncomeReport = async (req, res) => {
             const hoursMap = {};
             for (let h = 0; h < 24; h++) {
                 const label = `${String(h).padStart(2, '0')}:00`;
-                hoursMap[h] = { label, grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 };
+                hoursMap[h] = { label, grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 };
             }
             bookings.forEach(b => {
                 const h = new Date(b.CreatedAt).getHours();
                 if (hoursMap[h]) {
-                    hoursMap[h].grossVolume += getBookingInflow(b);
-                    hoursMap[h].commission += parseFloat(b.CommissionAmount || 0);
+                    const inflow = getBookingInflow(b);
+                    const comm = parseFloat(b.CommissionAmount || 0);
+                    hoursMap[h].grossVolume += inflow;
+                    hoursMap[h].commissionIncome += comm;
+                    hoursMap[h].totalPlatformIncome += comm;
                     hoursMap[h].transactionCount += 1;
                 }
             });
@@ -793,17 +796,19 @@ const getIncomeReport = async (req, res) => {
             subscriptionsList.forEach(s => {
                 const h = new Date(s.CreatedAt).getHours();
                 if (hoursMap[h]) {
-                    hoursMap[h].grossVolume += parseFloat(s.Price || 0);
-                    hoursMap[h].commission += parseFloat(s.Price || 0);
+                    const price = parseFloat(s.Price || 0);
+                    hoursMap[h].grossVolume += price;
+                    hoursMap[h].subscriptionIncome += price;
+                    hoursMap[h].totalPlatformIncome += price;
                     hoursMap[h].transactionCount += 1;
                 }
             });
             breakdownBuckets = Object.values(hoursMap).filter(b => b.transactionCount > 0 || b.grossVolume > 0 || b.payouts > 0);
             if (breakdownBuckets.length === 0) {
                 breakdownBuckets = [
-                    { label: 'Morning (08:00 - 12:00)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                    { label: 'Afternoon (12:00 - 17:00)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                    { label: 'Evening (17:00 - 22:00)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 }
+                    { label: 'Morning (08:00 - 12:00)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                    { label: 'Afternoon (12:00 - 17:00)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                    { label: 'Evening (17:00 - 22:00)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 }
                 ];
             }
         } else if (period === 'weekly') {
@@ -818,7 +823,9 @@ const getIncomeReport = async (req, res) => {
                     date: dStr,
                     label: `${daysNames[i]} (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
                     grossVolume: 0,
-                    commission: 0,
+                    commissionIncome: 0,
+                    subscriptionIncome: 0,
+                    totalPlatformIncome: 0,
                     payouts: 0,
                     transactionCount: 0
                 };
@@ -826,8 +833,11 @@ const getIncomeReport = async (req, res) => {
             bookings.forEach(b => {
                 const dStr = new Date(b.CreatedAt).toISOString().split('T')[0];
                 if (daysMap[dStr]) {
-                    daysMap[dStr].grossVolume += getBookingInflow(b);
-                    daysMap[dStr].commission += parseFloat(b.CommissionAmount || 0);
+                    const inflow = getBookingInflow(b);
+                    const comm = parseFloat(b.CommissionAmount || 0);
+                    daysMap[dStr].grossVolume += inflow;
+                    daysMap[dStr].commissionIncome += comm;
+                    daysMap[dStr].totalPlatformIncome += comm;
                     daysMap[dStr].transactionCount += 1;
                 }
             });
@@ -841,26 +851,31 @@ const getIncomeReport = async (req, res) => {
             subscriptionsList.forEach(s => {
                 const dStr = new Date(s.CreatedAt).toISOString().split('T')[0];
                 if (daysMap[dStr]) {
-                    daysMap[dStr].grossVolume += parseFloat(s.Price || 0);
-                    daysMap[dStr].commission += parseFloat(s.Price || 0);
+                    const price = parseFloat(s.Price || 0);
+                    daysMap[dStr].grossVolume += price;
+                    daysMap[dStr].subscriptionIncome += price;
+                    daysMap[dStr].totalPlatformIncome += price;
                     daysMap[dStr].transactionCount += 1;
                 }
             });
             breakdownBuckets = Object.values(daysMap);
         } else if (period === 'monthly') {
             const weeksMap = {
-                1: { label: 'Week 1 (Days 1 - 7)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                2: { label: 'Week 2 (Days 8 - 14)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                3: { label: 'Week 3 (Days 15 - 21)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                4: { label: 'Week 4 (Days 22 - 28)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 },
-                5: { label: 'Week 5 (Days 29 - End)', grossVolume: 0, commission: 0, payouts: 0, transactionCount: 0 }
+                1: { label: 'Week 1 (Days 1 - 7)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                2: { label: 'Week 2 (Days 8 - 14)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                3: { label: 'Week 3 (Days 15 - 21)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                4: { label: 'Week 4 (Days 22 - 28)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 },
+                5: { label: 'Week 5 (Days 29 - End)', grossVolume: 0, commissionIncome: 0, subscriptionIncome: 0, totalPlatformIncome: 0, payouts: 0, transactionCount: 0 }
             };
             bookings.forEach(b => {
                 const day = new Date(b.CreatedAt).getDate();
                 const weekIdx = Math.min(5, Math.ceil(day / 7));
                 if (weeksMap[weekIdx]) {
-                    weeksMap[weekIdx].grossVolume += getBookingInflow(b);
-                    weeksMap[weekIdx].commission += parseFloat(b.CommissionAmount || 0);
+                    const inflow = getBookingInflow(b);
+                    const comm = parseFloat(b.CommissionAmount || 0);
+                    weeksMap[weekIdx].grossVolume += inflow;
+                    weeksMap[weekIdx].commissionIncome += comm;
+                    weeksMap[weekIdx].totalPlatformIncome += comm;
                     weeksMap[weekIdx].transactionCount += 1;
                 }
             });
@@ -876,8 +891,10 @@ const getIncomeReport = async (req, res) => {
                 const day = new Date(s.CreatedAt).getDate();
                 const weekIdx = Math.min(5, Math.ceil(day / 7));
                 if (weeksMap[weekIdx]) {
-                    weeksMap[weekIdx].grossVolume += parseFloat(s.Price || 0);
-                    weeksMap[weekIdx].commission += parseFloat(s.Price || 0);
+                    const price = parseFloat(s.Price || 0);
+                    weeksMap[weekIdx].grossVolume += price;
+                    weeksMap[weekIdx].subscriptionIncome += price;
+                    weeksMap[weekIdx].totalPlatformIncome += price;
                     weeksMap[weekIdx].transactionCount += 1;
                 }
             });
@@ -890,18 +907,21 @@ const getIncomeReport = async (req, res) => {
                     monthNumber: m + 1,
                     label: monthNames[m],
                     grossVolume: 0,
-                    commission: 0,
+                    commissionIncome: 0,
+                    subscriptionIncome: 0,
+                    totalPlatformIncome: 0,
                     payouts: 0,
-                    netIncome: 0,
                     transactionCount: 0
                 };
             }
             bookings.forEach(b => {
                 const m = new Date(b.CreatedAt).getMonth();
                 if (monthsMap[m]) {
-                    monthsMap[m].grossVolume += getBookingInflow(b);
-                    monthsMap[m].commission += parseFloat(b.CommissionAmount || 0);
-                    monthsMap[m].netIncome += parseFloat(b.CommissionAmount || 0);
+                    const inflow = getBookingInflow(b);
+                    const comm = parseFloat(b.CommissionAmount || 0);
+                    monthsMap[m].grossVolume += inflow;
+                    monthsMap[m].commissionIncome += comm;
+                    monthsMap[m].totalPlatformIncome += comm;
                     monthsMap[m].transactionCount += 1;
                 }
             });
@@ -915,9 +935,10 @@ const getIncomeReport = async (req, res) => {
             subscriptionsList.forEach(s => {
                 const m = new Date(s.CreatedAt).getMonth();
                 if (monthsMap[m]) {
-                    monthsMap[m].netIncome += parseFloat(s.Price || 0);
-                    monthsMap[m].grossVolume += parseFloat(s.Price || 0);
-                    monthsMap[m].commission += parseFloat(s.Price || 0);
+                    const price = parseFloat(s.Price || 0);
+                    monthsMap[m].grossVolume += price;
+                    monthsMap[m].subscriptionIncome += price;
+                    monthsMap[m].totalPlatformIncome += price;
                     monthsMap[m].transactionCount += 1;
                 }
             });
