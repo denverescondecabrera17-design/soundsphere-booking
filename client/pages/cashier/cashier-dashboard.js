@@ -2392,9 +2392,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------------------
-    // 6. Categorized Income Reports (Daily, Weekly, Monthly, Yearly)
+    // 6. Categorized Income Reports (Monthly, Yearly)
     // ----------------------------------------------------
-    let currentReportPeriod = 'daily';
+    let currentReportPeriod = 'monthly';
     let currentLoadedReport = null;
 
     // Set default values for date inputs
@@ -2402,13 +2402,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const monthIso = todayIso.substring(0, 7);
     const yearIso = todayIso.substring(0, 4);
 
-    const dateDailyInput = document.getElementById('report-date-daily');
-    const dateWeeklyInput = document.getElementById('report-date-weekly');
     const dateMonthlyInput = document.getElementById('report-date-monthly');
     const dateYearlyInput = document.getElementById('report-date-yearly');
 
-    if (dateDailyInput) dateDailyInput.value = todayIso;
-    if (dateWeeklyInput) dateWeeklyInput.value = todayIso;
     if (dateMonthlyInput) dateMonthlyInput.value = monthIso;
     if (dateYearlyInput) dateYearlyInput.value = yearIso;
 
@@ -2443,13 +2439,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadIncomeReport() {
         let dateVal = '';
-        if (currentReportPeriod === 'daily') dateVal = dateDailyInput ? dateDailyInput.value : todayIso;
-        if (currentReportPeriod === 'weekly') dateVal = dateWeeklyInput ? dateWeeklyInput.value : todayIso;
         if (currentReportPeriod === 'monthly') dateVal = dateMonthlyInput ? dateMonthlyInput.value : monthIso;
         if (currentReportPeriod === 'yearly') dateVal = dateYearlyInput ? dateYearlyInput.value : yearIso;
 
         let queryUrl = `/api/cashier/reports/income?period=${currentReportPeriod}`;
-        if (currentReportPeriod === 'daily' || currentReportPeriod === 'weekly') queryUrl += `&date=${dateVal}`;
         if (currentReportPeriod === 'monthly') queryUrl += `&month=${dateVal}`;
         if (currentReportPeriod === 'yearly') queryUrl += `&year=${dateVal}`;
 
@@ -2576,111 +2569,303 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----------------------------------------------------
-    // 7. Printable Report Trigger & Generation
+    // 7. Export Income Report (Excel & PDF with Official Header)
     // ----------------------------------------------------
-    function triggerPrintReport() {
+    function exportIncomeReportToExcel() {
         if (!currentLoadedReport) {
-            alert('Please load an income report first before printing.');
+            alert('Please generate an income report first before exporting.');
             return;
         }
 
         const rep = currentLoadedReport;
         const s = rep.summary || {};
+        const periodLabel = rep.filterLabel || (rep.period === 'monthly' ? (dateMonthlyInput?.value || monthIso) : (dateYearlyInput?.value || yearIso));
+        const printedByName = currentUser?.name || 'Cashier Staff';
+        const printDate = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
 
-        // Extract or fallback commission records
-        const commRecords = rep.commissionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Booking Payment').map(i => ({
-            date: i.date,
-            reference: i.reference,
-            providerName: i.party?.includes('→') ? i.party.split('→')[1].trim() : i.party || 'Service Provider',
-            clientName: i.party?.includes('→') ? i.party.split('→')[0].trim() : 'Client',
-            bookingAmount: i.inflow || 0,
-            amountPaid: i.inflow || 0,
-            commissionEarned: i.commission || 0,
-            status: i.status || 'Paid'
-        }));
-
-        // Extract or fallback subscription records
-        const subRecords = rep.subscriptionRecords || (rep.detailedLedger || []).filter(i => i.type === 'Subscription Payment').map(i => ({
-            date: i.date,
-            reference: i.reference,
-            providerName: i.party || 'Service Provider',
-            planName: i.itemDescription || 'Pro Plan',
-            amount: i.inflow || i.commission || 0,
-            paymentMethod: i.method || 'Online',
-            status: i.status || 'Paid'
-        }));
-
-        // Populate Printable template elements
-        const docId = `REP-${Date.now().toString().slice(-6)}`;
-        document.getElementById('print-doc-id').textContent = docId;
-        document.getElementById('print-timestamp').textContent = new Date().toLocaleString();
-        document.getElementById('print-title').textContent = (rep.periodTitle || 'INCOME REPORT').toUpperCase();
-        document.getElementById('print-subtitle').textContent = `Financial Period: ${rep.filterLabel || ''} (${rep.startDate ? rep.startDate.substring(0, 10) : ''} to ${rep.endDate ? rep.endDate.substring(0, 10) : ''})`;
-
-        // KPIs
-        const printValComm = document.getElementById('print-val-commission');
-        const printValSub = document.getElementById('print-val-sub');
-        const printValTotalIncome = document.getElementById('print-val-total-income');
-
-        if (printValComm) printValComm.textContent = formatPHP(s.totalCommissionIncome || 0);
-        if (printValSub) printValSub.textContent = formatPHP(s.totalSubscriptionRevenue || 0);
-        if (printValTotalIncome) printValTotalIncome.textContent = formatPHP(s.netPlatformIncome || 0);
-
-        // 1. Commission Income Print Table
-        const printCommBody = document.getElementById('print-commission-body');
-        if (printCommBody) {
-            if (commRecords.length === 0) {
-                printCommBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">No commission earnings recorded for this period.</td></tr>`;
-            } else {
-                printCommBody.innerHTML = commRecords.map(item => `
-                    <tr>
-                        <td>${formatDateTime(item.date)}</td>
-                        <td><strong>${item.reference}</strong></td>
-                        <td>${item.providerName}</td>
-                        <td>${item.clientName || 'Client'}</td>
-                        <td>${formatPHP(item.bookingAmount || item.amountPaid)}</td>
-                        <td><strong>+${formatPHP(item.commissionEarned)}</strong></td>
-                        <td>${item.status || 'Paid'}</td>
-                    </tr>
-                `).join('');
+        const escapeCsv = (str) => {
+            const val = String(str ?? '');
+            if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+                return `"${val.replace(/"/g, '""')}"`;
             }
-        }
+            return val;
+        };
 
-        // 2. Subscription Income Print Table
-        const printSubBody = document.getElementById('print-subscription-body');
-        if (printSubBody) {
-            if (subRecords.length === 0) {
-                printSubBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">No subscription payments recorded for this period.</td></tr>`;
-            } else {
-                printSubBody.innerHTML = subRecords.map(item => `
-                    <tr>
-                        <td>${formatDateTime(item.date)}</td>
-                        <td><strong>${item.reference}</strong></td>
-                        <td>${item.providerName}</td>
-                        <td>${item.planName || 'Pro Plan'}</td>
-                        <td><strong>+${formatPHP(item.amount)}</strong></td>
-                        <td>${item.paymentMethod || 'Online'}</td>
-                        <td>${item.status || 'Paid'}</td>
-                    </tr>
-                `).join('');
-            }
-        }
+        const commRecords = rep.commissionRecords || [];
+        const subRecords = rep.subscriptionRecords || [];
 
-        // Execute print
-        window.print();
+        const commRows = commRecords.map(item => [
+            escapeCsv(formatDateTime(item.date)),
+            escapeCsv(item.reference),
+            escapeCsv(item.providerName),
+            escapeCsv(item.clientName || 'Client'),
+            escapeCsv(item.packageName || 'Booking Service'),
+            (item.bookingAmount || item.amountPaid || 0).toFixed(2),
+            escapeCsv(item.commissionRate || '5%'),
+            (item.commissionEarned || 0).toFixed(2),
+            escapeCsv(item.status || 'Paid')
+        ]);
+
+        const subRows = subRecords.map(item => [
+            escapeCsv(formatDateTime(item.date)),
+            escapeCsv(item.reference),
+            escapeCsv(item.providerName),
+            escapeCsv(item.planName || 'Pro Plan'),
+            (item.amount || 0).toFixed(2),
+            escapeCsv(item.paymentMethod || 'Online'),
+            escapeCsv(item.status || 'Paid')
+        ]);
+
+        const csvContent = [
+            ['SOUNDSPHERE - CASHIER FINANCIAL DESK'],
+            ['OFFICIAL PLATFORM INCOME REPORT'],
+            ['Reporting Period:', escapeCsv(periodLabel)],
+            ['Generated Date & Time:', escapeCsv(printDate)],
+            ['Generated By (Cashier Staff):', escapeCsv(printedByName)],
+            [],
+            ['=== FINANCIAL SUMMARY ==='],
+            ['Category', 'Amount (PHP)'],
+            ['Booking Commission Income (5%)', (s.totalCommissionIncome || 0).toFixed(2)],
+            ['Provider Subscription Income', (s.totalSubscriptionRevenue || 0).toFixed(2)],
+            ['Total Platform Income', (s.netPlatformIncome || 0).toFixed(2)],
+            [],
+            ['=== 1. BOOKING COMMISSION INCOME (FROM SERVICE PROVIDERS) ==='],
+            ['Date & Time', 'Booking Ref', 'Service Provider', 'Client / Event', 'Package / Service', 'Booking Amount (PHP)', 'Commission Rate', 'Platform Commission (PHP)', 'Status'],
+            ...(commRows.length > 0 ? commRows : [['No commission records for this period.', '', '', '', '', '', '', '', '']]),
+            ['Total Booking Commission Income (PHP):', '', '', '', '', '', '', (s.totalCommissionIncome || 0).toFixed(2), ''],
+            [],
+            ['=== 2. SUBSCRIPTION INCOME (FROM SERVICE PROVIDERS) ==='],
+            ['Date & Time', 'Payment Ref', 'Service Provider', 'Subscription Plan', 'Subscription Fee (PHP)', 'Payment Method', 'Status'],
+            ...(subRows.length > 0 ? subRows : [['No subscription records for this period.', '', '', '', '', '', '']]),
+            ['Total Subscription Income (PHP):', '', '', '', (s.totalSubscriptionRevenue || 0).toFixed(2), '', '']
+        ];
+
+        const csvString = '\uFEFF' + csvContent.map(r => r.join(',')).join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const filenameSlug = (periodLabel || rep.period || 'Report').replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.href = url;
+        a.download = `SoundSphere_Income_Report_${filenameSlug}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
-    document.getElementById('btn-trigger-print-report')?.addEventListener('click', triggerPrintReport);
+    function exportIncomeReportToPDF() {
+        if (!currentLoadedReport) {
+            alert('Please generate an income report first before exporting.');
+            return;
+        }
 
-    // Quick print today's report
-    document.getElementById('btn-quick-print-today')?.addEventListener('click', async () => {
-        setReportPeriod('daily');
-        if (dateDailyInput) dateDailyInput.value = todayIso;
-        await loadIncomeReport();
+        const rep = currentLoadedReport;
+        const s = rep.summary || {};
+        const periodLabel = rep.filterLabel || (rep.period === 'monthly' ? (dateMonthlyInput?.value || monthIso) : (dateYearlyInput?.value || yearIso));
+        const printedByName = currentUser?.name || 'Cashier Staff';
+        const printDate = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const commRecords = rep.commissionRecords || [];
+        const subRecords = rep.subscriptionRecords || [];
+
+        const commRowsHtml = commRecords.length === 0
+            ? `<tr><td colspan="8" style="text-align:center; padding:12px; color:#64748b;">No commission earnings recorded for this period.</td></tr>`
+            : commRecords.map(item => `
+                <tr>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8pt;">${formatDateTime(item.date)}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-weight:700; font-family:monospace; font-size:8pt;">${item.reference}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-weight:700; font-size:8.5pt;">${item.providerName}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8.5pt;">${item.clientName || 'Client'}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8pt; color:#475569;">${item.packageName || 'Booking Service'}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; text-align:right; font-size:8.5pt;">₱${(item.bookingAmount || item.amountPaid || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; text-align:right; font-weight:800; color:#2563eb; font-size:8.5pt;">+₱${(item.commissionEarned || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; text-align:center; font-size:8pt;">${item.status || 'Paid'}</td>
+                </tr>
+            `).join('');
+
+        const subRowsHtml = subRecords.length === 0
+            ? `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">No subscription payments recorded for this period.</td></tr>`
+            : subRecords.map(item => `
+                <tr>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8pt;">${formatDateTime(item.date)}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-weight:700; font-family:monospace; font-size:8pt;">${item.reference}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-weight:700; font-size:8.5pt;">${item.providerName}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8.5pt; color:#6b21a8; font-weight:600;">${item.planName || 'Pro Plan'}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; text-align:right; font-weight:800; color:#8b5cf6; font-size:8.5pt;">+₱${(item.amount || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:8pt; color:#475569;">${item.paymentMethod || 'Online'}</td>
+                    <td style="padding:7px 10px; border-bottom:1px solid #e2e8f0; text-align:center; font-size:8pt;">${item.status || 'Paid'}</td>
+                </tr>
+            `).join('');
+
+        const printableHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SoundSphere - Income Report (${periodLabel})</title>
+    <style>
+        @page { size: A4 portrait; margin: 12mm 15mm; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0a192f; padding-bottom: 12px; margin-bottom: 16px; }
+        .brand { font-size: 18pt; font-weight: 800; letter-spacing: 0.5px; color: #0a192f; }
+        .subbrand { font-size: 8.5pt; color: #64748b; font-weight: 600; margin-top: 2px; }
+        .meta-box { text-align: right; font-size: 8.5pt; color: #334155; line-height: 1.5; }
+        .report-title { font-size: 14pt; font-weight: 800; text-transform: uppercase; color: #0a192f; margin: 8px 0 2px 0; }
+        .report-subtitle { font-size: 9pt; font-weight: 600; color: #2563eb; margin-bottom: 16px; }
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kpi-card { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; padding: 10px 14px; }
+        .kpi-label { font-size: 7.5pt; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-value { font-size: 13pt; font-weight: 800; color: #0a192f; margin-top: 3px; }
+        .section-header { font-size: 10pt; font-weight: 800; text-transform: uppercase; color: #0a192f; margin: 18px 0 8px 0; border-left: 3px solid #2563eb; padding-left: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        th { background: #f1f5f9; color: #334155; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 7px 10px; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1; text-align: left; }
+        th.text-right { text-align: right; }
+        th.text-center { text-align: center; }
+        .total-row td { background: #f8fafc; border-top: 2px solid #0a192f; border-bottom: 2px solid #0a192f; font-weight: 800; padding: 8px 10px; }
+        .footer-sig { margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid; }
+        .sig-block { width: 220px; border-top: 1px solid #94a3b8; padding-top: 6px; text-align: center; font-size: 8.5pt; }
+        @media print { body { padding: 0; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="brand">SOUNDSPHERE</div>
+            <div class="subbrand">Audio & Event Booking Platform • Cashier Financial Desk</div>
+        </div>
+        <div class="meta-box">
+            <div><strong>Report Period:</strong> ${periodLabel}</div>
+            <div><strong>Printed By:</strong> ${printedByName}</div>
+            <div><strong>Date & Time:</strong> ${printDate}</div>
+        </div>
+    </div>
+
+    <div class="report-title">${(rep.periodTitle || 'Income Report').toUpperCase()}</div>
+    <div class="report-subtitle">Official Platform Income Report • Period: ${periodLabel}</div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card" style="border-left: 4px solid #2563eb;">
+            <div class="kpi-label">Commission Income (5%)</div>
+            <div class="kpi-value" style="color:#2563eb;">₱${(s.totalCommissionIncome || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #8b5cf6;">
+            <div class="kpi-label">Subscription Income</div>
+            <div class="kpi-value" style="color:#8b5cf6;">₱${(s.totalSubscriptionRevenue || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #10b981;">
+            <div class="kpi-label">Total Platform Income</div>
+            <div class="kpi-value" style="color:#059669;">₱${(s.netPlatformIncome || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+        </div>
+    </div>
+
+    <!-- 1. Commission Table -->
+    <div class="section-header">1. Booking Commission Income (From Service Providers)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Booking Ref</th>
+                <th>Service Provider</th>
+                <th>Client / Event</th>
+                <th>Package / Service</th>
+                <th class="text-right">Booking Amount</th>
+                <th class="text-right">Platform Commission</th>
+                <th class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${commRowsHtml}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6" style="text-align:right; font-size:8.5pt; text-transform:uppercase;">Total Commission Earned:</td>
+                <td style="text-align:right; font-size:9.5pt; font-weight:800; color:#2563eb;">₱${(s.totalCommissionIncome || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- 2. Subscription Table -->
+    <div class="section-header">2. Subscription Income (From Service Providers)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Payment Ref</th>
+                <th>Service Provider</th>
+                <th>Subscription Plan</th>
+                <th class="text-right">Subscription Fee</th>
+                <th>Payment Method</th>
+                <th class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${subRowsHtml}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="4" style="text-align:right; font-size:8.5pt; text-transform:uppercase;">Total Subscription Revenue:</td>
+                <td style="text-align:right; font-size:9.5pt; font-weight:800; color:#8b5cf6;">₱${(s.totalSubscriptionRevenue || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer-sig">
+        <div>
+            <div style="font-size:7.5pt; color:#94a3b8; text-transform:uppercase;">System Verification</div>
+            <div style="font-size:8pt; color:#64748b; margin-top:2px;">Generated via SoundSphere Cashier Portal • ${periodLabel}</div>
+        </div>
+        <div>
+            <div class="sig-block">
+                <strong>${printedByName}</strong><br>
+                <span style="font-size:7.5pt; color:#64748b;">Official Cashier Staff</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const printIframe = document.createElement('iframe');
+        printIframe.style.position = 'fixed';
+        printIframe.style.right = '0';
+        printIframe.style.bottom = '0';
+        printIframe.style.width = '0';
+        printIframe.style.height = '0';
+        printIframe.style.border = '0';
+        document.body.appendChild(printIframe);
+
+        const frameDoc = printIframe.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(printableHtml);
+        frameDoc.close();
+
+        printIframe.contentWindow.focus();
         setTimeout(() => {
-            triggerPrintReport();
-        }, 300);
-    });
+            printIframe.contentWindow.print();
+            setTimeout(() => {
+                if (printIframe.parentNode) printIframe.parentNode.removeChild(printIframe);
+            }, 1000);
+        }, 350);
+    }
+
+    document.getElementById('btn-export-income-excel')?.addEventListener('click', exportIncomeReportToExcel);
+    document.getElementById('btn-export-income-pdf')?.addEventListener('click', exportIncomeReportToPDF);
 
     // ----------------------------------------------------
     // 8. Platform Revenue Reports & Provider Breakdown
