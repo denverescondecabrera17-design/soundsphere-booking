@@ -113,7 +113,9 @@
                             </div>
                             <div style="padding:10px 16px; border-top:1px solid #f1f5f9; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-size:0.78rem; color:#64748b; font-weight:600;"><i class="fa-solid fa-circle-dot" style="color:#10b981; font-size:0.7rem; margin-right:4px;"></i> Real-Time Alerts</span>
-                                <span style="font-size:0.76rem; color:#94a3b8;">Click item to action</span>
+                                <button type="button" id="btn-cashier-view-all-notifs" style="background:none; border:none; color:#2563eb; font-size:0.84rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; transition:all 0.15s ease;" onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='transparent';">
+                                    View All <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1361,6 +1363,76 @@
                 </div>
             </div>
 
+        </main>
+    </div>
+
+    <!-- ==========================================================================
+         FULLSCREEN VIEW: CASHIER ALL NOTIFICATIONS & ALERTS DESK
+         ========================================================================== -->
+    <div id="view-cashier-fullscreen-notifications" class="cashier-fullscreen-view hidden" role="region" aria-label="Cashier Notifications and Alerts Desk" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:99999; overflow-y:auto; overflow-x:hidden; display:none; flex-direction:column; margin:0; padding:0;">
+        
+        <!-- Sticky Top Navigation Header -->
+        <header style="position:sticky; top:0; z-index:100; background:#ffffff; border-bottom:1px solid #e2e8f0; padding:14px 28px; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+            <div style="max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; width:100%; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <button type="button" id="btn-close-cashier-fullscreen-notifs" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 18px; font-size:0.88rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                        <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                    </button>
+                    <div style="height:28px; width:1px; background:#e2e8f0;"></div>
+                    <div>
+                        <h1 style="margin:0; font-size:1.24rem; font-weight:800; color:#0a192f; display:flex; align-items:center; gap:10px;">
+                            <i class="fa-solid fa-bell" style="color:#2563eb;"></i> Cashier Notifications &amp; Alerts
+                        </h1>
+                        <p style="margin:2px 0 0 0; font-size:0.82rem; color:#64748b;">Complete live feed of withdrawal payouts, client refunds, and financial notices.</p>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" id="btn-fullscreen-notifs-mark-read" style="display:inline-flex; align-items:center; gap:8px; background:#ffffff; border:1.5px solid #2563eb; color:#2563eb; border-radius:8px; padding:8px 16px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='#ffffff';">
+                        <i class="fa-solid fa-check-double"></i> <span>Mark all read</span>
+                    </button>
+                    <button type="button" id="btn-fullscreen-notifs-refresh" style="display:inline-flex; align-items:center; gap:8px; background:#2563eb; border:none; color:#ffffff; border-radius:8px; padding:8px 16px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(37,99,235,0.3);" onmouseover="this.style.background='#1d4ed8';" onmouseout="this.style.background='#2563eb';">
+                        <i class="fa-solid fa-arrows-rotate"></i> <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Fullscreen Content Container -->
+        <main style="flex:1; max-width:1100px; margin:24px auto 60px auto; width:100%; padding:0 24px; box-sizing:border-box;">
+            <!-- Filter Tabs & Search Bar -->
+            <div style="background:#ffffff; border-radius:14px; border:1px solid #e2e8f0; padding:14px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.03); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+                <div class="fullscreen-notif-filters" style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="fs-notif-tab active" data-filter="all" style="padding:6px 14px; border-radius:20px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s ease;">
+                        All Alerts (<span id="fs-count-all">0</span>)
+                    </button>
+                    <button type="button" class="fs-notif-tab" data-filter="unread" style="padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s ease;">
+                        Unread (<span id="fs-count-unread">0</span>)
+                    </button>
+                    <button type="button" class="fs-notif-tab" data-filter="withdrawals" style="padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s ease;">
+                        Withdrawals (<span id="fs-count-withdrawals">0</span>)
+                    </button>
+                    <button type="button" class="fs-notif-tab" data-filter="refunds" style="padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s ease;">
+                        Client Refunds (<span id="fs-count-refunds">0</span>)
+                    </button>
+                    <button type="button" class="fs-notif-tab" data-filter="disbursed" style="padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s ease;">
+                        Disbursed (<span id="fs-count-disbursed">0</span>)
+                    </button>
+                </div>
+                <div style="position:relative; width:260px; max-width:100%;">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.85rem;"></i>
+                    <input type="text" id="fs-notif-search" placeholder="Search alerts..." style="width:100%; padding:7px 12px 7px 34px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.85rem; outline:none; transition:border 0.2s;">
+                </div>
+            </div>
+
+            <!-- Fullscreen Notifications List Card -->
+            <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden;">
+                <div id="fs-notifs-feed" style="display:flex; flex-direction:column;">
+                    <div style="padding:48px 20px; text-align:center; color:#94a3b8;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#2563eb; margin-bottom:12px; display:block;"></i>
+                        Loading all cashier notifications...
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 

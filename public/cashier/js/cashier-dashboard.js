@@ -530,6 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Render list
             renderCashierNotificationsList();
+            renderFullScreenNotifications();
 
         } catch (err) {
             console.warn('Error fetching cashier notifications:', err);
@@ -692,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (notifHeaderCount) notifHeaderCount.style.display = 'none';
                 renderCashierNotificationsList();
+                renderFullScreenNotifications();
 
                 await fetch('/api/cashier/notifications/read-all', {
                     method: 'PUT',
@@ -722,6 +724,332 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
         });
     }
+
+    // ----------------------------------------------------
+    // Fullscreen Cashier Notifications Desk
+    // ----------------------------------------------------
+    let currentFsNotifFilter = 'all';
+    let currentFsNotifSearch = '';
+
+    function openCashierNotificationsFullScreen() {
+        if (notifDropdown) notifDropdown.style.display = 'none';
+        if (notifBtn) notifBtn.classList.remove('active');
+
+        const view = document.getElementById('view-cashier-fullscreen-notifications');
+        if (!view) return;
+
+        view.classList.remove('hidden');
+        view.style.setProperty('display', 'flex', 'important');
+        view.style.setProperty('visibility', 'visible', 'important');
+        view.style.setProperty('opacity', '1', 'important');
+        document.body.style.overflow = 'hidden';
+
+        renderFullScreenNotifications();
+    }
+
+    function closeCashierNotificationsFullScreen() {
+        const view = document.getElementById('view-cashier-fullscreen-notifications');
+        if (view) {
+            view.classList.add('hidden');
+            view.style.setProperty('display', 'none', 'important');
+            view.style.setProperty('visibility', 'hidden', 'important');
+            view.style.setProperty('opacity', '0', 'important');
+        }
+        document.body.style.overflow = '';
+    }
+
+    window.openCashierNotificationsFullScreen = openCashierNotificationsFullScreen;
+    window.closeCashierNotificationsFullScreen = closeCashierNotificationsFullScreen;
+
+    document.getElementById('btn-cashier-view-all-notifs')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openCashierNotificationsFullScreen();
+    });
+
+    document.getElementById('btn-close-cashier-fullscreen-notifs')?.addEventListener('click', closeCashierNotificationsFullScreen);
+
+    function updateFsCounts() {
+        const unreadCount = cashierNotificationsList.filter(n => !n.IsRead).length;
+        const wdCount = cashierNotificationsList.filter(n => {
+            const meta = getCashierNotifMeta(n);
+            return meta.target === 'withdrawals' && !n.IsRead;
+        }).length;
+        const refCount = cashierNotificationsList.filter(n => {
+            const meta = getCashierNotifMeta(n);
+            return meta.target === 'refunds' && !n.IsRead;
+        }).length;
+        const disbCount = cashierNotificationsList.filter(n => {
+            const meta = getCashierNotifMeta(n);
+            return meta.badgeText === 'Disbursed';
+        }).length;
+
+        const elAll = document.getElementById('fs-count-all');
+        const elUnread = document.getElementById('fs-count-unread');
+        const elWd = document.getElementById('fs-count-withdrawals');
+        const elRef = document.getElementById('fs-count-refunds');
+        const elDisb = document.getElementById('fs-count-disbursed');
+
+        if (elAll) elAll.textContent = cashierNotificationsList.length;
+        if (elUnread) elUnread.textContent = unreadCount;
+        if (elWd) elWd.textContent = wdCount;
+        if (elRef) elRef.textContent = refCount;
+        if (elDisb) elDisb.textContent = disbCount;
+    }
+
+    function renderFullScreenNotifications() {
+        updateFsCounts();
+
+        const container = document.getElementById('fs-notifs-feed');
+        if (!container) return;
+
+        let filtered = cashierNotificationsList.slice();
+
+        // Apply tab filter
+        if (currentFsNotifFilter === 'unread') {
+            filtered = filtered.filter(n => !n.IsRead);
+        } else if (currentFsNotifFilter === 'withdrawals') {
+            filtered = filtered.filter(n => {
+                const meta = getCashierNotifMeta(n);
+                return meta.target === 'withdrawals' && !n.IsRead;
+            });
+        } else if (currentFsNotifFilter === 'refunds') {
+            filtered = filtered.filter(n => {
+                const meta = getCashierNotifMeta(n);
+                return meta.target === 'refunds' && !n.IsRead;
+            });
+        } else if (currentFsNotifFilter === 'disbursed') {
+            filtered = filtered.filter(n => {
+                const meta = getCashierNotifMeta(n);
+                return meta.badgeText === 'Disbursed';
+            });
+        }
+
+        // Apply search filter
+        if (currentFsNotifSearch.trim()) {
+            const query = currentFsNotifSearch.trim().toLowerCase();
+            filtered = filtered.filter(n => {
+                const title = String(n.Title || '').toLowerCase();
+                const msg = String(n.Message || '').toLowerCase();
+                const ref = String(n.RelatedID || '').toLowerCase();
+                return title.includes(query) || msg.includes(query) || ref.includes(query);
+            });
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="padding:60px 20px; text-align:center; color:#94a3b8;">
+                    <i class="fa-solid fa-bell-slash" style="font-size:2.4rem; color:#cbd5e1; margin-bottom:12px; display:block;"></i>
+                    <strong style="font-size:1.05rem; color:#475569; display:block; margin-bottom:4px;">No notifications found</strong>
+                    <p style="font-size:0.86rem; color:#94a3b8; margin:0;">Try switching the filter tab or clearing the search query.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(n => {
+            const isUnread = !n.IsRead && n.IsRead !== 1;
+            const meta = getCashierNotifMeta(n);
+            const timeAgo = formatNotifRelativeTime(n.CreatedAt);
+            const exactTime = n.CreatedAt ? new Date(n.CreatedAt).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'Recent';
+
+            let actionBtnText = 'View Details';
+            let actionBtnIcon = 'fa-arrow-right';
+            let actionBtnClass = 'btn-secondary';
+
+            if (meta.target === 'withdrawals' && !n.IsRead) {
+                actionBtnText = 'Disburse Payout';
+                actionBtnIcon = 'fa-money-bill-transfer';
+                actionBtnClass = 'btn-primary';
+            } else if (meta.target === 'refunds' && !n.IsRead) {
+                actionBtnText = 'Process Refund';
+                actionBtnIcon = 'fa-hand-holding-dollar';
+                actionBtnClass = 'btn-danger';
+            }
+
+            return `
+                <div class="fs-notif-row ${isUnread ? 'unread' : ''}" data-id="${n.NotificationID || ''}" data-target="${meta.target}" style="border-bottom:1px solid #f1f5f9; padding:20px 24px; display:flex; gap:20px; align-items:flex-start; transition:all 0.15s ease;">
+                    <div style="width:48px; height:48px; border-radius:14px; background:${meta.bg}; color:${meta.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.35rem; margin-top:2px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                        <i class="fa-solid ${meta.icon}"></i>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <strong style="font-size:1.02rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                                    ${isUnread ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block; flex-shrink:0;"></span>' : ''}
+                                    ${n.Title || 'Cashier Alert'}
+                                </strong>
+                                <span style="background:${meta.bg}; color:${meta.color}; padding:3px 10px; border-radius:8px; font-weight:800; font-size:0.75rem; border:1px solid ${meta.bg};">
+                                    ${meta.badgeText}
+                                </span>
+                            </div>
+                            <span style="font-size:0.78rem; color:#94a3b8; font-weight:600; white-space:nowrap;">
+                                ${exactTime} • <span style="color:#64748b;">${timeAgo}</span>
+                            </span>
+                        </div>
+                        <p style="font-size:0.9rem; color:#334155; margin:0 0 12px 0; line-height:1.5;">
+                            ${n.Message || ''}
+                        </p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${n.RelatedID ? `<span style="font-family:monospace; font-size:0.76rem; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:700;">Ref #${n.RelatedID}</span>` : ''}
+                                ${isUnread ? `
+                                    <button type="button" class="btn-fs-mark-single-read" data-id="${n.NotificationID || ''}" style="background:none; border:none; color:#2563eb; font-size:0.78rem; font-weight:700; cursor:pointer; padding:2px 6px;">
+                                        <i class="fa-solid fa-check"></i> Mark read
+                                    </button>
+                                ` : '<span style="font-size:0.76rem; color:#10b981; font-weight:700;"><i class="fa-solid fa-check-double"></i> Read</span>'}
+                            </div>
+                            <button type="button" class="btn ${actionBtnClass} btn-sm btn-fs-action" data-id="${n.NotificationID || ''}" data-target="${meta.target}" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+                                <i class="fa-solid ${actionBtnIcon}"></i> <span>${actionBtnText}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Action button listeners
+        container.querySelectorAll('.btn-fs-action').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const notifId = btn.getAttribute('data-id');
+                const targetView = btn.getAttribute('data-target') || 'overview';
+
+                // Mark as read
+                if (notifId && token) {
+                    fetch(`/api/cashier/notifications/${encodeURIComponent(notifId)}/read`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(() => {});
+                    const item = cashierNotificationsList.find(x => String(x.NotificationID) === String(notifId));
+                    if (item) item.IsRead = true;
+                }
+
+                closeCashierNotificationsFullScreen();
+                window.location.hash = `#${targetView}`;
+                switchView(targetView);
+
+                if (targetView === 'withdrawals') {
+                    currentWithdrawalFilter = 'Pending';
+                    const filterSelect = document.getElementById('withdrawals-filter-status');
+                    if (filterSelect) filterSelect.value = 'Pending';
+                    loadWithdrawalsList();
+                } else if (targetView === 'refunds') {
+                    currentRefundsFilter = 'Pending';
+                    const refSelect = document.getElementById('refunds-filter-status');
+                    if (refSelect) refSelect.value = 'Pending';
+                    loadClientRefundsList();
+                }
+            });
+        });
+
+        // Mark single read listeners
+        container.querySelectorAll('.btn-fs-mark-single-read').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const notifId = btn.getAttribute('data-id');
+                if (notifId && token) {
+                    fetch(`/api/cashier/notifications/${encodeURIComponent(notifId)}/read`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(() => {});
+                    const item = cashierNotificationsList.find(x => String(x.NotificationID) === String(notifId));
+                    if (item) item.IsRead = true;
+                    renderCashierNotificationsList();
+                    renderFullScreenNotifications();
+                }
+            });
+        });
+
+        // Whole row click listener
+        container.querySelectorAll('.fs-notif-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const notifId = row.getAttribute('data-id');
+                const targetView = row.getAttribute('data-target') || 'overview';
+                if (notifId && token) {
+                    fetch(`/api/cashier/notifications/${encodeURIComponent(notifId)}/read`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(() => {});
+                    const item = cashierNotificationsList.find(x => String(x.NotificationID) === String(notifId));
+                    if (item) item.IsRead = true;
+                }
+                closeCashierNotificationsFullScreen();
+                window.location.hash = `#${targetView}`;
+                switchView(targetView);
+            });
+        });
+    }
+
+    // Filter Tabs Click Listener
+    document.querySelectorAll('.fs-notif-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.fs-notif-tab').forEach(t => {
+                t.classList.remove('active');
+                t.style.borderColor = '#cbd5e1';
+                t.style.background = '#ffffff';
+                t.style.color = '#475569';
+            });
+            tab.classList.add('active');
+            tab.style.borderColor = '#2563eb';
+            tab.style.background = '#eff6ff';
+            tab.style.color = '#2563eb';
+
+            currentFsNotifFilter = tab.getAttribute('data-filter') || 'all';
+            renderFullScreenNotifications();
+        });
+    });
+
+    // Search input listener
+    const fsSearchInput = document.getElementById('fs-notif-search');
+    if (fsSearchInput) {
+        fsSearchInput.addEventListener('input', (e) => {
+            currentFsNotifSearch = e.target.value || '';
+            renderFullScreenNotifications();
+        });
+    }
+
+    // Fullscreen Refresh button
+    document.getElementById('btn-fullscreen-notifs-refresh')?.addEventListener('click', async () => {
+        const refreshIcon = document.querySelector('#btn-fullscreen-notifs-refresh i');
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+        await loadCashierNotifications();
+        renderFullScreenNotifications();
+        setTimeout(() => {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+        }, 500);
+    });
+
+    // Fullscreen Mark All Read button
+    document.getElementById('btn-fullscreen-notifs-mark-read')?.addEventListener('click', async () => {
+        if (!token) return;
+        try {
+            cashierNotificationsList.forEach(n => { n.IsRead = true; });
+            if (notifBadge) {
+                notifBadge.style.display = 'none';
+                notifBtn?.classList.remove('has-unread');
+            }
+            if (notifHeaderCount) notifHeaderCount.style.display = 'none';
+            renderCashierNotificationsList();
+            renderFullScreenNotifications();
+
+            await fetch('/api/cashier/notifications/read-all', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+        } catch (err) {
+            console.warn('Error marking all notifications read:', err);
+        }
+    });
 
     // ----------------------------------------------------
     // 4. Provider Withdrawals List & Actions
@@ -1619,6 +1947,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const wView = document.getElementById('view-cashier-withdrawal-details');
             if (wView && !wView.classList.contains('hidden') && wView.style.display !== 'none') {
                 closeWithdrawalDetailsFullScreen();
+            }
+            const nView = document.getElementById('view-cashier-fullscreen-notifications');
+            if (nView && !nView.classList.contains('hidden') && nView.style.display !== 'none') {
+                closeCashierNotificationsFullScreen();
             }
         }
     });
