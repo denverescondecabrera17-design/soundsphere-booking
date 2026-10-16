@@ -2152,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (!paidBookings || paidBookings.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No upcoming events reserved.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">No upcoming events reserved.</td></tr>`;
             return;
         }
 
@@ -2162,44 +2162,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dateStr = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
             const payInfo = getBookingPaymentInfo(b);
-
-            let actionButtonsHtml = '';
-            if (statusLower === 'pending') {
-                actionButtonsHtml = `
-                    <div style="display:flex; gap:6px;">
-                        <button type="button" onclick="event.stopPropagation(); window.acceptProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Accept</button>
-                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700;">Reject</button>
-                    </div>
-                `;
-            } else if (statusLower === 'confirmed') {
-                const rawDate = b.ServiceStartDate || b.EventDate;
-                const isDayOfService = isEventServiceDayOrPast(rawDate);
-                const formattedDate = formatEventDisplayDate(rawDate);
-                actionButtonsHtml = `
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        ${isDayOfService ? `
-                            <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:6px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Complete</button>
-                        ` : `
-                            <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedDate})" style="padding:6px 12px; font-size:0.8rem; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.75;" onclick="event.stopPropagation();">Complete (${formattedDate})</button>
-                        `}
-                    </div>
-                `;
-            } else if (statusLower === 'awaiting client confirmation') {
-                actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:5px 9px; border-radius:6px; white-space:nowrap;" title="Provider marked service complete. The client has 24 hours to confirm, or it will automatically accept.">Awaiting Client Acceptance (Auto-accepts in 24h)</span>`;
-            } else if (statusLower === 'completed') {
-                const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
-                if (wdStatus === 'pending') {
-                    actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:4px 8px; border-radius:6px; white-space:nowrap;">Payout Requested</span>`;
-                } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
-                    actionButtonsHtml = `<span style="font-size:0.78rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:4px 8px; border-radius:6px; white-space:nowrap;">Paid &amp; Sent</span>`;
-                } else {
-                    actionButtonsHtml = `<button type="button" onclick="event.stopPropagation(); window.openBookingWithdrawalModal(${b.BookingID}, ${b.TotalAmount || 0}, '${b.BookingReference || ('BK-' + b.BookingID)}')" style="padding:5px 12px; font-size:0.8rem; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; white-space:nowrap;">Request Withdrawal</button>`;
-                }
-            } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#94a3b8;">Cancelled</span>`;
-            } else {
-                actionButtonsHtml = `<span style="font-size:0.85rem; font-weight:700; color:#475569;">${b.BookingStatus}</span>`;
-            }
 
             return `
                 <tr style="cursor:pointer; transition:background 0.2s ease;" onclick="window.openProviderBookingDetails(${b.BookingID})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" title="Click to view full reservation details">
@@ -2220,7 +2182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </td>
                     <td style="white-space:nowrap;"><span class="status-badge status-${statusLower}">${b.BookingStatus || 'Confirmed'}</span></td>
-                    <td onclick="event.stopPropagation();" style="white-space:nowrap;">${actionButtonsHtml}</td>
                 </tr>
             `;
         }).join('');
