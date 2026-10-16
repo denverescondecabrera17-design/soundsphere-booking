@@ -2811,19 +2811,9 @@ window.viewAdminReportDetails = function(reportId) {
         </div>
     `;
 
-    // Mirror buttons in top header actions
+    // Clear top header actions as requested (buttons are at the bottom of the page)
     if (headerActionsEl) {
-        headerActionsEl.innerHTML = `
-            <button type="button" onclick="adminWarnReportProvider(${report.ReportID})" style="padding:8px 16px; font-size:0.82rem; font-weight:800; border:1.5px solid #fde68a; border-radius:8px; background:#fef3c7; color:#b45309; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                <i class="fa-solid fa-triangle-exclamation"></i> Warn Service Provider
-            </button>
-            <button type="button" onclick="adminRefundReportBooking(${report.ReportID})" style="padding:8px 16px; font-size:0.82rem; font-weight:800; border:1.5px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#1d4ed8; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                <i class="fa-solid fa-rotate-left"></i> Full Refund
-            </button>
-            <button type="button" onclick="adminResolveReport(${report.ReportID})" style="padding:8px 20px; font-size:0.82rem; font-weight:800; border:none; border-radius:8px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
-                <i class="fa-solid fa-check"></i> Resolve
-            </button>
-        `;
+        headerActionsEl.innerHTML = '';
     }
 
     modal.classList.remove('hidden');
