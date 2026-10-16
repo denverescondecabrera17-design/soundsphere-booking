@@ -1087,7 +1087,10 @@ const getProviderWithdrawals = async (req, res) => {
                     b.BookingStatus,
                     b.EscrowStatus,
                     b.CompletionAcceptedAt,
-                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), 'Client') AS ClientName
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), 'Client') AS ClientName,
+                    (SELECT TOP 1 w.Status FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalStatus,
+                    (SELECT TOP 1 w.WithdrawalID FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalID,
+                    (SELECT TOP 1 w.RequestedAt FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalRequestedAt
                 FROM dbo.Bookings b
                 WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
                   AND b.BookingStatus NOT IN ('Cancelled', 'Rejected')
@@ -1101,6 +1104,8 @@ const getProviderWithdrawals = async (req, res) => {
         let totalContractEarnings = 0;
 
         const completedBookings = [];
+        const undisbursedCompletedBookings = [];
+        const disbursedCompletedBookings = [];
         const escrowBookings = [];
 
         allBookings.forEach(b => {
@@ -1109,18 +1114,31 @@ const getProviderWithdrawals = async (req, res) => {
             const commRate = parseFloat(b.CommissionRate || 5) / 100;
             const pSt = (b.PaymentStatus || '').toLowerCase();
             const isFullPaid = (pSt === 'paid' || b.BookingStatus === 'Completed');
-            const netAmount = (isFullPaid ? tot : paid) * (1 - commRate);
+            const gross = isFullPaid ? tot : paid;
+            const commFee = gross * commRate;
+            const netAmount = gross - commFee;
 
             totalContractEarnings += tot * (1 - commRate);
 
             const bookingItem = {
                 ...b,
+                grossAmount: parseFloat(gross.toFixed(2)),
+                commissionFee: parseFloat(commFee.toFixed(2)),
                 netEarnings: parseFloat(netAmount.toFixed(2))
             };
 
-            if (b.BookingStatus === 'Completed' || b.EscrowStatus === 'Released') {
+            const isCompleted = (b.BookingStatus === 'Completed' || b.EscrowStatus === 'Released');
+            const cashierStatus = (b.CashierWithdrawalStatus || '').toLowerCase();
+            const isDisbursed = cashierStatus === 'approved' || cashierStatus === 'completed';
+
+            if (isCompleted) {
                 totalCompletedEarnings += netAmount;
                 completedBookings.push(bookingItem);
+                if (!isDisbursed) {
+                    undisbursedCompletedBookings.push(bookingItem);
+                } else {
+                    disbursedCompletedBookings.push(bookingItem);
+                }
             } else if (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation') {
                 totalHeldInEscrow += netAmount;
                 escrowBookings.push(bookingItem);
@@ -1170,6 +1188,8 @@ const getProviderWithdrawals = async (req, res) => {
             totalWithdrawn: parseFloat(totalWithdrawn.toFixed(2)),
             pendingWithdrawals: parseFloat(pendingWithdrawals.toFixed(2)),
             completedBookings,
+            undisbursedCompletedBookings,
+            disbursedCompletedBookings,
             escrowBookings,
             withdrawals
         });

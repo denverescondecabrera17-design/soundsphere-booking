@@ -846,7 +846,71 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (legEarnings) legEarnings.textContent = `₱${parseFloat(data.totalEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     if (legWithdrawn) legWithdrawn.textContent = `₱${withdrawn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
-                    // Render Cashier Withdrawals Table
+                    // Render Complete Services Confirmed by Clients (Not Yet Disbursed by Cashier)
+                    const tableUndisbursed = document.getElementById('table-wallet-undisbursed-bookings');
+                    const badgeUndisbursed = document.getElementById('undisbursed-count-badge');
+                    const undisbursedList = data.undisbursedCompletedBookings || [];
+
+                    if (badgeUndisbursed) {
+                        badgeUndisbursed.textContent = `${undisbursedList.length} Undisbursed Service${undisbursedList.length === 1 ? '' : 's'}`;
+                    }
+
+                    if (tableUndisbursed) {
+                        if (undisbursedList.length === 0) {
+                            tableUndisbursed.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#64748b;">
+                                <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.4rem; display:block; margin-bottom:8px;"></i>
+                                All completed services have been disbursed by the Cashier! No pending undisbursed services.
+                            </td></tr>`;
+                        } else {
+                            tableUndisbursed.innerHTML = undisbursedList.map(b => {
+                                const tot = parseFloat(b.TotalAmount || 0);
+                                const paid = parseFloat(b.AmountPaid || 0);
+                                const pSt = (b.PaymentStatus || '').toLowerCase();
+                                const isFull = (pSt === 'paid' || b.BookingStatus === 'Completed');
+                                const gross = isFull ? tot : paid;
+                                const net = parseFloat(b.netEarnings || (gross * 0.95));
+
+                                const cashierStatusLower = (b.CashierWithdrawalStatus || '').toLowerCase();
+                                const isPendingPayout = cashierStatusLower === 'pending';
+
+                                let cashierActionHtml = '';
+                                if (isPendingPayout) {
+                                    cashierActionHtml = `
+                                        <span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                            <i class="fa-solid fa-clock"></i> Pending Cashier Payout
+                                        </span>
+                                    `;
+                                } else {
+                                    const refEsc = (b.BookingReference || ('BK-' + b.BookingID)).replace(/'/g, "\\'");
+                                    cashierActionHtml = `
+                                        <button type="button" class="btn btn-sm btn-success" onclick="window.openBookingWithdrawalModal(${b.BookingID}, ${gross}, '${refEsc}')" style="background:#10b981; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.8rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.25);">
+                                            <i class="fa-solid fa-money-bill-transfer"></i> Request Payout
+                                        </button>
+                                    `;
+                                }
+
+                                return `
+                                    <tr>
+                                        <td><strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#${b.BookingReference || 'BK-' + b.BookingID}</strong></td>
+                                        <td><strong style="color:#1e293b; font-size:0.88rem;">${b.ClientName || 'Client'}</strong></td>
+                                        <td><span style="color:#2563eb; font-weight:600; font-size:0.88rem;">${b.PackageName || 'Event Service Package'}</span></td>
+                                        <td style="text-align:right; font-size:0.9rem; font-weight:600; color:#475569;">₱${gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="text-align:right; font-size:0.95rem; font-weight:800; color:#059669;">₱${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="text-align:center;">
+                                            <span style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                                <i class="fa-solid fa-circle-check"></i> Confirmed Complete
+                                            </span>
+                                        </td>
+                                        <td style="text-align:center;">
+                                            ${cashierActionHtml}
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        }
+                    }
+
+                    // Render Cashier Withdrawals Table (Past History)
                     const tableBody = document.getElementById('table-provider-withdrawals-list');
                     if (tableBody) {
                         const withdrawals = data.withdrawals || [];
@@ -876,12 +940,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
-                    // Render Completed Services Released Table
+                    // Optional legacy table support
                     const tableCompleted = document.getElementById('table-wallet-completed-bookings');
                     if (tableCompleted) {
                         const completedList = data.completedBookings || [];
                         if (completedList.length === 0) {
-                            tableCompleted.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">No completed services released to wallet yet. Funds are moved to your wallet once clients confirm completion.</td></tr>`;
+                            tableCompleted.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">No completed services released to wallet yet.</td></tr>`;
                         } else {
                             tableCompleted.innerHTML = completedList.map(b => {
                                 const tot = parseFloat(b.TotalAmount || 0);
@@ -1676,7 +1740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (titleEl) titleEl.textContent = `Request Cashier Payout (${bookingRef || '#' + bookingId})`;
         if (breakdownCard) breakdownCard.style.display = 'block';
-        if (walletCard) walletCard.style.display = 'none';
+        if (walletCard) walletCard.style.display = 'block';
 
         if (idInput) idInput.value = bookingId || '';
         if (netInput) netInput.value = net.toFixed(2);
