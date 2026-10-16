@@ -69,6 +69,13 @@ a {
     box-sizing: border-box;
 }
 
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1360px;
+        padding: 0 24px;
+    }
+}
+
 @media (min-width: 640px) {
     .container {
         padding: 0 24px;
@@ -540,8 +547,8 @@ a {
 
 .product-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-    gap: 22px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
     align-items: stretch;
 }
 
@@ -550,7 +557,7 @@ a {
     background: #ffffff;
     border: 1.5px solid #93c5fd;
     border-radius: 14px;
-    padding: 16px 18px;
+    padding: 14px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -668,28 +675,30 @@ a {
 .pkg-card-actions-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 6px;
+    margin-top: 12px;
     width: 100%;
 }
 
 .btn-select-package,
 .btn-view-package-details {
     flex: 1;
-    height: 38px;
+    height: 36px;
     background: #eff6ff;
     color: #2563eb;
     border: 1.5px solid #bfdbfe;
     border-radius: 8px;
     font-family: inherit;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
+    padding: 0 4px;
+    white-space: nowrap;
     box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
 }
 
@@ -704,20 +713,22 @@ a {
 
 .btn-book-package-direct {
     flex: 1;
-    height: 38px;
+    height: 36px;
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
     border: none;
     border-radius: 8px;
     font-family: inherit;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
+    padding: 0 4px;
+    white-space: nowrap;
     box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
 }
 
@@ -974,7 +985,8 @@ html, body {
         height: 300px;
     }
     .product-cards-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
     }
 }
 
@@ -1040,7 +1052,7 @@ html, body {
         font-size: 1.1rem;
     }
     .product-cards-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 12px;
     }
     .product-card {
@@ -1077,8 +1089,8 @@ html, body {
         flex-direction: column;
     }
     .product-cards-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
     .footer-grid {
         grid-template-columns: 1fr;
