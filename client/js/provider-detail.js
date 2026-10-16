@@ -895,17 +895,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${photosGalleryHTML}
                                 </div>
 
-                                <button type="button" class="btn-select-package" title="View full details and specifications">
-                                    <i class="fa-solid fa-eye"></i> View Details
-                                </button>
+                                <div class="pkg-card-actions-row">
+                                    <button type="button" class="btn-select-package btn-view-package-details" title="View full details and specifications">
+                                        <i class="fa-solid fa-eye"></i> View Details
+                                    </button>
+                                    <button type="button" class="btn-book-package-direct" title="Book this package">
+                                        <i class="fa-solid fa-calendar-check"></i> Book Now
+                                    </button>
+                                </div>
                             </div>
                         `;
                     }).join('');
 
-                    // Re-bind package click to open Package Details Modal first
+                    // Re-bind package click to open Package Details Modal or trigger Direct Booking
                     const updatedCards = Array.from(pkgGrid.querySelectorAll('.package-card'));
                     updatedCards.forEach((card, cIdx) => {
-                        const selectBtn = card.querySelector('.btn-select-package');
+                        const viewBtn = card.querySelector('.btn-view-package-details') || card.querySelector('.btn-select-package');
+                        const bookBtn = card.querySelector('.btn-book-package-direct');
                         const pTitle = card.getAttribute('data-title') || "Package";
                         const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
                         const pkgData = uniqueOffers[cIdx] || {
@@ -924,15 +930,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
 
                         card.addEventListener('click', (e) => {
-                            // Don't trigger modal if user clicked photo thumbnail
-                            if (e.target.closest('.pkg-photo-gallery')) return;
+                            // Don't trigger modal if user clicked photo thumbnail or action buttons
+                            if (e.target.closest('.pkg-photo-gallery') || e.target.closest('.pkg-card-actions-row')) return;
                             handleDetailsClick();
                         });
 
-                        if (selectBtn) {
-                            selectBtn.addEventListener('click', (e) => {
+                        if (viewBtn) {
+                            viewBtn.addEventListener('click', (e) => {
                                 e.stopPropagation();
                                 handleDetailsClick();
+                            });
+                        }
+
+                        if (bookBtn) {
+                            bookBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                updatedCards.forEach(c => c.classList.remove('selected-active'));
+                                card.classList.add('selected-active');
+                                selectedPackageTitle = pTitle;
+                                selectedPackagePrice = pPrice;
+                                updateSummary();
+                                triggerBookingForPackage(pTitle, pPrice, pkgData.id || pkgData.offerId || card.getAttribute('data-id') || 1);
                             });
                         }
                     });

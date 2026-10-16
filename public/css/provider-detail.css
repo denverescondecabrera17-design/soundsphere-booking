@@ -466,16 +466,25 @@ body.provider-detail-body {
     font-weight: 900;
 }
 
-/* BOOK PACKAGE NOW BUTTON */
-.btn-select-package {
+/* PACKAGE CARD DUAL ACTION BUTTONS (VIEW DETAILS & BOOK) */
+.pkg-card-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
     width: 100%;
+}
+
+.btn-select-package,
+.btn-view-package-details {
+    flex: 1;
     height: 38px;
-    background: var(--blue-accent);
-    color: #ffffff;
-    border: none;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1.5px solid #bfdbfe;
     border-radius: 8px;
     font-family: inherit;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -483,19 +492,41 @@ body.provider-detail-body {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin-top: 10px;
-    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
 }
 
-.btn-select-package:hover {
-    background: #1d4ed8;
+.btn-select-package:hover,
+.btn-view-package-details:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
 }
 
-.package-card.selected-active .btn-select-package {
-    background: var(--navy-dark);
+.btn-book-package-direct {
+    flex: 1;
+    height: 38px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+}
+
+.btn-book-package-direct:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.38);
 }
 
 /* FOOTER POSITIONING (FOOTER IS THE TRUE END OF PAGE) */
