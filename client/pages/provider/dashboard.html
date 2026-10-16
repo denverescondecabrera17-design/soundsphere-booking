@@ -1605,12 +1605,15 @@
                     </div>
 
                     <div>
-                        <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">WITHDRAWAL AMOUNT (PHP) <span style="color:#ef4444;">*</span></label>
-                        <div style="position:relative; display:flex; align-items:center;">
-                            <span style="position:absolute; left:14px; font-weight:800; color:#64748b; font-size:1rem;">₱</span>
-                            <input type="number" step="0.01" min="1" id="input-bw-amount" required placeholder="0.00" style="width:100%; padding:11px 70px 11px 32px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:1.1rem; font-weight:800; box-sizing:border-box;">
-                            <button type="button" id="btn-bw-max-amount" style="position:absolute; right:8px; background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; font-weight:800; font-size:0.75rem; padding:6px 12px; border-radius:6px; cursor:pointer;">MAX</button>
+                        <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">WITHDRAWAL AMOUNT <span style="color:#ef4444;">*</span></label>
+                        <div style="display:flex; align-items:stretch; border:1.5px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#ffffff; box-shadow:0 1px 2px rgba(0,0,0,0.05);" id="bw-amount-group">
+                            <span style="background:#f1f5f9; color:#475569; font-weight:800; font-size:0.95rem; display:flex; align-items:center; padding:0 14px; border-right:1.5px solid #cbd5e1; letter-spacing:0.5px; user-select:none;">PHP</span>
+                            <input type="text" id="input-bw-amount" required placeholder="0.00" inputmode="decimal" style="flex:1; border:none; outline:none; padding:11px 14px; font-size:1.15rem; font-weight:800; color:#0f172a; background:transparent; min-width:0;">
+                            <div style="display:flex; align-items:center; padding-right:8px; background:#fff;">
+                                <button type="button" id="btn-bw-max-amount" style="background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; font-weight:800; font-size:0.75rem; padding:6px 12px; border-radius:6px; cursor:pointer;">MAX</button>
+                            </div>
                         </div>
+                        <span style="font-size:0.73rem; color:#64748b; margin-top:5px; display:block;">Automatically prefilled with your full available balance (e.g. PHP 20,000.00).</span>
                     </div>
                 </div>
 

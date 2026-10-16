@@ -1697,6 +1697,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ------------------------------------------------------------------------
     // Booking & Wallet Withdrawal Request Modal Logic
     // ------------------------------------------------------------------------
+    const formatCurrencyDisplay = (val) => {
+        const num = parseFloat(val || 0);
+        return isNaN(num) ? '0.00' : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
     window.openBookingWithdrawalModal = (bookingId, totalAmount, bookingRef) => {
         const modal = document.getElementById('modal-booking-withdrawal');
         if (!modal) return;
@@ -1723,13 +1728,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (idInput) idInput.value = bookingId || '';
         if (netInput) netInput.value = net.toFixed(2);
         if (amtInput) {
-            amtInput.value = net.toFixed(2);
+            amtInput.value = net > 0 ? formatCurrencyDisplay(net) : '0.00';
             amtInput.removeAttribute('max');
         }
         if (refDisplay) refDisplay.textContent = bookingRef || `#BK-${bookingId}`;
-        if (totDisplay) totDisplay.textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (feeDisplay) feeDisplay.textContent = `-₱${fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (netDisplay) netDisplay.textContent = `₱${net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (totDisplay) totDisplay.textContent = `₱${formatCurrencyDisplay(total)}`;
+        if (feeDisplay) feeDisplay.textContent = `-₱${formatCurrencyDisplay(fee)}`;
+        if (netDisplay) netDisplay.textContent = `₱${formatCurrencyDisplay(net)}`;
 
         modal.classList.remove('hidden');
     };
@@ -1738,11 +1743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modal = document.getElementById('modal-booking-withdrawal');
         if (!modal) return;
 
-        if (typeof loadWalletData === 'function') {
-            await loadWalletData();
-        }
-
-        const avail = window.currentWalletAvailableBalance || 0;
+        let avail = parseFloat(window.currentWalletAvailableBalance || 0);
         const titleEl = document.getElementById('bw-modal-title');
         const breakdownCard = document.getElementById('bw-booking-breakdown-card');
         const walletCard = document.getElementById('bw-wallet-amount-card');
@@ -1758,20 +1759,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (idInput) idInput.value = '';
         if (netInput) netInput.value = avail.toFixed(2);
         if (amtInput) {
-            amtInput.value = avail > 0 ? avail.toFixed(2) : '';
-            amtInput.max = avail.toFixed(2);
+            amtInput.value = avail > 0 ? formatCurrencyDisplay(avail) : '0.00';
         }
-        if (walletDisp) walletDisp.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (walletDisp) walletDisp.textContent = `₱${formatCurrencyDisplay(avail)}`;
 
         modal.classList.remove('hidden');
+
+        // Fetch fresh balance to guarantee 100% real-time accuracy
+        if (typeof loadWalletData === 'function') {
+            await loadWalletData();
+            const freshAvail = parseFloat(window.currentWalletAvailableBalance || 0);
+            if (amtInput) {
+                amtInput.value = freshAvail > 0 ? formatCurrencyDisplay(freshAvail) : '0.00';
+            }
+            if (netInput) netInput.value = freshAvail.toFixed(2);
+            if (walletDisp) walletDisp.textContent = `₱${formatCurrencyDisplay(freshAvail)}`;
+        }
     };
 
     window.triggerRequestWithdrawFromBooking = window.openBookingWithdrawalModal;
 
+    const amtInputEl = document.getElementById('input-bw-amount');
+    if (amtInputEl) {
+        amtInputEl.addEventListener('input', () => {
+            let val = amtInputEl.value.replace(/[^\d.,]/g, '');
+            const parts = val.split('.');
+            if (parts.length > 2) {
+                val = parts[0] + '.' + parts.slice(1).join('');
+            }
+            amtInputEl.value = val;
+        });
+
+        amtInputEl.addEventListener('blur', () => {
+            const clean = amtInputEl.value.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
+            const num = parseFloat(clean);
+            if (!isNaN(num) && num >= 0) {
+                amtInputEl.value = formatCurrencyDisplay(num);
+            }
+        });
+    }
+
     document.getElementById('btn-bw-max-amount')?.addEventListener('click', () => {
         const amtInput = document.getElementById('input-bw-amount');
+        const avail = parseFloat(window.currentWalletAvailableBalance || 0);
         if (amtInput) {
-            amtInput.value = (window.currentWalletAvailableBalance || 0).toFixed(2);
+            amtInput.value = avail > 0 ? formatCurrencyDisplay(avail) : '0.00';
         }
     });
 
@@ -1787,9 +1819,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         formBookingWithdrawal.addEventListener('submit', async (e) => {
             e.preventDefault();
             const bookingId = document.getElementById('input-bw-booking-id')?.value;
-            const customAmount = document.getElementById('input-bw-amount')?.value;
+            const customAmountStr = document.getElementById('input-bw-amount')?.value;
             const netAmount = document.getElementById('input-bw-net-amount')?.value;
-            const amount = customAmount ? parseFloat(customAmount) : parseFloat(netAmount || 0);
+
+            // Sanitize formatted amount (e.g. "21,496.60" -> 21496.60)
+            const cleanCustom = customAmountStr ? customAmountStr.replace(/,/g, '').replace(/PHP/gi, '').replace(/[^\d.]/g, '').trim() : '';
+            const amount = cleanCustom ? parseFloat(cleanCustom) : parseFloat(netAmount || 0);
 
             const payoutMethod = document.getElementById('input-bw-method')?.value;
             const accountName = document.getElementById('input-bw-account-name')?.value?.trim();
@@ -1797,6 +1832,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!amount || isNaN(amount) || amount <= 0) {
                 alert('Please enter a valid withdrawal amount.');
+                return;
+            }
+
+            const availBalance = parseFloat(window.currentWalletAvailableBalance || 0);
+            if (!bookingId && availBalance > 0 && amount > (availBalance + 0.05)) {
+                alert(`The requested amount (PHP ${formatCurrencyDisplay(amount)}) exceeds your available wallet balance of PHP ${formatCurrencyDisplay(availBalance)}.`);
                 return;
             }
 

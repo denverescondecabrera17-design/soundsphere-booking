@@ -1334,7 +1334,7 @@ const createWithdrawalRequest = async (req, res) => {
         const totalPendingOrApproved = parseFloat(wRes.recordset[0]?.TotalPendingOrApproved || 0);
         const currentAvailable = Math.max(0, totalCompleted - totalPendingOrApproved);
 
-        if (numericAmount > currentAvailable) {
+        if (numericAmount > (currentAvailable + 0.05)) {
             return res.status(400).json({
                 success: false,
                 message: `Insufficient wallet balance. You can only withdraw from completed services confirmed by clients. Current available balance is ₱${currentAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
