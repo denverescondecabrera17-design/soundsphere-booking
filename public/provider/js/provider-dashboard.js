@@ -857,7 +857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (tableUndisbursed) {
                         if (undisbursedList.length === 0) {
-                            tableUndisbursed.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#64748b;">
+                            tableUndisbursed.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:#64748b;">
                                 <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.4rem; display:block; margin-bottom:8px;"></i>
                                 All completed services have been disbursed by the Cashier! No pending undisbursed services.
                             </td></tr>`;
@@ -870,25 +870,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const gross = isFull ? tot : paid;
                                 const net = parseFloat(b.netEarnings || (gross * 0.95));
 
-                                const cashierStatusLower = (b.CashierWithdrawalStatus || '').toLowerCase();
-                                const isPendingPayout = cashierStatusLower === 'pending';
-
-                                let cashierActionHtml = '';
-                                if (isPendingPayout) {
-                                    cashierActionHtml = `
-                                        <span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
-                                            <i class="fa-solid fa-clock"></i> Pending Cashier Payout
-                                        </span>
-                                    `;
-                                } else {
-                                    const refEsc = (b.BookingReference || ('BK-' + b.BookingID)).replace(/'/g, "\\'");
-                                    cashierActionHtml = `
-                                        <button type="button" class="btn btn-sm btn-success" onclick="window.openBookingWithdrawalModal(${b.BookingID}, ${gross}, '${refEsc}')" style="background:#10b981; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.8rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.25);">
-                                            <i class="fa-solid fa-money-bill-transfer"></i> Request Payout
-                                        </button>
-                                    `;
-                                }
-
                                 return `
                                     <tr>
                                         <td><strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#${b.BookingReference || 'BK-' + b.BookingID}</strong></td>
@@ -900,9 +881,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             <span style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
                                                 <i class="fa-solid fa-circle-check"></i> Confirmed Complete
                                             </span>
-                                        </td>
-                                        <td style="text-align:center;">
-                                            ${cashierActionHtml}
                                         </td>
                                     </tr>
                                 `;
