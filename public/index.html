@@ -57,9 +57,9 @@
 
                 <!-- Big Central Search Bar -->
                 <div class="shopee-search-container">
-                    <input type="text" class="search-input"
-                        placeholder="Search sound systems, stage lights, DJ gear, event packages...">
-                    <button type="button" class="btn-search" aria-label="Search">
+                    <input type="text" id="main-search-input" class="search-input"
+                        placeholder="Search service providers, packages, area (e.g. Lian, Balayan, Lights)..." autocomplete="off">
+                    <button type="button" id="main-search-btn" class="btn-search" aria-label="Search">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
@@ -112,6 +112,13 @@
     <!-- ==================== 3. FLASH DEALS / HOT PACKAGES ==================== -->
     <section class="container">
         <div class="flash-deals-section">
+            <!-- Search Filter Feedback Banner -->
+            <div id="search-status-banner" style="display:none; margin-bottom:18px; padding:12px 18px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <span id="search-status-text" style="font-size:0.92rem; color:#1e40af; font-weight:700;"></span>
+                <button type="button" id="search-status-clear-btn" style="background:#2563eb; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.82rem; font-weight:800; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i> Clear Search
+                </button>
+            </div>
 
             <!-- Dynamic Product Card Grid (Loaded directly from SQL Server Database) -->
             <div class="product-cards-grid" id="public-packages-grid">

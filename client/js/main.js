@@ -83,190 +83,326 @@ document.addEventListener('DOMContentLoaded', () => {
             // Initialize global package photos dictionary for slider & lightbox
             if (!window.packagePhotosMap) window.packagePhotosMap = {};
 
-            // Render Dynamic Real Package Cards formatted like Provider Profile
-            packagesGrid.innerHTML = packageItems.map((item, index) => {
-                const p = item.provider;
-                const pkg = item.pkg;
-                const title = pkg.name || pkg.title || 'Sound Package';
-                const rawPrice = Number(pkg.price || p.startingPrice || 15000);
-                const priceFormatted = rawPrice.toLocaleString('en-US');
-                const description = pkg.description || '';
-                const cardKey = `main-pkg-${p.id || index}-${pkg.id || index}`;
+            const allPackageItems = packageItems;
+            const searchBanner = document.getElementById('search-status-banner');
+            const searchStatusText = document.getElementById('search-status-text');
+            const searchClearBtn = document.getElementById('search-status-clear-btn');
+            const mainSearchInput = document.getElementById('main-search-input');
+            const mainSearchBtn = document.getElementById('main-search-btn');
 
-                // Inclusions parsing
-                let inclusions = [];
-                if (Array.isArray(pkg.inclusions)) {
-                    inclusions = pkg.inclusions.filter(Boolean);
-                } else if (typeof pkg.inclusions === 'string' && pkg.inclusions.trim()) {
-                    inclusions = pkg.inclusions.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+            const escapeHtml = (str) => {
+                return String(str || '').replace(/[&<>"']/g, m => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m]));
+            };
+
+            const renderPackages = (items) => {
+                if (!items || items.length === 0) {
+                    packagesGrid.innerHTML = `
+                        <div style="grid-column: 1 / -1; padding: 48px 24px; text-align: center; background: #ffffff; border-radius: 14px; border: 1.5px dashed #cbd5e1; box-shadow: 0 4px 14px rgba(10,25,47,0.04);">
+                            <div style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 14px;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </div>
+                            <h4 style="color: #0a192f; font-weight: 800; font-size: 1.15rem; margin: 0 0 6px 0;">No Matching Packages Found</h4>
+                            <p style="color: #64748b; font-size: 0.9rem; max-width: 500px; margin: 0 auto 18px auto; line-height: 1.45;">
+                                We couldn't find any service packages matching your search. Try searching by service provider (e.g. <em>CHiCHa, AG Lights</em>), package type (e.g. <em>Wedding, Birthday</em>), equipment (e.g. <em>Speakers, Lights, Mic</em>), or area (e.g. <em>Lian, Balayan, Nasugbu</em>).
+                            </p>
+                            <button type="button" id="btn-reset-empty-search" style="background: #2563eb; color: #ffffff; border: none; padding: 10px 22px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+                                <i class="fa-solid fa-rotate-left" style="margin-right: 6px;"></i> View All Packages
+                            </button>
+                        </div>
+                    `;
+
+                    const resetEmptyBtn = document.getElementById('btn-reset-empty-search');
+                    if (resetEmptyBtn) {
+                        resetEmptyBtn.addEventListener('click', () => {
+                            if (mainSearchInput) mainSearchInput.value = '';
+                            applySearch('');
+                        });
+                    }
+                    return;
                 }
 
-                // Photos extraction
-                let rawPhotos = [];
-                if (pkg.images && Array.isArray(pkg.images)) {
-                    rawPhotos = pkg.images.map(img => typeof img === 'string' ? img : (img && img.url ? img.url : '')).filter(Boolean);
-                } else if (pkg.photos && Array.isArray(pkg.photos)) {
-                    rawPhotos = pkg.photos.map(img => typeof img === 'string' ? img : (img && img.url ? img.url : '')).filter(Boolean);
-                }
-                if (rawPhotos.length === 0 && p.banner) {
-                    rawPhotos.push(p.banner);
-                }
-                if (rawPhotos.length === 0) {
-                    rawPhotos.push(index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
-                }
+                packagesGrid.innerHTML = items.map((item, index) => {
+                    const p = item.provider;
+                    const pkg = item.pkg;
+                    const title = pkg.name || pkg.title || 'Sound Package';
+                    const rawPrice = Number(pkg.price || p.startingPrice || 15000);
+                    const priceFormatted = rawPrice.toLocaleString('en-US');
+                    const description = pkg.description || '';
+                    const cardKey = `main-pkg-${p.id || index}-${pkg.id || index}`;
 
-                const pkgPhotoUrls = rawPhotos.map(url => {
-                    let clean = url.trim();
-                    if (clean.startsWith('/data:')) return clean.substring(1);
-                    return clean;
-                });
+                    // Inclusions parsing
+                    let inclusions = [];
+                    if (Array.isArray(pkg.inclusions)) {
+                        inclusions = pkg.inclusions.filter(Boolean);
+                    } else if (typeof pkg.inclusions === 'string' && pkg.inclusions.trim()) {
+                        inclusions = pkg.inclusions.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+                    }
 
-                window.packagePhotosMap[cardKey] = pkgPhotoUrls;
+                    // Photos extraction
+                    let rawPhotos = [];
+                    if (pkg.images && Array.isArray(pkg.images)) {
+                        rawPhotos = pkg.images.map(img => typeof img === 'string' ? img : (img && img.url ? img.url : '')).filter(Boolean);
+                    } else if (pkg.photos && Array.isArray(pkg.photos)) {
+                        rawPhotos = pkg.photos.map(img => typeof img === 'string' ? img : (img && img.url ? img.url : '')).filter(Boolean);
+                    }
+                    if (rawPhotos.length === 0 && p.banner) {
+                        rawPhotos.push(p.banner);
+                    }
+                    if (rawPhotos.length === 0) {
+                        rawPhotos.push(index % 2 === 0 ? 'assets/images/banner.png' : 'assets/images/wedding.png');
+                    }
 
-                const firstPhotoUrl = pkgPhotoUrls[0] || 'assets/images/banner.png';
-                const hasMultiplePkgPhotos = pkgPhotoUrls.length > 1;
+                    const pkgPhotoUrls = rawPhotos.map(url => {
+                        let clean = url.trim();
+                        if (clean.startsWith('/data:')) return clean.substring(1);
+                        return clean;
+                    });
 
-                const photosGalleryHTML = `
-                    <div style="margin:10px 0 8px 0; border-top:1px solid #f1f5f9; padding-top:8px;">
-                        <strong style="font-size:0.78rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px; font-weight:800; letter-spacing:0.3px;">
-                            <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:4px;"></i> Setup / Equipment Photos
-                        </strong>
-                        <div class="pkg-photo-gallery" style="display:flex; flex-direction:column; gap:6px;">
-                            <div class="offer-card-image-wrap" 
-                                 id="pkg-photo-wrap-${cardKey}" 
-                                 data-pkg-id="${cardKey}" 
-                                 data-photo-idx="0" 
-                                 style="width:100%; height:130px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; background:#000; position:relative; cursor:pointer; user-select:none;" 
-                                 onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${cardKey}'] && window.packagePhotosMap['${cardKey}'].length > 1) { window.switchCardPhoto('${cardKey}', 'next', event); } else { window.openCardGalleryLightbox('${cardKey}', event); } }" 
-                                 title="${hasMultiplePkgPhotos ? 'Click to swipe photo' : 'Click to enlarge photo'}">
-                                <img id="main-offer-img-${cardKey}" src="${firstPhotoUrl}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">
-                                
+                    window.packagePhotosMap[cardKey] = pkgPhotoUrls;
+
+                    const firstPhotoUrl = pkgPhotoUrls[0] || 'assets/images/banner.png';
+                    const hasMultiplePkgPhotos = pkgPhotoUrls.length > 1;
+
+                    const photosGalleryHTML = `
+                        <div style="margin:10px 0 8px 0; border-top:1px solid #f1f5f9; padding-top:8px;">
+                            <strong style="font-size:0.78rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px; font-weight:800; letter-spacing:0.3px;">
+                                <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:4px;"></i> Setup / Equipment Photos
+                            </strong>
+                            <div class="pkg-photo-gallery" style="display:flex; flex-direction:column; gap:6px;">
+                                <div class="offer-card-image-wrap" 
+                                     id="pkg-photo-wrap-${cardKey}" 
+                                     data-pkg-id="${cardKey}" 
+                                     data-photo-idx="0" 
+                                     style="width:100%; height:130px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; background:#000; position:relative; cursor:pointer; user-select:none;" 
+                                     onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${cardKey}'] && window.packagePhotosMap['${cardKey}'].length > 1) { window.switchCardPhoto('${cardKey}', 'next', event); } else { window.openCardGalleryLightbox('${cardKey}', event); } }" 
+                                     title="${hasMultiplePkgPhotos ? 'Click to swipe photo' : 'Click to enlarge photo'}">
+                                    <img id="main-offer-img-${cardKey}" src="${firstPhotoUrl}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">
+                                    
+                                    ${hasMultiplePkgPhotos ? `
+                                        <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'prev', event);" title="Previous photo" style="position:absolute; left:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                            <i class="fa-solid fa-chevron-left" style="font-size:0.75rem;"></i>
+                                        </button>
+                                        <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'next', event);" title="Next photo" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                            <i class="fa-solid fa-chevron-right" style="font-size:0.75rem;"></i>
+                                        </button>
+                                        <span id="card-photo-counter-${cardKey}" style="position:absolute; bottom:6px; left:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:2px 7px; border-radius:6px; font-size:0.65rem; font-weight:800; pointer-events:none; border:1px solid rgba(255,255,255,0.2);">
+                                            1 / ${pkgPhotoUrls.length}
+                                        </span>
+                                    ` : ''}
+
+                                    <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${cardKey}', event);" style="position:absolute; bottom:6px; right:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.25); z-index:3;">
+                                        <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Enlarge
+                                    </button>
+                                </div>
                                 ${hasMultiplePkgPhotos ? `
-                                    <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'prev', event);" title="Previous photo" style="position:absolute; left:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
-                                        <i class="fa-solid fa-chevron-left" style="font-size:0.75rem;"></i>
-                                    </button>
-                                    <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'next', event);" title="Next photo" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
-                                        <i class="fa-solid fa-chevron-right" style="font-size:0.75rem;"></i>
-                                    </button>
-                                    <span id="card-photo-counter-${cardKey}" style="position:absolute; bottom:6px; left:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:2px 7px; border-radius:6px; font-size:0.65rem; font-weight:800; pointer-events:none; border:1px solid rgba(255,255,255,0.2);">
-                                        1 / ${pkgPhotoUrls.length}
-                                    </span>
+                                    <div id="card-thumbnails-row-${cardKey}" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;">
+                                        ${pkgPhotoUrls.map((pUrl, pIdx) => `
+                                            <img src="${pUrl}" class="card-thumb-item ${pIdx === 0 ? 'active' : ''}" 
+                                                 data-pkg-id="${cardKey}" 
+                                                 data-idx="${pIdx}" 
+                                                 style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
+                                                 onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', ${pIdx}, event);" 
+                                                 onmouseover="this.style.opacity='1'; this.style.transform='scale(1.08)';" 
+                                                 onmouseout="if(!this.classList.contains('active')) { this.style.opacity='0.65'; this.style.transform='scale(1)'; }" 
+                                                 title="Photo ${pIdx + 1} - Click to switch">
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    return `
+                        <div class="package-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" data-price="${rawPrice}" data-title="${title}" style="cursor:pointer;" title="Click to view details">
+                            <div>
+                                <div class="pkg-header-badge">POPULAR OFFER</div>
+                                <div class="pkg-card-title">${title}</div>
+                                <div class="pkg-provider-sub">
+                                    <span class="pkg-provider-name"><i class="fa-solid fa-store" style="color:#2563eb;"></i> ${p.name}</span>
+                                    <span class="pkg-provider-dot">•</span>
+                                    <span class="pkg-provider-location"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${p.coverageArea || 'Batangas'}</span>
+                                </div>
+                                <div class="pkg-card-price-row">
+                                    <span class="pkg-card-price">₱${priceFormatted}</span>
+                                    <span class="pkg-card-duration">/ Event Rental</span>
+                                </div>
+
+                                ${description ? `<p class="pkg-description-text">${description}</p>` : ''}
+
+                                ${inclusions.length > 0 ? `
+                                    <ul class="inclusions-list">
+                                        ${inclusions.map(inc => `<li><i class="fa-solid fa-check"></i> ${inc}</li>`).join('')}
+                                    </ul>
                                 ` : ''}
 
-                                <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${cardKey}', event);" style="position:absolute; bottom:6px; right:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.25); z-index:3;">
-                                    <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Enlarge
+                                ${photosGalleryHTML}
+                            </div>
+
+                            <div class="pkg-card-actions-row">
+                                <button type="button" class="btn-select-package btn-view-package-details" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" title="View full details and specifications">
+                                    <i class="fa-solid fa-eye"></i> View Details
+                                </button>
+                                <button type="button" class="btn-book-package-direct btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${title}" data-pkg-price="${rawPrice}" title="Book this package">
+                                    <i class="fa-solid fa-calendar-check"></i> Book Now
                                 </button>
                             </div>
-                            ${hasMultiplePkgPhotos ? `
-                                <div id="card-thumbnails-row-${cardKey}" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;">
-                                    ${pkgPhotoUrls.map((pUrl, pIdx) => `
-                                        <img src="${pUrl}" class="card-thumb-item ${pIdx === 0 ? 'active' : ''}" 
-                                             data-pkg-id="${cardKey}" 
-                                             data-idx="${pIdx}" 
-                                             style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
-                                             onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', ${pIdx}, event);" 
-                                             onmouseover="this.style.opacity='1'; this.style.transform='scale(1.08)';" 
-                                             onmouseout="if(!this.classList.contains('active')) { this.style.opacity='0.65'; this.style.transform='scale(1)'; }" 
-                                             title="Photo ${pIdx + 1} - Click to switch">
-                                    `).join('')}
-                                </div>
-                            ` : ''}
                         </div>
-                    </div>
-                `;
+                    `;
+                }).join('');
 
-                return `
-                    <div class="package-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" data-price="${rawPrice}" data-title="${title}" style="cursor:pointer;" title="Click to view details">
-                        <div>
-                            <div class="pkg-header-badge">POPULAR OFFER</div>
-                            <div class="pkg-card-title">${title}</div>
-                            <div class="pkg-provider-sub">
-                                <span class="pkg-provider-name"><i class="fa-solid fa-store" style="color:#2563eb;"></i> ${p.name}</span>
-                                <span class="pkg-provider-dot">•</span>
-                                <span class="pkg-provider-location"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${p.coverageArea || 'Batangas'}</span>
-                            </div>
-                            <div class="pkg-card-price-row">
-                                <span class="pkg-card-price">₱${priceFormatted}</span>
-                                <span class="pkg-card-duration">/ Event Rental</span>
-                            </div>
-
-                            ${description ? `<p class="pkg-description-text">${description}</p>` : ''}
-
-                            ${inclusions.length > 0 ? `
-                                <ul class="inclusions-list">
-                                    ${inclusions.map(inc => `<li><i class="fa-solid fa-check"></i> ${inc}</li>`).join('')}
-                                </ul>
-                            ` : ''}
-
-                            ${photosGalleryHTML}
-                        </div>
-
-                        <div class="pkg-card-actions-row">
-                            <button type="button" class="btn-select-package btn-view-package-details" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" title="View full details and specifications">
-                                <i class="fa-solid fa-eye"></i> View Details
-                            </button>
-                            <button type="button" class="btn-book-package-direct btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${title}" data-pkg-price="${rawPrice}" title="Book this package">
-                                <i class="fa-solid fa-calendar-check"></i> Book Now
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Attach View Details Click Listener
-            packagesGrid.querySelectorAll('.btn-view-package-details').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const providerId = btn.getAttribute('data-provider-id');
-                    const pkgId = btn.getAttribute('data-pkg-id');
-                    window.location.href = `/provider-detail.html?id=${providerId}${pkgId ? `&package_id=${pkgId}` : ''}`;
-                });
-            });
-
-            // Attach Unauthenticated Booking Check to Dynamic "Book Now" Buttons
-            const actionBookBtns = packagesGrid.querySelectorAll('.btn-action-book');
-            actionBookBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const providerId = btn.getAttribute('data-provider-id');
-                    const pkgId = btn.getAttribute('data-pkg-id');
-                    const pkgTitle = btn.getAttribute('data-pkg-title');
-                    const pkgPrice = parseInt(btn.getAttribute('data-pkg-price'), 10) || 15000;
-
-                    const pendingBooking = {
-                        packageId: pkgId,
-                        packageTitle: pkgTitle,
-                        packagePrice: pkgPrice,
-                        providerId: providerId,
-                        returnUrl: `/provider-detail.html?id=${providerId}`
-                    };
-
-                    if (!token || !user) {
-                        e.preventDefault();
-                        if (typeof window.openAuthModal === 'function') {
-                            window.openAuthModal('login', pendingBooking);
-                        } else {
-                            sessionStorage.setItem('soundsphere_pending_booking', JSON.stringify(pendingBooking));
-                            window.location.href = `/login.html?returnUrl=${encodeURIComponent(`/provider-detail.html?id=${providerId}`)}`;
-                        }
-                    } else {
-                        sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(pendingBooking));
-                        window.location.href = `/booking.html?package_id=${pkgId || ''}&provider_id=${providerId}`;
-                    }
-                });
-            });
-
-            // Make entire card clickable to view provider details
-            packagesGrid.querySelectorAll('.package-card').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    if (e.target.closest('.pkg-photo-gallery') || e.target.closest('.pkg-card-actions-row')) return;
-                    const providerId = card.getAttribute('data-provider-id');
-                    const pkgId = card.getAttribute('data-package-id');
-                    if (providerId) {
+                // Attach View Details Click Listener
+                packagesGrid.querySelectorAll('.btn-view-package-details').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const providerId = btn.getAttribute('data-provider-id');
+                        const pkgId = btn.getAttribute('data-pkg-id');
                         window.location.href = `/provider-detail.html?id=${providerId}${pkgId ? `&package_id=${pkgId}` : ''}`;
+                    });
+                });
+
+                // Attach Unauthenticated Booking Check to Dynamic "Book Now" Buttons
+                const actionBookBtns = packagesGrid.querySelectorAll('.btn-action-book');
+                actionBookBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const providerId = btn.getAttribute('data-provider-id');
+                        const pkgId = btn.getAttribute('data-pkg-id');
+                        const pkgTitle = btn.getAttribute('data-pkg-title');
+                        const pkgPrice = parseInt(btn.getAttribute('data-pkg-price'), 10) || 15000;
+
+                        const pendingBooking = {
+                            packageId: pkgId,
+                            packageTitle: pkgTitle,
+                            packagePrice: pkgPrice,
+                            providerId: providerId,
+                            returnUrl: `/provider-detail.html?id=${providerId}`
+                        };
+
+                        if (!token || !user) {
+                            e.preventDefault();
+                            if (typeof window.openAuthModal === 'function') {
+                                window.openAuthModal('login', pendingBooking);
+                            } else {
+                                sessionStorage.setItem('soundsphere_pending_booking', JSON.stringify(pendingBooking));
+                                window.location.href = `/login.html?returnUrl=${encodeURIComponent(`/provider-detail.html?id=${providerId}`)}`;
+                            }
+                        } else {
+                            sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(pendingBooking));
+                            window.location.href = `/booking.html?package_id=${pkgId || ''}&provider_id=${providerId}`;
+                        }
+                    });
+                });
+
+                // Make entire card clickable to view provider details
+                packagesGrid.querySelectorAll('.package-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (e.target.closest('.pkg-photo-gallery') || e.target.closest('.pkg-card-actions-row')) return;
+                        const providerId = card.getAttribute('data-provider-id');
+                        const pkgId = card.getAttribute('data-package-id');
+                        if (providerId) {
+                            window.location.href = `/provider-detail.html?id=${providerId}${pkgId ? `&package_id=${pkgId}` : ''}`;
+                        }
+                    });
+                });
+            };
+
+            // Universal Search Filter Function
+            // Matches: Service Provider Name, Package Title, Category, Description, Inclusions (equipment), and Area / Location
+            const applySearch = (query) => {
+                const q = (query || '').trim();
+                if (!q) {
+                    if (searchBanner) searchBanner.style.display = 'none';
+                    renderPackages(allPackageItems);
+                    return;
+                }
+
+                const terms = q.toLowerCase().replace(/[,;:&/\\+]+/g, ' ').split(/\s+/).filter(Boolean);
+                const filtered = allPackageItems.filter(item => {
+                    const p = item.provider;
+                    const pkg = item.pkg;
+
+                    let inclusionsText = '';
+                    if (Array.isArray(pkg.inclusions)) {
+                        inclusionsText = pkg.inclusions.join(' ');
+                    } else if (typeof pkg.inclusions === 'string') {
+                        inclusionsText = pkg.inclusions;
+                    }
+
+                    const searchableContent = [
+                        p.name || '',
+                        p.businessName || '',
+                        p.ownerName || '',
+                        p.coverageArea || '',
+                        p.businessAddress || '',
+                        p.address || '',
+                        p.city || '',
+                        p.municipality || '',
+                        p.province || '',
+                        p.location || '',
+                        pkg.name || '',
+                        pkg.title || '',
+                        pkg.category || '',
+                        pkg.description || '',
+                        inclusionsText
+                    ].join(' ').toLowerCase();
+
+                    return terms.every(term => searchableContent.includes(term));
+                });
+
+                if (searchBanner && searchStatusText) {
+                    searchBanner.style.display = 'flex';
+                    searchStatusText.innerHTML = `Found <strong>${filtered.length}</strong> package${filtered.length === 1 ? '' : 's'} for "<strong>${escapeHtml(q)}</strong>"`;
+                }
+
+                renderPackages(filtered);
+            };
+
+            // Attach Live Search Listeners
+            if (mainSearchInput) {
+                mainSearchInput.addEventListener('input', (e) => {
+                    applySearch(e.target.value);
+                });
+
+                mainSearchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applySearch(mainSearchInput.value);
+                        const section = document.querySelector('.flash-deals-section');
+                        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 });
-            });
+            }
+
+            if (mainSearchBtn) {
+                mainSearchBtn.addEventListener('click', () => {
+                    applySearch(mainSearchInput ? mainSearchInput.value : '');
+                    const section = document.querySelector('.flash-deals-section');
+                    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+
+            if (searchClearBtn) {
+                searchClearBtn.addEventListener('click', () => {
+                    if (mainSearchInput) mainSearchInput.value = '';
+                    applySearch('');
+                });
+            }
+
+            // Check if user came with a search query in URL (?search=... or ?q=...)
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialQuery = urlParams.get('search') || urlParams.get('q') || '';
+            if (initialQuery && mainSearchInput) {
+                mainSearchInput.value = initialQuery;
+                applySearch(initialQuery);
+            } else {
+                renderPackages(allPackageItems);
+            }
 
         } catch (err) {
             console.error('Error fetching public providers from DB:', err);
