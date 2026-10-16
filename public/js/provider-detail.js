@@ -539,13 +539,61 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!providerId && currentUser && (currentUser.role === 'ServiceProvider' || currentUser.roleId === 3)) {
             providerId = currentUser.userId || currentUser.providerId || currentUser.id;
         }
-        if (!providerId) providerId = 13;
+
+        const showProviderNotFound = (id) => {
+            const titleEl = document.getElementById('provider-detail-title');
+            const descEl = document.getElementById('provider-detail-desc');
+            const pkgGrid = document.getElementById('provider-detail-packages-grid');
+            const avatarEl = document.getElementById('provider-detail-avatar');
+            const contactRow = document.getElementById('provider-contact-row');
+            const ratingLineEl = document.getElementById('provider-detail-rating-line');
+            const badgeEl = document.getElementById('provider-verified-badge');
+            const btnReview = document.getElementById('btn-review-provider');
+
+            if (titleEl) titleEl.textContent = 'Service Provider Not Found';
+            if (descEl) descEl.textContent = id ? `The requested service provider (#${id}) could not be loaded.` : 'No service provider specified.';
+            if (avatarEl) avatarEl.innerHTML = `<i class="fa-solid fa-store-slash" style="font-size:2.5rem; color:#94a3b8;"></i>`;
+            if (contactRow) contactRow.style.display = 'none';
+            if (ratingLineEl) ratingLineEl.style.display = 'none';
+            if (badgeEl) badgeEl.style.display = 'none';
+            if (btnReview) btnReview.style.display = 'none';
+
+            const pageLoader = document.getElementById('provider-page-loader');
+            if (pageLoader) pageLoader.style.display = 'none';
+
+            if (pkgGrid) {
+                pkgGrid.removeAttribute('data-count');
+                pkgGrid.innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:60px 24px; background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px;">
+                        <i class="fa-solid fa-store-slash" style="font-size:3rem; color:#94a3b8; margin-bottom:16px; display:block;"></i>
+                        <h3 style="margin:0 0 10px 0; color:#0a192f; font-size:1.3rem; font-weight:800;">Provider Profile Unavailable</h3>
+                        <p style="margin:0 0 20px 0; font-size:0.95rem; color:#64748b; max-width:500px; margin-left:auto; margin-right:auto;">
+                            This lights and sounds service provider could not be loaded or may no longer be active. Please explore other verified service providers on the marketplace.
+                        </p>
+                        <a href="/marketplace.html" style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; background:#2563eb; color:#ffffff; border-radius:12px; font-weight:800; font-size:0.95rem; text-decoration:none;">
+                            <i class="fa-solid fa-arrow-left"></i> Return to Marketplace
+                        </a>
+                    </div>
+                `;
+            }
+        };
+
+        if (!providerId) {
+            showProviderNotFound(null);
+            return;
+        }
 
         try {
             const res = await fetch(`/api/providers/${providerId}`);
-            if (!res.ok) return;
+            if (!res.ok) {
+                showProviderNotFound(providerId);
+                return;
+            }
             const data = await res.json();
-            if (!data.success || !data.data) return;
+            if (!data.success || !data.data) {
+                showProviderNotFound(providerId);
+                return;
+            }
 
             const provider = data.data;
             currentLoadedProviderId = provider.providerId || provider.ProviderID || provider.id || provider.userId || providerId;
@@ -559,17 +607,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const avatarEl = document.getElementById('provider-detail-avatar');
             const badgeEl = document.getElementById('provider-verified-badge');
             const btnMsg = document.getElementById('btn-message-provider');
+            const btnReview = document.getElementById('btn-review-provider');
+            const contactRow = document.getElementById('provider-contact-row');
 
             if (titleEl) {
                 titleEl.textContent = provider.name || provider.businessName || 'Service Provider Profile';
             }
 
-            if (emailEl) {
-                emailEl.textContent = provider.email || 'denvercabrera.apo@gmail.com';
+            if (descEl) {
+                descEl.style.color = '#334155';
+                descEl.textContent = provider.description || `${provider.name || 'Service Provider'} - Professional Lights & Sounds Equipment.`;
             }
 
+            // Contact items handling
+            let hasContact = false;
+            const emailWrap = document.getElementById('provider-detail-email-wrap');
+            const emailDivider = document.getElementById('provider-detail-email-divider');
+            if (emailEl) {
+                if (provider.email) {
+                    emailEl.textContent = provider.email;
+                    if (emailWrap) emailWrap.style.display = 'inline-flex';
+                    if (emailDivider) emailDivider.style.display = 'inline';
+                    hasContact = true;
+                } else {
+                    if (emailWrap) emailWrap.style.display = 'none';
+                    if (emailDivider) emailDivider.style.display = 'none';
+                }
+            }
+
+            const phoneWrap = document.getElementById('provider-detail-phone-wrap');
+            const phoneDivider = document.getElementById('provider-detail-phone-divider');
+            const pPhone = provider.phone || provider.contactNumber || '';
             if (phoneEl) {
-                phoneEl.textContent = provider.phone || provider.contactNumber || '+63 951 602 8992';
+                if (pPhone) {
+                    phoneEl.textContent = pPhone;
+                    if (phoneWrap) phoneWrap.style.display = 'inline-flex';
+                    if (phoneDivider) phoneDivider.style.display = 'inline';
+                    hasContact = true;
+                } else {
+                    if (phoneWrap) phoneWrap.style.display = 'none';
+                    if (phoneDivider) phoneDivider.style.display = 'none';
+                }
             }
 
             const addressEl = document.getElementById('provider-detail-address');
@@ -582,18 +660,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     addressEl.textContent = bPlace;
                     if (addressWrap) addressWrap.style.display = 'inline-flex';
                     if (addressDivider) addressDivider.style.display = 'inline';
+                    hasContact = true;
                 } else {
                     if (addressWrap) addressWrap.style.display = 'none';
                     if (addressDivider) addressDivider.style.display = 'none';
                 }
             }
 
+            const coverageWrap = document.getElementById('provider-detail-coverage-wrap');
             if (coverageEl) {
-                coverageEl.textContent = provider.coverageArea || 'Lian, Balayan, Nasugbu';
+                if (provider.coverageArea) {
+                    coverageEl.textContent = provider.coverageArea;
+                    if (coverageWrap) coverageWrap.style.display = 'inline-flex';
+                    hasContact = true;
+                } else {
+                    coverageEl.textContent = 'Batangas & Nearby Areas';
+                    if (coverageWrap) coverageWrap.style.display = 'inline-flex';
+                    hasContact = true;
+                }
             }
 
-            if (descEl) {
-                descEl.textContent = provider.description || `${provider.name || 'Service Provider'} - Professional Lights & Sounds Equipment.`;
+            if (contactRow && hasContact) {
+                contactRow.style.display = 'flex';
             }
 
             // Update Header Inline Rating Score and Count
@@ -603,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ratingLineEl = document.getElementById('provider-detail-rating-line');
 
             const provRating = provider.rating || 5.0;
-            const provRevCount = (Array.isArray(provider.reviews) && provider.reviews.length > 0) ? provider.reviews.length : 3;
+            const provRevCount = (Array.isArray(provider.reviews) && provider.reviews.length > 0) ? provider.reviews.length : 0;
 
             if (ratingScoreEl) ratingScoreEl.textContent = Number(provRating).toFixed(1);
             if (ratingCountEl) ratingCountEl.textContent = `(${provRevCount} Client Review${provRevCount === 1 ? '' : 's'})`;
@@ -616,6 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (ratingLineEl) {
+                ratingLineEl.style.display = 'inline-flex';
                 ratingLineEl.style.cursor = 'pointer';
                 ratingLineEl.title = 'Click to view all client ratings & reviews';
                 ratingLineEl.onclick = () => window.openClientReviewModal && window.openClientReviewModal();
@@ -647,6 +736,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnMsg.onclick = () => {
                     window.location.href = `/client-messages.html?providerId=${provider.id}&providerName=${encodeURIComponent(provider.name)}`;
                 };
+            }
+
+            if (btnReview) {
+                btnReview.style.display = 'inline-flex';
             }
 
             const btnReport = document.getElementById('btn-report-provider');
@@ -860,8 +953,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Smoothly dismiss the centered page loader
+            const pageLoader = document.getElementById('provider-page-loader');
+            if (pageLoader) {
+                pageLoader.style.transition = 'opacity 0.25s ease';
+                pageLoader.style.opacity = '0';
+                setTimeout(() => {
+                    pageLoader.style.display = 'none';
+                }, 250);
+            }
+
         } catch (e) {
             console.warn('Provider profile load notice:', e.message);
+            const pageLoader = document.getElementById('provider-page-loader');
+            if (pageLoader) pageLoader.style.display = 'none';
         }
     };
 

@@ -89,13 +89,22 @@
         })();
     </script>
 
-        <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
+    <!-- ==================== DEDICATED CENTERED LOADING SCREEN ==================== -->
+    <div id="provider-page-loader" style="position:fixed; inset:0; background:#f8fafc; z-index:99999999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center;">
+        <div style="width:72px; height:72px; border-radius:50%; background:#ffffff; display:flex; align-items:center; justify-content:center; border:2px solid #bfdbfe; box-shadow:0 12px 30px rgba(37,99,235,0.15);">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:2.2rem; color:#2563eb;"></i>
+        </div>
+        <div style="font-size:1.25rem; font-weight:800; color:#0a192f; letter-spacing:-0.01em;">Loading Provider Profile...</div>
+        <p style="font-size:0.92rem; color:#64748b; margin:0; font-weight:600; max-width:400px; line-height:1.5;">Please wait while we retrieve service offerings and equipment packages.</p>
+    </div>
+
+    <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
     <section class="provider-profile-header-clean">
         <div class="provider-header-inner">
             <!-- Left: Profile Picture & Business Information -->
             <div class="provider-header-left">
                 <div class="provider-header-avatar" id="provider-detail-avatar">
-                    <i class="fa-solid fa-store"></i>
+                    <i class="fa-solid fa-store" style="font-size:2.8rem; color:#2563eb;"></i>
                 </div>
 
                 <div class="provider-header-info">
@@ -104,43 +113,42 @@
                             <h1 id="provider-detail-title" class="provider-business-title">
                                 Loading Provider Profile...
                             </h1>
-                            <span class="verified-badge-pill" id="provider-verified-badge" style="display:inline-flex;">
+                            <span class="verified-badge-pill" id="provider-verified-badge" style="display:none;">
                                 <i class="fa-solid fa-circle-check"></i> Verified Provider
                             </span>
                         </div>
 
-                        <div id="provider-detail-rating-line" class="provider-rating-pill" title="Click to view all client ratings & reviews">
+                        <div id="provider-detail-rating-line" class="provider-rating-pill" title="Click to view all client ratings & reviews" style="display:none;">
                             <span style="color:#f59e0b; font-size:0.95rem; display:inline-flex; align-items:center; gap:2px;" id="provider-rating-stars-inline">
-                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                             </span>
                             <strong style="font-size:0.95rem; color:#0a192f; font-weight:800;" id="provider-rating-score-inline">5.0</strong>
-                            <span style="font-size:0.82rem; color:#64748b; font-weight:600;" id="provider-rating-count-inline">(3 Client Reviews)</span>
+                            <span style="font-size:0.82rem; color:#64748b; font-weight:600;" id="provider-rating-count-inline"></span>
                         </div>
                     </div>
 
-                    <p id="provider-detail-desc" class="provider-description-text">
-                        Professional Lights &amp; Sounds Service Provider.
+                    <p id="provider-detail-desc" class="provider-description-text" style="color:#64748b;">
+                        Please wait while we retrieve provider storefront details and equipment packages...
                     </p>
 
-                    <div class="provider-contact-details-row">
-                        <span class="contact-item">
+                    <div class="provider-contact-details-row" id="provider-contact-row" style="display:none;">
+                        <span class="contact-item" id="provider-detail-email-wrap" style="display:none;">
                             <i class="fa-solid fa-envelope" style="color:#2563eb;"></i>
-                            <span id="provider-detail-email">denvercabrera.apo@gmail.com</span>
+                            <span id="provider-detail-email"></span>
                         </span>
-                        <span class="contact-divider">•</span>
-                        <span class="contact-item">
+                        <span class="contact-divider" id="provider-detail-email-divider" style="display:none;">•</span>
+                        <span class="contact-item" id="provider-detail-phone-wrap" style="display:none;">
                             <i class="fa-solid fa-phone" style="color:#059669;"></i>
-                            <span id="provider-detail-phone">+63 951 602 8992</span>
+                            <span id="provider-detail-phone"></span>
                         </span>
-                        <span class="contact-divider">•</span>
-                        <span class="contact-item" id="provider-detail-address-wrap" title="Business Place">
+                        <span class="contact-divider" id="provider-detail-phone-divider" style="display:none;">•</span>
+                        <span class="contact-item" id="provider-detail-address-wrap" title="Business Place" style="display:none;">
                             <i class="fa-solid fa-store" style="color:#7c3aed;"></i>
-                            <span id="provider-detail-address">Balayan, Batangas</span>
+                            <span id="provider-detail-address"></span>
                         </span>
-                        <span class="contact-divider" id="provider-detail-address-divider">•</span>
-                        <span class="contact-item" title="Service Coverage Area">
+                        <span class="contact-divider" id="provider-detail-address-divider" style="display:none;">•</span>
+                        <span class="contact-item" id="provider-detail-coverage-wrap" title="Service Coverage Area" style="display:none;">
                             <i class="fa-solid fa-location-dot" style="color:#dc2626;"></i>
-                            <span>Coverage: </span><span id="provider-detail-coverage">Lian, Balayan, Nasugbu</span>
+                            <span>Coverage: </span><span id="provider-detail-coverage"></span>
                         </span>
                     </div>
                 </div>
@@ -151,7 +159,7 @@
                 <button type="button" class="btn-message-provider-action" id="btn-message-provider" style="display:none;">
                     <i class="fa-solid fa-comment-dots"></i> Message Provider
                 </button>
-                <button type="button" class="btn-review-provider-action" id="btn-review-provider" onclick="window.openClientReviewModal()" title="Write a review for this provider">
+                <button type="button" class="btn-review-provider-action" id="btn-review-provider" onclick="window.openClientReviewModal()" title="Write a review for this provider" style="display:none;">
                     <i class="fa-solid fa-star" style="color:#f59e0b;"></i> Rate &amp; Review Provider
                 </button>
                 <button type="button" class="btn-report-provider-action" id="btn-report-provider" onclick="window.openReportProviderModal()" style="display:none;">
@@ -172,81 +180,10 @@
 
             <!-- Side-by-Side Package Cards -->
             <div class="packages-side-by-side-grid" id="provider-detail-packages-grid">
-                <!-- Package 1 -->
-                <div class="package-card" data-price="15000" data-title="Basic Wedding Sound & Lights System">
-                    <div class="pkg-card-title">Basic Wedding Sound & Lights System</div>
-                    <div class="pkg-card-price-row">
-                        <span class="pkg-card-price">₱15,000</span>
-                        <span class="pkg-card-duration">/ 6 Hours Event</span>
-                    </div>
-
-                    <ul class="inclusions-list">
-                        <li><i class="fa-solid fa-check"></i> 2x Line Array Tops</li>
-                        <li><i class="fa-solid fa-check"></i> 4x LED Par Uplights</li>
-                        <li><i class="fa-solid fa-check"></i> 1x Digital Sound Mixer</li>
-                        <li><i class="fa-solid fa-check"></i> 2x Wireless Microphones</li>
-                        <li><i class="fa-solid fa-check"></i> 1x On-Site Sound Technician</li>
-                    </ul>
-
-                    <button type="button" class="btn-select-package">Select Package</button>
-                </div>
-
-                <!-- Package 2 (Default Active) -->
-                <div class="package-card selected-active" data-price="28000" data-title="Concert Line Array & Stage Lighting Rigs">
-                    <div class="pkg-header-badge">POPULAR CONCERT RIG</div>
-                    <div class="pkg-card-title">Concert Line Array & Stage Lighting Rigs</div>
-                    <div class="pkg-card-price-row">
-                        <span class="pkg-card-price">₱28,000</span>
-                        <span class="pkg-card-duration">/ 10 Hours Event</span>
-                    </div>
-
-                    <ul class="inclusions-list">
-                        <li><i class="fa-solid fa-check"></i> 8x Heavy Line Array Towers</li>
-                        <li><i class="fa-solid fa-check"></i> 4x Subwoofer Basestations</li>
-                        <li><i class="fa-solid fa-check"></i> 24x Beam Moving Spot Lights</li>
-                        <li><i class="fa-solid fa-check"></i> Heavy-Duty Aluminum Trussing</li>
-                        <li><i class="fa-solid fa-check"></i> Fog & Haze Effects Machine</li>
-                        <li><i class="fa-solid fa-check"></i> 3x Crew Sound Engineers</li>
-                    </ul>
-
-                    <button type="button" class="btn-select-package">Selected Package ✓</button>
-                </div>
-
-                <!-- Package 3 -->
-                <div class="package-card" data-price="45000" data-title="Full Stage LED Wall & Festival Package">
-                    <div class="pkg-card-title">Full Stage LED Wall & Festival Package</div>
-                    <div class="pkg-card-price-row">
-                        <span class="pkg-card-price">₱45,000</span>
-                        <span class="pkg-card-duration">/ Full Day Festival</span>
-                    </div>
-
-                    <ul class="inclusions-list">
-                        <li><i class="fa-solid fa-check"></i> P3 High Res LED Wall (4m x 3m)</li>
-                        <li><i class="fa-solid fa-check"></i> 16x Concert Line Array Speakers</li>
-                        <li><i class="fa-solid fa-check"></i> 32x Moving Head Lights</li>
-                        <li><i class="fa-solid fa-check"></i> Video Switcher & Visual Operator</li>
-                        <li><i class="fa-solid fa-check"></i> Heavy Stage Roof Rigs</li>
-                    </ul>
-
-                    <button type="button" class="btn-select-package">Select Package</button>
-                </div>
-
-                <!-- Package 4 -->
-                <div class="package-card" data-price="8500" data-title="Acoustic & Corporate Audio Setup">
-                    <div class="pkg-card-title">Acoustic & Corporate Audio Setup</div>
-                    <div class="pkg-card-price-row">
-                        <span class="pkg-card-price">₱8,500</span>
-                        <span class="pkg-card-duration">/ 4 Hours Event</span>
-                    </div>
-
-                    <ul class="inclusions-list">
-                        <li><i class="fa-solid fa-check"></i> 2x Active Powered Speakers</li>
-                        <li><i class="fa-solid fa-check"></i> 2x Wireless Microphones</li>
-                        <li><i class="fa-solid fa-check"></i> 1x Compact Audio Mixer</li>
-                        <li><i class="fa-solid fa-check"></i> Warm Ambient Spotlight</li>
-                    </ul>
-
-                    <button type="button" class="btn-select-package">Select Package</button>
+                <div id="provider-packages-loading-placeholder" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; text-align: center; box-shadow: 0 4px 16px rgba(15,23,42,0.03);">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2.5rem; color: #2563eb; margin-bottom: 16px;"></i>
+                    <h3 style="margin: 0 0 8px 0; color: #0a192f; font-size: 1.25rem; font-weight: 800;">Loading Provider Packages &amp; Services...</h3>
+                    <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 600;">Please wait while we retrieve equipment packages and pricing.</p>
                 </div>
             </div>
         </div>
