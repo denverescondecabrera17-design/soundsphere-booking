@@ -1597,6 +1597,250 @@ const rejectClientRefundRequest = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/cashier/notifications
+ * Retrieve real-time notifications for Cashier desk (Pending withdrawals, pending client refunds, persistent alerts)
+ */
+const getCashierNotifications = async (req, res) => {
+    try {
+        let pool = await connectDB();
+        if (!pool) {
+            const { getOrConnectPool } = require('../config/db');
+            pool = await getOrConnectPool();
+        }
+
+        const cashierUserId = req.user?.userId || req.user?.id || 1;
+        let notifications = [];
+
+        // 1. Fetch persistent notifications targeted for Cashier from dbo.Notifications
+        try {
+            if (pool) {
+                const notifRes = await pool.request()
+                    .input('CashierUID', sql.Int, cashierUserId)
+                    .query(`
+                        SELECT 
+                            n.NotificationID,
+                            n.NotificationType,
+                            n.Title,
+                            n.Message,
+                            n.RelatedID,
+                            n.RelatedType,
+                            n.IsRead,
+                            n.CreatedAt
+                        FROM dbo.Notifications n
+                        WHERE n.UserID = @CashierUID 
+                           OR n.UserID IN (SELECT UserID FROM dbo.Users WHERE RoleID = 4)
+                           OR n.NotificationType IN ('CashierAlert', 'CashierNotice', 'DisbursementAlert', 'WithdrawalAlert', 'RefundAlert')
+                        ORDER BY n.CreatedAt DESC;
+                    `);
+                notifications = notifRes.recordset || [];
+            }
+        } catch (e) {
+            console.warn('Persistent cashier notifications fetch notice:', e.message);
+        }
+
+        // 2. Fetch pending provider withdrawal payout requests
+        try {
+            if (pool) {
+                const wdRes = await pool.request().query(`
+                    SELECT 
+                        w.WithdrawalID,
+                        w.Amount,
+                        w.PayoutMethod,
+                        w.Status,
+                        w.RequestedAt,
+                        w.AccountName,
+                        w.AccountReference,
+                        ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName
+                    FROM dbo.Withdrawals w
+                    LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
+                    WHERE w.Status = 'Pending'
+                    ORDER BY w.RequestedAt DESC;
+                `);
+
+                for (const wd of (wdRes.recordset || [])) {
+                    const alreadyExists = notifications.some(n => (n.NotificationType === 'Withdrawal' || n.RelatedType === 'Withdrawal') && String(n.RelatedID) === String(wd.WithdrawalID));
+                    if (!alreadyExists) {
+                        const amt = parseFloat(wd.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                        notifications.push({
+                            NotificationID: `wd-${wd.WithdrawalID}`,
+                            NotificationType: 'Withdrawal',
+                            Title: `Pending Provider Payout: ₱${amt}`,
+                            Message: `${wd.ProviderName} requested a payout of ₱${amt} via ${wd.PayoutMethod || 'GCash'}. Disbursement required.`,
+                            RelatedID: wd.WithdrawalID,
+                            RelatedType: 'Withdrawal',
+                            ActionTarget: 'withdrawals',
+                            IsRead: false,
+                            CreatedAt: wd.RequestedAt
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Cashier withdrawals notification fetch notice:', e.message);
+        }
+
+        // 3. Fetch pending client refund requests
+        try {
+            if (pool) {
+                const refRes = await pool.request().query(`
+                    SELECT 
+                        rr.RefundRequestID,
+                        rr.Amount,
+                        rr.PayoutMethod,
+                        rr.Status,
+                        rr.RequestedAt,
+                        rr.AccountName,
+                        rr.ClientName,
+                        rr.AdminNotes AS Reason
+                    FROM dbo.RefundRequests rr
+                    WHERE rr.Status = 'Pending'
+                    ORDER BY rr.RequestedAt DESC;
+                `);
+
+                for (const rf of (refRes.recordset || [])) {
+                    const alreadyExists = notifications.some(n => (n.NotificationType === 'Refund' || n.RelatedType === 'Refund') && String(n.RelatedID) === String(rf.RefundRequestID));
+                    if (!alreadyExists) {
+                        const amt = parseFloat(rf.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                        notifications.push({
+                            NotificationID: `ref-${rf.RefundRequestID}`,
+                            NotificationType: 'Refund',
+                            Title: `Pending Client Refund: ₱${amt}`,
+                            Message: `${rf.ClientName || 'Client'} requested a refund payout of ₱${amt} via ${rf.PayoutMethod || 'GCash'}. Disbursement required.`,
+                            RelatedID: rf.RefundRequestID,
+                            RelatedType: 'Refund',
+                            ActionTarget: 'refunds',
+                            IsRead: false,
+                            CreatedAt: rf.RequestedAt
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Cashier refunds notification fetch notice:', e.message);
+        }
+
+        // 4. Fetch recent approved/disbursed payouts (last 5)
+        try {
+            if (pool) {
+                const disRes = await pool.request().query(`
+                    SELECT TOP 5
+                        w.WithdrawalID,
+                        w.Amount,
+                        w.PayoutMethod,
+                        w.Status,
+                        w.ProcessedAt,
+                        ISNULL(sp.BusinessName, 'Service Provider') AS ProviderName
+                    FROM dbo.Withdrawals w
+                    LEFT JOIN dbo.ServiceProviders sp ON (w.ProviderID = sp.ProviderID OR w.ProviderID = sp.UserID)
+                    WHERE w.Status = 'Approved'
+                    ORDER BY w.ProcessedAt DESC;
+                `);
+
+                for (const dis of (disRes.recordset || [])) {
+                    const alreadyExists = notifications.some(n => String(n.NotificationID) === `disb-${dis.WithdrawalID}`);
+                    if (!alreadyExists) {
+                        const amt = parseFloat(dis.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                        notifications.push({
+                            NotificationID: `disb-${dis.WithdrawalID}`,
+                            NotificationType: 'Disbursement',
+                            Title: `Payout Disbursed: ₱${amt}`,
+                            Message: `Disbursed ₱${amt} to ${dis.ProviderName} via ${dis.PayoutMethod || 'GCash'}.`,
+                            RelatedID: dis.WithdrawalID,
+                            RelatedType: 'Withdrawal',
+                            ActionTarget: 'withdrawals',
+                            IsRead: true,
+                            CreatedAt: dis.ProcessedAt || new Date()
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Recent disbursements notification fetch notice:', e.message);
+        }
+
+        // Sort all notifications by CreatedAt DESC
+        notifications.sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
+
+        // Sanitize any broken legacy characters
+        notifications = notifications.map(n => ({
+            ...n,
+            Title: String(n.Title || '').replace(/^\?\?\s*/, '📢 ').replace(/\?(\d)/g, '₱$1'),
+            Message: String(n.Message || '').replace(/\?\?\s*/g, '📢 ').replace(/\?(\d)/g, '₱$1')
+        }));
+
+        const unreadCount = notifications.filter(n => !n.IsRead).length;
+
+        return res.status(200).json({
+            success: true,
+            unreadCount,
+            notifications
+        });
+    } catch (error) {
+        console.error('Get Cashier Notifications Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve cashier notifications.',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * PUT /api/cashier/notifications/:id/read
+ * Mark cashier notification as read
+ */
+const markCashierNotificationRead = async (req, res) => {
+    try {
+        const notifId = String(req.params.id || '');
+        const pool = await connectDB();
+        const numericId = parseInt(notifId, 10);
+
+        if (!isNaN(numericId) && numericId > 0 && !notifId.startsWith('wd-') && !notifId.startsWith('ref-') && !notifId.startsWith('disb-')) {
+            await pool.request()
+                .input('NID', sql.Int, numericId)
+                .query("UPDATE dbo.Notifications SET IsRead = 1 WHERE NotificationID = @NID");
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Cashier notification marked as read.'
+        });
+    } catch (error) {
+        console.error('Mark Cashier Notification Read Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * PUT /api/cashier/notifications/read-all
+ * Mark all cashier notifications as read
+ */
+const markAllCashierNotificationsRead = async (req, res) => {
+    try {
+        const cashierUserId = req.user?.userId || req.user?.id || 1;
+        const pool = await connectDB();
+
+        await pool.request()
+            .input('CID', sql.Int, cashierUserId)
+            .query(`
+                UPDATE dbo.Notifications 
+                SET IsRead = 1 
+                WHERE UserID = @CID 
+                   OR UserID IN (SELECT UserID FROM dbo.Users WHERE RoleID = 4)
+                   OR NotificationType IN ('CashierAlert', 'CashierNotice', 'DisbursementAlert');
+            `);
+
+        return res.status(200).json({
+            success: true,
+            message: 'All cashier notifications marked as read.'
+        });
+    } catch (error) {
+        console.error('Mark All Cashier Notifications Read Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getCashierSummary,
     getCashierWithdrawals,
@@ -1609,7 +1853,11 @@ module.exports = {
     getCashierRevenueSummary,
     getClientRefundRequests,
     approveClientRefundRequest,
-    rejectClientRefundRequest
+    rejectClientRefundRequest,
+    getCashierNotifications,
+    markCashierNotificationRead,
+    markAllCashierNotificationsRead
 };
+
 
 

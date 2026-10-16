@@ -89,6 +89,35 @@
                         <span id="current-date-text">Today</span>
                     </div>
 
+                    <!-- Notification Bell Container -->
+                    <div class="cashier-notification-container" id="cashier-notification-container" style="position:relative;">
+                        <button type="button" class="cashier-notification-btn" id="btn-cashier-notifications" title="Cashier Notifications" aria-label="Notifications" style="position:relative; width:38px; height:38px; border-radius:50%; border:1px solid #e2e8f0; background:#f8fafc; color:#475569; font-size:1.15rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease;">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="cashier-notif-badge" id="cashier-notif-badge" style="display:none; position:absolute; top:-3px; right:-3px; background:#ef4444; color:#ffffff; font-size:0.68rem; font-weight:800; min-width:18px; height:18px; border-radius:10px; padding:0 4px; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(239,68,68,0.4); border:2px solid #ffffff;">0</span>
+                        </button>
+
+                        <!-- Notification Dropdown Panel -->
+                        <div class="cashier-notif-dropdown" id="cashier-notif-dropdown" style="display:none; position:absolute; right:0; top:48px; width:360px; max-width:92vw; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; box-shadow:0 14px 36px rgba(10,25,47,0.18); z-index:999999; overflow:hidden;">
+                            <div style="padding:14px 18px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <strong style="font-size:0.95rem; color:#0a192f;"><i class="fa-solid fa-bell" style="color:#2563eb; margin-right:4px;"></i> Notifications</strong>
+                                    <span class="badge-count" id="cashier-notif-header-count" style="font-size:0.75rem; background:#eff6ff; color:#2563eb; font-weight:700; padding:2px 8px; border-radius:12px; border:1px solid #bfdbfe; display:none;">0 new</span>
+                                </div>
+                                <button type="button" id="btn-cashier-mark-all-read" style="background:none; border:none; color:#2563eb; font-size:0.8rem; font-weight:700; cursor:pointer; padding:4px 6px; border-radius:4px; transition:color 0.15s ease;">Mark all read</button>
+                            </div>
+                            <div id="cashier-notif-list" style="max-height:360px; overflow-y:auto;">
+                                <div style="padding:32px 16px; text-align:center; color:#94a3b8; font-size:0.88rem;">
+                                    <i class="fa-solid fa-bell-slash" style="font-size:1.8rem; color:#cbd5e1; margin-bottom:8px; display:block;"></i>
+                                    No notifications
+                                </div>
+                            </div>
+                            <div style="padding:10px 16px; border-top:1px solid #f1f5f9; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.78rem; color:#64748b; font-weight:600;"><i class="fa-solid fa-circle-dot" style="color:#10b981; font-size:0.7rem; margin-right:4px;"></i> Real-Time Alerts</span>
+                                <span style="font-size:0.76rem; color:#94a3b8;">Click item to action</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="topbar-actions">
                         <button type="button" class="btn btn-danger btn-sm" id="btn-cashier-logout" title="Sign Out">
                             <i class="fa-solid fa-right-from-bracket"></i>

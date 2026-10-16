@@ -35,4 +35,9 @@ router.get('/revenue-summary', cashierController.getCashierRevenueSummary);
 router.get('/subscriptions/overview', cashierController.getCashierSubscriptionsOverview);
 router.post('/subscriptions/record-payment', cashierController.recordCashierSubscriptionPayment);
 
+// Cashier Notification Alerts
+router.get('/notifications', cashierController.getCashierNotifications);
+router.put('/notifications/:id/read', cashierController.markCashierNotificationRead);
+router.put('/notifications/read-all', cashierController.markAllCashierNotificationsRead);
+
 module.exports = router;

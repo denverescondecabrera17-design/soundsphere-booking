@@ -5,6 +5,7 @@
 
 const notificationModel = require('../models/notificationModel');
 const adminController = require('./adminController');
+const cashierController = require('./cashierController');
 
 /**
  * GET /api/notifications
@@ -18,6 +19,10 @@ const getUserNotifications = async (req, res) => {
 
         if (userRole === 'admin' || userRole === 'administrator' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com' || req.query.scope === 'admin') {
             return adminController.getAdminNotifications(req, res);
+        }
+
+        if (userRole === 'cashier' || userRoleId === 4 || req.query.scope === 'cashier') {
+            return cashierController.getCashierNotifications(req, res);
         }
 
         const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.query.userId;
@@ -92,6 +97,10 @@ const markAllNotificationsRead = async (req, res) => {
 
         if (userRole === 'admin' || userRole === 'administrator' || userRoleId === 1 || userEmail === 'soundsphere@gmail.com' || req.body?.scope === 'admin') {
             return adminController.markAllAdminNotificationsRead(req, res);
+        }
+
+        if (userRole === 'cashier' || userRoleId === 4 || req.body?.scope === 'cashier') {
+            return cashierController.markAllCashierNotificationsRead(req, res);
         }
 
         const userId = (req.user && (req.user.userId || req.user.id || req.user.UserID)) || req.body?.userId;
