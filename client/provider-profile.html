@@ -88,7 +88,7 @@
         })();
     </script>
 
-    <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
+        <!-- ==================== 1. CLEAN WHITE SERVICE PROVIDER PROFILE HEADER ==================== -->
     <section class="provider-profile-header-clean">
         <div class="provider-header-inner">
             <!-- Left: Profile Picture & Business Information -->
@@ -98,14 +98,28 @@
                 </div>
 
                 <div class="provider-header-info">
-                    <div class="provider-name-badge-row">
-                        <h1 id="provider-detail-title" class="provider-business-title">
-                            Loading Provider Profile...
-                        </h1>
-                        <span class="verified-badge-pill" id="provider-verified-badge" style="display:inline-flex;">
-                            <i class="fa-solid fa-circle-check"></i> Verified Provider
-                        </span>
+                    <div class="provider-title-rating-row">
+                        <div class="provider-name-badge-row">
+                            <h1 id="provider-detail-title" class="provider-business-title">
+                                Loading Provider Profile...
+                            </h1>
+                            <span class="verified-badge-pill" id="provider-verified-badge" style="display:inline-flex;">
+                                <i class="fa-solid fa-circle-check"></i> Verified Provider
+                            </span>
+                        </div>
+
+                        <div id="provider-detail-rating-line" class="provider-rating-pill" title="Click to view all client ratings & reviews">
+                            <span style="color:#f59e0b; font-size:0.95rem; display:inline-flex; align-items:center; gap:2px;" id="provider-rating-stars-inline">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                            </span>
+                            <strong style="font-size:0.95rem; color:#0a192f; font-weight:800;" id="provider-rating-score-inline">5.0</strong>
+                            <span style="font-size:0.82rem; color:#64748b; font-weight:600;" id="provider-rating-count-inline">(3 Client Reviews)</span>
+                        </div>
                     </div>
+
+                    <p id="provider-detail-desc" class="provider-description-text">
+                        Professional Lights &amp; Sounds Service Provider.
+                    </p>
 
                     <div class="provider-contact-details-row">
                         <span class="contact-item">
@@ -114,31 +128,19 @@
                         </span>
                         <span class="contact-divider">•</span>
                         <span class="contact-item">
-                            <i class="fa-solid fa-phone" style="color:#2563eb;"></i>
+                            <i class="fa-solid fa-phone" style="color:#059669;"></i>
                             <span id="provider-detail-phone">+63 951 602 8992</span>
                         </span>
                         <span class="contact-divider">•</span>
                         <span class="contact-item" id="provider-detail-address-wrap" title="Business Place">
-                            <i class="fa-solid fa-store" style="color:#2563eb;"></i>
+                            <i class="fa-solid fa-store" style="color:#7c3aed;"></i>
                             <span id="provider-detail-address">Balayan, Batangas</span>
                         </span>
                         <span class="contact-divider" id="provider-detail-address-divider">•</span>
                         <span class="contact-item" title="Service Coverage Area">
-                            <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i>
+                            <i class="fa-solid fa-location-dot" style="color:#dc2626;"></i>
                             <span>Coverage: </span><span id="provider-detail-coverage">Lian, Balayan, Nasugbu</span>
                         </span>
-                    </div>
-
-                    <p id="provider-detail-desc" class="provider-description-text" style="margin-bottom:4px;">
-                        Professional Lights &amp; Sounds Service Provider.
-                    </p>
-
-                    <div id="provider-detail-rating-line" style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                        <span style="color:#f59e0b; font-size:1rem; display:inline-flex; align-items:center; gap:3px;" id="provider-rating-stars-inline">
-                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                        </span>
-                        <strong style="font-size:1rem; color:#0a192f; font-weight:900;" id="provider-rating-score-inline">5.0</strong>
-                        <span style="font-size:0.88rem; color:#64748b; font-weight:700;" id="provider-rating-count-inline">(3 Client Reviews)</span>
                     </div>
                 </div>
             </div>
@@ -148,7 +150,7 @@
                 <button type="button" class="btn-message-provider-action" id="btn-message-provider" style="display:none;">
                     <i class="fa-solid fa-comment-dots"></i> Message Provider
                 </button>
-                <button type="button" class="btn-review-provider-action" id="btn-review-provider" onclick="window.openClientReviewModal()" style="height:52px; padding:0 22px; background:#eff6ff; color:#1d4ed8; border:2px solid #bfdbfe; border-radius:12px; font-weight:800; font-size:1.05rem; cursor:pointer; display:inline-flex; align-items:center; gap:10px; white-space:nowrap; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(37,99,235,0.1);" onmouseover="this.style.background='#dbeafe'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#eff6ff'; this.style.transform='translateY(0)';" title="Write a review for this provider">
+                <button type="button" class="btn-review-provider-action" id="btn-review-provider" onclick="window.openClientReviewModal()" title="Write a review for this provider">
                     <i class="fa-solid fa-star" style="color:#f59e0b;"></i> Rate &amp; Review Provider
                 </button>
                 <button type="button" class="btn-report-provider-action" id="btn-report-provider" onclick="window.openReportProviderModal()" style="display:none;">
