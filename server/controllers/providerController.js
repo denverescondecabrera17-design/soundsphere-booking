@@ -1067,85 +1067,7 @@ const getProviderWithdrawals = async (req, res) => {
             providerId = provRes.recordset[0].ProviderID;
         }
 
-        // 2. Fetch all bookings for this provider
-        const bkRes = await pool.request()
-            .input('UID', userId)
-            .input('PID', providerId)
-            .query(`
-                SELECT 
-                    b.BookingID,
-                    b.BookingReference,
-                    b.PackageName,
-                    b.EventDate,
-                    b.ServiceStartDate,
-                    b.TotalAmount,
-                    b.AmountPaid,
-                    b.CommissionRate,
-                    b.CommissionAmount,
-                    b.ProviderEarnings,
-                    b.PaymentStatus,
-                    b.BookingStatus,
-                    b.EscrowStatus,
-                    b.CompletionAcceptedAt,
-                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), 'Client') AS ClientName,
-                    (SELECT TOP 1 w.Status FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalStatus,
-                    (SELECT TOP 1 w.WithdrawalID FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalID,
-                    (SELECT TOP 1 w.RequestedAt FROM dbo.Withdrawals w WHERE w.BookingID = b.BookingID ORDER BY w.RequestedAt DESC) AS CashierWithdrawalRequestedAt
-                FROM dbo.Bookings b
-                WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
-                  AND b.BookingStatus NOT IN ('Cancelled', 'Rejected')
-                ORDER BY b.BookingID DESC;
-            `);
-
-        const allBookings = bkRes.recordset || [];
-
-        let totalCompletedEarnings = 0;
-        let totalHeldInEscrow = 0;
-        let totalContractEarnings = 0;
-
-        const completedBookings = [];
-        const undisbursedCompletedBookings = [];
-        const disbursedCompletedBookings = [];
-        const escrowBookings = [];
-
-        allBookings.forEach(b => {
-            const tot = parseFloat(b.TotalAmount || 0);
-            const paid = parseFloat(b.AmountPaid || 0);
-            const commRate = parseFloat(b.CommissionRate || 5) / 100;
-            const pSt = (b.PaymentStatus || '').toLowerCase();
-            const isFullPaid = (pSt === 'paid' || b.BookingStatus === 'Completed');
-            const gross = isFullPaid ? tot : paid;
-            const commFee = gross * commRate;
-            const netAmount = gross - commFee;
-
-            totalContractEarnings += tot * (1 - commRate);
-
-            const bookingItem = {
-                ...b,
-                grossAmount: parseFloat(gross.toFixed(2)),
-                commissionFee: parseFloat(commFee.toFixed(2)),
-                netEarnings: parseFloat(netAmount.toFixed(2))
-            };
-
-            const isCompleted = (b.BookingStatus === 'Completed' || b.EscrowStatus === 'Released');
-            const cashierStatus = (b.CashierWithdrawalStatus || '').toLowerCase();
-            const isDisbursed = cashierStatus === 'approved' || cashierStatus === 'completed';
-
-            if (isCompleted) {
-                totalCompletedEarnings += netAmount;
-                completedBookings.push(bookingItem);
-                if (!isDisbursed) {
-                    undisbursedCompletedBookings.push(bookingItem);
-                } else {
-                    disbursedCompletedBookings.push(bookingItem);
-                }
-            } else if (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation') {
-                totalHeldInEscrow += netAmount;
-                escrowBookings.push(bookingItem);
-            }
-        });
-
-        // 3. Withdrawal History & Total Withdrawn from dbo.Withdrawals
+        // 2. Withdrawal History & Total Withdrawn from dbo.Withdrawals
         const wRes = await pool.request()
             .input('PID', providerId)
             .input('UID', userId)
@@ -1176,6 +1098,119 @@ const getProviderWithdrawals = async (req, res) => {
         const pendingWithdrawals = withdrawals
             .filter(w => w.Status === 'Pending')
             .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
+
+        // General (unlinked) approved and pending withdrawal amounts
+        let remainingGeneralApproved = withdrawals
+            .filter(w => !w.BookingID && (w.Status === 'Approved' || w.Status === 'Completed'))
+            .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
+
+        let remainingGeneralPending = withdrawals
+            .filter(w => !w.BookingID && w.Status === 'Pending')
+            .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
+
+        // Direct booking withdrawals map
+        const directBookingWd = {};
+        withdrawals.forEach(w => {
+            if (w.BookingID && !directBookingWd[w.BookingID]) {
+                directBookingWd[w.BookingID] = w;
+            }
+        });
+
+        // 3. Fetch all bookings for this provider in chronological order
+        const bkRes = await pool.request()
+            .input('UID', userId)
+            .input('PID', providerId)
+            .query(`
+                SELECT 
+                    b.BookingID,
+                    b.BookingReference,
+                    b.PackageName,
+                    b.EventDate,
+                    b.ServiceStartDate,
+                    b.TotalAmount,
+                    b.AmountPaid,
+                    b.CommissionRate,
+                    b.CommissionAmount,
+                    b.ProviderEarnings,
+                    b.PaymentStatus,
+                    b.BookingStatus,
+                    b.EscrowStatus,
+                    b.CreatedAt,
+                    b.CompletionAcceptedAt,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), 'Client') AS ClientName
+                FROM dbo.Bookings b
+                WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
+                  AND b.BookingStatus NOT IN ('Cancelled', 'Rejected')
+                ORDER BY b.CreatedAt ASC, b.BookingID ASC;
+            `);
+
+        const allBookings = bkRes.recordset || [];
+
+        let totalCompletedEarnings = 0;
+        let totalHeldInEscrow = 0;
+        let totalContractEarnings = 0;
+
+        const completedBookings = [];
+        const undisbursedCompletedBookings = [];
+        const disbursedCompletedBookings = [];
+        const escrowBookings = [];
+
+        allBookings.forEach(b => {
+            const tot = parseFloat(b.TotalAmount || 0);
+            const paid = parseFloat(b.AmountPaid || 0);
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            const isFullPaid = (pSt === 'paid' || b.BookingStatus === 'Completed');
+            const gross = isFullPaid ? tot : paid;
+            const commFee = gross * commRate;
+            const netAmount = gross - commFee;
+
+            totalContractEarnings += tot * (1 - commRate);
+
+            const directWd = directBookingWd[b.BookingID];
+            const directStatus = directWd ? (directWd.Status || '').toLowerCase() : null;
+
+            const bookingItem = {
+                ...b,
+                grossAmount: parseFloat(gross.toFixed(2)),
+                commissionFee: parseFloat(commFee.toFixed(2)),
+                netEarnings: parseFloat(netAmount.toFixed(2)),
+                CashierWithdrawalStatus: directWd ? directWd.Status : null,
+                CashierWithdrawalID: directWd ? directWd.WithdrawalID : null
+            };
+
+            const isCompleted = (b.BookingStatus === 'Completed' || b.EscrowStatus === 'Released');
+
+            if (isCompleted) {
+                totalCompletedEarnings += netAmount;
+                completedBookings.push(bookingItem);
+
+                // Determine if already disbursed directly or covered by general approved lump sum
+                if (directStatus === 'approved' || directStatus === 'completed') {
+                    disbursedCompletedBookings.push(bookingItem);
+                } else if (remainingGeneralApproved >= (netAmount - 0.50)) {
+                    remainingGeneralApproved -= netAmount;
+                    bookingItem.CashierWithdrawalStatus = 'Approved';
+                    disbursedCompletedBookings.push(bookingItem);
+                } else if (directStatus === 'pending') {
+                    bookingItem.CashierWithdrawalStatus = 'Pending';
+                    undisbursedCompletedBookings.push(bookingItem);
+                } else if (remainingGeneralPending >= (netAmount - 0.50)) {
+                    remainingGeneralPending -= netAmount;
+                    bookingItem.CashierWithdrawalStatus = 'Pending';
+                    undisbursedCompletedBookings.push(bookingItem);
+                } else {
+                    undisbursedCompletedBookings.push(bookingItem);
+                }
+            } else if (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation') {
+                totalHeldInEscrow += netAmount;
+                escrowBookings.push(bookingItem);
+            }
+        });
+
+        // Sort undisbursed list newest to oldest for display
+        undisbursedCompletedBookings.sort((a, b) => b.BookingID - a.BookingID);
+        completedBookings.sort((a, b) => b.BookingID - a.BookingID);
 
         const availableBalance = Math.max(0, totalCompletedEarnings - totalWithdrawn - pendingWithdrawals);
 
