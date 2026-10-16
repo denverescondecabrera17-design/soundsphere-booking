@@ -1458,9 +1458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (headerActionsEl) {
-            headerActionsEl.innerHTML = isSuspended
-                ? `<button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="padding:9px 20px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'"><i class="fa-solid fa-check"></i> Reactivate Provider</button>`
-                : `<button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="padding:9px 20px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 8px rgba(239,68,68,0.3); transition:0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'"><i class="fa-solid fa-ban"></i> Suspend Provider</button>`;
+            headerActionsEl.innerHTML = '';
         }
 
         modalBody.innerHTML = `
