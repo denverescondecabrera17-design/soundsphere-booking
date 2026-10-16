@@ -3175,7 +3175,7 @@ async function loadAdminPermitsPage() {
     const tbody = document.getElementById('table-admin-permits');
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Loading business permits...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Loading business permits...</td></tr>`;
 
     try {
         const res = await fetch('/api/admin/permits', {
@@ -3245,36 +3245,11 @@ async function loadAdminPermitsPage() {
             if (btnRefresh) {
                 btnRefresh.addEventListener('click', () => loadAdminPermitsPage());
             }
-
-            // Wire up modal review actions
-            const btnRejectToggle = document.getElementById('btn-admin-permit-reject-toggle');
-            const rejectSection = document.getElementById('modal-permit-reject-section');
-            if (btnRejectToggle && rejectSection) {
-                btnRejectToggle.addEventListener('click', () => {
-                    const isHidden = rejectSection.classList.contains('hidden');
-                    if (isHidden) {
-                        rejectSection.classList.remove('hidden');
-                        btnRejectToggle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Reject';
-                        btnRejectToggle.style.background = '#e11d48';
-                        btnRejectToggle.style.color = '#fff';
-                    } else {
-                        // Confirm rejection
-                        _submitPermitReview('reject');
-                    }
-                });
-            }
-
-            const btnApprove = document.getElementById('btn-admin-permit-approve');
-            if (btnApprove) {
-                btnApprove.addEventListener('click', () => {
-                    _submitPermitReview('approve');
-                });
-            }
         }
 
     } catch (err) {
         console.error('loadAdminPermitsPage error:', err);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Failed to load permit data. Please try again.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Failed to load permit data. Please try again.</td></tr>`;
     }
 }
 
@@ -3312,7 +3287,7 @@ function _renderAdminPermitsTable() {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:36px;color:#64748b;"><i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.5rem;display:block;margin-bottom:8px;"></i>No business permits match the selected criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:36px;color:#64748b;"><i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.5rem;display:block;margin-bottom:8px;"></i>No business permits match the selected criteria.</td></tr>`;
         return;
     }
 
@@ -3363,18 +3338,8 @@ function _renderAdminPermitsTable() {
             renewalDisplay = `<span style="color:#e11d48;font-weight:700;font-size:0.76rem;" title="${esc(p.RenewalRejectionReason)}"><i class="fa-solid fa-xmark"></i> Rejected</span>`;
         }
 
-        // Actions
-        let actionButtons = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">`;
-        if (p.RenewalPermitStatus === 'Pending') {
-            actionButtons += `<button type="button" onclick="openAdminReviewPermit(${p.ProviderID})" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(37,99,235,0.3);"><i class="fa-solid fa-file-signature"></i> Review Renewal</button>`;
-        }
-        
-        actionButtons += `<button type="button" onclick="sendAdminPermitNotice(${p.ProviderID}, '${esc(p.BusinessName)}')" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Send Renewal Reminder Notice to Provider"><i class="fa-solid fa-paper-plane" style="color:#0284c7;"></i> Notice</button>`;
-
-        actionButtons += `</div>`;
-
         return `
-            <tr>
+            <tr onclick="openAdminReviewPermit(${p.ProviderID})" style="cursor:pointer; transition:background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" title="Click to view permit details & compliance actions">
                 <td>
                     <div style="display:flex;align-items:center;gap:12px;">
                         <img src="${avatarUrl}" alt="Provider" onerror="this.onerror=null; this.src='${fallbackAvatar}';" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;">
@@ -3392,7 +3357,6 @@ function _renderAdminPermitsTable() {
                 <td>${statusBadge}</td>
                 <td>${noticeDisplay}</td>
                 <td>${renewalDisplay}</td>
-                <td>${actionButtons}</td>
             </tr>
         `;
     }).join('');
@@ -3556,26 +3520,46 @@ function openAdminReviewPermit(providerId) {
     // Reset reject section
     if (rejectSec) rejectSec.classList.add('hidden');
     if (rejectReason) rejectReason.value = '';
+
+    const isPending = (p.ComplianceStatus === 'Renewal_Pending' || p.RenewalPermitStatus === 'Pending' || p.PermitRenewalStatus === 'Pending_Review' || p.PermitRenewalStatus === 'Pending');
+
     if (btnRejectToggle) {
-        btnRejectToggle.innerHTML = '<i class="fa-solid fa-xmark"></i> Reject';
-        btnRejectToggle.style.background = '#fff1f2';
-        btnRejectToggle.style.color = '#e11d48';
-        btnRejectToggle.onclick = () => {
-            if (!rejectSec) return;
-            if (rejectSec.classList.contains('hidden')) {
-                rejectSec.classList.remove('hidden');
-                btnRejectToggle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection';
-                btnRejectToggle.style.background = '#e11d48';
-                btnRejectToggle.style.color = '#fff';
-                if (rejectReason) rejectReason.focus();
-            } else {
-                _submitPermitReview('reject');
-            }
-        };
+        if (isPending) {
+            btnRejectToggle.style.display = 'block';
+            btnRejectToggle.innerHTML = '<i class="fa-solid fa-xmark"></i> Reject';
+            btnRejectToggle.style.background = '#fff1f2';
+            btnRejectToggle.style.color = '#e11d48';
+            btnRejectToggle.onclick = () => {
+                if (!rejectSec) return;
+                if (rejectSec.classList.contains('hidden')) {
+                    rejectSec.classList.remove('hidden');
+                    btnRejectToggle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection';
+                    btnRejectToggle.style.background = '#e11d48';
+                    btnRejectToggle.style.color = '#fff';
+                    if (rejectReason) rejectReason.focus();
+                } else {
+                    _submitPermitReview('reject');
+                }
+            };
+        } else {
+            btnRejectToggle.style.display = 'none';
+        }
     }
 
     if (btnApprove) {
+        if (isPending) {
+            btnApprove.innerHTML = '<i class="fa-solid fa-check"></i> Approve &amp; Activate';
+        } else {
+            btnApprove.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Update Expiration Date';
+        }
         btnApprove.onclick = () => _submitPermitReview('approve');
+    }
+
+    const btnSendNoticeModal = document.getElementById('btn-admin-permit-send-notice-modal');
+    if (btnSendNoticeModal) {
+        btnSendNoticeModal.onclick = () => {
+            sendAdminPermitNotice(p.ProviderID, p.BusinessName);
+        };
     }
 
     // Reset canvas zoom & rotation
