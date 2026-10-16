@@ -333,7 +333,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnProviderProfileDropdown = document.getElementById('btn-provider-profile-dropdown');
     const providerProfileMenu = document.getElementById('provider-profile-menu');
     const btnProviderMyProfile = document.getElementById('btn-provider-my-profile');
-    const btnProviderAccountSettings = document.getElementById('btn-provider-account-settings');
 
     if (btnProviderProfileDropdown && providerProfileMenu) {
         btnProviderProfileDropdown.addEventListener('click', (e) => {
@@ -353,14 +352,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnProviderMyProfile) {
         btnProviderMyProfile.addEventListener('click', () => {
-            if (providerProfileMenu) providerProfileMenu.classList.add('hidden');
-            const navProf = document.getElementById('nav-item-profile');
-            if (navProf) navProf.click();
-        });
-    }
-
-    if (btnProviderAccountSettings) {
-        btnProviderAccountSettings.addEventListener('click', () => {
             if (providerProfileMenu) providerProfileMenu.classList.add('hidden');
             const navProf = document.getElementById('nav-item-profile');
             if (navProf) navProf.click();
