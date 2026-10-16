@@ -2028,10 +2028,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Render Provider Revenue Summary Table
             if (tableSummary) {
                 if (providers.length === 0) {
-                    tableSummary.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;">No service provider revenue records found.</td></tr>`;
+                    tableSummary.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:28px; color:#64748b;">No service provider revenue records found.</td></tr>`;
                 } else {
                     tableSummary.innerHTML = providers.map(p => `
-                        <tr>
+                        <tr class="clickable-prov-revenue-row" data-prov-name="${encodeURIComponent(p.providerName)}" style="cursor:pointer; transition: background 0.15s ease;" title="Click to view ${p.providerName} revenue details">
                             <td>
                                 <strong style="color:#0a192f; font-size:0.92rem; display:block;">${p.providerName}</strong>
                                 <span style="font-size:0.75rem; color:#64748b;">${p.providerEmail || ''}</span>
@@ -2040,18 +2040,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td><strong style="font-size:0.95rem; color:#10b981;">${formatPHP(p.netEarnings)}</strong></td>
                             <td><strong style="font-size:0.95rem; color:#8b5cf6;">${formatPHP(p.adminCommission)}</strong></td>
                             <td><span style="font-size:0.85rem; font-weight:700; color:#2563eb;">${p.bookingsCount} Booking(s)</span></td>
-                            <td style="text-align:right;">
-                                <button type="button" class="btn btn-primary btn-sm btn-view-prov-revenue" data-prov-name="${encodeURIComponent(p.providerName)}">
-                                    <i class="fa-solid fa-eye"></i> View Revenue Details
-                                </button>
-                            </td>
                         </tr>
                     `).join('');
 
-                    tableSummary.querySelectorAll('.btn-view-prov-revenue').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const pName = decodeURIComponent(btn.getAttribute('data-prov-name'));
+                    tableSummary.querySelectorAll('.clickable-prov-revenue-row').forEach(row => {
+                        row.addEventListener('click', () => {
+                            const pName = decodeURIComponent(row.getAttribute('data-prov-name'));
                             openCashierProviderRevenueDetail(pName);
+                        });
+                        row.addEventListener('mouseenter', () => {
+                            row.style.backgroundColor = '#f1f5f9';
+                        });
+                        row.addEventListener('mouseleave', () => {
+                            row.style.backgroundColor = '';
                         });
                     });
                 }
@@ -2059,7 +2060,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error('Error loading revenue reports:', err);
-            if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">Failed to load revenue reports.</td></tr>`;
+            if (tableSummary) tableSummary.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#ef4444;">Failed to load revenue reports.</td></tr>`;
         }
     }
 
