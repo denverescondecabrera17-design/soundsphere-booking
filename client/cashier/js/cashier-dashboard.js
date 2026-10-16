@@ -2027,6 +2027,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Render Provider Revenue Summary Table
             if (tableSummary) {
+                const tableEl = tableSummary.closest('table');
+                if (tableEl) {
+                    const thead = tableEl.querySelector('thead');
+                    if (thead) {
+                        thead.innerHTML = `
+                            <tr>
+                                <th>SERVICE PROVIDER</th>
+                                <th>GROSS REVENUE</th>
+                                <th>NET PROVIDER (95%)</th>
+                                <th>5% ADMIN FEE</th>
+                                <th>TOTAL BOOKINGS</th>
+                            </tr>
+                        `;
+                    }
+                }
+
                 if (providers.length === 0) {
                     tableSummary.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:28px; color:#64748b;">No service provider revenue records found.</td></tr>`;
                 } else {
