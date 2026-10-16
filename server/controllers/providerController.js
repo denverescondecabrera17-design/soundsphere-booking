@@ -605,24 +605,28 @@ const getDashboardStats = async (req, res) => {
             return bDate && bDate > nowManilaStr && isConfirmed;
         });
 
-        // 3. AVAILABLE BALANCE & EARNINGS: Strictly calculated from collected funds minus commission and withdrawals
+        // 3. AVAILABLE WALLET BALANCE & EARNINGS:
+        // Funds strictly move to provider wallet once service is confirmed COMPLETED by the client!
         let totalContractEarnings = 0;
-        let totalCollectedEarnings = 0;
+        let totalCompletedEarnings = 0;
+        let totalHeldInEscrow = 0;
 
         allBookings.forEach(b => {
             const st = b.BookingStatus || '';
             const pSt = (b.PaymentStatus || '').toLowerCase();
             if (st !== 'Cancelled' && st !== 'Rejected' && pSt !== 'refunded') {
-                if (st === 'Confirmed' || st === 'Completed') {
-                    const tot = parseFloat(b.TotalAmount || 0);
-                    const paid = parseFloat(b.AmountPaid || 0);
-                    const commRate = parseFloat(b.CommissionRate || 5) / 100;
+                const tot = parseFloat(b.TotalAmount || 0);
+                const paid = parseFloat(b.AmountPaid || 0);
+                const commRate = parseFloat(b.CommissionRate || 5) / 100;
+                const isFullPaid = (pSt === 'paid' || st === 'Completed');
+                const netAmount = (isFullPaid ? tot : paid) * (1 - commRate);
 
-                    const contractNet = tot * (1 - commRate);
-                    const collectedNet = paid * (1 - commRate);
+                totalContractEarnings += tot * (1 - commRate);
 
-                    totalContractEarnings += contractNet;
-                    totalCollectedEarnings += collectedNet;
+                if (st === 'Completed' || b.EscrowStatus === 'Released') {
+                    totalCompletedEarnings += netAmount;
+                } else if (st === 'Confirmed' || st === 'Awaiting Client Confirmation') {
+                    totalHeldInEscrow += netAmount;
                 }
             }
         });
@@ -646,7 +650,7 @@ const getDashboardStats = async (req, res) => {
             pendingWithdrawals = 0;
         }
 
-        const availableBalance = Math.max(0, totalCollectedEarnings - totalWithdrawn - pendingWithdrawals);
+        const availableBalance = Math.max(0, totalCompletedEarnings - totalWithdrawn - pendingWithdrawals);
 
         // Client Reviews
         let reviewsList = [];
@@ -676,8 +680,12 @@ const getDashboardStats = async (req, res) => {
                 upcomingBookingsCount: upcomingBookings.length,
                 todaysEventsCount: todaysEvents.length,
                 availableBalance: parseFloat(availableBalance.toFixed(2)),
+                heldInEscrow: parseFloat(totalHeldInEscrow.toFixed(2)),
+                completedEarnings: parseFloat(totalCompletedEarnings.toFixed(2)),
                 totalEarnings: parseFloat(totalContractEarnings.toFixed(2)),
-                collectedEarnings: parseFloat(totalCollectedEarnings.toFixed(2)),
+                collectedEarnings: parseFloat(totalCompletedEarnings.toFixed(2)),
+                totalWithdrawn: parseFloat(totalWithdrawn.toFixed(2)),
+                pendingWithdrawals: parseFloat(pendingWithdrawals.toFixed(2)),
                 monthlyEarnings: parseFloat(availableBalance.toFixed(2)),
                 upcomingBookings,
                 todaysEvents,
@@ -1059,41 +1067,64 @@ const getProviderWithdrawals = async (req, res) => {
             providerId = provRes.recordset[0].ProviderID;
         }
 
-        // 2. Total Gross & Collected Earnings from confirmed / completed bookings
+        // 2. Fetch all bookings for this provider
         const bkRes = await pool.request()
             .input('UID', userId)
             .input('PID', providerId)
             .query(`
                 SELECT 
                     b.BookingID,
+                    b.BookingReference,
+                    b.PackageName,
+                    b.EventDate,
+                    b.ServiceStartDate,
                     b.TotalAmount,
                     b.AmountPaid,
                     b.CommissionRate,
                     b.CommissionAmount,
                     b.ProviderEarnings,
                     b.PaymentStatus,
-                    b.BookingStatus
+                    b.BookingStatus,
+                    b.EscrowStatus,
+                    b.CompletionAcceptedAt,
+                    COALESCE(NULLIF(LTRIM(RTRIM(b.ClientName)), ''), 'Client') AS ClientName
                 FROM dbo.Bookings b
                 WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
-                  AND b.BookingStatus IN ('Confirmed', 'Completed');
+                  AND b.BookingStatus NOT IN ('Cancelled', 'Rejected')
+                ORDER BY b.BookingID DESC;
             `);
 
-        const bookingsList = bkRes.recordset || [];
-        
-        let totalContractEarnings = 0;
-        let totalCollectedEarnings = 0;
+        const allBookings = bkRes.recordset || [];
 
-        bookingsList.forEach(b => {
+        let totalCompletedEarnings = 0;
+        let totalHeldInEscrow = 0;
+        let totalContractEarnings = 0;
+
+        const completedBookings = [];
+        const escrowBookings = [];
+
+        allBookings.forEach(b => {
             const tot = parseFloat(b.TotalAmount || 0);
             const paid = parseFloat(b.AmountPaid || 0);
             const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const pSt = (b.PaymentStatus || '').toLowerCase();
+            const isFullPaid = (pSt === 'paid' || b.BookingStatus === 'Completed');
+            const netAmount = (isFullPaid ? tot : paid) * (1 - commRate);
 
-            const contractNet = tot * (1 - commRate);
-            const isFullPaid = (b.PaymentStatus === 'Paid' || b.BookingStatus === 'Completed');
-            const collectedNet = (isFullPaid ? tot : paid) * (1 - commRate);
+            totalContractEarnings += tot * (1 - commRate);
 
-            totalContractEarnings += contractNet;
-            totalCollectedEarnings += collectedNet;
+            const bookingItem = {
+                ...b,
+                netEarnings: parseFloat(netAmount.toFixed(2))
+            };
+
+            if (b.BookingStatus === 'Completed' || b.EscrowStatus === 'Released') {
+                totalCompletedEarnings += netAmount;
+                completedBookings.push(bookingItem);
+            } else if (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation') {
+                totalHeldInEscrow += netAmount;
+                escrowBookings.push(bookingItem);
+            }
         });
 
         // 3. Withdrawal History & Total Withdrawn from dbo.Withdrawals
@@ -1104,6 +1135,7 @@ const getProviderWithdrawals = async (req, res) => {
                 SELECT 
                     w.WithdrawalID,
                     w.ProviderID,
+                    w.BookingID,
                     w.Amount,
                     w.PayoutMethod,
                     w.AccountName,
@@ -1119,7 +1151,6 @@ const getProviderWithdrawals = async (req, res) => {
 
         const withdrawals = wRes.recordset || [];
 
-        // Sum of all approved & pending withdrawal amounts
         const totalWithdrawn = withdrawals
             .filter(w => w.Status === 'Approved' || w.Status === 'Completed')
             .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
@@ -1128,15 +1159,18 @@ const getProviderWithdrawals = async (req, res) => {
             .filter(w => w.Status === 'Pending')
             .reduce((sum, w) => sum + parseFloat(w.Amount || 0), 0);
 
-        const availableBalance = Math.max(0, totalCollectedEarnings - totalWithdrawn - pendingWithdrawals);
+        const availableBalance = Math.max(0, totalCompletedEarnings - totalWithdrawn - pendingWithdrawals);
 
         return res.status(200).json({
             success: true,
             availableBalance: parseFloat(availableBalance.toFixed(2)),
+            heldInEscrow: parseFloat(totalHeldInEscrow.toFixed(2)),
+            completedEarnings: parseFloat(totalCompletedEarnings.toFixed(2)),
             totalEarnings: parseFloat(totalContractEarnings.toFixed(2)),
-            collectedEarnings: parseFloat(totalCollectedEarnings.toFixed(2)),
             totalWithdrawn: parseFloat(totalWithdrawn.toFixed(2)),
             pendingWithdrawals: parseFloat(pendingWithdrawals.toFixed(2)),
+            completedBookings,
+            escrowBookings,
             withdrawals
         });
     } catch (err) {
@@ -1151,7 +1185,7 @@ const getProviderWithdrawals = async (req, res) => {
 
 /**
  * POST /api/providers/withdrawals/create
- * Submit new payout withdrawal request
+ * Submit new payout withdrawal request to Cashier
  */
 const createWithdrawalRequest = async (req, res) => {
     try {
@@ -1184,7 +1218,7 @@ const createWithdrawalRequest = async (req, res) => {
                 .input('PID', providerId)
                 .input('UID', userId)
                 .query(`
-                    SELECT BookingID, TotalAmount, AmountPaid, PaymentStatus, BookingStatus
+                    SELECT BookingID, TotalAmount, AmountPaid, PaymentStatus, BookingStatus, EscrowStatus
                     FROM dbo.Bookings
                     WHERE BookingID = @BID AND (ProviderID = @PID OR ProviderID = @UID);
                 `);
@@ -1192,6 +1226,15 @@ const createWithdrawalRequest = async (req, res) => {
             if (!targetBk) {
                 return res.status(400).json({ success: false, message: 'Specified booking was not found.' });
             }
+
+            // Must be confirmed completed by client
+            if (targetBk.BookingStatus !== 'Completed' && targetBk.EscrowStatus !== 'Released') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Payment for this booking is still held in escrow. The client must first confirm that the service is completed before funds can be withdrawn.'
+                });
+            }
+
             const bkTotal = parseFloat(targetBk.TotalAmount || 0);
             const bkPaid = parseFloat(targetBk.AmountPaid || 0);
             const isFull = (targetBk.PaymentStatus === 'Paid' || targetBk.BookingStatus === 'Completed');
@@ -1203,49 +1246,47 @@ const createWithdrawalRequest = async (req, res) => {
                     message: `Requested payout ₱${numericAmount.toFixed(2)} exceeds booking net earnings of ₱${bkAllowedNet.toFixed(2)}.`
                 });
             }
-        } else {
-            // General wallet balance check
-            const bkRes = await pool.request()
-                .input('UID', userId)
-                .input('PID', providerId)
-                .query(`
-                    SELECT b.TotalAmount, b.AmountPaid, b.CommissionRate, b.PaymentStatus, b.BookingStatus
-                    FROM dbo.Bookings b
-                    WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
-                      AND b.BookingStatus IN ('Confirmed', 'Completed');
-                `);
-
-            let totalCollected = 0;
-            (bkRes.recordset || []).forEach(b => {
-                const tot = parseFloat(b.TotalAmount || 0);
-                const paid = parseFloat(b.AmountPaid || 0);
-                const commRate = parseFloat(b.CommissionRate || 5) / 100;
-                const isFullPaid = (b.PaymentStatus === 'Paid' || b.BookingStatus === 'Completed');
-                totalCollected += (isFullPaid ? tot : paid) * (1 - commRate);
-            });
-
-            const wRes = await pool.request()
-                .input('PID', providerId)
-                .input('UID', userId)
-                .query(`
-                    SELECT ISNULL(SUM(w.Amount), 0) AS TotalPendingOrApproved
-                    FROM dbo.Withdrawals w
-                    WHERE (w.ProviderID = @PID OR w.ProviderID = @UID)
-                      AND w.Status IN ('Pending', 'Approved', 'Completed');
-                `);
-
-            const totalPendingOrApproved = parseFloat(wRes.recordset[0]?.TotalPendingOrApproved || 0);
-            const currentAvailable = Math.max(0, totalCollected - totalPendingOrApproved);
-
-            if (numericAmount > currentAvailable) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient balance. Available balance is ₱${currentAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
-                });
-            }
         }
 
-        // Insert new withdrawal request into dbo.Withdrawals
+        // Check general available balance strictly from completed services
+        const bkRes = await pool.request()
+            .input('UID', userId)
+            .input('PID', providerId)
+            .query(`
+                SELECT b.TotalAmount, b.AmountPaid, b.CommissionRate, b.PaymentStatus, b.BookingStatus, b.EscrowStatus
+                FROM dbo.Bookings b
+                WHERE (b.ProviderID = @PID OR b.ProviderID = @UID)
+                  AND (b.BookingStatus = 'Completed' OR b.EscrowStatus = 'Released');
+            `);
+
+        let totalCompleted = 0;
+        (bkRes.recordset || []).forEach(b => {
+            const tot = parseFloat(b.TotalAmount || 0);
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            totalCompleted += tot * (1 - commRate);
+        });
+
+        const wRes = await pool.request()
+            .input('PID', providerId)
+            .input('UID', userId)
+            .query(`
+                SELECT ISNULL(SUM(w.Amount), 0) AS TotalPendingOrApproved
+                FROM dbo.Withdrawals w
+                WHERE (w.ProviderID = @PID OR w.ProviderID = @UID)
+                  AND w.Status IN ('Pending', 'Approved', 'Completed');
+            `);
+
+        const totalPendingOrApproved = parseFloat(wRes.recordset[0]?.TotalPendingOrApproved || 0);
+        const currentAvailable = Math.max(0, totalCompleted - totalPendingOrApproved);
+
+        if (numericAmount > currentAvailable) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient wallet balance. You can only withdraw from completed services confirmed by clients. Current available balance is ₱${currentAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
+            });
+        }
+
+        // Insert new withdrawal request into dbo.Withdrawals for Cashier review
         const methodStr = payoutMethod || 'GCash / Maya E-Wallet';
         const nameStr = accountName ? accountName.trim() : 'Provider Payout Account';
         const refStr = accountReference.trim();
@@ -1269,7 +1310,7 @@ const createWithdrawalRequest = async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: `🎉 Payout request of ₱${numericAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} submitted successfully! Awaiting Administrator payout approval.`,
+            message: `🎉 Withdrawal request of ₱${numericAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} submitted successfully! It has been routed to the Cashier for disbursement approval.`,
             withdrawal: newWithdrawal
         });
     } catch (err) {

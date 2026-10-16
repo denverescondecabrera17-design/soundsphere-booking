@@ -687,9 +687,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadProviderCalendarSchedule();
         }
         else if (cleanHash === 'profile-section' || cleanHash === 'view-provider-profile') targetViewId = 'view-provider-profile';
-        else if (cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') {
-            targetViewId = 'view-provider-bookings';
-            window.location.hash = '#bookings-section';
+        else if (cleanHash === 'wallet-section' || cleanHash === 'view-provider-wallet' || cleanHash === 'withdrawals-section' || cleanHash === 'view-provider-withdrawals') {
+            targetViewId = 'view-provider-wallet';
+            loadWalletData();
         }
         else if (cleanHash === 'reviews-section' || cleanHash === 'view-provider-reviews') targetViewId = 'view-provider-reviews';
         else if (cleanHash === 'messages-section' || cleanHash === 'view-provider-messages') {
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sidebarNavLinks.forEach(link => {
             const href = link.getAttribute('href');
-            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-income-report' && href === '#income-report-section')) {
+            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-income-report' && href === '#income-report-section') || (targetViewId === 'view-provider-wallet' && (href === '#wallet-section' || href === '#withdrawals-section'))) {
                 link.classList.add('active');
             } else {
                 link.classList.remove('active');
@@ -797,30 +797,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
         // ------------------------------------------------------------------------
-    // Withdrawal Data & Modal Submission Engine
     // ------------------------------------------------------------------------
-    const loadWithdrawalsData = async () => {
-        if (!document.getElementById('table-provider-withdrawals-list')) return;
+    // Provider Wallet & Cashier Disbursements Engine
+    // ------------------------------------------------------------------------
+    window.currentWalletAvailableBalance = 0;
+
+    const loadWalletData = async () => {
         try {
-            const headers = { 'Authorization': `Bearer ${token}` };
+            const authToken = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token') || token);
+            const headers = { 'Authorization': `Bearer ${authToken}` };
             const res = await fetch('/api/providers/withdrawals/list', { headers });
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
-                    const elAvail = document.getElementById('val-available-balance');
-                    const elEarnings = document.getElementById('val-total-earnings');
-                    const elWithdrawn = document.getElementById('val-total-withdrawn');
+                    const avail = parseFloat(data.availableBalance || 0);
+                    const escrow = parseFloat(data.heldInEscrow || 0);
+                    const pending = parseFloat(data.pendingWithdrawals || 0);
+                    const withdrawn = parseFloat(data.totalWithdrawn || 0);
+
+                    window.currentWalletAvailableBalance = avail;
+
+                    // Update stat cards in view-provider-wallet
+                    const elAvail = document.getElementById('wallet-stat-available');
+                    const elEscrow = document.getElementById('wallet-stat-escrow');
+                    const elPending = document.getElementById('wallet-stat-pending');
+                    const elWithdrawn = document.getElementById('wallet-stat-withdrawn');
+
+                    if (elAvail) elAvail.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (elEscrow) elEscrow.textContent = `₱${escrow.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (elPending) elPending.textContent = `₱${pending.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (elWithdrawn) elWithdrawn.textContent = `₱${withdrawn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+                    // Also update dashboard cards if present
+                    const dashWallet = document.getElementById('stat-wallet-balance');
+                    const dashEscrow = document.getElementById('stat-escrow-balance');
+                    if (dashWallet) dashWallet.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (dashEscrow) dashEscrow.textContent = `₱${escrow.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+                    // Also modal display
+                    const modalAvail = document.getElementById('bw-available-wallet-display');
+                    if (modalAvail) modalAvail.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+                    // Legacy ledger elements support
+                    const legAvail = document.getElementById('val-available-balance');
+                    const legEarnings = document.getElementById('val-total-earnings');
+                    const legWithdrawn = document.getElementById('val-total-withdrawn');
+                    if (legAvail) legAvail.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (legEarnings) legEarnings.textContent = `₱${parseFloat(data.totalEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (legWithdrawn) legWithdrawn.textContent = `₱${withdrawn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+                    // Render Cashier Withdrawals Table
                     const tableBody = document.getElementById('table-provider-withdrawals-list');
-
-                    if (elAvail) elAvail.textContent = `₱${parseFloat(data.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                    if (elEarnings) elEarnings.textContent = `₱${parseFloat(data.totalEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                    if (elWithdrawn) elWithdrawn.textContent = `₱${parseFloat(data.totalWithdrawn || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-
-
                     if (tableBody) {
                         const withdrawals = data.withdrawals || [];
                         if (withdrawals.length === 0) {
-                            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No payout requests submitted yet.</td></tr>`;
+                            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;">No payout requests submitted yet.</td></tr>`;
                         } else {
                             tableBody.innerHTML = withdrawals.map(w => {
                                 const reqDate = new Date(w.RequestedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
@@ -828,17 +859,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const isApproved = stLower === 'approved' || stLower === 'completed';
 
                                 const statusHtml = isApproved
-                                    ? `<span class="status-badge status-confirmed"><i class="fa-solid fa-check"></i> Paid & Sent</span>`
-                                    : `<span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7;"><i class="fa-solid fa-clock"></i> Pending Admin Payout</span>`;
+                                    ? `<span class="status-badge status-confirmed" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;"><i class="fa-solid fa-circle-check"></i> Disbursed by Cashier</span>`
+                                    : `<span class="status-badge status-pending" style="background:#fffbeb; color:#d97706; border:1px solid #fef3c7;"><i class="fa-solid fa-clock"></i> Pending Cashier Payout</span>`;
 
                                 return `
                                     <tr>
-                                        <td><strong style="color:#0a192f; font-size:0.88rem;">#WD-${w.WithdrawalID}</strong></td>
-                                        <td><strong style="color:#10b981; font-size:0.92rem;">₱${parseFloat(w.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                                        <td><span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet"></i> ${w.PayoutMethod}</span></td>
-                                        <td><span style="font-size:0.85rem; color:#475569; font-weight:600;">${w.AccountReference} (${w.AccountName || 'Account'})</span></td>
+                                        <td><strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#WD-${w.WithdrawalID}</strong></td>
+                                        <td><strong style="color:#10b981; font-size:0.95rem;">₱${parseFloat(w.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                                        <td><span style="font-weight:700; color:#2563eb; font-size:0.88rem;"><i class="fa-solid fa-wallet"></i> ${w.PayoutMethod || 'GCash / Maya'}</span></td>
+                                        <td><span style="font-size:0.85rem; color:#475569; font-weight:600;">${w.AccountReference} <span style="color:#64748b; font-weight:400;">(${w.AccountName || 'Account'})</span></span></td>
                                         <td><span style="font-size:0.82rem; color:#64748b;">${reqDate}</span></td>
                                         <td>${statusHtml}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        }
+                    }
+
+                    // Render Completed Services Released Table
+                    const tableCompleted = document.getElementById('table-wallet-completed-bookings');
+                    if (tableCompleted) {
+                        const completedList = data.completedBookings || [];
+                        if (completedList.length === 0) {
+                            tableCompleted.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">No completed services released to wallet yet. Funds are moved to your wallet once clients confirm completion.</td></tr>`;
+                        } else {
+                            tableCompleted.innerHTML = completedList.map(b => {
+                                const tot = parseFloat(b.TotalAmount || 0);
+                                const paid = parseFloat(b.AmountPaid || 0);
+                                const pSt = (b.PaymentStatus || '').toLowerCase();
+                                const isFull = (pSt === 'paid' || b.BookingStatus === 'Completed');
+                                const gross = isFull ? tot : paid;
+                                const comm = gross * 0.05;
+                                const net = gross * 0.95;
+
+                                const compDate = b.CompletionAcceptedAt ? new Date(b.CompletionAcceptedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Confirmed Complete';
+
+                                return `
+                                    <tr>
+                                        <td><strong style="color:#0a192f; font-size:0.88rem; font-family:monospace;">#${b.BookingReference || 'BK-' + b.BookingID}</strong></td>
+                                        <td><strong style="color:#1e293b; font-size:0.88rem;">${b.ClientName || 'Client'}</strong></td>
+                                        <td><span style="color:#2563eb; font-weight:600; font-size:0.88rem;">${b.PackageName || 'Sound & Lights'}</span></td>
+                                        <td style="text-align:right; font-size:0.9rem; font-weight:600; color:#475569;">₱${gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="text-align:right; font-size:0.9rem; font-weight:600; color:#ef4444;">-₱${comm.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="text-align:right; font-size:0.95rem; font-weight:800; color:#059669;">₱${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="text-align:center;">
+                                            <span style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                                <i class="fa-solid fa-circle-check"></i> ${compDate}
+                                            </span>
+                                        </td>
                                     </tr>
                                 `;
                             }).join('');
@@ -847,9 +915,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (err) {
-            console.warn('Withdrawals load notice:', err.message);
+            console.warn('Wallet load notice:', err.message);
         }
     };
+
+    const loadWithdrawalsData = loadWalletData;
+    window.loadWalletData = loadWalletData;
 
     // ------------------------------------------------------------------------
     // Provider Income Report & Financial Ledger Engine
@@ -1582,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ------------------------------------------------------------------------
-    // Booking Withdrawal Request Modal Logic
+    // Booking & Wallet Withdrawal Request Modal Logic
     // ------------------------------------------------------------------------
     window.openBookingWithdrawalModal = (bookingId, totalAmount, bookingRef) => {
         const modal = document.getElementById('modal-booking-withdrawal');
@@ -1592,15 +1663,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fee = total * 0.05;
         const net = total * 0.95;
 
+        const titleEl = document.getElementById('bw-modal-title');
+        const breakdownCard = document.getElementById('bw-booking-breakdown-card');
+        const walletCard = document.getElementById('bw-wallet-amount-card');
         const idInput = document.getElementById('input-bw-booking-id');
         const netInput = document.getElementById('input-bw-net-amount');
+        const amtInput = document.getElementById('input-bw-amount');
         const refDisplay = document.getElementById('bw-booking-ref');
         const totDisplay = document.getElementById('bw-total-amount');
         const feeDisplay = document.getElementById('bw-commission-amount');
         const netDisplay = document.getElementById('bw-net-display');
 
+        if (titleEl) titleEl.textContent = `Request Cashier Payout (${bookingRef || '#' + bookingId})`;
+        if (breakdownCard) breakdownCard.style.display = 'block';
+        if (walletCard) walletCard.style.display = 'none';
+
         if (idInput) idInput.value = bookingId || '';
         if (netInput) netInput.value = net.toFixed(2);
+        if (amtInput) {
+            amtInput.value = net.toFixed(2);
+            amtInput.removeAttribute('max');
+        }
         if (refDisplay) refDisplay.textContent = bookingRef || `#BK-${bookingId}`;
         if (totDisplay) totDisplay.textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         if (feeDisplay) feeDisplay.textContent = `-₱${fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1609,7 +1692,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.remove('hidden');
     };
 
+    window.openWalletWithdrawalModal = async () => {
+        const modal = document.getElementById('modal-booking-withdrawal');
+        if (!modal) return;
+
+        if (typeof loadWalletData === 'function') {
+            await loadWalletData();
+        }
+
+        const avail = window.currentWalletAvailableBalance || 0;
+        const titleEl = document.getElementById('bw-modal-title');
+        const breakdownCard = document.getElementById('bw-booking-breakdown-card');
+        const walletCard = document.getElementById('bw-wallet-amount-card');
+        const idInput = document.getElementById('input-bw-booking-id');
+        const netInput = document.getElementById('input-bw-net-amount');
+        const amtInput = document.getElementById('input-bw-amount');
+        const walletDisp = document.getElementById('bw-available-wallet-display');
+
+        if (titleEl) titleEl.textContent = 'Request Cashier Payout (My Wallet)';
+        if (breakdownCard) breakdownCard.style.display = 'none';
+        if (walletCard) walletCard.style.display = 'block';
+
+        if (idInput) idInput.value = '';
+        if (netInput) netInput.value = avail.toFixed(2);
+        if (amtInput) {
+            amtInput.value = avail > 0 ? avail.toFixed(2) : '';
+            amtInput.max = avail.toFixed(2);
+        }
+        if (walletDisp) walletDisp.textContent = `₱${avail.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        modal.classList.remove('hidden');
+    };
+
     window.triggerRequestWithdrawFromBooking = window.openBookingWithdrawalModal;
+
+    document.getElementById('btn-bw-max-amount')?.addEventListener('click', () => {
+        const amtInput = document.getElementById('input-bw-amount');
+        if (amtInput) {
+            amtInput.value = (window.currentWalletAvailableBalance || 0).toFixed(2);
+        }
+    });
 
     document.getElementById('btn-close-booking-withdrawal')?.addEventListener('click', () => {
         document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
@@ -1623,20 +1745,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         formBookingWithdrawal.addEventListener('submit', async (e) => {
             e.preventDefault();
             const bookingId = document.getElementById('input-bw-booking-id')?.value;
-            const amount = document.getElementById('input-bw-net-amount')?.value;
+            const customAmount = document.getElementById('input-bw-amount')?.value;
+            const netAmount = document.getElementById('input-bw-net-amount')?.value;
+            const amount = customAmount ? parseFloat(customAmount) : parseFloat(netAmount || 0);
+
             const payoutMethod = document.getElementById('input-bw-method')?.value;
             const accountName = document.getElementById('input-bw-account-name')?.value?.trim();
             const accountReference = document.getElementById('input-bw-account-ref')?.value?.trim();
 
+            if (!amount || isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid withdrawal amount.');
+                return;
+            }
+
             if (!accountReference) {
-                alert('Please enter your account / mobile number.');
+                alert('Please enter your destination account / mobile number.');
                 return;
             }
 
             const submitBtn = document.getElementById('btn-submit-booking-withdrawal');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting to Cashier...`;
             }
 
             try {
@@ -1648,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({
-                        bookingId,
+                        bookingId: bookingId || null,
                         amount,
                         payoutMethod,
                         accountName,
@@ -1659,12 +1789,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (res.ok && data.success) {
                     if (typeof showToast === 'function') {
-                        showToast(data.message || 'Withdrawal request submitted! Sent to Cashier.', 'success');
+                        showToast(data.message || '🎉 Withdrawal request routed to Cashier for disbursement!', 'success');
                     } else {
-                        alert(data.message || 'Withdrawal request submitted successfully! It has been routed to the Cashier for disbursement.');
+                        alert(data.message || '🎉 Withdrawal request submitted successfully! It has been routed to the Cashier for verified disbursement.');
                     }
                     document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
                     formBookingWithdrawal.reset();
+                    if (typeof loadWalletData === 'function') {
+                        await loadWalletData();
+                    }
                     if (typeof loadDashboardData === 'function') {
                         await loadDashboardData();
                     }
@@ -1677,7 +1810,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Request`;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Request to Cashier`;
                 }
             }
         });
@@ -1698,18 +1831,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.success && data.stats) {
                     const s = data.stats;
 
-                    // Force-remove Total Services & Available Balance cards if still lingering from browser cache
-                    const leftoverTotalServicesCard = document.getElementById('stat-total-services')?.closest('.stat-card');
-                    if (leftoverTotalServicesCard) {
-                        leftoverTotalServicesCard.remove();
-                    }
-                    const leftoverBalanceCard = document.getElementById('stat-monthly-earnings')?.closest('.stat-card');
-                    if (leftoverBalanceCard) {
-                        leftoverBalanceCard.remove();
-                    }
-
                     const statUpcomingBookings = document.getElementById('stat-upcoming-bookings');
                     const statTodaysEvents = document.getElementById('stat-todays-events');
+                    const statWalletBalance = document.getElementById('stat-wallet-balance');
+                    const statEscrowBalance = document.getElementById('stat-escrow-balance');
+
+                    if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
+                    if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
+                    if (statWalletBalance) statWalletBalance.textContent = `₱${parseFloat(s.availableBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (statEscrowBalance) statEscrowBalance.textContent = `₱${parseFloat(s.heldInEscrow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
                     if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
                     if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;

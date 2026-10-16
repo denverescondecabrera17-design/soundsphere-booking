@@ -45,6 +45,9 @@
                 <a href="#income-report-section" class="menu-item" id="nav-item-income-report">
                     <i class="fa-solid fa-file-invoice-dollar"></i> Income Report
                 </a>
+                <a href="#wallet-section" class="menu-item" id="nav-item-wallet">
+                    <i class="fa-solid fa-wallet"></i> My Wallet
+                </a>
                 <a href="#calendar-section" class="menu-item" id="nav-item-calendar">
                     <i class="fa-solid fa-calendar-days"></i> Availability Calendar
                 </a>
@@ -181,6 +184,35 @@
 
                     <!-- Summary Cards Grid -->
                     <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px;">
+
+                        <!-- WALLET BALANCE (AVAILABLE) -->
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <div class="stat-icon icon-emerald" style="width:48px; height:48px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                    <i class="fa-solid fa-wallet"></i>
+                                </div>
+                                <div>
+                                    <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">AVAILABLE WALLET</span>
+                                    <h3 class="stat-value" id="stat-wallet-balance" style="font-size:1.5rem; color:#059669; margin:2px 0 0 0; font-weight:800;">₱0.00</h3>
+                                    <span style="font-size:0.72rem; color:#64748b;">Released upon client completion</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="window.openWalletWithdrawalModal()" style="border:none; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.78rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; transition:all 0.2s ease;">
+                                <i class="fa-solid fa-money-bill-transfer"></i> Withdraw
+                            </button>
+                        </div>
+
+                        <!-- HELD IN ESCROW -->
+                        <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
+                            <div class="stat-icon icon-blue" style="width:48px; height:48px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <span class="stat-title" style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">HELD IN ESCROW</span>
+                                <h3 class="stat-value" id="stat-escrow-balance" style="font-size:1.5rem; color:#2563eb; margin:2px 0 0 0; font-weight:800;">₱0.00</h3>
+                                <span style="font-size:0.72rem; color:#64748b;">Pending service completion</span>
+                            </div>
+                        </div>
 
 
                         <div class="stat-card" style="background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
@@ -426,6 +458,160 @@
                                 </thead>
                                 <tbody id="table-provider-income-list">
                                     <tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:0.95rem;">Loading financial ledger...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: PROVIDER WALLET & CASHIER PAYOUTS -->
+                <div class="provider-view-panel hidden" id="view-provider-wallet">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+                        <div>
+                            <h2 style="font-size:1.4rem; color:#0a192f; margin:0 0 4px 0;">
+                                <i class="fa-solid fa-wallet" style="color:#10b981;"></i> My Wallet & Cashier Disbursements
+                            </h2>
+                            <p style="color:#64748b; margin:0; font-size:0.9rem;">
+                                Payments are held safely in escrow and automatically transferred to your available wallet balance when the client confirms service completion.
+                            </p>
+                        </div>
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <button type="button" class="btn btn-success" onclick="window.openWalletWithdrawalModal()" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(16,185,129,0.25);">
+                                <i class="fa-solid fa-money-bill-transfer"></i> Request Withdrawal
+                            </button>
+                            <button type="button" id="btn-refresh-wallet" class="btn btn-outline" onclick="loadWalletData()" style="background:#fff; border:1px solid #cbd5e1; color:#334155; padding:9px 16px; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh Wallet
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Escrow Protection Info Banner -->
+                    <div style="background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border:1.5px solid #86efac; border-radius:14px; padding:18px 22px; margin-bottom:24px; display:flex; align-items:flex-start; gap:16px;">
+                        <div style="width:40px; height:40px; border-radius:10px; background:#10b981; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <strong style="color:#065f46; font-size:0.98rem; display:block; margin-bottom:4px;">How Your Wallet & Escrow Work</strong>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:8px; font-size:0.84rem; color:#1e293b;">
+                                <div style="background:rgba(255,255,255,0.7); padding:10px 14px; border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                                    <span style="font-weight:800; color:#059669;">1. Booking Confirmed</span>
+                                    <p style="margin:2px 0 0 0; color:#475569; font-size:0.78rem;">Client pays online. Payment is held in <strong>Escrow</strong>.</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.7); padding:10px 14px; border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                                    <span style="font-weight:800; color:#059669;">2. Service Delivered</span>
+                                    <p style="margin:2px 0 0 0; color:#475569; font-size:0.78rem;">You perform the lights, sound, or DJ package for the event.</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.7); padding:10px 14px; border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                                    <span style="font-weight:800; color:#059669;">3. Client Confirms</span>
+                                    <p style="margin:2px 0 0 0; color:#475569; font-size:0.78rem;">Client confirms completion. Net funds (95%) <strong>enter your Wallet</strong>.</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.7); padding:10px 14px; border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                                    <span style="font-weight:800; color:#059669;">4. Cashier Payout</span>
+                                    <p style="margin:2px 0 0 0; color:#475569; font-size:0.78rem;">Withdraw anytime. The <strong>Cashier</strong> verifies and disburses your payout.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Financial Summary Stat Cards -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:28px;">
+                        <!-- Available Balance -->
+                        <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1.5px solid #a7f3d0; display:flex; gap:16px; align-items:flex-start;">
+                            <div style="width:48px; height:48px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">AVAILABLE WALLET</span>
+                                <h3 id="wallet-stat-available" style="font-size:1.6rem; font-weight:900; color:#059669; margin:4px 0 2px 0;">₱0.00</h3>
+                                <p style="font-size:0.78rem; color:#64748b; margin:0;">Withdrawable now (from completed services)</p>
+                            </div>
+                        </div>
+
+                        <!-- Held in Escrow -->
+                        <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
+                            <div style="width:48px; height:48px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">HELD IN ESCROW</span>
+                                <h3 id="wallet-stat-escrow" style="font-size:1.6rem; font-weight:900; color:#2563eb; margin:4px 0 2px 0;">₱0.00</h3>
+                                <p style="font-size:0.78rem; color:#64748b; margin:0;">Waiting for client completion confirmation</p>
+                            </div>
+                        </div>
+
+                        <!-- Pending Cashier Disbursements -->
+                        <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
+                            <div style="width:48px; height:48px; border-radius:12px; background:#fffbeb; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">PENDING CASHIER PAYOUT</span>
+                                <h3 id="wallet-stat-pending" style="font-size:1.6rem; font-weight:900; color:#d97706; margin:4px 0 2px 0;">₱0.00</h3>
+                                <p style="font-size:0.78rem; color:#64748b; margin:0;">Under review & disbursement by cashier</p>
+                            </div>
+                        </div>
+
+                        <!-- Total Withdrawn -->
+                        <div style="background:#ffffff; border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #e2e8f0; display:flex; gap:16px; align-items:flex-start;">
+                            <div style="width:48px; height:48px; border-radius:12px; background:#faf5ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">TOTAL DISBURSED</span>
+                                <h3 id="wallet-stat-withdrawn" style="font-size:1.6rem; font-weight:900; color:#7c3aed; margin:4px 0 2px 0;">₱0.00</h3>
+                                <p style="font-size:0.78rem; color:#64748b; margin:0;">All-time successfully paid out to you</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Withdrawal Payout Requests Table -->
+                    <div class="card" style="margin-bottom:28px; background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <h3 style="font-size:1.1rem; color:#0a192f; margin:0;">
+                                <i class="fa-solid fa-clock-rotate-left" style="color:#2563eb;"></i> Cashier Withdrawal Requests History
+                            </h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:#f8fafc; text-align:left; font-size:0.82rem; color:#475569;">
+                                        <th style="padding:12px 16px;">Reference</th>
+                                        <th style="padding:12px 16px;">Amount</th>
+                                        <th style="padding:12px 16px;">Payout Method</th>
+                                        <th style="padding:12px 16px;">Destination Account</th>
+                                        <th style="padding:12px 16px;">Requested Date</th>
+                                        <th style="padding:12px 16px;">Cashier Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-provider-withdrawals-list">
+                                    <tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;">Loading withdrawal records...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Services Completed & Released to Wallet Table -->
+                    <div class="card" style="margin-bottom:28px; background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <h3 style="font-size:1.1rem; color:#0a192f; margin:0;">
+                                <i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Services Confirmed Complete (Released to Wallet)
+                            </h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:#f8fafc; text-align:left; font-size:0.82rem; color:#475569;">
+                                        <th style="padding:12px 16px;">Booking</th>
+                                        <th style="padding:12px 16px;">Client</th>
+                                        <th style="padding:12px 16px;">Package</th>
+                                        <th style="padding:12px 16px; text-align:right;">Gross Paid</th>
+                                        <th style="padding:12px 16px; text-align:right;">Commission (5%)</th>
+                                        <th style="padding:12px 16px; text-align:right;">Net in Wallet (95%)</th>
+                                        <th style="padding:12px 16px; text-align:center;">Client Confirmation</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-wallet-completed-bookings">
+                                    <tr><td colspan="7" style="text-align:center; padding:28px; color:#64748b;">Loading completed services...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1443,12 +1629,12 @@
 
 
 
-    <!-- MODAL: REQUEST BOOKING WITHDRAWAL -->
+    <!-- MODAL: REQUEST BOOKING / WALLET WITHDRAWAL -->
     <div class="admin-modal-overlay hidden" id="modal-booking-withdrawal" role="dialog">
         <div class="admin-modal-card" style="max-width:540px; padding:28px; border-radius:18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
                 <h3 style="margin:0; font-size:1.25rem; color:#0a192f; display:flex; align-items:center; gap:8px;">
-                    <i class="fa-solid fa-money-bill-transfer" style="color:#10b981;"></i> Request Booking Payout
+                    <i class="fa-solid fa-money-bill-transfer" style="color:#10b981;"></i> <span id="bw-modal-title">Request Cashier Payout</span>
                 </h3>
                 <button type="button" id="btn-close-booking-withdrawal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">&times;</button>
             </div>
@@ -1457,8 +1643,8 @@
                 <input type="hidden" id="input-bw-booking-id" value="">
                 <input type="hidden" id="input-bw-net-amount" value="0">
 
-                <!-- Financial Breakdown Card -->
-                <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:18px;">
+                <!-- Financial Breakdown Card for Specific Booking -->
+                <div id="bw-booking-breakdown-card" style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:18px; display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <span style="font-size:0.82rem; font-weight:700; color:#64748b;">Booking Reference:</span>
                         <strong id="bw-booking-ref" style="font-size:0.95rem; color:#0a192f; font-family:monospace;">#BK-0</strong>
@@ -1472,8 +1658,28 @@
                         <strong id="bw-commission-amount" style="font-size:0.95rem; color:#ef4444;">-₱0.00</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1.5px dashed #cbd5e1; padding-top:10px;">
-                        <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">Net Provider Payout (95%):</span>
+                        <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">Net Booking Payout (95%):</span>
                         <strong id="bw-net-display" style="font-size:1.35rem; font-weight:900; color:#10b981;">₱0.00</strong>
+                    </div>
+                </div>
+
+                <!-- Wallet Available Balance & Amount Input Card -->
+                <div id="bw-wallet-amount-card" style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:14px; padding:18px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div>
+                            <span style="font-size:0.75rem; font-weight:700; color:#059669; text-transform:uppercase;">AVAILABLE WALLET BALANCE</span>
+                            <div style="font-size:1.35rem; font-weight:900; color:#065f46;" id="bw-available-wallet-display">₱0.00</div>
+                        </div>
+                        <span style="font-size:0.72rem; color:#059669; background:#dcfce7; padding:4px 8px; border-radius:6px; font-weight:700;">Completed Services Only</span>
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">WITHDRAWAL AMOUNT (PHP) <span style="color:#ef4444;">*</span></label>
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <span style="position:absolute; left:14px; font-weight:800; color:#64748b; font-size:1rem;">₱</span>
+                            <input type="number" step="0.01" min="1" id="input-bw-amount" required placeholder="0.00" style="width:100%; padding:11px 70px 11px 32px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:1.1rem; font-weight:800; box-sizing:border-box;">
+                            <button type="button" id="btn-bw-max-amount" style="position:absolute; right:8px; background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; font-weight:800; font-size:0.75rem; padding:6px 12px; border-radius:6px; cursor:pointer;">MAX</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1508,7 +1714,7 @@
                 <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">
                     <button type="button" id="btn-cancel-booking-withdrawal" class="btn btn-outline" style="padding:10px 18px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; font-weight:700;">Cancel</button>
                     <button type="submit" id="btn-submit-booking-withdrawal" class="btn btn-success" style="padding:10px 22px; border-radius:8px; background:#10b981; color:#fff; border:none; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-paper-plane"></i> Submit Request
+                        <i class="fa-solid fa-paper-plane"></i> Submit Request to Cashier
                     </button>
                 </div>
             </form>
