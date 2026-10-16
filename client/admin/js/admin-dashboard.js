@@ -1558,17 +1558,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
                         ${isSuspended ? `
-                            <button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="flex:1; padding:10px 16px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:0.2s;">
+                            <button type="button" onclick="window.reactivateProvider(${p.ProviderID})" style="width:100%; padding:11px 16px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:0.2s;">
                                 <i class="fa-solid fa-check"></i> Reactivate Provider Account
                             </button>
                         ` : `
-                            <button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="flex:1; padding:10px 16px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(239,68,68,0.3); transition:0.2s;">
+                            <button type="button" onclick="window.suspendProvider(${p.ProviderID})" style="width:100%; padding:11px 16px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(239,68,68,0.3); transition:0.2s;">
                                 <i class="fa-solid fa-ban"></i> Suspend Provider Account
                             </button>
                         `}
-                        <a href="/pages/provider-profile.html?id=${p.ProviderID}" target="_blank" style="padding:10px 16px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0a192f; font-weight:700; font-size:0.88rem; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
-                            <i class="fa-solid fa-arrow-up-right-from-square" style="color:#2563eb;"></i> View Public Profile
-                        </a>
                     </div>
                 </div>
             </div>
