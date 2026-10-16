@@ -1609,9 +1609,6 @@
                         <div style="display:flex; align-items:stretch; border:1.5px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#ffffff; box-shadow:0 1px 2px rgba(0,0,0,0.05);" id="bw-amount-group">
                             <span style="background:#f1f5f9; color:#475569; font-weight:800; font-size:0.95rem; display:flex; align-items:center; padding:0 14px; border-right:1.5px solid #cbd5e1; letter-spacing:0.5px; user-select:none;">PHP</span>
                             <input type="text" id="input-bw-amount" required placeholder="0.00" inputmode="decimal" style="flex:1; border:none; outline:none; padding:11px 14px; font-size:1.15rem; font-weight:800; color:#0f172a; background:transparent; min-width:0;">
-                            <div style="display:flex; align-items:center; padding-right:8px; background:#fff;">
-                                <button type="button" id="btn-bw-max-amount" style="background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; font-weight:800; font-size:0.75rem; padding:6px 12px; border-radius:6px; cursor:pointer;">MAX</button>
-                            </div>
                         </div>
                         <span style="font-size:0.73rem; color:#64748b; margin-top:5px; display:block;">Automatically prefilled with your full available balance (e.g. PHP 20,000.00).</span>
                     </div>
@@ -1621,10 +1618,11 @@
                 <div>
                     <label style="font-size:0.82rem; font-weight:700; color:#0a192f; display:block; margin-bottom:6px;">PAYOUT METHOD <span style="color:#ef4444;">*</span></label>
                     <select id="input-bw-method" class="input-control" style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid #cbd5e1; font-weight:700; font-size:0.92rem; background:#fff;">
-                        <option value="GCash / Maya E-Wallet">GCash / Maya E-Wallet</option>
-                        <option value="Bank Transfer">Bank Transfer (BDO, BPI, UnionBank)</option>
+                        <option value="GCash">GCash</option>
                         <option value="Maya">Maya</option>
-                        <option value="Cash">Cash / Over-The-Counter</option>
+                        <option value="BPI">BPI</option>
+                        <option value="BDO">BDO</option>
+                        <option value="PNB">PNB</option>
                     </select>
                 </div>
 

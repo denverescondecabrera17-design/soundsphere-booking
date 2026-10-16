@@ -1799,14 +1799,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    document.getElementById('btn-bw-max-amount')?.addEventListener('click', () => {
-        const amtInput = document.getElementById('input-bw-amount');
-        const avail = parseFloat(window.currentWalletAvailableBalance || 0);
-        if (amtInput) {
-            amtInput.value = avail > 0 ? formatCurrencyDisplay(avail) : '0.00';
-        }
-    });
-
     document.getElementById('btn-close-booking-withdrawal')?.addEventListener('click', () => {
         document.getElementById('modal-booking-withdrawal')?.classList.add('hidden');
     });
