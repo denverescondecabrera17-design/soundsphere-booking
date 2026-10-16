@@ -51,6 +51,9 @@ router.get('/audit-logs', adminController.getAdminAuditLogs);
 // Admin Client Reports Against Service Providers Endpoints
 router.get('/reports', adminController.getAdminClientReports);
 router.put('/reports/:id/status', adminController.updateReportStatus);
+router.post('/reports/:id/warn', adminController.warnReportProvider);
+router.post('/reports/:id/refund', adminController.refundReportBooking);
+router.post('/reports/:id/resolve', adminController.resolveReport);
 
 // Admin Real-Time Operational Notifications Endpoints
 router.get('/notifications', adminController.getAdminNotifications);

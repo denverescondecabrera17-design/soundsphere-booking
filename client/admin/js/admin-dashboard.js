@@ -2628,122 +2628,334 @@ window.viewAdminReportDetails = function(reportId) {
     const modal = document.getElementById('modal-admin-report-detail');
     const titleSpan = document.getElementById('report-detail-id-display');
     const bodyEl = document.getElementById('admin-report-detail-body');
-    const actionsEl = document.getElementById('admin-report-detail-actions');
+    const headerActionsEl = document.getElementById('admin-report-detail-header-actions');
+    const subtitleSpan = document.getElementById('report-detail-subtitle');
+    const statusBadgeEl = document.getElementById('report-detail-status-badge');
 
     if (!modal || !bodyEl) return;
 
-    if (titleSpan) titleSpan.textContent = `#REP-${report.ReportID}`;
+    if (titleSpan) titleSpan.textContent = `Client Incident Report #REP-${report.ReportID}`;
+    if (subtitleSpan) {
+        subtitleSpan.textContent = `Dispute investigation & resolution suite • Filed ${report.CreatedAt ? new Date(report.CreatedAt).toLocaleString() : 'N/A'}`;
+    }
+
+    if (statusBadgeEl) {
+        if (report.Status === 'Pending') {
+            statusBadgeEl.textContent = 'Pending Review';
+            statusBadgeEl.style.background = '#fef2f2';
+            statusBadgeEl.style.color = '#b91c1c';
+        } else if (report.Status === 'Under Review') {
+            statusBadgeEl.textContent = 'Under Review';
+            statusBadgeEl.style.background = '#fef3c7';
+            statusBadgeEl.style.color = '#92400e';
+        } else if (report.Status === 'Resolved') {
+            statusBadgeEl.textContent = 'Resolved';
+            statusBadgeEl.style.background = '#d1fae5';
+            statusBadgeEl.style.color = '#065f46';
+        } else {
+            statusBadgeEl.textContent = report.Status || 'Active';
+            statusBadgeEl.style.background = '#f1f5f9';
+            statusBadgeEl.style.color = '#475569';
+        }
+    }
 
     const isSuspended = report.ProviderAccountStatus === 'Suspended';
 
+    // Resolve Proof / Evidence Picture
+    let cleanProofSrc = '';
+    if (report.ProofImage && String(report.ProofImage).trim() !== '' && report.ProofImage !== 'null' && report.ProofImage !== 'undefined') {
+        const raw = String(report.ProofImage).trim();
+        if (raw.startsWith('data:')) {
+            cleanProofSrc = raw;
+        } else if (raw.startsWith('http://') || raw.startsWith('https://')) {
+            cleanProofSrc = raw;
+        } else {
+            cleanProofSrc = raw.startsWith('/') ? raw : '/' + raw;
+        }
+    }
+
+    // Proof Picture Section HTML
+    const proofHtml = cleanProofSrc ? `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-camera" style="color:#2563eb;"></i> Client Proof / Supporting Evidence Picture
+                </h4>
+                <a href="${cleanProofSrc}" target="_blank" download="incident-proof-report-${report.ReportID}.png" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; color:#2563eb; text-decoration:none; background:#eff6ff; padding:7px 14px; border-radius:8px; border:1px solid #bfdbfe; transition:all 0.2s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Resolution Image
+                </a>
+            </div>
+            <div style="background:#0f172a; border-radius:14px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; border:1px solid #1e293b;">
+                <img src="${cleanProofSrc}" 
+                     alt="Client Incident Proof" 
+                     style="max-width:100%; max-height:560px; object-fit:contain; border-radius:10px; cursor:zoom-in; box-shadow:0 12px 36px rgba(0,0,0,0.6);"
+                     onclick="window.open('${cleanProofSrc}', '_blank')"
+                     title="Click to open image in full resolution">
+                <span style="color:#94a3b8; font-size:0.78rem; margin-top:12px; font-weight:600;"><i class="fa-solid fa-magnifying-glass-plus"></i> Click image to open in full size tab</span>
+            </div>
+        </div>
+    ` : `
+        <div style="background:#ffffff; border:1.5px dashed #cbd5e1; border-radius:16px; padding:28px 24px; text-align:center; color:#64748b;">
+            <i class="fa-solid fa-image-slash" style="font-size:2.2rem; color:#cbd5e1; margin-bottom:10px; display:block;"></i>
+            <strong style="color:#334155; font-size:0.95rem; display:block;">No Proof Picture Attached</strong>
+            <span style="font-size:0.82rem; color:#94a3b8;">The client did not upload an image proof or screenshot with this incident report.</span>
+        </div>
+    `;
+
+    // Booking Details HTML (if linked)
+    let bookingHtml = '';
+    if (report.BookingReference || report.BookingID) {
+        const amtPaid = report.BookingAmountPaid ? `₱${parseFloat(report.BookingAmountPaid).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : (report.BookingTotalAmount ? `₱${parseFloat(report.BookingTotalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'N/A');
+        const totalAmt = report.BookingTotalAmount ? `₱${parseFloat(report.BookingTotalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'N/A';
+        bookingHtml = `
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px; margin-top:14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px;">
+                <div>
+                    <span style="font-size:0.74rem; font-weight:800; color:#15803d; text-transform:uppercase;">Booking Reference</span>
+                    <strong style="display:block; color:#0f172a; font-size:0.95rem; margin-top:2px;">${escHtml(report.BookingReference || `#${report.BookingID}`)}</strong>
+                </div>
+                <div>
+                    <span style="font-size:0.74rem; font-weight:800; color:#15803d; text-transform:uppercase;">Package Name</span>
+                    <strong style="display:block; color:#0f172a; font-size:0.92rem; margin-top:2px;">${escHtml(report.BookingPackageName || 'Event Service')}</strong>
+                </div>
+                <div>
+                    <span style="font-size:0.74rem; font-weight:800; color:#15803d; text-transform:uppercase;">Total Package Fee</span>
+                    <strong style="display:block; color:#0f172a; font-size:0.95rem; margin-top:2px;">${totalAmt}</strong>
+                </div>
+                <div>
+                    <span style="font-size:0.74rem; font-weight:800; color:#15803d; text-transform:uppercase;">Payment Captured</span>
+                    <strong style="display:block; color:#15803d; font-size:0.95rem; margin-top:2px;">${amtPaid}</strong>
+                </div>
+                <div>
+                    <span style="font-size:0.74rem; font-weight:800; color:#15803d; text-transform:uppercase;">Booking Status</span>
+                    <span style="display:block; font-weight:700; font-size:0.86rem; color:#334155; margin-top:2px;">${escHtml(report.BookingStatus || 'Confirmed')}</span>
+                </div>
+            </div>
+        `;
+    }
+
     bodyEl.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                <h4 style="margin:0 0 8px 0;color:#0a192f;font-size:0.92rem;display:flex;align-items:center;gap:6px;">
+        <!-- Parties Information Card -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+                <h4 style="margin:0 0 14px 0; color:#0a192f; font-size:0.92rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:8px;">
                     <i class="fa-solid fa-user" style="color:#2563eb;"></i> Reporter Client
                 </h4>
-                <div style="font-size:0.86rem;color:#334155;"><strong>Name:</strong> ${escHtml(report.ReporterName || 'N/A')}</div>
-                <div style="font-size:0.86rem;color:#334155;margin-top:4px;"><strong>Email:</strong> ${escHtml(report.ReporterEmail || 'N/A')}</div>
-                <div style="font-size:0.86rem;color:#334155;margin-top:4px;"><strong>Phone:</strong> ${escHtml(report.ReporterPhone || 'N/A')}</div>
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:0.88rem;">
+                    <div><span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Client Name</span><strong>${escHtml(report.ReporterName || 'N/A')}</strong></div>
+                    <div><span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Email Address</span><span style="color:#334155;">${escHtml(report.ReporterEmail || 'N/A')}</span></div>
+                    <div><span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Contact Phone</span><span style="color:#334155;">${escHtml(report.ReporterPhone || 'N/A')}</span></div>
+                </div>
             </div>
 
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                <h4 style="margin:0 0 8px 0;color:#0a192f;font-size:0.92rem;display:flex;align-items:center;gap:6px;">
-                    <i class="fa-solid fa-store" style="color:#e11d48;"></i> Reported Provider
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+                <h4 style="margin:0 0 14px 0; color:#0a192f; font-size:0.92rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-store" style="color:#e11d48;"></i> Reported Service Provider
                 </h4>
-                <div style="font-size:0.86rem;color:#334155;"><strong>Business:</strong> ${escHtml(report.ProviderBusinessName || 'N/A')}</div>
-                <div style="font-size:0.86rem;color:#334155;margin-top:4px;"><strong>Owner:</strong> ${escHtml(report.ProviderOwnerName || 'N/A')}</div>
-                <div style="font-size:0.86rem;color:#334155;margin-top:4px;">
-                    <strong>Account Status:</strong> 
-                    ${isSuspended ? '<span style="color:#b91c1c;font-weight:800;">Suspended</span>' : '<span style="color:#10b981;font-weight:700;">Active</span>'}
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:0.88rem;">
+                    <div><span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Business Name</span><strong>${escHtml(report.ProviderBusinessName || 'N/A')}</strong></div>
+                    <div><span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Owner / Proprietor</span><span style="color:#334155;">${escHtml(report.ProviderOwnerName || report.ProviderEmail || 'N/A')}</span></div>
+                    <div>
+                        <span style="color:#64748b; font-size:0.78rem; font-weight:700; text-transform:uppercase; display:block;">Account Status</span>
+                        ${isSuspended ? '<span style="color:#b91c1c; font-weight:800; font-size:0.84rem;"><i class="fa-solid fa-ban"></i> Suspended</span>' : '<span style="color:#10b981; font-weight:700; font-size:0.84rem;"><i class="fa-solid fa-circle-check"></i> Active</span>'}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:16px;">
-            <div style="font-size:0.75rem;font-weight:800;color:#9f1239;text-transform:uppercase;letter-spacing:0.04em;">Reported Violation</div>
-            <h4 style="margin:4px 0 8px 0;color:#881337;font-size:1.05rem;">${escHtml(report.Reason)}</h4>
-            ${report.BookingReference ? `<div style="font-size:0.82rem;color:#be123c;margin-bottom:8px;">Associated Booking: <strong>${escHtml(report.BookingReference)}</strong> (${escHtml(report.BookingPackageName || '')})</div>` : ''}
-            <div style="background:#ffffff;border:1px solid #fecdd3;border-radius:8px;padding:14px;font-size:0.88rem;color:#0a192f;line-height:1.5;white-space:pre-wrap;">${escHtml(report.Description)}</div>
-            <div style="font-size:0.76rem;color:#9f1239;margin-top:8px;">Date Filed: ${report.CreatedAt ? new Date(report.CreatedAt).toLocaleString() : 'N/A'}</div>
+        <!-- Incident Statement & Violation Card -->
+        <div style="background:#ffffff; border:1px solid #fecdd3; border-radius:16px; padding:22px; box-shadow:0 2px 8px rgba(225,29,72,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="font-size:0.76rem; font-weight:800; color:#e11d48; text-transform:uppercase; letter-spacing:0.04em;">Reported Violation Category</div>
+                <span style="font-size:0.78rem; color:#64748b;">Report ID: <strong>#REP-${report.ReportID}</strong> • Filed: ${report.CreatedAt ? new Date(report.CreatedAt).toLocaleString() : 'N/A'}</span>
+            </div>
+            <h3 style="margin:6px 0 12px 0; color:#881337; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-triangle-exclamation" style="color:#e11d48;"></i> ${escHtml(report.Reason)}
+            </h3>
+
+            ${bookingHtml}
+
+            <div style="margin-top:16px;">
+                <label style="display:block; font-size:0.78rem; font-weight:800; color:#9f1239; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Client Statement / Complaint Details:</label>
+                <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:16px; font-size:0.95rem; color:#0f172a; line-height:1.6; white-space:pre-wrap;">${escHtml(report.Description)}</div>
+            </div>
         </div>
 
-        <div>
-            <label style="display:block;font-size:0.84rem;font-weight:700;color:#334155;margin-bottom:6px;">Administrator Action Notes:</label>
-            <textarea id="input-admin-report-notes" rows="3" style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.86rem;font-family:inherit;box-sizing:border-box;" placeholder="Enter internal administrative notes or resolution summary...">${escHtml(report.AdminNotes || '')}</textarea>
-        </div>
-    `;
+        <!-- Proof Picture Card -->
+        ${proofHtml}
 
-    actionsEl.innerHTML = `
-        <div style="display:flex;gap:8px;">
-            ${!isSuspended ? `
-                <button type="button" onclick="adminExecuteReportAction(${report.ReportID}, '${report.Status}', true)"
-                    style="padding:8px 16px;border:none;border-radius:8px;background:#e11d48;color:#fff;cursor:pointer;font-weight:700;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;">
-                    <i class="fa-solid fa-ban"></i> Suspend Provider
+        <!-- Administrative Notes Card -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:22px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+            <label for="input-admin-report-notes" style="display:block; font-size:0.86rem; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
+                <i class="fa-solid fa-pen-to-square" style="color:#2563eb; margin-right:6px;"></i> Administrator Resolution Notes:
+            </label>
+            <p style="margin:0 0 10px 0; font-size:0.78rem; color:#64748b;">Record internal administrative reasoning, refund references, warning timestamps, or communication notes.</p>
+            <textarea id="input-admin-report-notes" rows="3" style="width:100%; padding:12px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-family:inherit; box-sizing:border-box; color:#0a192f; outline:none;" placeholder="Enter administrative notes, resolution summary, or warning details...">${escHtml(report.AdminNotes || '')}</textarea>
+        </div>
+
+        <!-- Only the 3 requested action buttons -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:20px 24px; box-shadow:0 4px 16px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+            <button type="button" onclick="document.getElementById('modal-admin-report-detail').classList.add('hidden')" style="padding:11px 20px; font-size:0.88rem; font-weight:700; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#64748b; cursor:pointer;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Reports
+            </button>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <button type="button" onclick="adminWarnReportProvider(${report.ReportID})" style="padding:11px 20px; font-size:0.88rem; font-weight:800; border:1.5px solid #fde68a; border-radius:10px; background:#fef3c7; color:#b45309; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s;" onmouseover="this.style.background='#fde68a'" onmouseout="this.style.background='#fef3c7'" title="Issue an official platform violation warning to the service provider">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Warn Service Provider
                 </button>
-            ` : ''}
-        </div>
-        <div style="display:flex;gap:8px;">
-            <button type="button" onclick="document.getElementById('modal-admin-report-detail').classList.add('hidden')"
-                style="padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;cursor:pointer;font-weight:600;font-size:0.82rem;">
-                Close
-            </button>
-            <button type="button" onclick="adminExecuteReportAction(${report.ReportID}, 'Dismissed')"
-                style="padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#f1f5f9;color:#475569;cursor:pointer;font-weight:700;font-size:0.82rem;">
-                Dismiss Report
-            </button>
-            <button type="button" onclick="adminExecuteReportAction(${report.ReportID}, 'Under Review')"
-                style="padding:8px 16px;border:none;border-radius:8px;background:#f59e0b;color:#fff;cursor:pointer;font-weight:700;font-size:0.82rem;">
-                Mark Under Review
-            </button>
-            <button type="button" onclick="adminExecuteReportAction(${report.ReportID}, 'Resolved')"
-                style="padding:8px 20px;border:none;border-radius:8px;background:#10b981;color:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;">
-                <i class="fa-solid fa-check"></i> Resolve Dispute
-            </button>
+                <button type="button" onclick="adminRefundReportBooking(${report.ReportID})" style="padding:11px 20px; font-size:0.88rem; font-weight:800; border:1.5px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'" title="Credit full refund to client wallet and cancel booking">
+                    <i class="fa-solid fa-rotate-left"></i> Full Refund
+                </button>
+                <button type="button" onclick="adminResolveReport(${report.ReportID})" style="padding:11px 26px; font-size:0.88rem; font-weight:800; border:none; border-radius:10px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(16,185,129,0.35); transition:all 0.2s;" onmouseover="this.style.boxShadow='0 6px 18px rgba(16,185,129,0.45)'" onmouseout="this.style.boxShadow='0 4px 14px rgba(16,185,129,0.35)'" title="Mark this incident report as resolved">
+                    <i class="fa-solid fa-check"></i> Resolve
+                </button>
+            </div>
         </div>
     `;
+
+    // Mirror buttons in top header actions
+    if (headerActionsEl) {
+        headerActionsEl.innerHTML = `
+            <button type="button" onclick="adminWarnReportProvider(${report.ReportID})" style="padding:8px 16px; font-size:0.82rem; font-weight:800; border:1.5px solid #fde68a; border-radius:8px; background:#fef3c7; color:#b45309; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Warn Service Provider
+            </button>
+            <button type="button" onclick="adminRefundReportBooking(${report.ReportID})" style="padding:8px 16px; font-size:0.82rem; font-weight:800; border:1.5px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#1d4ed8; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-rotate-left"></i> Full Refund
+            </button>
+            <button type="button" onclick="adminResolveReport(${report.ReportID})" style="padding:8px 20px; font-size:0.82rem; font-weight:800; border:none; border-radius:8px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                <i class="fa-solid fa-check"></i> Resolve
+            </button>
+        `;
+    }
 
     modal.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-/** Quick resolve button from table */
-window.adminQuickResolveReport = async function(reportId) {
-    if (!confirm(`Resolve client Report #${reportId}?`)) return;
-    await adminExecuteReportAction(reportId, 'Resolved');
-};
-
-/** Execute report status update */
-window.adminExecuteReportAction = async function(reportId, newStatus, suspendProvider = false) {
+/** Action 1: Warn Service Provider */
+window.adminWarnReportProvider = async function(reportId) {
+    const report = _repAllData.find(r => r.ReportID === reportId);
     const notes = document.getElementById('input-admin-report-notes')?.value || '';
 
-    if (suspendProvider) {
-        if (!confirm(`⚠️ Are you sure you want to SUSPEND the reported service provider account? They will lose access to accept bookings.`)) return;
+    if (!confirm(`Issue an official violation warning to "${report?.ProviderBusinessName || 'the provider'}" regarding Report #${reportId}?`)) {
+        return;
     }
 
     try {
-        const res = await fetch(`/api/admin/reports/${reportId}/status`, {
-            method: 'PUT',
-            headers: getAdminHeaders(),
-            body: JSON.stringify({
-                status: newStatus,
-                adminNotes: notes,
-                suspendProvider
-            })
+        const res = await fetch(`/api/admin/reports/${reportId}/warn`, {
+            method: 'POST',
+            headers: {
+                ...getAdminHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ adminNotes: notes })
         });
-
         const data = await res.json();
-        if (res.ok && data.success) {
-            alert(`✅ ${data.message}`);
-            document.getElementById('modal-admin-report-detail')?.classList.add('hidden');
-            _repInitialised = false;
-            await loadClientReportsPage();
-            if (typeof loadDashboardData === 'function') loadDashboardData();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to issue warning');
+
+        if (typeof showToast === 'function') {
+            showToast(`✓ Warning issued to ${report?.ProviderBusinessName || 'provider'}`, 'success');
         } else {
-            alert(`❌ Error: ${data.message || 'Failed to update report.'}`);
+            alert(`✅ ${data.message}`);
         }
+        document.getElementById('modal-admin-report-detail')?.classList.add('hidden');
+        _repInitialised = false;
+        await loadClientReportsPage();
     } catch (err) {
-        console.error('adminExecuteReportAction error:', err);
-        alert('❌ Network error updating report status.');
+        console.error('adminWarnReportProvider error:', err);
+        if (typeof showToast === 'function') {
+            showToast(err.message || 'Error sending provider warning', 'error');
+        } else {
+            alert(`❌ ${err.message || 'Error sending warning'}`);
+        }
+    }
+};
+
+/** Action 2: Full Refund to Client */
+window.adminRefundReportBooking = async function(reportId) {
+    const report = _repAllData.find(r => r.ReportID === reportId);
+    const notes = document.getElementById('input-admin-report-notes')?.value || '';
+
+    let suggestedAmt = parseFloat(report?.BookingAmountPaid || report?.BookingTotalAmount || 0);
+    let promptMsg = `Are you sure you want to issue a FULL REFUND to client "${report?.ReporterName || 'Client'}" for Report #${reportId}?`;
+    if (suggestedAmt > 0) {
+        promptMsg += `\n\nRefund amount: ₱${suggestedAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    }
+
+    if (!confirm(promptMsg)) return;
+
+    let refundAmount = suggestedAmt;
+    if (refundAmount <= 0) {
+        const entered = prompt('Please enter the refund amount in Pesos to credit to the client wallet (e.g. 5000):');
+        if (!entered) return;
+        refundAmount = parseFloat(entered);
+        if (isNaN(refundAmount) || refundAmount <= 0) {
+            alert('Please enter a valid refund amount greater than 0.');
+            return;
+        }
+    }
+
+    try {
+        const res = await fetch(`/api/admin/reports/${reportId}/refund`, {
+            method: 'POST',
+            headers: {
+                ...getAdminHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ adminNotes: notes, refundAmount })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to process refund');
+
+        if (typeof showToast === 'function') {
+            showToast(`✓ Full refund credited to client wallet. Dispute marked as Resolved!`, 'success');
+        } else {
+            alert(`✅ ${data.message}`);
+        }
+        document.getElementById('modal-admin-report-detail')?.classList.add('hidden');
+        _repInitialised = false;
+        await loadClientReportsPage();
+    } catch (err) {
+        console.error('adminRefundReportBooking error:', err);
+        if (typeof showToast === 'function') {
+            showToast(err.message || 'Error processing refund', 'error');
+        } else {
+            alert(`❌ ${err.message || 'Error processing refund'}`);
+        }
+    }
+};
+
+/** Action 3: Resolve Incident Report */
+window.adminResolveReport = async function(reportId) {
+    const notes = document.getElementById('input-admin-report-notes')?.value || '';
+
+    if (!confirm(`Mark Report #${reportId} as Resolved?`)) return;
+
+    try {
+        const res = await fetch(`/api/admin/reports/${reportId}/resolve`, {
+            method: 'POST',
+            headers: {
+                ...getAdminHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ adminNotes: notes })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to resolve report');
+
+        if (typeof showToast === 'function') {
+            showToast(`✓ Report #${reportId} marked as Resolved`, 'success');
+        } else {
+            alert(`✅ ${data.message}`);
+        }
+        document.getElementById('modal-admin-report-detail')?.classList.add('hidden');
+        _repInitialised = false;
+        await loadClientReportsPage();
+    } catch (err) {
+        console.error('adminResolveReport error:', err);
+        if (typeof showToast === 'function') {
+            showToast(err.message || 'Error resolving report', 'error');
+        } else {
+            alert(`❌ ${err.message || 'Error resolving report'}`);
+        }
     }
 };
 

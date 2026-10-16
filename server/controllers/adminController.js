@@ -1,5 +1,6 @@
 const { connectDB, sql } = require('../config/db');
 const notificationModel = require('../models/notificationModel');
+const walletService = require('../services/walletService');
 
 /**
  * Helper: Log Activity into dbo.ActivityLogs
@@ -1012,8 +1013,13 @@ const getAdminClientReports = async (req, res) => {
                 b.BookingReference,
                 b.PackageName AS BookingPackageName,
                 b.TotalAmount AS BookingTotalAmount,
+                b.AmountPaid AS BookingAmountPaid,
+                b.BookingStatus,
+                b.PaymentStatus AS BookingPaymentStatus,
+                b.EventDate AS BookingEventDate,
                 r.Reason,
                 r.Description,
+                r.ProofImage,
                 r.Status,
                 r.AdminNotes,
                 r.CreatedAt,
@@ -1197,6 +1203,329 @@ const updateReportStatus = async (req, res) => {
             message: 'Failed to update report status.',
             error: error.message
         });
+    }
+};
+
+/**
+ * POST /api/admin/reports/:id/warn
+ * Warn Service Provider regarding client incident report
+ */
+const warnReportProvider = async (req, res) => {
+    try {
+        const reportId = parseInt(req.params.id, 10);
+        const { adminNotes, warningMessage } = req.body;
+        const adminUserId = req.user ? (req.user.userId || req.user.id) : 1;
+
+        if (!reportId) {
+            return res.status(400).json({ success: false, message: 'Invalid Report ID.' });
+        }
+
+        const pool = await connectDB();
+        const rRes = await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .query(`
+                SELECT r.*, sp.UserID AS ProviderUserID, sp.BusinessName, uClient.Email AS ReporterEmail
+                FROM dbo.ProviderReports r
+                LEFT JOIN dbo.ServiceProviders sp ON r.ProviderID = sp.ProviderID
+                LEFT JOIN dbo.Users uClient ON r.ReporterUserID = uClient.UserID
+                WHERE r.ReportID = @ReportID;
+            `);
+
+        if (!rRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Report record not found.' });
+        }
+
+        const currentReport = rRes.recordset[0];
+        const defaultWarning = `SoundSphere Administration has issued an official violation warning regarding Client Incident Report #${reportId} (${currentReport.Reason}). Please uphold professional standards and platform policies. Continued violations may lead to account penalties or suspension.`;
+        const finalWarning = (warningMessage && warningMessage.trim()) ? warningMessage.trim() : defaultWarning;
+
+        // 1. Notify Provider in dbo.Notifications
+        if (currentReport.ProviderUserID) {
+            await pool.request()
+                .input('UID', sql.Int, currentReport.ProviderUserID)
+                .input('Title', sql.NVarChar(255), '⚠️ Official Platform Violation Warning')
+                .input('Message', sql.NVarChar(sql.MAX), finalWarning)
+                .input('ReportID', sql.Int, reportId)
+                .query(`
+                    IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                        VALUES (@UID, @Title, @Message, 'Account', @ReportID, 'ProviderReport', GETDATE());
+                    END
+                `);
+        }
+
+        // 2. Append to Admin Notes
+        const noteStamp = `[Official Warning Issued on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}]`;
+        const updatedNotes = adminNotes ? `${adminNotes} ${noteStamp}`.trim() : `${currentReport.AdminNotes || ''} ${noteStamp}`.trim();
+
+        await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .input('AdminNotes', sql.NVarChar(sql.MAX), updatedNotes)
+            .query(`
+                UPDATE dbo.ProviderReports
+                SET AdminNotes = @AdminNotes,
+                    Status = CASE WHEN Status = 'Pending' THEN 'Under Review' ELSE Status END
+                WHERE ReportID = @ReportID;
+            `);
+
+        // 3. Log Activity in Audit Trail
+        await logActivity(
+            pool,
+            adminUserId,
+            'Provider Warning Issued',
+            `Admin issued an official warning to Service Provider "${currentReport.BusinessName}" for Report #${reportId}. Reason: ${currentReport.Reason}`,
+            'ProviderReport',
+            reportId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `Official warning has been issued to "${currentReport.BusinessName}".`,
+            reportId
+        });
+    } catch (error) {
+        console.error('Warn Report Provider Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to issue provider warning.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/admin/reports/:id/refund
+ * Issue Full Refund to client for an incident report
+ */
+const refundReportBooking = async (req, res) => {
+    try {
+        const reportId = parseInt(req.params.id, 10);
+        const { adminNotes, refundAmount: reqRefundAmt } = req.body;
+        const adminUserId = req.user ? (req.user.userId || req.user.id) : 1;
+
+        if (!reportId) {
+            return res.status(400).json({ success: false, message: 'Invalid Report ID.' });
+        }
+
+        const pool = await connectDB();
+        const rRes = await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .query(`
+                SELECT r.*, sp.UserID AS ProviderUserID, sp.BusinessName, uClient.Email AS ReporterEmail
+                FROM dbo.ProviderReports r
+                LEFT JOIN dbo.ServiceProviders sp ON r.ProviderID = sp.ProviderID
+                LEFT JOIN dbo.Users uClient ON r.ReporterUserID = uClient.UserID
+                WHERE r.ReportID = @ReportID;
+            `);
+
+        if (!rRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Report record not found.' });
+        }
+
+        const currentReport = rRes.recordset[0];
+
+        // Locate booking if any
+        let booking = null;
+        if (currentReport.BookingID) {
+            const bkRes = await pool.request()
+                .input('BID', sql.Int, currentReport.BookingID)
+                .query(`SELECT * FROM dbo.Bookings WHERE BookingID = @BID;`);
+            if (bkRes.recordset.length) booking = bkRes.recordset[0];
+        }
+
+        if (!booking && currentReport.ReporterUserID) {
+            const bkFallback = await pool.request()
+                .input('ClientUID', sql.Int, currentReport.ReporterUserID)
+                .input('PID', sql.Int, currentReport.ProviderID)
+                .query(`
+                    SELECT TOP 1 * FROM dbo.Bookings 
+                    WHERE ClientUserID = @ClientUID AND (ProviderID = @PID)
+                    ORDER BY BookingID DESC;
+                `);
+            if (bkFallback.recordset.length) booking = bkFallback.recordset[0];
+        }
+
+        let amountToRefund = parseFloat(reqRefundAmt || 0);
+        if (amountToRefund <= 0 && booking) {
+            amountToRefund = parseFloat(booking.AmountPaid || booking.TotalAmount || 0);
+        }
+
+        if (amountToRefund <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No refund amount could be automatically determined. Please enter a valid refund amount.'
+            });
+        }
+
+        // Credit refund to client wallet using walletService
+        const refundReason = `Full refund granted by Administration for Incident Report #${reportId} against "${currentReport.BusinessName}"`;
+        await walletService.creditWalletForRefund({
+            userId: currentReport.ReporterUserID,
+            amount: amountToRefund,
+            bookingId: booking ? booking.BookingID : null,
+            bookingReference: booking ? booking.BookingReference : null,
+            reason: refundReason
+        });
+
+        // Update booking status if exists
+        if (booking) {
+            await pool.request()
+                .input('BID', sql.Int, booking.BookingID)
+                .query(`
+                    UPDATE dbo.Bookings 
+                    SET PaymentStatus = 'Refunded', BookingStatus = 'Cancelled', UpdatedAt = GETDATE()
+                    WHERE BookingID = @BID;
+                `);
+        }
+
+        // Update Report to Resolved
+        const noteStamp = `[Full Refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}]`;
+        const updatedNotes = adminNotes ? `${adminNotes} ${noteStamp}`.trim() : `${currentReport.AdminNotes || ''} ${noteStamp}`.trim();
+
+        await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .input('AdminNotes', sql.NVarChar(sql.MAX), updatedNotes)
+            .input('AdminUID', sql.Int, adminUserId)
+            .query(`
+                UPDATE dbo.ProviderReports
+                SET Status = 'Resolved',
+                    ResolvedAt = GETDATE(),
+                    ResolvedByAdminID = @AdminUID,
+                    AdminNotes = @AdminNotes
+                WHERE ReportID = @ReportID;
+            `);
+
+        // Notify client
+        if (currentReport.ReporterUserID) {
+            await pool.request()
+                .input('UID', sql.Int, currentReport.ReporterUserID)
+                .input('Title', sql.NVarChar(255), '🎉 Full Refund Approved')
+                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has approved a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} following dispute resolution (Report #${reportId}). The funds have been credited to your SoundSphere wallet balance.`)
+                .input('ReportID', sql.Int, reportId)
+                .query(`
+                    IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                        VALUES (@UID, @Title, @Message, 'Payment', @ReportID, 'ProviderReport', GETDATE());
+                    END
+                `);
+        }
+
+        // Notify provider
+        if (currentReport.ProviderUserID) {
+            await pool.request()
+                .input('UID', sql.Int, currentReport.ProviderUserID)
+                .input('Title', sql.NVarChar(255), 'ℹ️ Dispute Resolved - Client Refund Issued')
+                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has issued a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} to the client for Incident Report #${reportId}. The dispute is now marked as resolved.`)
+                .input('ReportID', sql.Int, reportId)
+                .query(`
+                    IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                        VALUES (@UID, @Title, @Message, 'Report', @ReportID, 'ProviderReport', GETDATE());
+                    END
+                `);
+        }
+
+        // Log Audit Trail
+        await logActivity(
+            pool,
+            adminUserId,
+            'Dispute Full Refund Issued',
+            `Admin granted full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} to Client (${currentReport.ReporterEmail}) for Report #${reportId} against "${currentReport.BusinessName}".`,
+            'ProviderReport',
+            reportId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `Full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet. Report marked as Resolved.`,
+            reportId,
+            refundAmount: amountToRefund
+        });
+    } catch (error) {
+        console.error('Refund Report Booking Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process refund.', error: error.message });
+    }
+};
+
+/**
+ * POST /api/admin/reports/:id/resolve
+ * Mark client report as Resolved
+ */
+const resolveReport = async (req, res) => {
+    try {
+        const reportId = parseInt(req.params.id, 10);
+        const { adminNotes } = req.body;
+        const adminUserId = req.user ? (req.user.userId || req.user.id) : 1;
+
+        if (!reportId) {
+            return res.status(400).json({ success: false, message: 'Invalid Report ID.' });
+        }
+
+        const pool = await connectDB();
+        const rRes = await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .query(`
+                SELECT r.*, sp.UserID AS ProviderUserID, sp.BusinessName, uClient.Email AS ReporterEmail
+                FROM dbo.ProviderReports r
+                LEFT JOIN dbo.ServiceProviders sp ON r.ProviderID = sp.ProviderID
+                LEFT JOIN dbo.Users uClient ON r.ReporterUserID = uClient.UserID
+                WHERE r.ReportID = @ReportID;
+            `);
+
+        if (!rRes.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Report record not found.' });
+        }
+
+        const currentReport = rRes.recordset[0];
+        const notes = adminNotes !== undefined ? adminNotes : currentReport.AdminNotes;
+
+        await pool.request()
+            .input('ReportID', sql.Int, reportId)
+            .input('AdminNotes', sql.NVarChar(sql.MAX), notes)
+            .input('AdminUID', sql.Int, adminUserId)
+            .query(`
+                UPDATE dbo.ProviderReports
+                SET Status = 'Resolved',
+                    ResolvedAt = GETDATE(),
+                    ResolvedByAdminID = @AdminUID,
+                    AdminNotes = @AdminNotes
+                WHERE ReportID = @ReportID;
+            `);
+
+        // Notify Client
+        if (currentReport.ReporterUserID) {
+            await pool.request()
+                .input('UID', sql.Int, currentReport.ReporterUserID)
+                .input('Title', sql.NVarChar(255), `📋 Report #${reportId} Resolved`)
+                .input('Message', sql.NVarChar(sql.MAX), `Your incident report regarding "${currentReport.BusinessName}" has been resolved by SoundSphere Administration. Thank you for your feedback.`)
+                .input('ReportID', sql.Int, reportId)
+                .query(`
+                    IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
+                    BEGIN
+                        INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                        VALUES (@UID, @Title, @Message, 'Report', @ReportID, 'ProviderReport', GETDATE());
+                    END
+                `);
+        }
+
+        // Log Audit Trail
+        await logActivity(
+            pool,
+            adminUserId,
+            'Report Resolved',
+            `Admin resolved Client Report #${reportId} against "${currentReport.BusinessName}". Notes: ${notes || 'None'}`,
+            'ProviderReport',
+            reportId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `Report #${reportId} has been marked as Resolved.`,
+            reportId,
+            status: 'Resolved'
+        });
+    } catch (error) {
+        console.error('Resolve Report Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to resolve report.', error: error.message });
     }
 };
 
@@ -2033,6 +2362,9 @@ module.exports = {
     getAdminAuditLogs,
     getAdminClientReports,
     updateReportStatus,
+    warnReportProvider,
+    refundReportBooking,
+    resolveReport,
     getAdminNotifications,
     markAdminNotificationRead,
     markAllAdminNotificationsRead,

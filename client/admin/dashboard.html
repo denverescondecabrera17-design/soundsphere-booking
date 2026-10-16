@@ -1041,24 +1041,40 @@
         </div>
     </div>
 
-    <!-- View & Resolve Client Report Modal -->
-    <div class="admin-modal-overlay hidden" id="modal-admin-report-detail" role="dialog" aria-modal="true" style="z-index:999999;">
-        <div class="admin-modal-card" style="max-width:680px;">
-            <div style="padding:20px 24px; background:#fff1f2; border-bottom:1px solid #fecdd3; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:1.15rem; color:#9f1239; font-weight:800; display:flex; align-items:center; gap:10px;">
-                    <i class="fa-solid fa-flag" style="color:#e11d48;"></i> Client Incident Report <span id="report-detail-id-display">#0</span>
-                </h3>
-                <button type="button" onclick="document.getElementById('modal-admin-report-detail').classList.add('hidden')" style="background:none; border:none; font-size:1.5rem; color:#9f1239; cursor:pointer;">&times;</button>
+    <!-- FULLSCREEN: VIEW & RESOLVE CLIENT INCIDENT REPORT -->
+    <div class="provider-fullscreen-view hidden" id="modal-admin-report-detail" role="region" aria-label="Client Incident Report & Dispute Resolution">
+        <!-- Fullscreen Sticky Top Header Bar -->
+        <header style="position:sticky; top:0; z-index:100; background:#ffffff; border-bottom:1px solid #e2e8f0; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button type="button" onclick="document.getElementById('modal-admin-report-detail').classList.add('hidden')" style="display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:8px 16px; font-size:0.86rem; font-weight:700; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0a192f';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#334155';">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <div style="height:28px; width:1px; background:#e2e8f0;"></div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; border-radius:8px; background:#fee2e2; display:flex; align-items:center; justify-content:center; color:#e11d48; font-size:1.15rem;">
+                        <i class="fa-solid fa-flag"></i>
+                    </div>
+                    <div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <h2 style="margin:0; font-size:1.25rem; color:#0a192f; font-weight:800;" id="report-detail-id-display">Client Incident Report #0</h2>
+                            <span id="report-detail-status-badge" style="padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:800; text-transform:uppercase; background:#fef2f2; color:#b91c1c;">Pending Review</span>
+                        </div>
+                        <span id="report-detail-subtitle" style="font-size:0.8rem; color:#64748b;">Dispute investigation & resolution suite</span>
+                    </div>
+                </div>
             </div>
 
-            <div style="padding:24px; display:flex; flex-direction:column; gap:18px; max-height:65vh; overflow-y:auto;" id="admin-report-detail-body">
-                <!-- Loaded dynamically -->
+            <div id="admin-report-detail-header-actions" style="display:flex; align-items:center; gap:10px;">
+                <!-- Header action buttons -->
             </div>
+        </header>
 
-            <div style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;" id="admin-report-detail-actions">
-                <!-- Actions loaded dynamically -->
+        <!-- Fullscreen Content Canvas -->
+        <main style="flex:1; width:100%; display:flex; justify-content:center; padding:32px 24px 80px 24px; box-sizing:border-box; background:#f8fafc;">
+            <div style="max-width:1040px; width:100%; display:flex; flex-direction:column; gap:22px;" id="admin-report-detail-body">
+                <!-- Dynamically loaded report details and actions -->
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- View Booking Details Modal -->
