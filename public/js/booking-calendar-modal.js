@@ -188,9 +188,6 @@
 
                 <!-- Fullscreen Footer -->
                 <div class="cal-modal-footer">
-                    <button type="button" class="cal-btn-cancel" id="cal-btn-cancel-action">
-                        <i class="fa-solid fa-arrow-left"></i> Cancel
-                    </button>
                     <button type="button" class="cal-btn-confirm" id="cal-btn-confirm-action">
                         Next <i class="fa-solid fa-arrow-right"></i>
                     </button>
