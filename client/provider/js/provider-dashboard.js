@@ -1736,6 +1736,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (feeDisplay) feeDisplay.textContent = `-₱${formatCurrencyDisplay(fee)}`;
         if (netDisplay) netDisplay.textContent = `₱${formatCurrencyDisplay(net)}`;
 
+        updatePayoutMethodFields();
         modal.classList.remove('hidden');
     };
 
@@ -1763,6 +1764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (walletDisp) walletDisp.textContent = `₱${formatCurrencyDisplay(avail)}`;
 
+        updatePayoutMethodFields();
         modal.classList.remove('hidden');
 
         // Fetch fresh balance to guarantee 100% real-time accuracy
@@ -1778,6 +1780,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.triggerRequestWithdrawFromBooking = window.openBookingWithdrawalModal;
+
+    const updatePayoutMethodFields = () => {
+        const methodSelect = document.getElementById('input-bw-method');
+        const labelRef = document.getElementById('label-bw-account-ref');
+        const inputRef = document.getElementById('input-bw-account-ref');
+        if (!methodSelect || !labelRef || !inputRef) return;
+
+        const method = (methodSelect.value || '').toUpperCase();
+        if (method === 'GCASH' || method === 'MAYA') {
+            labelRef.innerHTML = `MOBILE NUMBER <span style="color:#ef4444;">*</span>`;
+            inputRef.placeholder = 'e.g. 09516028992';
+        } else {
+            // BPI, BDO, PNB
+            labelRef.innerHTML = `ACCOUNT NUMBER <span style="color:#ef4444;">*</span>`;
+            inputRef.placeholder = 'e.g. 10 or 12-digit Account Number';
+        }
+    };
+
+    document.getElementById('input-bw-method')?.addEventListener('change', updatePayoutMethodFields);
 
     const amtInputEl = document.getElementById('input-bw-amount');
     if (amtInputEl) {
@@ -1834,7 +1855,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (!accountReference) {
-                alert('Please enter your destination account / mobile number.');
+                const method = (payoutMethod || '').toUpperCase();
+                const isMobile = (method === 'GCASH' || method === 'MAYA');
+                alert(`Please enter your ${isMobile ? 'mobile number' : 'account number'}.`);
                 return;
             }
 
