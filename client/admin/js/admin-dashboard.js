@@ -2495,7 +2495,7 @@ async function loadClientReportsPage() {
     const tbody = document.getElementById('table-client-reports');
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Loading client reports...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#64748b;"><i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>Loading client reports...</td></tr>`;
 
     try {
         const headers = getAdminHeaders();
@@ -2568,7 +2568,7 @@ async function loadClientReportsPage() {
         }
     } catch (err) {
         console.error('loadClientReportsPage error:', err);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Failed to load client reports. Please try again.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Failed to load client reports. Please try again.</td></tr>`;
     }
 }
 
@@ -2578,7 +2578,7 @@ function _repRenderTable(reports) {
     if (!tbody) return;
 
     if (!reports || reports.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#64748b;"><i class="fa-solid fa-inbox" style="font-size:1.8rem;margin-bottom:8px;display:block;color:#cbd5e1;"></i>No client reports found matching criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#64748b;"><i class="fa-solid fa-inbox" style="font-size:1.8rem;margin-bottom:8px;display:block;color:#cbd5e1;"></i>No client reports found matching criteria.</td></tr>`;
         return;
     }
 
@@ -2593,7 +2593,7 @@ function _repRenderTable(reports) {
     tbody.innerHTML = reports.map(r => {
         const isSuspended = r.ProviderAccountStatus === 'Suspended';
         return `
-            <tr>
+            <tr onclick="viewAdminReportDetails(${r.ReportID})" style="cursor:pointer; transition:background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" title="Click to view report details & dispute actions">
                 <td style="font-weight:700;color:#e11d48;font-size:0.82rem;">#REP-${r.ReportID}</td>
                 <td>
                     <div style="font-weight:700;color:#0a192f;font-size:0.88rem;">${escHtml(r.ReporterName || 'Client')}</div>
@@ -2615,20 +2615,6 @@ function _repRenderTable(reports) {
                     ${r.CreatedAt ? new Date(r.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                 </td>
                 <td>${statusBadge(r.Status)}</td>
-                <td>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                        <button type="button" onclick="viewAdminReportDetails(${r.ReportID})"
-                            style="padding:6px 12px;font-size:0.78rem;font-weight:700;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0a192f;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;">
-                            <i class="fa-solid fa-eye" style="color:#2563eb;"></i> View
-                        </button>
-                        ${r.Status === 'Pending' || r.Status === 'Under Review' ? `
-                            <button type="button" onclick="adminQuickResolveReport(${r.ReportID})"
-                                style="padding:6px 12px;font-size:0.78rem;font-weight:700;border:none;border-radius:8px;background:#10b981;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-                                <i class="fa-solid fa-check"></i> Resolve
-                            </button>
-                        ` : ''}
-                    </div>
-                </td>
             </tr>
         `;
     }).join('');
