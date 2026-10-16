@@ -2179,7 +2179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (!paidBookings || paidBookings.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:36px; color:#64748b; font-size:1.02rem;">No bookings yet.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:36px; color:#64748b; font-size:1.02rem;">No bookings yet.</td></tr>`;
             return;
         }
 
@@ -2194,46 +2194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const locStr = b.Location || b.EventAddress || b.EventPlace || 'Batangas';
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
             const payInfo = getBookingPaymentInfo(b);
-
-            let actionButtonsHtml = '';
-            if (statusLower === 'pending') {
-                actionButtonsHtml = `
-                    <div style="display:flex; gap:8px; flex-wrap:nowrap;">
-                        <button type="button" onclick="event.stopPropagation(); window.acceptProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.2);">Accept</button>
-                        <button type="button" onclick="event.stopPropagation(); window.cancelProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(239,68,68,0.2);">Reject</button>
-                    </div>
-                `;
-            } else if (statusLower === 'confirmed') {
-                const isDayOfService = isEventServiceDayOrPast(rawStartDate);
-                actionButtonsHtml = `
-                    <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center;">
-                        ${isDayOfService ? `
-                            <button type="button" onclick="event.stopPropagation(); window.completeProviderBooking(${b.BookingID})" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(37,99,235,0.2);">Complete</button>
-                        ` : `
-                            <button type="button" disabled title="The Complete button will unlock on the day of services (${formattedStart})" style="padding:8px 16px; font-size:0.86rem; border:1.5px solid #cbd5e1; border-radius:8px; background:#f1f5f9; color:#94a3b8; cursor:not-allowed; font-weight:700; opacity:0.8;" onclick="event.stopPropagation();">Complete (${formattedStart})</button>
-                        `}
-                    </div>
-                `;
-            } else if (statusLower === 'awaiting client confirmation') {
-                actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:7px 14px; border-radius:8px; white-space:nowrap;" title="The service has been completed by the provider. The client has 24 hours to confirm, or it will automatically accept.">Awaiting Client Acceptance (Auto-accepts in 24h)</span>`;
-            } else if (statusLower === 'completed') {
-                const wdStatus = (b.WithdrawalStatus || '').toLowerCase();
-                if (wdStatus === 'pending') {
-                    actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:7px 14px; border-radius:8px; white-space:nowrap;">Payout Requested</span>`;
-                } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
-                    actionButtonsHtml = `<span style="font-size:0.84rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:7px 14px; border-radius:8px; white-space:nowrap;">Paid &amp; Sent</span>`;
-                } else {
-                    actionButtonsHtml = `
-                        <button type="button" onclick="event.stopPropagation(); window.openBookingWithdrawalModal(${b.BookingID}, ${b.TotalAmount || 0}, '${b.BookingReference || ('BK-' + b.BookingID)}')" style="padding:8px 16px; font-size:0.86rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 2px 6px rgba(16,185,129,0.25); white-space:nowrap; transition:all 0.15s ease;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
-                            Request Withdrawal
-                        </button>
-                    `;
-                }
-            } else if (statusLower === 'cancelled' || statusLower === 'rejected') {
-                actionButtonsHtml = `<span style="font-size:0.88rem; font-weight:700; color:#94a3b8; white-space:nowrap;">Cancelled</span>`;
-            } else {
-                actionButtonsHtml = `<span style="font-size:0.88rem; font-weight:700; color:#475569; white-space:nowrap;">${b.BookingStatus}</span>`;
-            }
 
             return `
                 <tr id="booking-row-${b.BookingID}" data-booking-id="${b.BookingID}" style="transition:all 0.2s ease; cursor:pointer;" onclick="window.openProviderBookingDetails(${b.BookingID})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" title="Click row or ID to view full reservation details">
@@ -2263,7 +2223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </td>
                     <td style="padding:18px 20px; white-space:nowrap;"><span class="status-badge status-${statusLower}" style="font-size:0.86rem; padding:6px 14px; border-radius:20px; font-weight:700;">${b.BookingStatus || 'Confirmed'}</span></td>
-                    <td style="padding:18px 20px; white-space:nowrap;" onclick="event.stopPropagation();">${actionButtonsHtml}</td>
                 </tr>
             `;
         }).join('');
