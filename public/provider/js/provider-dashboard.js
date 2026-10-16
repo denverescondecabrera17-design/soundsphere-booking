@@ -1969,6 +1969,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadPackages();
     };
 
+    window.loadDashboardData = loadDashboardData;
+
     // Global Booking Action Handlers for Provider Dashboard
     window.acceptProviderBooking = async (bookingId) => {
         if (!confirm(`Are you sure you want to ACCEPT booking #${bookingId}?`)) return;
@@ -2663,6 +2665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (fullContainer) {
             fullContainer.innerHTML = reviews.map(r => {
                 const dateStr = formatDate(r.CreatedAt);
+                const reviewId = r.ReviewID || r.id;
                 return `
                 <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:#fff; border-radius:10px; margin-bottom:12px; border:1px solid #e2e8f0; transition:all 0.2s ease;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
@@ -2674,15 +2677,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 ${dateStr ? `<span style="font-size:0.75rem; color:#94a3b8;"><i class="fa-regular fa-calendar" style="font-size:0.7rem;"></i> ${dateStr}</span>` : ''}
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:6px; background:#fffbeb; padding:4px 10px; border-radius:20px; border:1px solid #fef3c7;">
-                            <div>${buildStars(r.Rating)}</div>
-                            <span style="font-size:0.85rem; color:#d97706; font-weight:700;">${(Number(r.Rating) || 0).toFixed(1)}</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:6px; background:#fffbeb; padding:4px 10px; border-radius:20px; border:1px solid #fef3c7;">
+                                <div>${buildStars(r.Rating)}</div>
+                                <span style="font-size:0.85rem; color:#d97706; font-weight:700;">${(Number(r.Rating) || 0).toFixed(1)}</span>
+                            </div>
+                            ${reviewId ? `
+                            <button type="button" onclick="window.deleteProviderReview(${reviewId})" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; padding:5px 12px; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" title="Delete this review">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </button>
+                            ` : ''}
                         </div>
                     </div>
                     <p style="font-size:0.88rem; color:#334155; margin:8px 0 0 0; line-height:1.5;">"${r.Comment || 'No feedback text provided.'}"</p>
                 </div>
                 `;
             }).join('');
+        }
+    };
+
+    // Handler to permanently delete a client review
+    window.deleteProviderReview = async (reviewId) => {
+        if (!reviewId) return;
+        if (!confirm('Are you sure you want to permanently delete this client review?')) return;
+
+        try {
+            const authToken = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) 
+                ? SoundSphereAPI.getAuthToken() 
+                : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token') || token);
+
+            const res = await fetch(`/api/providers/reviews/${reviewId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Review deleted successfully.', 'success');
+                } else {
+                    alert(data.message || 'Review deleted successfully.');
+                }
+                if (typeof loadDashboardData === 'function') {
+                    await loadDashboardData();
+                }
+            } else {
+                alert(data.message || 'Failed to delete review.');
+            }
+        } catch (err) {
+            console.error('Error deleting review:', err);
+            alert('Failed to delete review: ' + err.message);
         }
     };
 

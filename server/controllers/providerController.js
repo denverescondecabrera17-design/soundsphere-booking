@@ -1051,6 +1051,53 @@ const getProviderReviewsList = async (req, res) => {
 };
 
 /**
+ * DELETE /api/providers/reviews/:id
+ * Delete a review associated with the provider
+ */
+const deleteProviderReview = async (req, res) => {
+    try {
+        const userId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.query.userId || 13);
+        const reviewId = parseInt(req.params.id, 10);
+
+        if (!reviewId || isNaN(reviewId)) {
+            return res.status(400).json({ success: false, message: 'Invalid review ID.' });
+        }
+
+        let pool = null;
+        try { pool = getPool(); } catch (e) { pool = await connectDB(); }
+
+        let providerId = userId;
+        const provRes = await pool.request().input('UID', userId).query(`SELECT ProviderID FROM dbo.ServiceProviders WHERE UserID = @UID;`);
+        if (provRes.recordset && provRes.recordset[0]) {
+            providerId = provRes.recordset[0].ProviderID;
+        }
+
+        const delRes = await pool.request()
+            .input('RID', reviewId)
+            .input('UID', userId)
+            .input('PID', providerId)
+            .query(`
+                DELETE FROM dbo.Reviews
+                WHERE ReviewID = @RID
+                  AND (
+                      ProviderID = @UID 
+                      OR ProviderID = @PID
+                      OR BookingID IN (SELECT BookingID FROM dbo.Bookings WHERE ProviderID = @UID OR ProviderID = @PID)
+                  );
+            `);
+
+        if (delRes.rowsAffected && delRes.rowsAffected[0] > 0) {
+            return res.status(200).json({ success: true, message: 'Review successfully deleted.' });
+        } else {
+            return res.status(404).json({ success: false, message: 'Review not found or unauthorized to delete.' });
+        }
+    } catch (err) {
+        console.error('Error deleting provider review:', err);
+        return res.status(500).json({ success: false, message: 'Failed to delete review: ' + err.message });
+    }
+};
+
+/**
  * GET /api/providers/withdrawals/list
  * Retrieve total earnings, available balance, total withdrawn, and withdrawal history
  */
@@ -1585,6 +1632,7 @@ module.exports = {
     completeBooking,
     cancelBooking,
     getProviderReviewsList,
+    deleteProviderReview,
     getProviderPermitStatus,
     submitPermitRenewal,
     upload,

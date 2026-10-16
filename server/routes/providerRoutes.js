@@ -43,6 +43,7 @@ router.post('/withdrawals/create', verifyToken, providerController.createWithdra
 
 // Reviews Routes
 router.get('/reviews/my-reviews', verifyToken, providerController.getProviderReviewsList);
+router.delete('/reviews/:id', verifyToken, providerController.deleteProviderReview);
 
 // Permit Compliance & Renewal Routes
 router.get('/permit-status', verifyToken, providerController.getProviderPermitStatus);
