@@ -738,7 +738,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const pTitle = packageData.PackageName || urlParams.get('package_name') || (sessionSelected && (sessionSelected.packageTitle || sessionSelected.packageName));
                 summaryPkgName.textContent = pTitle || 'Birthday Package';
             }
-            if (summaryPkgPrice) summaryPkgPrice.textContent = `₱${basePackagePrice.toLocaleString()}`;
+            const formatMoney = (val) => {
+                const num = parseFloat(val) || 0;
+                return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            };
+
+            if (summaryPkgPrice) summaryPkgPrice.textContent = formatMoney(basePackagePrice);
 
             // Render Inclusions
             if (summaryInclusionsList) {
@@ -765,6 +770,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Dynamic Real-Time Price & Payment Plan Breakdown Calculation
     const updatePriceBreakdown = () => {
+        const formatMoney = (val) => {
+            const num = parseFloat(val) || 0;
+            return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        };
+
         // 1. Base Package Price
         basePackagePrice = packageData ? parseFloat(packageData.Price || 0) : basePackagePrice;
 
@@ -803,10 +813,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const downpaymentVal = Math.round(totalCost * 0.5);
         const fullVal = totalCost;
 
-        if (planDownpaymentVal) planDownpaymentVal.textContent = `₱${downpaymentVal.toLocaleString()}`;
-        if (planFullVal) planFullVal.textContent = `₱${fullVal.toLocaleString()}`;
+        if (planDownpaymentVal) planDownpaymentVal.textContent = formatMoney(downpaymentVal);
+        if (planFullVal) planFullVal.textContent = formatMoney(fullVal);
 
-        if (summaryValPkgPrice) summaryValPkgPrice.textContent = `₱${basePackagePrice.toLocaleString()}`;
+        if (summaryValPkgPrice) summaryValPkgPrice.textContent = formatMoney(basePackagePrice);
 
         // Additional Day Row Display
         const summaryRowAddDays = document.getElementById('summary-row-adddays');
@@ -817,7 +827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const addDaysCount = calculatedDays - 1;
             if (summaryRowAddDays) summaryRowAddDays.style.display = 'table-row';
             if (summaryLblAddDays) summaryLblAddDays.textContent = `${addDaysCount} add'l day${addDaysCount > 1 ? 's' : ''}`;
-            if (summaryValAddDays) summaryValAddDays.textContent = `+₱${additionalDayCharges.toLocaleString()}`;
+            if (summaryValAddDays) summaryValAddDays.textContent = `+${formatMoney(additionalDayCharges)}`;
         } else {
             if (summaryRowAddDays) summaryRowAddDays.style.display = 'none';
         }
@@ -825,17 +835,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Distance & Transport Fee Display
         const summaryLblDistance = document.getElementById('summary-lbl-distance');
         if (summaryLblDistance) summaryLblDistance.textContent = `${calculatedDistanceKm} km`;
-        if (summaryValTransport) summaryValTransport.textContent = `₱${transportFee.toLocaleString()}`;
+        if (summaryValTransport) summaryValTransport.textContent = formatMoney(transportFee);
 
-        if (summaryValTotal) summaryValTotal.textContent = `₱${totalCost.toLocaleString()}`;
+        if (summaryValTotal) summaryValTotal.textContent = formatMoney(totalCost);
 
         if (selectedPaymentPlan === 'downpayment') {
             if (summaryValPlan) summaryValPlan.textContent = '50% Down Payment';
-            if (summaryValDueNow) summaryValDueNow.textContent = `₱${downpaymentVal.toLocaleString()}`;
-            if (summaryValRemaining) summaryValRemaining.textContent = `₱${(totalCost - downpaymentVal).toLocaleString()}`;
+            if (summaryValDueNow) summaryValDueNow.textContent = formatMoney(downpaymentVal);
+            if (summaryValRemaining) summaryValRemaining.textContent = formatMoney(totalCost - downpaymentVal);
         } else {
             if (summaryValPlan) summaryValPlan.textContent = '100% Full Payment';
-            if (summaryValDueNow) summaryValDueNow.textContent = `₱${fullVal.toLocaleString()}`;
+            if (summaryValDueNow) summaryValDueNow.textContent = formatMoney(fullVal);
             if (summaryValRemaining) summaryValRemaining.textContent = '₱0.00 (Fully Paid)';
         }
 
@@ -1768,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'qrph': document.getElementById('paymongo-view-qrph')
                 };
 
-                if (pmModalAmount) pmModalAmount.textContent = `₱${amountToPayNow.toLocaleString()}`;
+                if (pmModalAmount) pmModalAmount.textContent = `₱${(parseFloat(amountToPayNow) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 if (pmModalMethodName) pmModalMethodName.textContent = selectedPayMongoMethod;
 
                 // Hide all views and show active method view

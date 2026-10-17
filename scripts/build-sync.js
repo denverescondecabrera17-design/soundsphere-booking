@@ -341,6 +341,20 @@ if (fs.existsSync(srcBookingJs)) {
     });
 }
 
+const srcCheckoutJs = path.join(__dirname, '../client/js/checkout-modal.js');
+const checkoutJsTargets = [
+    path.join(__dirname, '../client/pages/js/checkout-modal.js'),
+    path.join(__dirname, '../public/js/checkout-modal.js'),
+    path.join(__dirname, '../public/pages/js/checkout-modal.js')
+];
+if (fs.existsSync(srcCheckoutJs)) {
+    const cJsContent = fs.readFileSync(srcCheckoutJs, 'utf8');
+    checkoutJsTargets.forEach(target => {
+        safeWriteFileSync(target, cJsContent);
+        console.log(`Synced checkout-modal.js -> ${target}`);
+    });
+}
+
 // 15d. Sync other pages (index, login, register, marketplace, provider-profile, etc.)
 ['index.html', 'login.html', 'register.html', 'marketplace.html', 'provider-profile.html', 'forgot-password.html', 'reset-password.html', 'verify-otp.html', 'booking-confirmation.html'].forEach(page => {
     const srcPage = path.join(__dirname, `../client/${page}`);

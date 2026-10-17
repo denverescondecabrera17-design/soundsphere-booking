@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let totalCost = basePackagePrice + transportFee; // ₱29,500
     let paymentType = 'downpayment'; // 'downpayment' (50%) or 'full' (100%)
     let selectedPaymentMethod = 'GCash';
+    const formatMoney = (val) => '₱' + (parseFloat(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let currentBookingMeta = {
         providerId: 13,
         packageName: 'Audio & Light Package',
@@ -70,9 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Recalculate options
         const downpaymentVal = Math.round(totalCost * 0.5);
-        if (downpaymentAmountSpan) downpaymentAmountSpan.textContent = `₱${downpaymentVal.toLocaleString()}`;
-        if (fullAmountSpan) fullAmountSpan.textContent = `₱${totalCost.toLocaleString()}`;
-        if (totalAmountToPaySpan) totalAmountToPaySpan.textContent = `₱${totalCost.toLocaleString()}`;
+        if (downpaymentAmountSpan) downpaymentAmountSpan.textContent = formatMoney(downpaymentVal);
+        if (fullAmountSpan) fullAmountSpan.textContent = formatMoney(totalCost);
+        if (totalAmountToPaySpan) totalAmountToPaySpan.textContent = formatMoney(totalCost);
 
         currentStep = 1;
         updateStepDisplay();
@@ -109,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const amountToPayNow = paymentType === 'downpayment' ? Math.round(totalCost * 0.5) : totalCost;
-        if (paynowDisplaySpan) paynowDisplaySpan.textContent = `₱${amountToPayNow.toLocaleString()}`;
+        if (paynowDisplaySpan) paynowDisplaySpan.textContent = formatMoney(amountToPayNow);
     };
 
     if (radioDownpayment) radioDownpayment.addEventListener('change', updatePaymentTypeSelection);
@@ -175,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnPrevStep) btnPrevStep.style.visibility = 'visible';
             const amountToPayNow = paymentType === 'downpayment' ? Math.round(totalCost * 0.5) : totalCost;
             if (btnNextStep) {
-                btnNextStep.innerHTML = `<span>Proceed to Pay ₱${amountToPayNow.toLocaleString()}</span> <i class="fa-solid fa-shield-halved"></i>`;
+                btnNextStep.innerHTML = `<span>Proceed to Pay ${formatMoney(amountToPayNow)}</span> <i class="fa-solid fa-shield-halved"></i>`;
                 btnNextStep.disabled = false;
             }
         }
@@ -246,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .catch(err => {
                     console.warn('Booking POST notice:', err);
-                    showToast(`✓ Booking Reservation Submitted! (₱${amountToPayNow.toLocaleString()})`, 'success');
+                    showToast(`✓ Booking Reservation Submitted! (${formatMoney(amountToPayNow)})`, 'success');
                     if (checkoutModal) checkoutModal.classList.add('hidden');
                     setTimeout(() => {
                         window.location.href = '/client-bookings.html';
