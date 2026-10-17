@@ -1247,15 +1247,9 @@
             
             <!-- Reservation Banner Card -->
             <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:22px 26px; box-shadow:0 4px 16px rgba(0,0,0,0.04); margin-bottom:22px;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Booking Reference</span>
-                        <div id="cbd-booking-ref" style="font-size:1.35rem; font-weight:900; color:#0a192f; font-family:monospace; margin-top:2px;">#SS-2026-00000</div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <span id="cbd-booking-status" class="badge" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; font-weight:800; font-size:0.82rem; padding:6px 12px;">Cancelled</span>
-                        <span id="cbd-payment-status" class="badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-weight:800; font-size:0.82rem; padding:6px 12px;">Refunded</span>
-                    </div>
+                <div style="margin-bottom:12px;">
+                    <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Booking Reference</span>
+                    <div id="cbd-booking-ref" style="font-size:1.35rem; font-weight:900; color:#0a192f; font-family:monospace; margin-top:2px;">#SS-2026-00000</div>
                 </div>
                 <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
                     <div id="cbd-package-name" style="font-size:1.15rem; font-weight:800; color:#2563eb;">Birthday Package</div>
@@ -1263,53 +1257,28 @@
                 </div>
             </div>
 
-            <!-- Two-Column Details Grid -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:22px;">
-                
-                <!-- Client Details Card -->
-                <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
-                    <div style="font-size:0.85rem; font-weight:800; color:#0f172a; text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                        <i class="fa-solid fa-user-check" style="color:#2563eb;"></i> Client & User Details
+            <!-- Client & User Details Card -->
+            <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:22px 26px; box-shadow:0 4px 16px rgba(0,0,0,0.04); margin-bottom:22px;">
+                <div style="font-size:0.85rem; font-weight:800; color:#0f172a; text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
+                    <i class="fa-solid fa-user-check" style="color:#2563eb;"></i> Client & User Details
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                    <div>
+                        <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">User Account Name</span>
+                        <strong id="cbd-client-name" style="font-size:1.02rem; color:#0a192f; display:block; margin-top:2px;">Denver Cabrera</strong>
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">User Account Name</span>
-                            <strong id="cbd-client-name" style="font-size:1.02rem; color:#0a192f; display:block; margin-top:2px;">Denver Cabrera</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">User Account Email</span>
-                            <strong id="cbd-client-email" style="font-size:0.92rem; color:#2563eb; display:block; margin-top:2px;">dendenescondecabrera17@gmail.com</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">Contact Phone</span>
-                            <strong id="cbd-client-phone" style="font-size:0.92rem; color:#0a192f; display:block; margin-top:2px;">09516028992</strong>
-                        </div>
-                        <div id="cbd-guest-container" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-top:4px;">
-                            <span style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase; display:block;">Booking Form Name (Guest)</span>
-                            <strong id="cbd-booking-guest-name" style="font-size:0.95rem; color:#0a192f; display:block; margin-top:2px;">Larra Ayroso</strong>
-                        </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">User Account Email</span>
+                        <strong id="cbd-client-email" style="font-size:0.92rem; color:#2563eb; display:block; margin-top:2px;">dendenescondecabrera17@gmail.com</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">Contact Phone</span>
+                        <strong id="cbd-client-phone" style="font-size:0.92rem; color:#0a192f; display:block; margin-top:2px;">09516028992</strong>
                     </div>
                 </div>
-
-                <!-- Event Schedule & Location Card -->
-                <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
-                    <div style="font-size:0.85rem; font-weight:800; color:#0f172a; text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                        <i class="fa-solid fa-calendar-day" style="color:#2563eb;"></i> Event Reservation
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">Event Schedule</span>
-                            <strong id="cbd-event-schedule" style="font-size:0.96rem; color:#0a192f; display:block; margin-top:2px;">-</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">Venue Name</span>
-                            <strong id="cbd-event-venue" style="font-size:0.96rem; color:#0a192f; display:block; margin-top:2px;">-</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; display:block;">Event Address / Location</span>
-                            <span id="cbd-event-address" style="font-size:0.88rem; color:#475569; display:block; margin-top:2px; line-height:1.4;">-</span>
-                        </div>
-                    </div>
+                <div id="cbd-guest-container" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-top:14px; display:none;">
+                    <span style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase; display:block;">Booking Form Name (Guest)</span>
+                    <strong id="cbd-booking-guest-name" style="font-size:0.95rem; color:#0a192f; display:block; margin-top:2px;">Larra Ayroso</strong>
                 </div>
             </div>
 
