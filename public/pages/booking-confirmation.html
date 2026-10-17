@@ -281,12 +281,6 @@
                     <td class="receipt-val"><span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800;">CONFIRMED</span></td>
                 </tr>
             </table>
-
-            <div id="invoice-actions-row" style="display: flex; gap: 12px; justify-content: center; margin-top: 26px; flex-wrap: wrap;">
-                <button type="button" id="btn-download-pdf" class="btn-invoice-action btn-pdf-primary">
-                    <i class="fa-solid fa-file-pdf"></i> Download PDF Invoice
-                </button>
-            </div>
         </div>
     </main>
 
@@ -492,89 +486,6 @@
                         bookingLoaded = true;
                     }
                 } catch (e) {}
-            }
-
-            // PDF Download Handler (Crisp, perfectly centered, non-clipped A4 export)
-            const downloadPdfBtn = document.getElementById('btn-download-pdf');
-            if (downloadPdfBtn) {
-                downloadPdfBtn.addEventListener('click', async () => {
-                    const refElem = document.getElementById('confirm-ref-code');
-                    const ref = refElem ? refElem.textContent.trim() : 'SS-Booking';
-                    const invoiceCard = document.querySelector('.confirmation-card');
-
-                    if (!invoiceCard) return;
-
-                    const originalBtnHtml = downloadPdfBtn.innerHTML;
-                    downloadPdfBtn.disabled = true;
-                    downloadPdfBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...`;
-
-                    // Create a dedicated clean clone styled specifically for A4 PDF export
-                    const invoiceClone = invoiceCard.cloneNode(true);
-                    const cloneActions = invoiceClone.querySelector('#invoice-actions-row');
-                    if (cloneActions) cloneActions.remove();
-
-                    // Style clone cleanly for standard A4 document without shadows or clipping
-                    invoiceClone.style.width = '640px';
-                    invoiceClone.style.maxWidth = '640px';
-                    invoiceClone.style.margin = '0 auto';
-                    invoiceClone.style.padding = '28px 32px';
-                    invoiceClone.style.boxShadow = 'none';
-                    invoiceClone.style.border = '1px solid #cbd5e1';
-                    invoiceClone.style.borderRadius = '12px';
-                    invoiceClone.style.background = '#ffffff';
-                    invoiceClone.style.boxSizing = 'border-box';
-
-                    // Ensure all table rows maintain proper widths and font styling
-                    const tables = invoiceClone.querySelectorAll('table');
-                    tables.forEach(t => {
-                        t.style.width = '100%';
-                        t.style.borderCollapse = 'collapse';
-                        t.style.margin = '16px 0';
-                    });
-
-                    // Off-screen wrapper with zero scroll to eliminate html2canvas scroll offset cropping
-                    const wrapper = document.createElement('div');
-                    wrapper.style.position = 'fixed';
-                    wrapper.style.top = '0';
-                    wrapper.style.left = '-9999px';
-                    wrapper.style.width = '640px';
-                    wrapper.style.background = '#ffffff';
-                    wrapper.style.zIndex = '-9999';
-                    wrapper.appendChild(invoiceClone);
-                    document.body.appendChild(wrapper);
-
-                    try {
-                        if (typeof html2pdf !== 'undefined') {
-                            const opt = {
-                                margin: [12, 10, 12, 10],
-                                filename: `Invoice-${ref}.pdf`,
-                                image: { type: 'jpeg', quality: 0.98 },
-                                html2canvas: {
-                                    scale: 2,
-                                    useCORS: true,
-                                    logging: false,
-                                    scrollX: 0,
-                                    scrollY: 0,
-                                    windowWidth: 640
-                                },
-                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                            };
-                            await html2pdf().set(opt).from(invoiceClone).save();
-                        } else {
-                            window.print();
-                        }
-                    } catch (err) {
-                        console.warn('PDF export fallback:', err);
-                        window.print();
-                    } finally {
-                        if (wrapper && wrapper.parentNode) {
-                            wrapper.parentNode.removeChild(wrapper);
-                        }
-                        downloadPdfBtn.disabled = false;
-                        downloadPdfBtn.innerHTML = originalBtnHtml;
-                    }
-                });
             }
         });
     </script>
