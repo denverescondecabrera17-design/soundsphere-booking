@@ -132,8 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pkg = item.pkg;
                     const title = pkg.name || pkg.title || 'Sound Package';
                     const rawPrice = Number(pkg.price || p.startingPrice || 15000);
-                    const priceFormatted = rawPrice.toLocaleString('en-US');
-                    const description = pkg.description || '';
+                    const providerName = p.businessName || p.name || 'SoundSphere Provider';
+                    const businessAddress = p.businessAddress || p.address || '';
+                    const coverageArea = p.coverageArea || 'Batangas';
+                    const category = (pkg.category || 'Basic Package').toUpperCase();
                     const cardKey = `main-pkg-${p.id || index}-${pkg.id || index}`;
 
                     // Inclusions parsing
@@ -169,100 +171,139 @@ document.addEventListener('DOMContentLoaded', () => {
                     const firstPhotoUrl = pkgPhotoUrls[0] || 'assets/images/banner.png';
                     const hasMultiplePkgPhotos = pkgPhotoUrls.length > 1;
 
-                    const photosGalleryHTML = `
-                        <div style="margin:10px 0 8px 0; border-top:1px solid #f1f5f9; padding-top:8px;">
-                            <strong style="font-size:0.78rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px; font-weight:800; letter-spacing:0.3px;">
-                                <i class="fa-solid fa-camera" style="color:#2563eb; margin-right:4px;"></i> Setup / Equipment Photos
-                            </strong>
-                            <div class="pkg-photo-gallery" style="display:flex; flex-direction:column; gap:6px;">
+                    // Provider Avatar extraction
+                    let avatarSrc = p.profilePicture || p.avatar || p.userProfilePicture || '';
+                    if (avatarSrc && typeof avatarSrc === 'string') {
+                        avatarSrc = avatarSrc.trim();
+                        if (avatarSrc.startsWith('/data:')) avatarSrc = avatarSrc.substring(1);
+                        else if (!avatarSrc.startsWith('/') && !avatarSrc.startsWith('http') && !avatarSrc.startsWith('data:')) avatarSrc = '/' + avatarSrc;
+                    }
+                    const avatarHTML = avatarSrc ?
+                        `<img src="${avatarSrc}" alt="${escapeHtml(providerName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.outerHTML='<i class=\\'fa-solid fa-store\\' style=\\'color:#2563eb;\\'></i>'">` :
+                        `<i class="fa-solid fa-store" style="color:#2563eb;"></i>`;
+
+                    return `
+                        <div class="package-card shopee-offer-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" data-price="${rawPrice}" data-title="${escapeHtml(title)}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(10,25,47,0.06); transition:all 0.25s ease; display:flex; flex-direction:column; justify-content:space-between; width:100%; box-sizing:border-box;">
+                            <div>
+                                <!-- 1. Setup / Equipment Photo Carousel -->
                                 <div class="offer-card-image-wrap" 
-                                     id="pkg-photo-wrap-${cardKey}" 
                                      data-pkg-id="${cardKey}" 
                                      data-photo-idx="0" 
-                                     style="width:100%; height:130px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; background:#000; position:relative; cursor:pointer; user-select:none;" 
-                                     onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${cardKey}'] && window.packagePhotosMap['${cardKey}'].length > 1) { window.switchCardPhoto('${cardKey}', 'next', event); } else { window.openCardGalleryLightbox('${cardKey}', event); } }" 
-                                     title="${hasMultiplePkgPhotos ? 'Click to swipe photo' : 'Click to enlarge photo'}">
-                                    <img id="main-offer-img-${cardKey}" src="${firstPhotoUrl}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">
-                                    
+                                     style="position:relative; height:180px; overflow:hidden; background:linear-gradient(135deg, #0a192f 0%, #1e3e62 100%); display:flex; align-items:center; justify-content:center; user-select:none; cursor:pointer;" 
+                                     onclick="if(!event.target.closest('.card-carousel-btn') && !event.target.closest('.card-enlarge-btn')) { if (window.packagePhotosMap && window.packagePhotosMap['${cardKey}'] && window.packagePhotosMap['${cardKey}'].length > 1) { window.switchCardPhoto('${cardKey}', 'next', event); } else { window.openCardGalleryLightbox('${cardKey}', event); } }"
+                                     title="${hasMultiplePkgPhotos ? 'Click photo to swipe to next photo' : 'Click photo to enlarge'}">
+                                    <img id="main-offer-img-${cardKey}" src="${firstPhotoUrl}" alt="${escapeHtml(title)}" class="card-main-img" style="width:100%; height:100%; object-fit:cover; transition:transform 0.25s ease, opacity 0.15s ease;">
+                                    <span style="position:absolute; top:10px; left:10px; background:rgba(37,99,235,0.95); color:#ffffff; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; text-transform:uppercase; backdrop-filter:blur(4px); box-shadow:0 2px 4px rgba(0,0,0,0.2); pointer-events:none; z-index:2;">${escapeHtml(category)}</span>
+                                    <span style="position:absolute; top:10px; right:10px; background:rgba(16,185,129,0.95); color:#ffffff; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; backdrop-filter:blur(4px); box-shadow:0 2px 4px rgba(0,0,0,0.2); pointer-events:none; z-index:2;"><i class="fa-solid fa-circle-check"></i> Available</span>
+
                                     ${hasMultiplePkgPhotos ? `
-                                        <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'prev', event);" title="Previous photo" style="position:absolute; left:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
-                                            <i class="fa-solid fa-chevron-left" style="font-size:0.75rem;"></i>
+                                        <button type="button" class="card-carousel-btn prev-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'prev', event);" title="Previous photo" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                            <i class="fa-solid fa-chevron-left" style="font-size:0.8rem;"></i>
                                         </button>
-                                        <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'next', event);" title="Next photo" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
-                                            <i class="fa-solid fa-chevron-right" style="font-size:0.75rem;"></i>
+                                        <button type="button" class="card-carousel-btn next-btn" onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', 'next', event);" title="Next photo" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:50%; background:rgba(10,25,47,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px); transition:all 0.2s ease; z-index:4;">
+                                            <i class="fa-solid fa-chevron-right" style="font-size:0.8rem;"></i>
                                         </button>
-                                        <span id="card-photo-counter-${cardKey}" style="position:absolute; bottom:6px; left:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:2px 7px; border-radius:6px; font-size:0.65rem; font-weight:800; pointer-events:none; border:1px solid rgba(255,255,255,0.2);">
+                                        <span id="card-photo-counter-${cardKey}" style="position:absolute; bottom:10px; left:10px; background:rgba(10,25,47,0.75); color:#ffffff; padding:2px 8px; border-radius:10px; font-size:0.6875rem; font-weight:800; backdrop-filter:blur(4px); pointer-events:none; border:1px solid rgba(255,255,255,0.2); z-index:2;">
                                             1 / ${pkgPhotoUrls.length}
                                         </span>
                                     ` : ''}
 
-                                    <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${cardKey}', event);" style="position:absolute; bottom:6px; right:6px; background:rgba(10,25,47,0.78); color:#ffffff; backdrop-filter:blur(4px); padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.25); z-index:3;">
+                                    <button type="button" class="card-enlarge-btn" onclick="event.stopPropagation(); window.openCardGalleryLightbox('${cardKey}', event);" style="position:absolute; bottom:10px; right:10px; background:rgba(10,25,47,0.78); color:#ffffff; padding:3px 9px; border-radius:8px; font-size:0.6875rem; font-weight:700; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.2s; z-index:3;" title="Click to enlarge photo">
                                         <i class="fa-solid fa-magnifying-glass-plus" style="color:#60a5fa;"></i> Enlarge
                                     </button>
                                 </div>
+
+                                <!-- Mini Gallery Preview Thumbnails -->
                                 ${hasMultiplePkgPhotos ? `
-                                    <div id="card-thumbnails-row-${cardKey}" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;">
+                                    <div id="card-thumbnails-row-${cardKey}" style="display:flex; gap:6px; padding:6px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; overflow-x:auto;">
                                         ${pkgPhotoUrls.map((pUrl, pIdx) => `
                                             <img src="${pUrl}" class="card-thumb-item ${pIdx === 0 ? 'active' : ''}" 
                                                  data-pkg-id="${cardKey}" 
                                                  data-idx="${pIdx}" 
-                                                 style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
                                                  onclick="event.stopPropagation(); window.switchCardPhoto('${cardKey}', ${pIdx}, event);" 
+                                                 style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:2px solid ${pIdx === 0 ? '#2563eb' : '#cbd5e1'}; cursor:pointer; flex-shrink:0; opacity:${pIdx === 0 ? '1' : '0.65'}; transition:all 0.2s ease; ${pIdx === 0 ? 'box-shadow:0 2px 6px rgba(37,99,235,0.35); transform:scale(1.05);' : ''}" 
                                                  onmouseover="this.style.opacity='1'; this.style.transform='scale(1.08)';" 
                                                  onmouseout="if(!this.classList.contains('active')) { this.style.opacity='0.65'; this.style.transform='scale(1)'; }" 
                                                  title="Photo ${pIdx + 1} - Click to switch">
                                         `).join('')}
                                     </div>
                                 ` : ''}
-                            </div>
-                        </div>
-                    `;
 
-                    return `
-                        <div class="package-card" data-provider-id="${p.id}" data-package-id="${pkg.id || ''}" data-price="${rawPrice}" data-title="${title}" style="cursor:pointer;" title="Click to view details">
-                            <div>
-                                <div class="pkg-header-badge">POPULAR OFFER</div>
-                                <div class="pkg-card-title">${title}</div>
-                                <div class="pkg-provider-sub">
-                                    <span class="pkg-provider-name"><i class="fa-solid fa-store" style="color:#2563eb;"></i> ${p.name}</span>
-                                    <span class="pkg-provider-dot">•</span>
-                                    <span class="pkg-provider-location"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${p.coverageArea || 'Batangas'}</span>
+                                <!-- Card Content Body -->
+                                <div style="padding:16px 16px 8px 16px;">
+                                    <!-- Service Package Title -->
+                                    <h3 onclick="window.location.href='/provider-detail.html?id=${p.id}${pkg.id ? `&package_id=${pkg.id}` : ''}'" style="margin:0 0 8px 0; font-size:1.05rem; font-weight:800; color:#0a192f; line-height:1.35; min-height:2.7em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; transition:color 0.2s ease;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#0a192f'" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+
+                                    <!-- Price Row -->
+                                    <div style="margin-bottom:10px;">
+                                        <div style="font-size:1.25rem; font-weight:900; color:#2563eb; letter-spacing:-0.2px;">
+                                            ₱${rawPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                            <span style="font-size:0.8125rem; color:#64748b; font-weight:600;">/Event</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Inclusions Box -->
+                                    <div onclick="window.location.href='/provider-detail.html?id=${p.id}${pkg.id ? `&package_id=${pkg.id}` : ''}'" style="margin-bottom:10px; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0; cursor:pointer;" title="Click to view inclusions">
+                                        <strong style="font-size:0.75rem; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px; font-weight:800;">INCLUSIONS:</strong>
+                                        <ul style="list-style:none; padding:0; margin:0; font-size:0.8125rem; color:#0f172a; display:flex; flex-direction:column; gap:3px;">
+                                            ${inclusions.slice(0, 3).map(inc => `<li style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;"><i class="fa-solid fa-check" style="color:#059669; margin-right:6px; font-size:0.8125rem; font-weight:900;"></i> ${escapeHtml(inc)}</li>`).join('')}
+                                            ${inclusions.length > 3 ? `<li style="font-size:0.75rem; color:#64748b; font-style:italic; font-weight:600; margin-top:2px;">+ ${inclusions.length - 3} more included</li>` : ''}
+                                        </ul>
+                                    </div>
+
+                                    <!-- Provider Profile and Coverage Location -->
+                                    <div style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
+                                        <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="window.location.href='/provider-detail.html?id=${p.id}'" title="View Storefront Profile of ${escapeHtml(providerName)}">
+                                            <div style="width:32px; height:32px; border-radius:50%; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.875rem; overflow:hidden; border:1px solid #93c5fd; flex-shrink:0;">
+                                                ${avatarHTML}
+                                            </div>
+                                            <div style="overflow:hidden; flex:1;">
+                                                <a href="/provider-detail.html?id=${p.id}" onclick="event.stopPropagation();" style="font-size:0.875rem; font-weight:800; color:#0a192f; text-decoration:none; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="Click to view ${escapeHtml(providerName)} Profile">
+                                                    ${escapeHtml(providerName)} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.6875rem; color:#2563eb;"></i>
+                                                </a>
+                                                <span style="font-size:0.8125rem; color:#64748b; font-weight:500; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">
+                                                    ${businessAddress ? `<span title="Business Place"><i class="fa-solid fa-store" style="color:#2563eb; margin-right:3px;"></i>${escapeHtml(businessAddress)}</span> <span style="margin:0 4px; color:#cbd5e1;">•</span> ` : ''}<span title="Coverage Area"><i class="fa-solid fa-location-dot" style="color:#ef4444; margin-right:3px;"></i>${escapeHtml(coverageArea)}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="pkg-card-price-row">
-                                    <span class="pkg-card-price">₱${priceFormatted}</span>
-                                    <span class="pkg-card-duration">/ Event Rental</span>
-                                </div>
-
-                                ${description ? `<p class="pkg-description-text">${description}</p>` : ''}
-
-                                ${inclusions.length > 0 ? `
-                                    <ul class="inclusions-list">
-                                        ${inclusions.map(inc => `<li><i class="fa-solid fa-check"></i> ${inc}</li>`).join('')}
-                                    </ul>
-                                ` : ''}
-
-                                ${photosGalleryHTML}
                             </div>
 
-                            <div class="pkg-card-actions-row">
-                                <button type="button" class="btn-select-package btn-view-package-details" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" title="View full details and specifications">
-                                    <i class="fa-solid fa-eye"></i> View Details
-                                </button>
-                                <button type="button" class="btn-book-package-direct btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${title}" data-pkg-price="${rawPrice}" title="Book this package">
-                                    <i class="fa-solid fa-calendar-check"></i> Book Now
-                                </button>
+                            <!-- Bottom Action Buttons: Chat & Book Now -->
+                            <div style="padding:0 16px 16px 16px;">
+                                <div style="display:flex; gap:8px;">
+                                    <button type="button" class="btn-card-chat" data-provider-id="${p.id}" data-provider-name="${encodeURIComponent(providerName)}" style="flex:1; height:40px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; color:#2563eb; font-weight:700; font-size:0.875rem; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Message Provider">
+                                        <i class="fa-solid fa-comment-dots"></i> Chat
+                                    </button>
+                                    <button type="button" class="btn-action-book" data-provider-id="${p.id}" data-pkg-id="${pkg.id || ''}" data-pkg-title="${encodeURIComponent(title)}" data-pkg-price="${rawPrice}" data-provider-name="${encodeURIComponent(providerName)}" style="flex:1.2; height:40px; border:none; border-radius:8px; background:#2563eb; color:#ffffff; font-weight:700; font-size:0.875rem; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.25); transition:all 0.2s ease; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Book Offer">
+                                        Book Now
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
                 }).join('');
 
-                // Attach View Details Click Listener
-                packagesGrid.querySelectorAll('.btn-view-package-details').forEach(btn => {
+                // Attach Chat Button Click Listener
+                const chatBtns = packagesGrid.querySelectorAll('.btn-card-chat');
+                chatBtns.forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const providerId = btn.getAttribute('data-provider-id');
-                        const pkgId = btn.getAttribute('data-pkg-id');
-                        window.location.href = `/provider-detail.html?id=${providerId}${pkgId ? `&package_id=${pkgId}` : ''}`;
+                        const providerName = decodeURIComponent(btn.getAttribute('data-provider-name') || '');
+                        const targetUrl = `/client-messages.html?providerId=${providerId}&providerName=${encodeURIComponent(providerName)}`;
+
+                        if (!token || !user) {
+                            if (typeof window.openAuthModal === 'function') {
+                                window.openAuthModal('login', { returnUrl: targetUrl });
+                            } else {
+                                sessionStorage.setItem('soundsphere_pending_redirect', targetUrl);
+                                window.location.href = `/login.html?returnUrl=${encodeURIComponent(targetUrl)}`;
+                            }
+                        } else {
+                            window.location.href = targetUrl;
+                        }
                     });
                 });
 
@@ -273,14 +314,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         e.stopPropagation();
                         const providerId = btn.getAttribute('data-provider-id');
                         const pkgId = btn.getAttribute('data-pkg-id');
-                        const pkgTitle = btn.getAttribute('data-pkg-title');
+                        const pkgTitle = decodeURIComponent(btn.getAttribute('data-pkg-title') || '');
                         const pkgPrice = parseInt(btn.getAttribute('data-pkg-price'), 10) || 15000;
+                        const providerName = decodeURIComponent(btn.getAttribute('data-provider-name') || '');
 
                         const pendingBooking = {
                             packageId: pkgId,
                             packageTitle: pkgTitle,
                             packagePrice: pkgPrice,
                             providerId: providerId,
+                            providerName: providerName,
                             returnUrl: `/provider-detail.html?id=${providerId}`
                         };
 
@@ -302,7 +345,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Make entire card clickable to view provider details
                 packagesGrid.querySelectorAll('.package-card').forEach(card => {
                     card.addEventListener('click', (e) => {
-                        if (e.target.closest('.pkg-photo-gallery') || e.target.closest('.pkg-card-actions-row')) return;
+                        if (e.target.closest('.offer-card-image-wrap') || 
+                            e.target.closest('.card-thumb-item') || 
+                            e.target.closest('.btn-card-chat') || 
+                            e.target.closest('.btn-action-book') || 
+                            e.target.closest('a')) return;
                         const providerId = card.getAttribute('data-provider-id');
                         const pkgId = card.getAttribute('data-package-id');
                         if (providerId) {
