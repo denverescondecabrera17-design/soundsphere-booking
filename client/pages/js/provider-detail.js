@@ -1428,6 +1428,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof showToast === 'function') showToast('Please state the reason clearly (at least 10 characters).', 'warning');
                 return;
             }
+            if (!bookingRef || !bookingRef.trim()) {
+                if (typeof showToast === 'function') showToast('Please enter the associated booking reference.', 'warning');
+                return;
+            }
 
             const targetProvId = (typeof currentLoadedProviderId !== 'undefined' && currentLoadedProviderId) || new URLSearchParams(window.location.search).get('id') || new URLSearchParams(window.location.search).get('provider_id') || new URLSearchParams(window.location.search).get('userId') || 13;
 

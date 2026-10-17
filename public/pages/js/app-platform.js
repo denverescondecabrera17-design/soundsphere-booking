@@ -5325,9 +5325,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <!-- Associated Booking Reference -->
                                 <div>
                                     <label style="display:block; font-size:1.05rem; font-weight:800; color:#1e293b; margin-bottom:8px;">
-                                        Associated Booking Reference <span style="font-size:0.85rem; color:#64748b; font-weight:normal;">(Optional)</span>
+                                        Associated Booking Reference <span style="color:#ef4444;">*</span>
                                     </label>
-                                    <input type="text" id="report-modal-booking-ref" placeholder="e.g. SS-2026-00018 or #BK-5" style="width:100%; padding:14px 18px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:1.05rem; color:#0f172a; box-sizing:border-box; outline:none;">
+                                    <input type="text" id="report-modal-booking-ref" required placeholder="e.g. SS-2026-00018 or #BK-5" style="width:100%; padding:14px 18px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:1.05rem; color:#0f172a; box-sizing:border-box; outline:none;">
                                 </div>
 
                                 <!-- Info Banner -->
@@ -5340,10 +5340,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
 
                             <!-- Footer -->
-                            <div style="padding:20px 36px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:14px; flex-shrink:0;">
-                                <button type="button" class="btn-close-report-modal" style="padding:14px 28px; border:1.5px solid #cbd5e1; border-radius:12px; background:#ffffff; color:#475569; font-weight:800; font-size:1.05rem; cursor:pointer; outline:none;">Cancel</button>
-                                <button type="submit" id="btn-submit-provider-report" style="padding:14px 34px; border:none; border-radius:12px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; font-weight:900; font-size:1.05rem; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 6px 20px rgba(37,99,235,0.35);">
-                                    <i class="fa-solid fa-paper-plane"></i> Submit Official Report
+                            <div style="padding:16px 36px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:12px; flex-shrink:0;">
+                                <button type="button" class="btn-close-report-modal" style="padding:9px 20px; border:1.5px solid #cbd5e1; border-radius:10px; background:#ffffff; color:#475569; font-weight:700; font-size:0.92rem; cursor:pointer; outline:none;">Cancel</button>
+                                <button type="submit" id="btn-submit-provider-report" style="padding:9px 22px; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; font-weight:800; font-size:0.92rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                                    <i class="fa-solid fa-paper-plane" style="font-size:0.88rem;"></i> Submit Official Report
                                 </button>
                             </div>
                         </form>
@@ -5477,6 +5477,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!description || description.trim().length < 10) {
                     toastFn('⚠️ Please state clearly what happened (at least 10 characters).', 'warning');
+                    return;
+                }
+
+                if (!bookingRef || !bookingRef.trim()) {
+                    toastFn('⚠️ Please enter the associated booking reference.', 'warning');
                     return;
                 }
 
