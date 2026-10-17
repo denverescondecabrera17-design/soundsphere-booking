@@ -1949,8 +1949,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return st !== 'pending' && pSt !== 'pending' && paid > 0;
                     };
 
-                    // Render Upcoming Event Reservations Table
-                    renderUpcomingReservations((s.upcomingBookings || []).filter(isPaidBooking));
+                    // Render Upcoming Event Reservations Table (include Today's events + future upcoming)
+                    const combinedReservations = [];
+                    const seenBookingIds = new Set();
+                    (s.todaysEvents || []).forEach(b => {
+                        if (b && b.BookingID && !seenBookingIds.has(b.BookingID)) {
+                            seenBookingIds.add(b.BookingID);
+                            combinedReservations.push(b);
+                        }
+                    });
+                    (s.upcomingBookings || []).forEach(b => {
+                        if (b && b.BookingID && !seenBookingIds.has(b.BookingID)) {
+                            seenBookingIds.add(b.BookingID);
+                            combinedReservations.push(b);
+                        }
+                    });
+                    // Sort chronologically (earliest first)
+                    combinedReservations.sort((a, b) => {
+                        const dateA = new Date(a.ServiceStartDate || a.EventDate || 0).getTime();
+                        const dateB = new Date(b.ServiceStartDate || b.EventDate || 0).getTime();
+                        return dateA - dateB;
+                    });
+
+                    renderUpcomingReservations(combinedReservations.filter(isPaidBooking));
                     renderBookingsTable((s.allBookings || []).filter(isPaidBooking));
                     renderRecentReviews(s.reviewsList || []);
                 }
@@ -2069,6 +2090,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             return dStr;
         } catch (e) {
             return dStr;
+        }
+    };
+
+    // Helper to determine if an event date is today
+    const isEventToday = (dStr) => {
+        if (!dStr || dStr === 'Scheduled') return false;
+        try {
+            const cleanStr = String(dStr).split('T')[0];
+            const parts = cleanStr.split('-');
+            let eventDate;
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                eventDate = new Date(year, month, day);
+            } else {
+                eventDate = new Date(dStr);
+            }
+            if (isNaN(eventDate.getTime())) return false;
+            const now = new Date();
+            return eventDate.getFullYear() === now.getFullYear() &&
+                   eventDate.getMonth() === now.getMonth() &&
+                   eventDate.getDate() === now.getDate();
+        } catch (e) {
+            return false;
         }
     };
 
@@ -2197,12 +2243,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dateStr = formatEventDisplayDate(b.ServiceStartDate || b.EventDate);
             const statusLower = (b.BookingStatus || 'Confirmed').toLowerCase();
             const payInfo = getBookingPaymentInfo(b);
+            const isToday = isEventToday(b.ServiceStartDate || b.EventDate);
 
             return `
                 <tr style="cursor:pointer; transition:background 0.2s ease;" onclick="window.openProviderBookingDetails(${b.BookingID})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" title="Click to view full reservation details">
                     <td><strong style="color:#0a192f; font-size:0.9rem;">${clientNameStr}</strong></td>
                     <td><strong style="color:#2563eb; font-size:0.88rem;">${packageNameStr}</strong></td>
-                    <td style="white-space:nowrap;"><span style="font-size:0.85rem; color:#334155; font-weight:600;">${dateStr}</span></td>
+                    <td style="white-space:nowrap;">
+                        <span style="font-size:0.85rem; color:#334155; font-weight:600;">
+                            ${dateStr}
+                            ${isToday ? `<span style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:10px; margin-left:6px; letter-spacing:0.4px;">TODAY</span>` : ''}
+                        </span>
+                    </td>
                     <td style="white-space:nowrap;">
                         <div style="display:flex; flex-direction:column; gap:1px; line-height:1.35;">
                             <strong style="font-size:0.95rem; color:#10b981; font-weight:800;">₱${payInfo.amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
