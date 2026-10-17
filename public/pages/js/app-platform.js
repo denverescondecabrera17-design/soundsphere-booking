@@ -814,11 +814,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const counts = { all: bookings.length, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
             bookings.forEach(b => {
                 const st = (b.BookingStatus || 'Confirmed').toLowerCase().trim();
-                if (st === 'confirmed' || st === 'approved' || st === 'paid') {
+                if (st === 'confirmed' || st === 'approved' || st === 'paid' || st === 'awaiting client confirmation') {
                     counts.confirmed++;
                 } else if (st === 'completed') {
                     counts.completed++;
-                } else if (st === 'pending') {
+                } else if (st === 'pending' || st === 'pending payment') {
                     counts.pending++;
                 } else if (st === 'cancelled' || st === 'rejected') {
                     counts.cancelled++;
