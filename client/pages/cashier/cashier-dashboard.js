@@ -1262,6 +1262,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const netEl = document.getElementById('cwd-net-amount');
         if (netEl) netEl.textContent = formatPHP(netAmount);
 
+        const payoutAmtEl = document.getElementById('cwd-payout-amount');
+        if (payoutAmtEl) payoutAmtEl.textContent = formatPHP(netAmount);
+
         const formulaTextEl = document.getElementById('cwd-formula-text');
         if (formulaTextEl) {
             formulaTextEl.innerHTML = `<strong>Payout Breakdown:</strong> ${formatPHP(grossAmount)} Gross Client Inflow − 5% SoundSphere Platform Commission (${formatPHP(commissionAmount)}) = <strong style="color:#059669;">${formatPHP(netAmount)} Net Provider Payout</strong>`;

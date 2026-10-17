@@ -1019,62 +1019,19 @@
                             <div id="cwd-requested-date" style="font-size:0.92rem; font-weight:700; color:#475569; margin-top:2px;">-</div>
                         </div>
                     </div>
-                    <div style="border-top:1px solid #f1f5f9; padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="border-top:1px solid #f1f5f9; padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
                         <div>
                             <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Service Provider</span>
                             <div id="cwd-provider-name" style="font-size:1.15rem; font-weight:800; color:#0a192f; margin-top:2px;">Provider Name</div>
                         </div>
                         <div>
+                            <span style="font-size:0.75rem; font-weight:700; color:#059669; text-transform:uppercase;">Payout Amount to Disburse</span>
+                            <div id="cwd-payout-amount" style="font-size:1.35rem; font-weight:900; color:#059669; margin-top:2px;">₱0.00</div>
+                        </div>
+                        <div>
                             <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Linked Booking Reference</span>
                             <div id="cwd-booking-ref" style="font-family:monospace; font-weight:800; font-size:1rem; color:#2563eb; margin-top:2px;">-</div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- 5% Platform Commission & Financial Breakdown Card -->
-                <div style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; padding:22px 26px; box-shadow:0 4px 16px rgba(0,0,0,0.04); margin-bottom:22px;">
-                    <div style="font-size:0.85rem; font-weight:800; color:#0f172a; text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                        <span style="display:flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-calculator" style="color:#2563eb;"></i> Financial Breakdown & 5% Platform Commission
-                        </span>
-                        <span class="badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:0.75rem; font-weight:800;">
-                            Platform Fee Applied
-                        </span>
-                    </div>
-
-                    <!-- 3 Metric Cards -->
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:16px;">
-                        <!-- Gross Amount -->
-                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 18px;">
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase; display:block;">Gross Booking Volume</span>
-                            <strong id="cwd-gross-amount" style="font-size:1.35rem; color:#0a192f; font-weight:900; display:block; margin-top:4px;">₱0.00</strong>
-                            <span style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Total paid by client for booking</span>
-                        </div>
-
-                        <!-- 5% Commission -->
-                        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:16px 18px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size:0.75rem; color:#92400e; font-weight:700; text-transform:uppercase;">Platform Commission</span>
-                                <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #f59e0b; font-size:0.7rem; font-weight:800;">5% Deduction</span>
-                            </div>
-                            <strong id="cwd-commission-amount" style="font-size:1.35rem; color:#d97706; font-weight:900; display:block; margin-top:4px;">-₱0.00</strong>
-                            <span style="font-size:0.75rem; color:#92400e; margin-top:4px; display:block;">SoundSphere 5% platform service share</span>
-                        </div>
-
-                        <!-- Net Payout to Provider -->
-                        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:16px 18px;">
-                            <span style="font-size:0.75rem; color:#065f46; font-weight:700; text-transform:uppercase; display:block;">Net Payout to Disburse</span>
-                            <strong id="cwd-net-amount" style="font-size:1.45rem; color:#059669; font-weight:900; display:block; margin-top:4px;">₱0.00</strong>
-                            <span style="font-size:0.75rem; color:#047857; margin-top:4px; display:block;">Net payout released to service provider</span>
-                        </div>
-                    </div>
-
-                    <!-- Explanatory Formula Banner -->
-                    <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:12px; font-size:0.86rem; color:#334155;">
-                        <i class="fa-solid fa-circle-info" style="color:#2563eb; font-size:1.15rem; flex-shrink:0;"></i>
-                        <span id="cwd-formula-text">
-                            <strong>Formula:</strong> Gross Inflow − 5% SoundSphere Platform Commission = <strong>Net Disbursable Provider Payout</strong>
-                        </span>
                     </div>
                 </div>
 
@@ -1373,6 +1330,6 @@
 
     <!-- API Helper & Cashier Dashboard Logic -->
     <script src="/js/api.js"></script>
-    <script src="js/cashier-dashboard.js?v=20261017_wdr_clickable_v1"></script>
+    <script src="js/cashier-dashboard.js?v=20261017_wdr_nobrkdown_v1"></script>
 </body>
 </html>
