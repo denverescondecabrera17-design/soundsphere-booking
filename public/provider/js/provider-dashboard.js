@@ -3372,15 +3372,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (btnClaimTrial) {
                         if (hasUsedTrial) {
                             btnClaimTrial.disabled = true;
-                            btnClaimTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> 1st Month Free Trial Claimed`;
+                            btnClaimTrial.innerHTML = `1st Month Free Trial Claimed`;
                             btnClaimTrial.style.background = '#94a3b8';
+                            btnClaimTrial.style.color = '#ffffff';
                             btnClaimTrial.style.boxShadow = 'none';
                             btnClaimTrial.style.cursor = 'not-allowed';
                         } else {
                             btnClaimTrial.disabled = false;
-                            btnClaimTrial.innerHTML = `<i class="fa-solid fa-circle-play"></i> Claim 1st Month Free`;
-                            btnClaimTrial.style.background = '#10b981';
-                            btnClaimTrial.style.boxShadow = '0 4px 12px rgba(16,185,129,0.25)';
+                            btnClaimTrial.innerHTML = `Claim 1st Month Free`;
+                            btnClaimTrial.style.background = '#0a192f';
+                            btnClaimTrial.style.color = '#ffffff';
+                            btnClaimTrial.style.boxShadow = 'none';
                             btnClaimTrial.style.cursor = 'pointer';
                         }
                     }
@@ -3447,27 +3449,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const amt = parseFloat(p.Amount || 0);
                                 const isFree = p.PlanType === 'free_trial' || amt === 0;
                                 const amtDisplay = isFree ? '₱0.00 (Free)' : `₱${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                                const statusColor = (p.PaymentStatus === 'Paid') ? '#10b981' : '#f59e0b';
                                 const refId = p.PayMongoSessionID || 'N/A';
 
                                 return `
                                     <tr style="border-bottom:1px solid #f1f5f9;">
                                         <td style="padding:14px 16px; font-weight:700; color:#0a192f;">
-                                            <i class="fa-solid fa-crown" style="color:#f59e0b; margin-right:6px;"></i>
                                             ${cleanPlanTitle(p.PlanName || p.PlanType)}
                                         </td>
                                         <td style="padding:14px 16px; font-weight:800; color:#0a192f;">${amtDisplay}</td>
                                         <td style="padding:14px 16px; color:#475569; font-weight:600;">${p.PaymentMethod || 'PayMongo'}</td>
                                         <td style="padding:14px 16px; color:#64748b;">${payDate}</td>
                                         <td style="padding:14px 16px;">
-                                            <span style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}40; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:800;">
+                                            <span style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">
                                                 ${p.PaymentStatus || 'Paid'}
                                             </span>
                                         </td>
                                         <td style="padding:14px 16px; font-family:monospace; font-size:0.8rem; color:#64748b;">${refId.length > 20 ? refId.substring(0, 18) + '...' : refId}</td>
                                         <td style="padding:14px 16px; text-align:center;">
-                                            <button type="button" class="btn-view-sub-receipt-item" data-payment-id="${p.PaymentID}" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 14px; border-radius:8px; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                                                <i class="fa-solid fa-receipt"></i> View Receipt
+                                            <button type="button" class="btn-view-sub-receipt-item" data-payment-id="${p.PaymentID}" style="background:#f8fafc; color:#0a192f; border:1px solid #cbd5e1; padding:6px 14px; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center;">
+                                                View Receipt
                                             </button>
                                         </td>
                                     </tr>
