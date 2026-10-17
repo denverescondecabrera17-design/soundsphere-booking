@@ -2128,7 +2128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadCashierSubscriptions() {
         const tbody = document.getElementById('subscriptions-table-body');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:28px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Loading subscription payments...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Loading subscription payments...</td></tr>`;
         }
 
         try {
@@ -2142,7 +2142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (handleCashierAuthError(res, data)) return;
 
             if (!data.success) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#ef4444;">${data.message || 'Failed to load subscription payments.'}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">${data.message || 'Failed to load subscription payments.'}</td></tr>`;
                 return;
             }
 
@@ -2171,7 +2171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSubscriptionsList();
         } catch (err) {
             console.error('Error fetching cashier subscriptions:', err);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#ef4444;">Error connecting to server.</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">Error connecting to server.</td></tr>`;
         }
     }
 
@@ -2198,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#64748b;">No subscription payments found for this filter.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:#64748b;">No subscription payments found for this filter.</td></tr>`;
             return;
         }
 
@@ -2217,7 +2217,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td>${planBadge}</td>
                     <td><strong class="flow-inflow">+${formatPHP(item.Amount)}</strong></td>
-                    <td><span class="badge" style="background:#f8fafc; border:1px solid #cbd5e1; color:#0a192f;">${item.PaymentMethod || 'Cash'}</span></td>
                     <td><span style="font-size:0.85rem; color:#475569;">${formatDateTime(item.PaymentDate)}</span></td>
                     <td><span class="badge badge-approved">${item.PaymentStatus || 'Paid'}</span></td>
                 </tr>
