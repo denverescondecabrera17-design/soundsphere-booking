@@ -2932,9 +2932,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </div>
 
                                         <div style="display:flex; gap:10px; padding-top:16px; border-top:1px solid #f1f5f9; margin-top:14px;">
-                                            <button type="button" onclick="window.togglePackageStatusItem(${p.PackageID}, ${!isActive})" style="flex:1; height:46px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; font-size:0.96rem; font-weight:700; color:#475569; cursor:pointer;" title="Toggle Offer Status">
-                                                <i class="fa-solid fa-power-off" style="color:${isActive ? '#ef4444' : '#10b981'};"></i> ${isActive ? 'Deactivate' : 'Activate'}
-                                            </button>
                                             <button type="button" onclick="window.editPackageItem(${p.PackageID})" style="flex:1; height:46px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-size:0.96rem; font-weight:700; cursor:pointer;" title="Edit Offer">
                                                 <i class="fa-solid fa-pen"></i> Edit
                                             </button>
