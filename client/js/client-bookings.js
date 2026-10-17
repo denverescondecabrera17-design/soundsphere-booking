@@ -396,11 +396,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <div class="pricing-side-box">
                         <div class="total-price-label">Total Booking Amount</div>
-                        <div class="total-price-amount">₱${b.totalPrice.toLocaleString()}</div>
-                        <div style="font-size:0.82rem; font-weight:700; color:#10b981; margin-top:4px;">Paid: ₱${b.amountPaid.toLocaleString()} (${b.paymentType === 'full' ? '100% Full' : '50% Down'})</div>
-                        ${b.remainingBalance > 0 ? (b.isOverdue ? `<div style="font-size:0.82rem; font-weight:800; color:#dc2626; margin-top:2px;"><i class="fa-solid fa-triangle-exclamation"></i> Overdue: ₱${b.remainingBalance.toLocaleString()} (${b.daysOverdue}d past due)</div>` : `<div style="font-size:0.82rem; font-weight:800; color:#ef4444; margin-top:2px;">Balance: ₱${b.remainingBalance.toLocaleString()} (Due on event date)</div>`) : `<div style="font-size:0.82rem; font-weight:700; color:#2563eb; margin-top:2px;">Remaining Balance Paid</div>`}
+                        <div class="total-price-amount">₱${b.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div style="font-size:0.82rem; font-weight:700; color:#10b981; margin-top:4px;">Paid: ₱${b.amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${b.paymentType === 'full' ? '100% Full' : '50% Down'})</div>
+                        ${b.remainingBalance > 0 ? (b.isOverdue ? `<div style="font-size:0.82rem; font-weight:800; color:#dc2626; margin-top:2px;"><i class="fa-solid fa-triangle-exclamation"></i> Overdue: ₱${b.remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${b.daysOverdue}d past due)</div>` : `<div style="font-size:0.82rem; font-weight:800; color:#ef4444; margin-top:2px;">Balance: ₱${b.remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Due on event date)</div>`) : `<div style="font-size:0.82rem; font-weight:700; color:#2563eb; margin-top:2px;">Remaining Balance Paid</div>`}
                         <div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-top:6px; border-top:1px dashed #e2e8f0; padding-top:4px;">
-                            Pkg: ₱${b.packagePrice.toLocaleString()} | Transpo: ₱${b.transportationFee.toLocaleString()}${b.distanceKm ? ` (${b.distanceKm}km)` : ''}${b.additionalDayCharges > 0 ? ` | Extra: ₱${b.additionalDayCharges.toLocaleString()}` : ''}
+                            Pkg: ₱${b.packagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Transpo: ₱${b.transportationFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${b.distanceKm ? ` (${b.distanceKm}km)` : ''}${b.additionalDayCharges > 0 ? ` | Extra: ₱${b.additionalDayCharges.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                         </div>
                     </div>
                 </div>

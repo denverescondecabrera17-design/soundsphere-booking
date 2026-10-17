@@ -1033,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                     <div style="text-align:right; min-width:200px; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                                         <div style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase;">Total Amount</div>
-                                        <div style="font-size:1.65rem; font-weight:900; color:#2563eb;">₱${totalAmountVal.toLocaleString()}</div>
+                                        <div style="font-size:1.65rem; font-weight:900; color:#2563eb;">₱${totalAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         
                                         <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
                                             ${(statusLower === 'pending' || statusLower === 'pending payment' || amountPaidVal === 0) ? `
@@ -1042,21 +1042,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                             </span>
                                             ` : `
                                             <span style="font-size:0.84rem; font-weight:800; background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #a7f3d0;">
-                                                Paid: ₱${amountPaidVal.toLocaleString()} (${isDownpayment ? '50% Deposit' : '100% Full'})
+                                                Paid: ₱${amountPaidVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${isDownpayment ? '50% Deposit' : '100% Full'})
                                             </span>
                                             `}
                                             
                                             ${remainingBalVal > 0 && amountPaidVal > 0 ? (isOverdue ? `
                                             <span style="font-size:0.82rem; font-weight:800; background:#fee2e2; color:#b91c1c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; border:1.5px solid #f87171;">
-                                                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Overdue: ₱${remainingBalVal.toLocaleString()} (${daysOverdue}d past due)
+                                                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Overdue: ₱${remainingBalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${daysOverdue}d past due)
                                             </span>` : `
                                             <span style="font-size:0.82rem; font-weight:800; background:#fff1f2; color:#be123c; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; border:1px solid #fecdd3;">
-                                                Balance: ₱${remainingBalVal.toLocaleString()} (Due on event)
+                                                Balance: ₱${remainingBalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Due on event)
                                             </span>`) : ''}
                                         </div>
 
                                         <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-align:right; margin-top:2px;">
-                                            Package: ₱${parseFloat(b.PackagePrice || 0).toLocaleString()} | Transpo: ₱${parseFloat(b.TransportationFee || 0).toLocaleString()}${b.DistanceKm ? ` (${b.DistanceKm}km)` : ''}${b.AdditionalDayCharges > 0 ? ` | Extra: ₱${parseFloat(b.AdditionalDayCharges).toLocaleString()}` : ''}
+                                            Package: ₱${parseFloat(b.PackagePrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Transpo: ₱${parseFloat(b.TransportationFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${b.DistanceKm ? ` (${b.DistanceKm}km)` : ''}${b.AdditionalDayCharges > 0 ? ` | Extra: ₱${parseFloat(b.AdditionalDayCharges).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -1388,7 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                     <div style="text-align:right; min-width:180px; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                                         <div style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Total Amount</div>
-                                        <div style="font-size:1.8rem; font-weight:900; color:#2563eb;">₱${parseFloat(b.TotalAmount || b.PackagePrice || 0).toLocaleString()}</div>
+                                        <div style="font-size:1.8rem; font-weight:900; color:#2563eb;">₱${parseFloat(b.TotalAmount || b.PackagePrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         <span style="font-size:0.85rem; font-weight:800; background:#ecfdf5; color:#047857; padding:5px 12px; border-radius:6px; display:inline-block;">
                                             ${b.PaymentStatus || 'Paid'} (${b.PaymentType === 'downpayment' ? '50% Deposit' : '100% Full'})
                                         </span>
@@ -1400,11 +1400,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
                                         <div>
                                             <div style="font-size:0.8rem; font-weight:800; color:#64748b; text-transform:uppercase;">Package Base Price</div>
-                                            <div style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-top:3px;">₱${parseFloat(b.PackagePrice || b.TotalAmount || 0).toLocaleString()}</div>
+                                            <div style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-top:3px;">₱${parseFloat(b.PackagePrice || b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
                                         <div>
                                             <div style="font-size:0.8rem; font-weight:800; color:#64748b; text-transform:uppercase;">Transportation Fee</div>
-                                            <div style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-top:3px;">${b.TransportationFee ? '₱' + parseFloat(b.TransportationFee).toLocaleString() : 'Included / Free'}</div>
+                                            <div style="font-size:1.05rem; font-weight:800; color:#0a192f; margin-top:3px;">${b.TransportationFee ? '₱' + parseFloat(b.TransportationFee).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Included / Free'}</div>
                                         </div>
                                         <div>
                                             <div style="font-size:0.8rem; font-weight:800; color:#64748b; text-transform:uppercase;">Payment Method</div>
@@ -1610,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     data-client-email="${encodeURIComponent(b.ClientEmail || (currentUser && currentUser.email) || '')}"
                                     data-client-phone="${encodeURIComponent(b.ClientPhone || (currentUser && currentUser.phone) || '')}"
                                     style="padding:12px 28px; font-size:1rem; font-weight:900; border:none; border-radius:10px; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(220,38,38,0.35); transition:all 0.2s ease;">
-                                <i class="fa-solid fa-triangle-exclamation"></i> Pay Overdue Balance (₱${remainingBalVal.toLocaleString()})
+                                <i class="fa-solid fa-triangle-exclamation"></i> Pay Overdue Balance (₱${remainingBalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                             </button>
                         ` : `
                             <button type="button" class="btn-pay-balance-due btn-card-primary" 
@@ -1622,7 +1622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     data-client-email="${encodeURIComponent(b.ClientEmail || (currentUser && currentUser.email) || '')}"
                                     data-client-phone="${encodeURIComponent(b.ClientPhone || (currentUser && currentUser.phone) || '')}"
                                     style="padding:12px 28px; font-size:1rem; font-weight:800; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); transition:all 0.2s ease;">
-                                <i class="fa-solid fa-credit-card"></i> Pay Remaining Balance (₱${remainingBalVal.toLocaleString()})
+                                <i class="fa-solid fa-credit-card"></i> Pay Remaining Balance (₱${remainingBalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                             </button>
                         `;
 
@@ -1661,15 +1661,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div style="text-align:right; min-width:240px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; background:${isOverdue ? '#fef2f2' : '#f8fafc'}; border:1px solid ${isOverdue ? '#fecaca' : '#e2e8f0'}; padding:16px 20px; border-radius:14px;">
                                         <div style="display:flex; justify-content:space-between; width:100%; gap:16px;">
                                             <span style="font-size:0.85rem; font-weight:700; color:#64748b;">Total Package & Transpo:</span>
-                                            <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">₱${totalAmountVal.toLocaleString()}</span>
+                                            <span style="font-size:0.95rem; font-weight:800; color:#0a192f;">₱${totalAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div style="display:flex; justify-content:space-between; width:100%; gap:16px;">
                                             <span style="font-size:0.85rem; font-weight:700; color:#059669;">Initial Deposit Paid:</span>
-                                            <span style="font-size:0.95rem; font-weight:800; color:#059669;">-₱${amountPaidVal.toLocaleString()}</span>
+                                            <span style="font-size:0.95rem; font-weight:800; color:#059669;">-₱${amountPaidVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div style="display:flex; justify-content:space-between; width:100%; gap:16px; border-top:1.5px dashed ${isOverdue ? '#f87171' : '#cbd5e1'}; padding-top:8px;">
                                             <span style="font-size:0.9rem; font-weight:800; color:${isOverdue ? '#b91c1c' : '#be123c'};">${isOverdue ? 'Overdue Balance Due:' : 'Remaining Due:'}</span>
-                                            <span style="font-size:1.45rem; font-weight:900; color:${isOverdue ? '#dc2626' : '#e11d48'};">₱${remainingBalVal.toLocaleString()}</span>
+                                            <span style="font-size:1.45rem; font-weight:900; color:${isOverdue ? '#dc2626' : '#e11d48'};">₱${remainingBalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         ${dueBoxHtml}
                                     </div>
@@ -1692,7 +1692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (totalDueAmountEl) {
-                    totalDueAmountEl.textContent = `₱${sumOutstandingDue.toLocaleString()}`;
+                    totalDueAmountEl.textContent = `₱${sumOutstandingDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 }
             }
         } catch (err) {
