@@ -1155,7 +1155,7 @@ const createPayMongoCheckout = async (req, res) => {
             const lookupRes = await pool.request()
                 .input('BID', sql.Int, bookingId ? parseInt(bookingId, 10) : 0)
                 .input('Ref', sql.NVarChar(50), bookingReference || '')
-                .query(`SELECT TOP 1 * FROM dbo.Bookings WHERE BookingID = @BID OR BookingReference = @Ref;`);
+                .query(`SELECT TOP 1 * FROM dbo.Bookings WHERE BookingID = @BID OR BookingReference = @Ref ORDER BY BookingID DESC;`);
 
             if (lookupRes.recordset && lookupRes.recordset[0]) {
                 const bk = lookupRes.recordset[0];
@@ -1365,8 +1365,8 @@ const acceptBookingCompletion = async (req, res) => {
  */
 const verifyPayMongoPayment = async (req, res) => {
     try {
-        const { bookingReference, sessionId } = req.body;
-        if (!bookingReference && !sessionId) {
+        const { bookingReference, bookingId, sessionId, action } = req.body;
+        if (!bookingReference && !sessionId && !bookingId) {
             return res.status(400).json({ success: false, message: 'Booking reference or Session ID is required.' });
         }
 
@@ -1374,65 +1374,39 @@ const verifyPayMongoPayment = async (req, res) => {
         try { pool = getPool(); } catch (e) { pool = await getOrConnectPool(); }
         if (!pool) return res.status(500).json({ success: false, message: 'Database connection failed.' });
 
-        const bkRes = await pool.request()
-            .input('Ref', bookingReference)
-            .query(`SELECT TOP 1 * FROM dbo.Bookings WHERE BookingReference = @Ref;`);
+        const reqQuery = pool.request();
+        let findSql = 'SELECT TOP 1 * FROM dbo.Bookings WHERE ';
+        if (bookingId) {
+            reqQuery.input('BID', sql.Int, parseInt(bookingId, 10));
+            findSql += 'BookingID = @BID;';
+        } else if (bookingReference) {
+            reqQuery.input('Ref', sql.NVarChar(50), bookingReference);
+            findSql += 'BookingReference = @Ref ORDER BY BookingID DESC;';
+        } else {
+            reqQuery.input('SessId', sql.NVarChar(100), sessionId);
+            findSql += 'BookingID = (SELECT TOP 1 BookingID FROM dbo.Payments WHERE TransactionReference = @SessId ORDER BY PaymentID DESC);';
+        }
 
+        const bkRes = await reqQuery.query(findSql);
         const booking = bkRes.recordset[0];
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking reservation not found.' });
         }
 
+        const targetBookingId = booking.BookingID;
         const remainingBal = parseFloat(booking.RemainingBalance || 0);
-
-        // If booking is already confirmed, check if remaining balance needs to be settled
-        if (booking.BookingStatus === 'Confirmed') {
-            if (remainingBal > 0) {
-                let isPaid = true;
-                if (sessionId && sessionId.startsWith('cs_')) {
-                    try {
-                        const pmStatus = await paymongoService.getCheckoutSessionStatus(sessionId);
-                        isPaid = pmStatus && (pmStatus.status === 'paid' || pmStatus.isPaid || pmStatus.success);
-                    } catch (pmErr) {
-                        console.warn('PayMongo verification check error:', pmErr.message);
-                        isPaid = true;
-                    }
-                }
-
-                if (!isPaid) {
-                    return res.status(400).json({ success: false, message: 'Payment verification failed or was cancelled.' });
-                }
-
-                await bookingModel.settleRemainingBalance({
-                    bookingId: booking.BookingID,
-                    bookingReference: booking.BookingReference,
-                    amount: req.body.amount ? parseFloat(req.body.amount) : remainingBal,
-                    paymentMethod: 'PayMongo',
-                    transactionReference: sessionId || `BAL-${booking.BookingReference}-${Date.now()}`
-                });
-
-                return res.status(200).json({
-                    success: true,
-                    message: 'Remaining balance settled and booking marked as fully paid.',
-                    booking: {
-                        ...booking,
-                        PaymentStatus: 'Paid',
-                        PaymentType: 'full',
-                        AmountPaid: booking.TotalAmount,
-                        RemainingBalance: 0
-                    }
-                });
-            }
-
-            return res.status(200).json({ success: true, message: 'Booking is already confirmed and fully paid.', booking });
-        }
 
         // Verify with PayMongo if a real session ID is provided
         let isPaid = true;
+        let pmStatus = null;
+        let sessionPaidAmount = 0;
         if (sessionId && sessionId.startsWith('cs_')) {
             try {
-                const pmStatus = await paymongoService.getCheckoutSessionStatus(sessionId);
+                pmStatus = await paymongoService.getCheckoutSessionStatus(sessionId);
                 isPaid = pmStatus && (pmStatus.status === 'paid' || pmStatus.isPaid || pmStatus.success);
+                if (pmStatus && pmStatus.payments && pmStatus.payments[0] && pmStatus.payments[0].attributes && pmStatus.payments[0].attributes.amount) {
+                    sessionPaidAmount = parseFloat((pmStatus.payments[0].attributes.amount / 100).toFixed(2));
+                }
             } catch (pmErr) {
                 console.warn('PayMongo verification check error:', pmErr.message);
                 isPaid = true; // Fallback to avoid blocking client
@@ -1443,16 +1417,49 @@ const verifyPayMongoPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment verification failed or was cancelled.' });
         }
 
+        // ONLY settle remaining balance if action === 'settle_balance'
+        if (action === 'settle_balance') {
+            await bookingModel.settleRemainingBalance({
+                bookingId: targetBookingId,
+                bookingReference: booking.BookingReference,
+                amount: req.body.amount ? parseFloat(req.body.amount) : (sessionPaidAmount > 0 ? sessionPaidAmount : remainingBal),
+                paymentMethod: 'PayMongo',
+                transactionReference: sessionId || `BAL-${booking.BookingReference}-${Date.now()}`
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Remaining balance settled and booking marked as fully paid.',
+                booking: {
+                    ...booking,
+                    PaymentStatus: 'Paid',
+                    PaymentType: 'full',
+                    AmountPaid: booking.TotalAmount,
+                    RemainingBalance: 0
+                }
+            });
+        }
+
+        // If booking is already confirmed AND has accurate partial/full payment, return current booking
+        if (booking.BookingStatus === 'Confirmed' && parseFloat(booking.AmountPaid || 0) > 0) {
+            return res.status(200).json({ success: true, message: 'Booking is already confirmed.', booking });
+        }
+
         const total = parseFloat(booking.TotalAmount || 0);
         const isDown = (booking.PaymentType === 'downpayment');
-        const paidAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
-        const remBal = isDown ? parseFloat((total - paidAmount).toFixed(2)) : 0;
+        let paidAmount = 0;
+        if (sessionPaidAmount > 0) {
+            paidAmount = sessionPaidAmount;
+        } else {
+            paidAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
+        }
+        const remBal = parseFloat(Math.max(0, total - paidAmount).toFixed(2));
         const commRate = parseFloat(booking.CommissionRate || 5) / 100;
         const providerEarn = parseFloat((paidAmount * (1 - commRate)).toFixed(2));
-        const paymentStatus = isDown ? 'Partial' : 'Paid';
+        const paymentStatus = remBal <= 0 ? 'Paid' : 'Partial';
 
         await pool.request()
-            .input('Ref', bookingReference)
+            .input('BID', sql.Int, targetBookingId)
             .input('AmountPaid', sql.Decimal(18, 2), paidAmount)
             .input('RemainingBalance', sql.Decimal(18, 2), remBal)
             .input('ProviderEarnings', sql.Decimal(18, 2), providerEarn)
@@ -1465,13 +1472,13 @@ const verifyPayMongoPayment = async (req, res) => {
                     RemainingBalance = @RemainingBalance,
                     ProviderEarnings = @ProviderEarnings,
                     UpdatedAt = GETDATE()
-                WHERE BookingReference = @Ref;
+                WHERE BookingID = @BID;
 
                 UPDATE dbo.Payments
                 SET PaymentStatus = 'Paid',
                     Amount = @AmountPaid,
                     PaidAt = GETDATE()
-                WHERE BookingID = (SELECT BookingID FROM dbo.Bookings WHERE BookingReference = @Ref);
+                WHERE BookingID = @BID;
             `);
 
         // Send notifications upon verified confirmation

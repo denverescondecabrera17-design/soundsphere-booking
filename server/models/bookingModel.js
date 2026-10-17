@@ -518,8 +518,18 @@ const getTransportationFees = async () => {
 const generateBookingReference = async () => {
     const pool = getPool();
     const currentYear = new Date().getFullYear();
-    const countRes = await pool.request().query(`SELECT COUNT(*) AS Total FROM dbo.Bookings;`);
-    const nextNum = (countRes.recordset[0]?.Total || 0) + 1;
+    const maxRefRes = await pool.request().query(`
+        SELECT 
+            MAX(TRY_CAST(RIGHT(BookingReference, 5) AS INT)) AS MaxNum,
+            MAX(BookingID) AS MaxID,
+            COUNT(*) AS Total
+        FROM dbo.Bookings;
+    `);
+    const r = (maxRefRes.recordset && maxRefRes.recordset[0]) || {};
+    const maxNum = r.MaxNum || 0;
+    const maxId = r.MaxID || 0;
+    const total = r.Total || 0;
+    const nextNum = Math.max(maxNum, maxId, total) + 1;
     const padded = String(nextNum).padStart(5, '0');
     return `SS-${currentYear}-${padded}`;
 };
@@ -1046,7 +1056,7 @@ const settleRemainingBalance = async ({ bookingId, bookingReference, amount, pay
             queryStr += `BookingID = @BookingID;`;
         } else if (bookingReference) {
             req.input('BookingReference', sql.NVarChar(50), bookingReference);
-            queryStr += `BookingReference = @BookingReference;`;
+            queryStr += `BookingReference = @BookingReference ORDER BY BookingID DESC;`;
         } else {
             throw new Error('BookingID or BookingReference is required.');
         }
