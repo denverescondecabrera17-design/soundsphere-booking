@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 ` : ''}
 
-                                <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap;">
+                                <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap; align-items:center;">
                                     ${statusLower === 'awaiting client confirmation' ? `
                                         <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
                                             Accept Completion
@@ -1100,7 +1100,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-comments"></i> Chat Provider
                                         </a>
+                                        <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
+                                            data-booking-id="${b.BookingID}"
+                                            data-booking-ref="${b.BookingReference || ''}"
+                                            data-provider-id="${b.ProviderID || ''}"
+                                            data-provider-name="${encodeURIComponent(b.ProviderName || 'Provider')}"
+                                            data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                            data-is-reported="${b.ReportID ? 'true' : 'false'}"
+                                            style="padding:10px 18px; font-size:0.92rem; font-weight:800; border:1.5px solid ${b.ReportID ? '#cbd5e1' : '#fecdd3'}; cursor:${b.ReportID ? 'default' : 'pointer'}; display:inline-flex; align-items:center; gap:6px; border-radius:10px; background:${b.ReportID ? '#f8fafc' : '#fff1f2'}; color:${b.ReportID ? '#64748b' : '#be123c'}; text-decoration:none;"
+                                            ${b.ReportID ? 'disabled title="You have submitted a report for this booking"' : 'title="Report an issue with this provider"'}>
+                                            <i class="fa-solid ${b.ReportID ? 'fa-circle-check' : 'fa-flag'}" style="color:${b.ReportID ? '#10b981' : '#e11d48'};"></i> ${b.ReportID ? 'Reported' : 'Report'}
+                                        </button>
                                     ` : (statusLower === 'completed') ? `
+                                        <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
+                                            data-booking-id="${b.BookingID}"
+                                            data-booking-ref="${b.BookingReference || ''}"
+                                            data-provider-id="${b.ProviderID || ''}"
+                                            data-provider-name="${encodeURIComponent(b.ProviderName || 'Provider')}"
+                                            data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                            data-is-reported="${b.ReportID ? 'true' : 'false'}"
+                                            style="padding:10px 20px; font-size:0.92rem; font-weight:800; border:1.5px solid ${b.ReportID ? '#cbd5e1' : '#fecdd3'}; cursor:${b.ReportID ? 'default' : 'pointer'}; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:${b.ReportID ? '#f8fafc' : '#fff1f2'}; color:${b.ReportID ? '#64748b' : '#be123c'}; box-shadow:0 2px 8px rgba(225,29,72,0.06); transition:all 0.2s ease;"
+                                            ${b.ReportID ? 'disabled title="You have submitted a report for this booking"' : 'title="Report an issue with this provider"'}>
+                                            <i class="fa-solid ${b.ReportID ? 'fa-circle-check' : 'fa-flag'}" style="color:${b.ReportID ? '#10b981' : '#e11d48'};"></i> ${b.ReportID ? 'Reported' : 'Report'}
+                                        </button>
                                         <button type="button" class="btn-card-rate-review" onclick="window.handleRateButtonClick(this)"
                                             data-booking-id="${b.BookingID}"
                                             data-provider-id="${b.ProviderID || ''}"
@@ -1129,6 +1151,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-comments"></i> Chat Provider
                                         </a>
+                                        <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
+                                            data-booking-id="${b.BookingID}"
+                                            data-booking-ref="${b.BookingReference || ''}"
+                                            data-provider-id="${b.ProviderID || ''}"
+                                            data-provider-name="${encodeURIComponent(b.ProviderName || 'Provider')}"
+                                            data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                            data-is-reported="${b.ReportID ? 'true' : 'false'}"
+                                            style="padding:10px 18px; font-size:0.92rem; font-weight:800; border:1.5px solid ${b.ReportID ? '#cbd5e1' : '#fecdd3'}; cursor:${b.ReportID ? 'default' : 'pointer'}; display:inline-flex; align-items:center; gap:6px; border-radius:10px; background:${b.ReportID ? '#f8fafc' : '#fff1f2'}; color:${b.ReportID ? '#64748b' : '#be123c'}; text-decoration:none;"
+                                            ${b.ReportID ? 'disabled title="You have submitted a report for this booking"' : 'title="Report an issue with this provider"'}>
+                                            <i class="fa-solid ${b.ReportID ? 'fa-circle-check' : 'fa-flag'}" style="color:${b.ReportID ? '#10b981' : '#e11d48'};"></i> ${b.ReportID ? 'Reported' : 'Report'}
+                                        </button>
                                     `}
                                 </div>
                             </div>
@@ -1437,6 +1470,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </button>
                                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                                         ${statusLower === 'completed' ? `
+                                            <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
+                                                data-booking-id="${b.BookingID}"
+                                                data-booking-ref="${b.BookingReference || ''}"
+                                                data-provider-id="${b.ProviderID || ''}"
+                                                data-provider-name="${encodeURIComponent(b.ProviderName || providerName || 'Provider')}"
+                                                data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                                data-is-reported="${b.ReportID ? 'true' : 'false'}"
+                                                style="padding:10px 20px; font-size:0.92rem; font-weight:800; border:1.5px solid ${b.ReportID ? '#cbd5e1' : '#fecdd3'}; cursor:${b.ReportID ? 'default' : 'pointer'}; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:${b.ReportID ? '#f8fafc' : '#fff1f2'}; color:${b.ReportID ? '#64748b' : '#be123c'}; box-shadow:0 2px 8px rgba(225,29,72,0.06); transition:all 0.2s ease;"
+                                                ${b.ReportID ? 'disabled title="You have submitted a report for this booking"' : 'title="Report an issue with this provider"'}>
+                                                <i class="fa-solid ${b.ReportID ? 'fa-circle-check' : 'fa-flag'}" style="color:${b.ReportID ? '#10b981' : '#e11d48'};"></i> ${b.ReportID ? 'Reported' : 'Report'}
+                                            </button>
                                             <button type="button" class="btn-card-rate-review" onclick="window.handleRateButtonClick(this)"
                                                 data-booking-id="${b.BookingID}"
                                                 data-provider-id="${b.ProviderID || ''}"
@@ -5148,6 +5192,256 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initRateReviewModal();
+
+    // ==================== REPORT SERVICE PROVIDER MODAL ====================
+    let currentReportingTriggerBtn = null;
+
+    window.handleReportButtonClick = (btn) => {
+        if (!btn) return;
+        if (btn.disabled || btn.getAttribute('data-is-reported') === 'true') {
+            const toastFn = (typeof showToast === 'function') ? showToast : (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.showToast ? SoundSphereAPI.showToast : alert);
+            toastFn('ℹ️ A report has already been submitted for this booking.', 'info');
+            return;
+        }
+
+        const bookingId = btn.getAttribute('data-booking-id');
+        const bookingRef = btn.getAttribute('data-booking-ref');
+        const providerId = btn.getAttribute('data-provider-id');
+        const providerName = btn.getAttribute('data-provider-name');
+        const packageName = btn.getAttribute('data-package-name');
+
+        window.openReportModal({
+            bookingId: bookingId ? parseInt(bookingId, 10) : null,
+            bookingRef: bookingRef || '',
+            providerId: providerId ? parseInt(providerId, 10) : null,
+            providerName: window.safeDecodeString(providerName),
+            packageName: window.safeDecodeString(packageName)
+        }, btn);
+    };
+
+    // Global Delegated Click Listener for Report Button
+    document.addEventListener('click', (e) => {
+        const reportBtn = e.target.closest('.btn-card-report-provider');
+        if (reportBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.handleReportButtonClick(reportBtn);
+        }
+    });
+
+    window.openReportModal = (options = {}, triggerBtn = null) => {
+        currentReportingTriggerBtn = triggerBtn;
+        let modal = document.getElementById('modal-report-provider');
+        if (!modal) {
+            const modalMarkup = `
+                <div class="modal-overlay hidden" id="modal-report-provider" role="dialog" aria-modal="true" style="position:fixed; inset:0; background:rgba(10,25,47,0.7); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:999999; padding:16px;">
+                    <div class="modal-card" style="background:#ffffff; border-radius:20px; width:100%; max-width:540px; box-shadow:0 25px 60px rgba(10,25,47,0.3); overflow:hidden; animation:reportModalFadeIn 0.2s ease-out;">
+                        <div style="padding:20px 24px; background:linear-gradient(135deg, #881337 0%, #4c0519 100%); color:#ffffff; display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:42px; height:42px; border-radius:12px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fda4af; display:flex; align-items:center; justify-content:center; font-size:1.25rem;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <div>
+                                    <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Report Service Provider</h3>
+                                    <p style="margin:3px 0 0 0; font-size:0.82rem; color:#fecdd3;" id="report-modal-subtitle">Incident report for Booking</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close-report-modal" style="background:none; border:none; font-size:1.5rem; color:#fecdd3; cursor:pointer; line-height:1;" title="Close">&times;</button>
+                        </div>
+                        <form id="form-report-provider" style="padding:22px 24px; display:flex; flex-direction:column; gap:16px; margin:0;">
+                            <input type="hidden" id="report-modal-booking-id" value="">
+                            <input type="hidden" id="report-modal-booking-ref" value="">
+                            <input type="hidden" id="report-modal-provider-id" value="">
+                            
+                            <div style="padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase;">Service Provider</span>
+                                    <div style="font-size:0.95rem; font-weight:800; color:#0a192f; margin-top:2px;" id="report-modal-provider-name">Service Provider</div>
+                                </div>
+                                <span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-weight:800; font-size:0.75rem; padding:4px 10px; border-radius:20px;">
+                                    Incident Report
+                                </span>
+                            </div>
+
+                            <div>
+                                <label for="report-modal-reason" style="display:block; font-size:0.88rem; font-weight:800; color:#0a192f; margin-bottom:6px;">
+                                    Reason for Report <span style="color:#ef4444;">*</span>
+                                </label>
+                                <select id="report-modal-reason" required style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; color:#0a192f; background:#fff; cursor:pointer; outline:none;">
+                                    <option value="" disabled selected>— Select an issue category —</option>
+                                    <option value="Failure to Attend / No-Show">Failure to Attend / No-Show on Event Day</option>
+                                    <option value="Unprofessional Behavior / Harassment">Unprofessional Behavior / Harassment</option>
+                                    <option value="Overcharging / Payment Discrepancy">Overcharging / Off-Platform Payment Demand</option>
+                                    <option value="Poor Quality / Faulty Equipment">Poor Sound Quality / Damaged Equipment</option>
+                                    <option value="Misleading Information / Fake Rig Listing">Misleading Information / Fake Rig Photos</option>
+                                    <option value="Breach of Booking Agreement">Breach of Agreed Schedule or Package Inclusions</option>
+                                    <option value="Other Policy Violation">Other Service Policy Violation</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="report-modal-desc" style="display:block; font-size:0.88rem; font-weight:800; color:#0a192f; margin-bottom:6px;">
+                                    Complaint Description <span style="color:#ef4444;">*</span>
+                                </label>
+                                <textarea id="report-modal-desc" required rows="4" style="width:100%; padding:12px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-family:inherit; color:#0a192f; box-sizing:border-box; resize:vertical; outline:none;" placeholder="Please describe what occurred during your event reservation (minimum 10 characters)..."></textarea>
+                            </div>
+
+                            <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:10px 14px; display:flex; gap:10px; align-items:flex-start;">
+                                <i class="fa-solid fa-shield-halved" style="color:#e11d48; margin-top:2px; font-size:0.95rem;"></i>
+                                <p style="margin:0; font-size:0.76rem; color:#9f1239; line-height:1.4;">
+                                    Your report will be sent directly to SoundSphere Administration for dispute investigation and logged in the platform audit trail.
+                                </p>
+                            </div>
+
+                            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px; border-top:1px solid #e2e8f0; padding-top:14px;">
+                                <button type="button" class="btn-close-report-modal" style="padding:10px 18px; border:1.5px solid #cbd5e1; border-radius:10px; background:#ffffff; color:#475569; font-weight:700; font-size:0.9rem; cursor:pointer;">Cancel</button>
+                                <button type="submit" id="btn-submit-provider-report" style="padding:10px 22px; border:none; border-radius:10px; background:linear-gradient(135deg, #e11d48, #be123c); color:#ffffff; font-weight:800; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(225,29,72,0.3);">
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Report to Admin
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalMarkup);
+            modal = document.getElementById('modal-report-provider');
+            initReportModal();
+        }
+
+        const bookingIdInput = document.getElementById('report-modal-booking-id');
+        const bookingRefInput = document.getElementById('report-modal-booking-ref');
+        const providerIdInput = document.getElementById('report-modal-provider-id');
+        const providerNameEl = document.getElementById('report-modal-provider-name');
+        const subtitleEl = document.getElementById('report-modal-subtitle');
+        const reasonSelect = document.getElementById('report-modal-reason');
+        const descTextarea = document.getElementById('report-modal-desc');
+
+        const rawProvName = options.providerName ? window.safeDecodeString(options.providerName) : 'Service Provider';
+        const rawRef = options.bookingRef || (options.bookingId ? `Booking #${options.bookingId}` : 'Booking');
+
+        if (bookingIdInput) bookingIdInput.value = options.bookingId || '';
+        if (bookingRefInput) bookingRefInput.value = options.bookingRef || '';
+        if (providerIdInput) providerIdInput.value = options.providerId || '';
+        if (providerNameEl) providerNameEl.textContent = rawProvName;
+        if (subtitleEl) subtitleEl.textContent = `Incident report for ${rawRef}`;
+        if (reasonSelect) reasonSelect.value = '';
+        if (descTextarea) descTextarea.value = '';
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+    };
+
+    window.closeReportModal = () => {
+        const modal = document.getElementById('modal-report-provider');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    };
+
+    function initReportModal() {
+        const modal = document.getElementById('modal-report-provider');
+        if (!modal) return;
+
+        modal.querySelectorAll('.btn-close-report-modal').forEach(btn => {
+            btn.addEventListener('click', window.closeReportModal);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) window.closeReportModal();
+        });
+
+        const form = document.getElementById('form-report-provider');
+        if (form && !form.dataset.initialized) {
+            form.dataset.initialized = 'true';
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const bookingId = document.getElementById('report-modal-booking-id')?.value;
+                const bookingRef = document.getElementById('report-modal-booking-ref')?.value;
+                const providerId = document.getElementById('report-modal-provider-id')?.value;
+                const reason = document.getElementById('report-modal-reason')?.value;
+                const description = document.getElementById('report-modal-desc')?.value;
+                const submitBtn = document.getElementById('btn-submit-provider-report');
+
+                const toastFn = (msg, type = 'info') => {
+                    if (typeof showToast === 'function') showToast(msg, type);
+                    else if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.showToast) SoundSphereAPI.showToast(msg, type);
+                    else alert(msg);
+                };
+
+                if (!reason) {
+                    toastFn('⚠️ Please select a reason for reporting.', 'warning');
+                    return;
+                }
+
+                if (!description || description.trim().length < 10) {
+                    toastFn('⚠️ Please provide at least 10 characters describing the issue.', 'warning');
+                    return;
+                }
+
+                const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
+                const user = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthUser) ? SoundSphereAPI.getAuthUser() : (JSON.parse(localStorage.getItem('soundsphere_user') || '{}'));
+
+                try {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+                    }
+
+                    const res = await fetch('/api/reports/provider', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({
+                            userId: user.userId || user.id || user.UserID,
+                            providerId: providerId ? parseInt(providerId, 10) : null,
+                            bookingId: bookingId ? parseInt(bookingId, 10) : null,
+                            reason: reason,
+                            description: `[Booking Ref: ${bookingRef || bookingId || 'N/A'}] ${description.trim()}`
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        toastFn('✓ Official report submitted to SoundSphere Administration for review.', 'success');
+                        window.closeReportModal();
+                        form.reset();
+
+                        if (currentReportingTriggerBtn) {
+                            currentReportingTriggerBtn.disabled = true;
+                            currentReportingTriggerBtn.setAttribute('data-is-reported', 'true');
+                            currentReportingTriggerBtn.style.background = '#f8fafc';
+                            currentReportingTriggerBtn.style.color = '#64748b';
+                            currentReportingTriggerBtn.style.borderColor = '#cbd5e1';
+                            currentReportingTriggerBtn.style.cursor = 'default';
+                            currentReportingTriggerBtn.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Reported';
+                            currentReportingTriggerBtn.setAttribute('title', 'You have submitted a report for this booking');
+                        }
+
+                        if (typeof window.fetchUserBookings === 'function') {
+                            window.fetchUserBookings();
+                        }
+                    } else {
+                        toastFn(`⚠️ ${data.message || 'Failed to submit report.'}`, 'error');
+                    }
+                } catch (err) {
+                    console.error('Report submission error:', err);
+                    toastFn('⚠️ Network error submitting report. Please try again.', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report to Admin';
+                    }
+                }
+            });
+        }
+    }
+
+    initReportModal();
 
     // Initial Notifications Fetch & Polling every 10 seconds
     fetchNotifications();

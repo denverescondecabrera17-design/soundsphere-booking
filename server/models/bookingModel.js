@@ -741,6 +741,7 @@ const getBookingsByUserId = async (clientUserId) => {
                 r.ReviewID,
                 r.Rating,
                 r.ReviewText,
+                (SELECT TOP 1 pr.ReportID FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID AND pr.ReporterUserID = b.ClientUserID) AS ReportID,
                 ISNULL(b.ClientName, ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), cUser.Email)) AS ClientName,
                 ISNULL(b.ClientEmail, cUser.Email) AS ClientEmail,
                 ISNULL(b.ClientPhone, cUser.Phone) AS ClientPhone
