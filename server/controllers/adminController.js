@@ -1389,8 +1389,7 @@ const refundReportBooking = async (req, res) => {
                     IF OBJECT_ID('dbo.Payments', 'U') IS NOT NULL
                     BEGIN
                         UPDATE dbo.Payments
-                        SET PaymentStatus = 'Refunded',
-                            UpdatedAt = GETDATE()
+                        SET PaymentStatus = 'Refunded'
                         WHERE BookingID = @BID;
                     END
                 `);
