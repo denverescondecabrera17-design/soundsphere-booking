@@ -1097,9 +1097,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                         </a>
-                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
-                                            <i class="fa-solid fa-comments"></i> Chat Provider
-                                        </a>
                                         <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
                                             data-booking-id="${b.BookingID}"
                                             data-booking-ref="${b.BookingReference || ''}"
@@ -1140,17 +1137,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <i class="fa-solid fa-credit-card"></i> Complete Payment
                                         </button>
                                         ${cancelBtnHtml}
-                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
-                                            <i class="fa-solid fa-comments"></i> Chat Provider
-                                        </a>
                                     ` : `
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                         </a>
                                         ${cancelBtnHtml}
-                                        <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(b.ProviderName || 'Provider')}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
-                                            <i class="fa-solid fa-comments"></i> Chat Provider
-                                        </a>
                                         <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
                                             data-booking-id="${b.BookingID}"
                                             data-booking-ref="${b.BookingReference || ''}"
@@ -1499,9 +1490,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#f1f5f9; color:#0a192f; border:1.5px solid #cbd5e1;">
                                                 <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                             </a>
-                                            <a href="client-messages.html?providerId=${b.ProviderID}&providerName=${encodeURIComponent(providerName)}" class="btn-card-primary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#2563eb; color:#ffffff;">
-                                                <i class="fa-solid fa-comments"></i> Chat Provider
-                                            </a>
+                                            <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
+                                                data-booking-id="${b.BookingID}"
+                                                data-booking-ref="${b.BookingReference || ''}"
+                                                data-provider-id="${b.ProviderID || ''}"
+                                                data-provider-name="${encodeURIComponent(b.ProviderName || providerName || 'Provider')}"
+                                                data-package-name="${encodeURIComponent(b.PackageName || 'Package')}"
+                                                data-is-reported="${b.ReportID ? 'true' : 'false'}"
+                                                style="padding:10px 18px; font-size:0.92rem; font-weight:800; border:1.5px solid ${b.ReportID ? '#cbd5e1' : '#fecdd3'}; cursor:${b.ReportID ? 'default' : 'pointer'}; display:inline-flex; align-items:center; gap:6px; border-radius:10px; background:${b.ReportID ? '#f8fafc' : '#fff1f2'}; color:${b.ReportID ? '#64748b' : '#be123c'}; text-decoration:none;"
+                                                ${b.ReportID ? 'disabled title="You have submitted a report for this booking"' : 'title="Report an issue with this provider"'}>
+                                                <i class="fa-solid ${b.ReportID ? 'fa-circle-check' : 'fa-flag'}" style="color:${b.ReportID ? '#10b981' : '#e11d48'};"></i> ${b.ReportID ? 'Reported' : 'Report'}
+                                            </button>
                                         `}
                                     </div>
                                 </div>
