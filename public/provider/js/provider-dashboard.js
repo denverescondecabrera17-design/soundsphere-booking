@@ -2637,13 +2637,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (footerBar) footerBar.style.display = 'flex';
             } else if (statusLower === 'completed') {
                 const wdStatus = (booking.WithdrawalStatus || '').toLowerCase();
-                let withdrawButtonHtml = '';
+                let withdrawStatusHtml = '';
                 if (wdStatus === 'pending') {
-                    withdrawButtonHtml = `<span style="font-size:0.88rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:8px 16px; border-radius:8px;">Payout Requested</span>`;
+                    withdrawStatusHtml = `<span style="font-size:0.88rem; font-weight:700; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:8px 16px; border-radius:8px;">Payout Requested</span>`;
                 } else if (wdStatus === 'approved' || wdStatus === 'completed' || wdStatus === 'processed') {
-                    withdrawButtonHtml = `<span style="font-size:0.88rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:8px 16px; border-radius:8px;">Paid &amp; Sent</span>`;
-                } else {
-                    withdrawButtonHtml = `<button type="button" onclick="${hideFullscreen} window.openBookingWithdrawalModal(${booking.BookingID}, ${booking.TotalAmount || 0}, '${booking.BookingReference || ('BK-' + booking.BookingID)}')" style="padding:10px 22px; font-size:0.92rem; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700;">Request Withdrawal</button>`;
+                    withdrawStatusHtml = `<span style="font-size:0.88rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:8px 16px; border-radius:8px;">Paid &amp; Sent</span>`;
                 }
 
                 actionsContainer.innerHTML = `
@@ -2651,7 +2649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span style="font-size:0.92rem; font-weight:700; color:#10b981; display:flex; align-items:center; gap:6px;">
                             <i class="fa-solid fa-circle-check"></i> Booking Completed
                         </span>
-                        ${withdrawButtonHtml}
+                        ${withdrawStatusHtml}
                     </div>
                 `;
                 if (footerBar) footerBar.style.display = 'flex';
