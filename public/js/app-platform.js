@@ -1109,7 +1109,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                             Accept Completion
                                         </button>
                                     </div>
-                                `) : ''}
+                                `) : (statusLower === 'cancelled' && (b.PaymentStatus === 'Refunded' || b.EscrowStatus === 'Refunded')) ? `
+                                    <div style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:12px; padding:12px 18px; margin: 4px 0 10px 0; display:flex; align-items:center; gap:12px;">
+                                        <i class="fa-solid fa-circle-check" style="color:#16a34a; font-size:1.3rem; flex-shrink:0;"></i>
+                                        <div>
+                                            <div style="font-weight:800; color:#166534; font-size:0.92rem;">Booking Automatically Cancelled &amp; Refunded</div>
+                                            <div style="font-size:0.84rem; color:#15803d; line-height:1.4; margin-top:2px;">This booking to the service provider was automatically cancelled following dispute resolution. A full refund of <strong>₱${parseFloat(b.AmountPaid || b.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> has been credited directly back into your SoundSphere Wallet.</div>
+                                        </div>
+                                    </div>
+                                ` : ''}
 
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap; align-items:center;">
                                     ${statusLower === 'awaiting client confirmation' ? `

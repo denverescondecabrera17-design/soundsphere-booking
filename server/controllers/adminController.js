@@ -1372,19 +1372,32 @@ const refundReportBooking = async (req, res) => {
             reason: refundReason
         });
 
-        // Update booking status if exists
+        // Update booking status to Cancelled and Payment/Escrow to Refunded
+        const bkRef = booking ? (booking.BookingReference || `SS-2026-${String(booking.BookingID).padStart(5, '0')}`) : `Report #${reportId}`;
         if (booking) {
             await pool.request()
                 .input('BID', sql.Int, booking.BookingID)
                 .query(`
                     UPDATE dbo.Bookings 
-                    SET PaymentStatus = 'Refunded', BookingStatus = 'Cancelled', EscrowStatus = 'Refunded', RemainingBalance = 0, UpdatedAt = GETDATE()
+                    SET PaymentStatus = 'Refunded', 
+                        BookingStatus = 'Cancelled', 
+                        EscrowStatus = 'Refunded', 
+                        RemainingBalance = 0, 
+                        UpdatedAt = GETDATE()
                     WHERE BookingID = @BID;
+
+                    IF OBJECT_ID('dbo.Payments', 'U') IS NOT NULL
+                    BEGIN
+                        UPDATE dbo.Payments
+                        SET PaymentStatus = 'Refunded',
+                            UpdatedAt = GETDATE()
+                        WHERE BookingID = @BID;
+                    END
                 `);
         }
 
         // Update Report to Resolved
-        const noteStamp = `[Full Refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}]`;
+        const noteStamp = `[Booking ${bkRef} Cancelled & Full Refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}]`;
         const updatedNotes = adminNotes ? `${adminNotes} ${noteStamp}`.trim() : `${currentReport.AdminNotes || ''} ${noteStamp}`.trim();
 
         await pool.request()
@@ -1400,12 +1413,12 @@ const refundReportBooking = async (req, res) => {
                 WHERE ReportID = @ReportID;
             `);
 
-        // Notify client
+        // Notify client that booking has been automatically cancelled and wallet refunded
         if (currentReport.ReporterUserID) {
             await pool.request()
                 .input('UID', sql.Int, currentReport.ReporterUserID)
-                .input('Title', sql.NVarChar(255), '🎉 Full Refund Approved')
-                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has approved a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} following dispute resolution (Report #${reportId}). The funds have been credited to your SoundSphere wallet balance.`)
+                .input('Title', sql.NVarChar(255), '🎉 Full Refund Approved & Booking Cancelled')
+                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has approved your report #${reportId}. Booking ${bkRef} has been automatically cancelled, and a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been credited back into your SoundSphere wallet balance.`)
                 .input('ReportID', sql.Int, reportId)
                 .query(`
                     IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
@@ -1416,18 +1429,18 @@ const refundReportBooking = async (req, res) => {
                 `);
         }
 
-        // Notify provider
+        // Notify provider that the booking is automatically cancelled and escrow payout revoked
         if (currentReport.ProviderUserID) {
             await pool.request()
                 .input('UID', sql.Int, currentReport.ProviderUserID)
-                .input('Title', sql.NVarChar(255), 'ℹ️ Dispute Resolved - Client Refund Issued')
-                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has issued a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} to the client for Incident Report #${reportId}. The dispute is now marked as resolved.`)
+                .input('Title', sql.NVarChar(255), '⚠️ Booking Cancelled (Dispute Resolution & Client Refund)')
+                .input('Message', sql.NVarChar(sql.MAX), `SoundSphere Administration has resolved Incident Report #${reportId}. Booking ${bkRef} has been automatically cancelled, and a full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been returned to the client's wallet. The scheduled date has been freed up and escrow payout cancelled.`)
                 .input('ReportID', sql.Int, reportId)
                 .query(`
                     IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL
                     BEGIN
                         INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
-                        VALUES (@UID, @Title, @Message, 'Report', @ReportID, 'ProviderReport', GETDATE());
+                        VALUES (@UID, @Title, @Message, 'Booking', @ReportID, 'ProviderReport', GETDATE());
                     END
                 `);
         }
@@ -1436,16 +1449,17 @@ const refundReportBooking = async (req, res) => {
         await logActivity(
             pool,
             adminUserId,
-            'Dispute Full Refund Issued',
-            `Admin granted full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} to Client (${currentReport.ReporterEmail}) for Report #${reportId} against "${currentReport.BusinessName}".`,
+            'Dispute Full Refund & Booking Cancelled',
+            `Admin granted full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} to Client (${currentReport.ReporterEmail}) and automatically cancelled Booking ${bkRef} against "${currentReport.BusinessName}".`,
             'ProviderReport',
             reportId
         );
 
         return res.status(200).json({
             success: true,
-            message: `Full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet. Report marked as Resolved.`,
+            message: `Booking ${bkRef} automatically cancelled and full refund of ₱${amountToRefund.toLocaleString('en-US', { minimumFractionDigits: 2 })} credited to client wallet. Report marked as Resolved.`,
             reportId,
+            bookingReference: bkRef,
             refundAmount: amountToRefund
         });
     } catch (error) {

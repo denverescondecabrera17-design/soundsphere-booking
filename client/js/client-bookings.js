@@ -441,7 +441,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             Accept Completion
                         </button>
                     </div>
-                `) : ''}
+                `) : (b.status === 'Cancelled' && (b.paymentStatus === 'Refunded' || b.escrowStatus === 'Refunded')) ? `
+                    <div style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:10px; padding:12px 16px; margin: 12px 20px 0 20px; display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-circle-check" style="color:#16a34a; font-size:1.3rem; flex-shrink:0;"></i>
+                        <div>
+                            <div style="font-weight:800; color:#166534; font-size:0.92rem;">Booking Automatically Cancelled &amp; Refunded</div>
+                            <div style="font-size:0.82rem; color:#15803d; line-height:1.4; margin-top:2px;">This booking to the service provider was automatically cancelled following administration review. The payment was refunded back into your SoundSphere Wallet.</div>
+                        </div>
+                    </div>
+                ` : ''}
 
                 <div class="booking-card-actions">
                     ${(b.status === 'Pending' || b.status === 'Pending Payment') ? `
