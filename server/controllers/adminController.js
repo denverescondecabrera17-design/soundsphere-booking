@@ -1342,6 +1342,14 @@ const refundReportBooking = async (req, res) => {
             if (bkFallback.recordset.length) booking = bkFallback.recordset[0];
         }
 
+        // Verify client did not accept completion (accepted completions are non-refundable)
+        if (booking && (booking.CompletionAcceptedAt || (booking.BookingStatus === 'Completed' && booking.EscrowStatus === 'Released'))) {
+            return res.status(400).json({
+                success: false,
+                message: `Refund cannot be processed: Service completion has already been accepted${booking.CompletionAcceptedAt ? ` on ${new Date(booking.CompletionAcceptedAt).toLocaleString('en-US')}` : ''}, releasing escrow payout to the service provider. In accordance with platform policy, once completion is accepted, the booking cannot be refunded.`
+            });
+        }
+
         let amountToRefund = parseFloat(reqRefundAmt || 0);
         if (amountToRefund <= 0 && booking) {
             amountToRefund = parseFloat(booking.AmountPaid || booking.TotalAmount || 0);

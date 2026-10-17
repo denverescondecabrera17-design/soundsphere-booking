@@ -1102,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem;"></i>
                                             <div>
                                                 <div style="font-weight:800; color:#92400e; font-size:0.95rem;">Service Marked Complete by Provider</div>
-                                                <div style="font-size:0.84rem; color:#b45309;">Please confirm that your event setup and services were fulfilled. Auto-accepts in 24 hours.</div>
+                                                <div style="font-size:0.84rem; color:#b45309; line-height:1.45; margin-top:2px;">Please verify that your event setup and services were fulfilled properly. <strong>Non-refundable once accepted.</strong> If there was a scam, no-show, or issue, click <strong>Report</strong> before the 24-hour auto-complete window so Administration can review and refund your wallet.</div>
                                             </div>
                                         </div>
                                         <button type="button" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; font-size:0.92rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:all 0.15s ease;">
@@ -1313,7 +1313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         } catch (e) { }
 
-                        if (!confirm(`Confirm that provider services for Booking #${bookingRef || bookingId} have been completed?\n\nThis will mark the booking as Completed and release provider payout to the Cashier. You can also leave a rating and review.`)) return;
+                        if (!confirm(`⚠️ FINAL CONFIRMATION - NON-REFUNDABLE:\n\nAre you sure you want to accept service completion for Booking #${bookingRef || bookingId}?\n\n• Once accepted, escrow payment is permanently released to the service provider and CANNOT BE REFUNDED.\n• If the provider was a no-show, scam, or breached service agreement, DO NOT ACCEPT. Click "Report" instead before the 24-hour auto-complete window so SoundSphere Administration can investigate and refund your wallet.\n\nClick OK to confirm completion.`)) return;
                         try {
                             const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
                             const headers = { 'Content-Type': 'application/json' };
@@ -5376,7 +5376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:14px; padding:14px 18px; display:flex; gap:12px; align-items:flex-start;">
                                     <i class="fa-solid fa-shield-halved" style="color:#0284c7; margin-top:3px; font-size:1.15rem; flex-shrink:0;"></i>
                                     <p style="margin:0; font-size:0.88rem; color:#0369a1; line-height:1.5; font-weight:600;">
-                                        False or malicious reports violate SoundSphere Terms of Service. Reports are reviewed by platform administrators and recorded in the official audit trail.
+                                        Reporting before the 24-hour auto-complete deadline freezes escrow payouts. If SoundSphere Administration approves your report (scam, no-show, or breach), your payment is refunded directly back to your SoundSphere Wallet balance. Note: Once you click "Accept Completion", escrow is released and refunds cannot be issued.
                                     </p>
                                 </div>
                             </div>

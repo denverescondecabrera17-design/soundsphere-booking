@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem;"></i>
                             <div>
                                 <div style="font-weight:800; color:#92400e; font-size:0.92rem;">Service Marked Complete by Provider</div>
-                                <div style="font-size:0.82rem; color:#b45309;">Please confirm that your lights &amp; sounds service was performed. Automatically accepts in 24 hours.</div>
+                                <div style="font-size:0.82rem; color:#b45309; line-height:1.45; margin-top:2px;">Please verify that your lights &amp; sounds service was performed properly. <strong>Non-refundable once accepted.</strong> If there was a scam, no-show, or issue, click <strong>Report Issue</strong> before the 24-hour auto-complete window so Administration can review and refund your wallet.</div>
                             </div>
                         </div>
                         <button type="button" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3); transition:all 0.15s ease;">
@@ -721,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!confirm(`Confirm that provider services for Booking #${bookingRef || bookingId} have been completed?\n\nThis will mark the booking as Completed and release provider payout to the Cashier. You can also leave a rating and review.`)) return;
+        if (!confirm(`⚠️ FINAL CONFIRMATION - NON-REFUNDABLE:\n\nAre you sure you want to accept service completion for Booking #${bookingRef || bookingId}?\n\n• Once accepted, escrow payment is permanently released to the service provider and CANNOT BE REFUNDED.\n• If the provider was a no-show, scam, or breached service agreement, DO NOT ACCEPT. Click "Report Issue" instead before the 24-hour auto-complete window so SoundSphere Administration can investigate and refund your wallet.\n\nClick OK to confirm completion.`)) return;
         try {
             const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));
             const headers = { 'Content-Type': 'application/json' };
