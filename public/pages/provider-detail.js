@@ -879,7 +879,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `
                             <div class="package-card ${isDefault ? 'selected-active' : ''}" data-price="${pkg.price || 15000}" data-title="${title}" data-id="${offerId}" data-pkg-idx="${idx}" style="cursor: pointer;" title="Click to view full package details">
                                 <div>
-                                    ${isDefault ? `<div class="pkg-header-badge">POPULAR OFFER</div>` : ''}
                                     <div class="pkg-card-title">${title}</div>
                                     <div class="pkg-card-price-row">
                                         <span class="pkg-card-price">₱${priceFormatted}</span>

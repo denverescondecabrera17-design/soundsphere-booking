@@ -388,17 +388,7 @@ body.provider-detail-body {
 }
 
 .pkg-header-badge {
-    position: absolute;
-    top: -10px;
-    right: 14px;
-    background: var(--navy-dark);
-    color: #ffffff;
-    font-size: 0.65rem;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    display: none !important;
 }
 
 .pkg-card-title {

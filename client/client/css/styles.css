@@ -583,19 +583,7 @@ a {
 }
 
 .pkg-header-badge {
-    position: absolute;
-    top: -10px;
-    right: 14px;
-    background: #0a192f;
-    color: #ffffff;
-    font-size: 0.65rem;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    z-index: 2;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    display: none !important;
 }
 
 .pkg-card-title {
