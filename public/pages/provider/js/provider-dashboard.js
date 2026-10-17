@@ -698,6 +698,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-provider-subscription';
             loadProviderSubscriptionData();
         }
+        else if (cleanHash === 'archive-section' || cleanHash === 'view-provider-archive') {
+            targetViewId = 'view-provider-archive';
+            if (typeof loadArchivedPackages === 'function') loadArchivedPackages();
+        }
 
         // Fallback: If target view panel element doesn't exist in DOM, default to view-provider-dashboard
         if (!document.getElementById(targetViewId)) {
@@ -706,7 +710,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sidebarNavLinks.forEach(link => {
             const href = link.getAttribute('href');
-            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-income-report' && href === '#income-report-section') || (targetViewId === 'view-provider-wallet' && (href === '#wallet-section' || href === '#withdrawals-section'))) {
+            if (href === `#${cleanHash}` || (targetViewId === 'view-provider-dashboard' && href === '#dashboard-overview') || (targetViewId === 'view-provider-packages' && href === '#packages-section') || (targetViewId === 'view-provider-archive' && href === '#archive-section') || (targetViewId === 'view-provider-subscription' && href === '#subscription-section') || (targetViewId === 'view-provider-income-report' && href === '#income-report-section') || (targetViewId === 'view-provider-wallet' && (href === '#wallet-section' || href === '#withdrawals-section'))) {
                 link.classList.add('active');
             } else {
                 link.classList.remove('active');
@@ -2960,11 +2964,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </tr>
                         `).join('');
                     }
+                    updateArchiveBadge();
                     return;
                 }
             }
         } catch (e) {
             console.warn('Load packages notice:', e.message);
+        } finally {
+            updateArchiveBadge();
         }
     };
 
@@ -3146,21 +3153,197 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    const updateArchiveBadge = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const res = await fetch('/api/providers/packages/archived', { headers });
+            if (res.ok) {
+                const data = await res.json();
+                const count = Array.isArray(data.data) ? data.data.length : 0;
+                const sideBadge = document.getElementById('archive-count-badge');
+                const pkgPill = document.getElementById('packages-archive-pill');
+                if (sideBadge) {
+                    sideBadge.textContent = count;
+                    sideBadge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+                if (pkgPill) {
+                    pkgPill.textContent = count;
+                    pkgPill.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            }
+        } catch (e) {
+            // silent catch
+        }
+    };
+
+    window.loadArchivedPackages = async () => {
+        const grid = document.getElementById('provider-archived-cards-grid');
+        if (!grid) return;
+        grid.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:48px 24px; color:#64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#2563eb; margin-bottom:12px; display:block;"></i>
+                <p style="margin:0; font-size:0.95rem;">Loading archived packages...</p>
+            </div>
+        `;
+
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const res = await fetch('/api/providers/packages/archived', { headers });
+            if (res.ok) {
+                const data = await res.json();
+                const packages = Array.isArray(data.data) ? data.data : [];
+                updateArchiveBadge();
+
+                if (packages.length === 0) {
+                    grid.innerHTML = `
+                        <div style="grid-column:1/-1; text-align:center; padding:52px 24px; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;">
+                            <i class="fa-solid fa-box-archive" style="font-size:2.8rem; color:#cbd5e1; margin-bottom:14px; display:block;"></i>
+                            <h3 style="margin:0 0 6px 0; color:#0a192f; font-size:1.15rem; font-weight:800;">Archive is Empty</h3>
+                            <p style="margin:0; font-size:0.9rem; color:#64748b;">When you delete a service package, it will safely appear here first before permanent deletion.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = packages.map(p => {
+                    const inclusionsArr = (p.Inclusions || p.Description || 'Full Equipment Setup')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                    const photos = Array.isArray(p.images) ? p.images : [];
+                    let photosHTML = '';
+                    if (photos.length > 0) {
+                        photosHTML = photos.slice(0, 3).map(img => {
+                            const src = img.url.startsWith('/') || img.url.startsWith('http') || img.url.startsWith('data:') ? img.url : `/${img.url}`;
+                            return `
+                                <div style="width:70px; height:70px; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; flex-shrink:0;">
+                                    <img src="${src}" style="width:100%; height:100%; object-fit:cover;">
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    const archivedDateStr = p.ArchivedAt 
+                        ? new Date(p.ArchivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : 'Recently';
+
+                    return `
+                        <div class="package-offer-card" style="background:#ffffff; border:1.5px solid #fed7aa; border-radius:14px; padding:24px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 14px rgba(10,25,47,0.05); position:relative;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                                    <span style="font-size:0.82rem; font-weight:700; color:#64748b; background:#f1f5f9; padding:4px 12px; border-radius:20px; text-transform:uppercase;">
+                                        ${p.Category || 'Package Offer'}
+                                    </span>
+                                    <span style="font-size:0.82rem; font-weight:800; color:#ef4444; background:#fee2e2; padding:4px 12px; border-radius:20px; display:inline-flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-box-archive"></i> Archived
+                                    </span>
+                                </div>
+
+                                <h3 style="margin:0 0 8px 0; color:#0a192f; font-size:1.25rem; font-weight:800;">${p.PackageName}</h3>
+                                <div style="font-size:1.45rem; font-weight:800; color:#0f766e; margin-bottom:12px;">
+                                    ₱${parseFloat(p.Price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    <span style="font-size:0.85rem; color:#64748b; font-weight:500;">/ Event</span>
+                                </div>
+
+                                <p style="font-size:0.92rem; color:#64748b; margin:0 0 14px 0; line-height:1.45;">${p.Description || 'No description.'}</p>
+
+                                <div style="margin-bottom:14px;">
+                                    <strong style="font-size:0.85rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px; font-weight:700;">Includes:</strong>
+                                    <ul style="list-style:none; padding:0; margin:0; font-size:0.88rem; color:#334155; display:flex; flex-direction:column; gap:4px;">
+                                        ${inclusionsArr.slice(0, 4).map(inc => `<li><i class="fa-solid fa-check" style="color:#10b981; margin-right:6px;"></i> ${inc}</li>`).join('')}
+                                    </ul>
+                                </div>
+
+                                ${photosHTML ? `
+                                    <div style="margin-bottom:16px;">
+                                        <strong style="font-size:0.82rem; color:#64748b; text-transform:uppercase; display:block; margin-bottom:8px; font-weight:700;">Photos:</strong>
+                                        <div style="display:flex; align-items:center; gap:8px; overflow-x:auto;">${photosHTML}</div>
+                                    </div>
+                                ` : ''}
+
+                                <div style="font-size:0.8rem; color:#94a3b8; margin-top:8px; padding-top:10px; border-top:1px dashed #e2e8f0; display:flex; align-items:center; gap:6px;">
+                                    <i class="fa-regular fa-clock" style="color:#94a3b8;"></i> Moved to Archive: <strong>${archivedDateStr}</strong>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:10px; padding-top:16px; border-top:1px solid #f1f5f9; margin-top:16px;">
+                                <button type="button" onclick="window.restorePackageItem(${p.PackageID})" style="flex:1; height:44px; border:none; border-radius:8px; background:#10b981; color:#fff; font-size:0.92rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 8px rgba(16,185,129,0.25);" title="Restore this package offer back to active services">
+                                    <i class="fa-solid fa-rotate-left"></i> Restore Offer
+                                </button>
+                                <button type="button" onclick="window.permanentDeletePackageItem(${p.PackageID})" style="height:44px; padding:0 16px; border:1.5px solid #ef4444; border-radius:8px; background:#ffffff; color:#ef4444; font-size:0.88rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;" title="Permanently delete from database (cannot be undone)">
+                                    <i class="fa-solid fa-trash-can"></i> Delete Permanently
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (e) {
+            console.warn('Load archived packages notice:', e.message);
+        }
+    };
+
+    window.restorePackageItem = async (id) => {
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const res = await fetch(`/api/providers/packages/${id}/restore`, { method: 'PUT', headers });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast('✓ Package offer successfully restored to active services!', 'success');
+                await loadArchivedPackages();
+                await loadPackages();
+            } else {
+                showToast(`✕ ${data.message || 'Failed to restore package.'}`, 'error');
+            }
+        } catch (e) {
+            showToast('✕ Error restoring package.', 'error');
+        }
+    };
+
+    window.permanentDeletePackageItem = async (id) => {
+        if (!confirm('Are you sure you want to permanently delete this package offer?\n\nWARNING: This action cannot be undone and will permanently erase this package and its images from the database.')) return;
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const res = await fetch(`/api/providers/packages/${id}/permanent`, { method: 'DELETE', headers });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast('✓ Package offer permanently deleted.', 'info');
+                await loadArchivedPackages();
+                await updateArchiveBadge();
+            } else {
+                showToast(`✕ ${data.message || 'Failed to permanently delete package.'}`, 'error');
+            }
+        } catch (e) {
+            showToast('✕ Error permanently deleting package.', 'error');
+        }
+    };
+
     window.deletePackageItem = async (id) => {
-        if (!confirm('Are you sure you want to delete this service package offer?')) return;
+        if (!confirm('Move this service package to Archive?\n\nIt will be moved to Archive first where it is hidden from clients. You can safely restore it anytime or delete it permanently.')) return;
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`/api/providers/packages/${id}`, { method: 'DELETE', headers });
             const data = await res.json();
             if (res.ok && data.success) {
-                showToast('✓ Package offer deleted successfully.', 'info');
+                showToast('✓ Package moved to Archive.', 'info');
                 await loadPackages();
+                await updateArchiveBadge();
                 await loadDashboardData();
+            } else {
+                showToast(`✕ ${data.message || 'Failed to archive package.'}`, 'error');
             }
         } catch (e) {
-            showToast('✕ Error deleting package.', 'error');
+            showToast('✕ Error archiving package.', 'error');
         }
     };
+
+    const btnRefreshArchive = document.getElementById('btn-refresh-archive');
+    if (btnRefreshArchive) {
+        btnRefreshArchive.addEventListener('click', () => {
+            loadArchivedPackages();
+            showToast('Archive refreshed.', 'info');
+        });
+    }
 
     // ------------------------------------------------------------------------
     // Provider Subscription & PayMongo Checkout Engine

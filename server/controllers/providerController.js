@@ -168,7 +168,20 @@ const deleteProviderService = async (req, res) => {
 const getProviderPackages = async (req, res) => {
     try {
         const userId = req.user ? req.user.userId : (req.query.userId || 13);
-        const packages = await providerModel.getPackagesByProviderId(userId);
+        const includeArchived = req.query.archived === 'true' || req.query.isArchived === 'true';
+        const packages = includeArchived 
+            ? await providerModel.getArchivedPackagesByProviderId(userId)
+            : await providerModel.getPackagesByProviderId(userId);
+        return res.status(200).json({ success: true, data: packages });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const getArchivedPackages = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.userId : (req.query.userId || 13);
+        const packages = await providerModel.getArchivedPackagesByProviderId(userId);
         return res.status(200).json({ success: true, data: packages });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -238,12 +251,51 @@ const updateProviderPackage = async (req, res) => {
     }
 };
 
+const archiveProviderPackage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user ? req.user.userId : (req.body.userId || req.query.userId || 13);
+        await providerModel.archivePackage(id, userId);
+        return res.status(200).json({ success: true, message: 'Package moved to archive successfully' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const restoreProviderPackage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user ? req.user.userId : (req.body.userId || req.query.userId || 13);
+        await providerModel.restorePackage(id, userId);
+        return res.status(200).json({ success: true, message: 'Package restored from archive successfully' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const deleteProviderPackagePermanently = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user ? req.user.userId : (req.query.userId || 13);
+        await providerModel.deletePackagePermanently(id, userId);
+        return res.status(200).json({ success: true, message: 'Package permanently deleted' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 const deleteProviderPackage = async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user ? req.user.userId : (req.query.userId || 13);
-        await providerModel.deletePackage(id, userId);
-        return res.status(200).json({ success: true, message: 'Package deleted successfully' });
+        const isPermanent = req.query.permanent === 'true' || req.body?.permanent === true;
+        if (isPermanent) {
+            await providerModel.deletePackagePermanently(id, userId);
+            return res.status(200).json({ success: true, message: 'Package permanently deleted' });
+        } else {
+            await providerModel.archivePackage(id, userId);
+            return res.status(200).json({ success: true, message: 'Package moved to archive successfully' });
+        }
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
@@ -1619,9 +1671,13 @@ module.exports = {
     updateProviderService,
     deleteProviderService,
     getProviderPackages,
+    getArchivedPackages,
     createProviderPackage,
     updateProviderPackage,
     deleteProviderPackage,
+    archiveProviderPackage,
+    restoreProviderPackage,
+    deleteProviderPackagePermanently,
     getProviderWithdrawals,
     createWithdrawalRequest,
     getProviderProfile,

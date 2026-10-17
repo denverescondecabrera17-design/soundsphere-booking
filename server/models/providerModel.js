@@ -69,7 +69,7 @@ const getAllApprovedProviders = async (filters = {}) => {
                     pi.ImageUrl
                 FROM dbo.Packages p
                 LEFT JOIN dbo.PackageImages pi ON p.PackageID = pi.PackageID
-                WHERE p.IsActive = 1
+                WHERE p.IsActive = 1 AND (p.IsArchived = 0 OR p.IsArchived IS NULL)
                 ORDER BY p.PackageID DESC, pi.ImageID ASC
             `);
 
@@ -455,7 +455,7 @@ const getPackagesByProviderId = async (userId) => {
                     pi.ImageUrl
                 FROM dbo.Packages p
                 LEFT JOIN dbo.PackageImages pi ON p.PackageID = pi.PackageID
-                WHERE p.UserID = @UserID
+                WHERE p.UserID = @UserID AND (p.IsArchived = 0 OR p.IsArchived IS NULL)
                 ORDER BY p.PackageID DESC, pi.ImageID ASC
             `);
 
@@ -473,6 +473,7 @@ const getPackagesByProviderId = async (userId) => {
                     Inclusions: row.Inclusions,
                     AdditionalDayPercentage: row.AdditionalDayPercentage != null ? parseFloat(row.AdditionalDayPercentage) : 20.0,
                     IsActive: row.IsActive,
+                    IsArchived: row.IsArchived || 0,
                     CreatedAt: row.CreatedAt,
                     images: []
                 };
@@ -489,6 +490,59 @@ const getPackagesByProviderId = async (userId) => {
         return Object.values(pkgsMap);
     } catch (e) {
         console.warn('Error getPackagesByProviderId:', e.message);
+        return [];
+    }
+};
+
+const getArchivedPackagesByProviderId = async (userId) => {
+    try {
+        const pool = await getActivePool();
+        if (!pool) return [];
+        const result = await pool.request()
+            .input('UserID', parseInt(userId, 10))
+            .query(`
+                SELECT 
+                    p.*,
+                    pi.ImageID,
+                    pi.ImageUrl
+                FROM dbo.Packages p
+                LEFT JOIN dbo.PackageImages pi ON p.PackageID = pi.PackageID
+                WHERE p.UserID = @UserID AND p.IsArchived = 1
+                ORDER BY p.ArchivedAt DESC, p.PackageID DESC, pi.ImageID ASC
+            `);
+
+        const pkgsMap = {};
+        (result.recordset || []).forEach(row => {
+            const pid = row.PackageID;
+            if (!pkgsMap[pid]) {
+                pkgsMap[pid] = {
+                    PackageID: row.PackageID,
+                    UserID: row.UserID,
+                    PackageName: row.PackageName,
+                    Category: row.Category,
+                    Price: row.Price,
+                    Description: row.Description,
+                    Inclusions: row.Inclusions,
+                    AdditionalDayPercentage: row.AdditionalDayPercentage != null ? parseFloat(row.AdditionalDayPercentage) : 20.0,
+                    IsActive: row.IsActive,
+                    IsArchived: 1,
+                    ArchivedAt: row.ArchivedAt,
+                    CreatedAt: row.CreatedAt,
+                    images: []
+                };
+            }
+            if (row.ImageID && row.ImageUrl) {
+                const cleanImgUrl = typeof row.ImageUrl === 'string' && row.ImageUrl.startsWith('/data:') ? row.ImageUrl.substring(1) : row.ImageUrl;
+                pkgsMap[pid].images.push({
+                    id: row.ImageID,
+                    url: cleanImgUrl
+                });
+            }
+        });
+
+        return Object.values(pkgsMap);
+    } catch (e) {
+        console.warn('Error getArchivedPackagesByProviderId:', e.message);
         return [];
     }
 };
@@ -634,14 +688,52 @@ const updatePackage = async (packageId, userId, packageData) => {
     return result.recordset[0];
 };
 
-const deletePackage = async (packageId, userId) => {
+const archivePackage = async (packageId, userId) => {
     const pool = await getActivePool();
     if (!pool) throw new Error('Database pool unavailable');
     const result = await pool.request()
         .input('PackageID', parseInt(packageId, 10))
         .input('UserID', parseInt(userId, 10))
+        .query(`
+            UPDATE dbo.Packages 
+            SET IsArchived = 1, ArchivedAt = GETDATE() 
+            WHERE PackageID = @PackageID AND UserID = @UserID
+        `);
+    return result.rowsAffected[0] > 0;
+};
+
+const restorePackage = async (packageId, userId) => {
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
+    const result = await pool.request()
+        .input('PackageID', parseInt(packageId, 10))
+        .input('UserID', parseInt(userId, 10))
+        .query(`
+            UPDATE dbo.Packages 
+            SET IsArchived = 0, ArchivedAt = NULL 
+            WHERE PackageID = @PackageID AND UserID = @UserID
+        `);
+    return result.rowsAffected[0] > 0;
+};
+
+const deletePackagePermanently = async (packageId, userId) => {
+    const pool = await getActivePool();
+    if (!pool) throw new Error('Database pool unavailable');
+    // Delete associated photos first
+    await pool.request()
+        .input('PackageID', parseInt(packageId, 10))
+        .query(`DELETE FROM dbo.PackageImages WHERE PackageID = @PackageID`);
+
+    const result = await pool.request()
+        .input('PackageID', parseInt(packageId, 10))
+        .input('UserID', parseInt(userId, 10))
         .query(`DELETE FROM dbo.Packages WHERE PackageID = @PackageID AND UserID = @UserID`);
     return result.rowsAffected[0] > 0;
+};
+
+const deletePackage = async (packageId, userId) => {
+    // Soft delete: moves to archive first before permanent delete
+    return await archivePackage(packageId, userId);
 };
 
 // ------------------------------------------------------------------------
@@ -681,10 +773,14 @@ module.exports = {
     updateService,
     deleteService,
     getPackagesByProviderId,
+    getArchivedPackagesByProviderId,
     getPackageById,
     createPackage,
     updatePackage,
     deletePackage,
+    archivePackage,
+    restorePackage,
+    deletePackagePermanently,
     addPackageImages,
     deletePackagePhotoById,
     getWithdrawalsByProviderId,

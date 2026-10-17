@@ -387,7 +387,15 @@ const autoSeedDatabase = async (activePool) => {
                 BEGIN
                     ALTER TABLE dbo.Packages ADD AdditionalDayPercentage DECIMAL(5,2) DEFAULT 20.00;
                     EXEC('UPDATE dbo.Packages SET AdditionalDayPercentage = 20.00 WHERE AdditionalDayPercentage IS NULL;');
-                END
+                END;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Packages') AND name = 'IsArchived')
+                BEGIN
+                    ALTER TABLE dbo.Packages ADD IsArchived BIT NOT NULL CONSTRAINT DF_Packages_IsArchived DEFAULT 0;
+                END;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Packages') AND name = 'ArchivedAt')
+                BEGIN
+                    ALTER TABLE dbo.Packages ADD ArchivedAt DATETIME2 NULL;
+                END;
             END;
 
             IF OBJECT_ID('dbo.PackageImages', 'U') IS NULL

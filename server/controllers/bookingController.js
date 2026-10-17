@@ -96,7 +96,7 @@ const getPackageById = async (req, res) => {
                 FROM dbo.Packages p
                 LEFT JOIN dbo.ServiceProviders sp ON p.UserID = sp.UserID
                 LEFT JOIN dbo.Users u ON p.UserID = u.UserID
-                WHERE p.PackageID = @PackageID AND p.IsActive = 1;
+                WHERE p.PackageID = @PackageID AND p.IsActive = 1 AND (p.IsArchived = 0 OR p.IsArchived IS NULL);
             `);
 
         if (!pkgRes.recordset || pkgRes.recordset.length === 0) {
@@ -127,7 +127,7 @@ const getPackageById = async (req, res) => {
                 FROM dbo.Packages p
                 LEFT JOIN dbo.ServiceProviders sp ON (p.UserID = sp.UserID OR sp.ProviderID = 1)
                 LEFT JOIN dbo.Users u ON p.UserID = u.UserID
-                WHERE p.IsActive = 1
+                WHERE p.IsActive = 1 AND (p.IsArchived = 0 OR p.IsArchived IS NULL)
                 ORDER BY p.PackageID ASC;
             `);
             if (fallbackRes.recordset && fallbackRes.recordset.length > 0) {
@@ -678,7 +678,7 @@ const createBooking = async (req, res) => {
             const pkgRes = await pool.request().input('PackageID', sql.Int, parseInt(packageId, 10)).query(`
                 SELECT p.*, sp.ProviderID FROM dbo.Packages p
                 LEFT JOIN dbo.ServiceProviders sp ON p.UserID = sp.UserID
-                WHERE p.PackageID = @PackageID AND p.IsActive = 1;
+                WHERE p.PackageID = @PackageID AND p.IsActive = 1 AND (p.IsArchived = 0 OR p.IsArchived IS NULL);
             `);
             if (pkgRes.recordset && pkgRes.recordset[0]) {
                 targetPkg = pkgRes.recordset[0];

@@ -26,9 +26,13 @@ router.delete('/services/:id', verifyToken, providerController.deleteProviderSer
 
 // Packages CRUD Routes
 router.get('/packages/list', verifyToken, providerController.getProviderPackages);
+router.get('/packages/archived', verifyToken, providerController.getArchivedPackages);
 router.post('/packages/create', verifyToken, providerController.uploadPackagePhotos.array('packagePhotos', 10), providerController.createProviderPackage);
+router.put('/packages/:id/archive', verifyToken, providerController.archiveProviderPackage);
+router.put('/packages/:id/restore', verifyToken, providerController.restoreProviderPackage);
 router.put('/packages/:id', verifyToken, providerController.uploadPackagePhotos.array('packagePhotos', 10), providerController.updateProviderPackage);
 router.delete('/packages/photos/:imageId', verifyToken, providerController.deletePackagePhoto);
+router.delete('/packages/:id/permanent', verifyToken, providerController.deleteProviderPackagePermanently);
 router.delete('/packages/:id', verifyToken, providerController.deleteProviderPackage);
 
 // Bookings Routes

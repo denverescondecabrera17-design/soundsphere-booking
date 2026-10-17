@@ -61,6 +61,11 @@
                 <a href="#reviews-section" class="menu-item" id="nav-item-reviews">
                     <i class="fa-solid fa-star"></i> Client Reviews
                 </a>
+
+                <a href="#archive-section" class="menu-item" id="nav-item-archive">
+                    <i class="fa-solid fa-box-archive"></i> Archive
+                    <span id="archive-count-badge" style="margin-left:auto; font-size:0.72rem; background:#fee2e2; color:#ef4444; padding:2px 8px; border-radius:10px; font-weight:800; display:none;">0</span>
+                </a>
             </nav>
         </aside>
 
@@ -257,9 +262,15 @@
                             <h2 style="font-size:1.65rem; color:#0a192f; margin:0 0 6px 0; font-weight:700;"><i class="fa-solid fa-cubes" style="color:#2563eb;"></i> Service Packages</h2>
                             <p style="color:#64748b; margin:0; font-size:0.95rem;">Create and manage the services and packages you offer to clients.</p>
                         </div>
-                        <button type="button" id="btn-create-package-modal" style="background:#2563eb; color:#fff; height:44px; padding:0 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.92rem; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
-                            <i class="fa-solid fa-plus"></i> Create New Offer
-                        </button>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <a href="#archive-section" id="btn-goto-archive" style="background:#ffffff; border:1px solid #cbd5e1; color:#475569; height:44px; padding:0 18px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-size:0.92rem; text-decoration:none; box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:all 0.2s;">
+                                <i class="fa-solid fa-box-archive" style="color:#64748b;"></i> Archived Packages
+                                <span id="packages-archive-pill" style="background:#fee2e2; color:#ef4444; font-size:0.75rem; padding:2px 7px; border-radius:10px; font-weight:800; display:none;">0</span>
+                            </a>
+                            <button type="button" id="btn-create-package-modal" style="background:#2563eb; color:#fff; height:44px; padding:0 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.92rem; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                                <i class="fa-solid fa-plus"></i> Create New Offer
+                            </button>
+                        </div>
                     </div>
 
                     <div id="provider-packages-cards-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 420px)); gap:24px;">
@@ -267,6 +278,42 @@
                             <i class="fa-solid fa-box-open" style="font-size:2.5rem; color:#94a3b8; margin-bottom:12px; display:block;"></i>
                             <h3 style="margin:0 0 6px 0; color:#0a192f; font-size:1.1rem; font-weight:800;">No Service Packages Added Yet</h3>
                             <p style="margin:0 0 16px 0; font-size:0.88rem; color:#64748b;">Click <strong>Create New Offer</strong> to add your first service package for clients.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ARCHIVED PACKAGES (RECYCLE BIN) -->
+                <div class="provider-view-panel hidden" id="view-provider-archive">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h2 style="font-size:1.65rem; color:#0a192f; margin:0 0 6px 0; font-weight:800; display:flex; align-items:center; gap:12px;">
+                                <i class="fa-solid fa-box-archive" style="color:#ef4444;"></i> Archived Packages
+                            </h2>
+                            <p style="color:#64748b; margin:0; font-size:0.95rem;">Deleted service packages go here first before permanent deletion. You can restore them anytime or permanently erase them.</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <a href="#packages-section" class="btn btn-outline" style="background:#ffffff; border:1px solid #cbd5e1; color:#334155; height:42px; padding:0 16px; border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:8px; text-decoration:none;">
+                                <i class="fa-solid fa-arrow-left"></i> Active Packages
+                            </a>
+                            <button type="button" id="btn-refresh-archive" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; height:42px; padding:0 16px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Safety Information Banner -->
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:10px; padding:14px 20px; margin-bottom:24px; display:flex; align-items:center; gap:14px;">
+                        <i class="fa-solid fa-shield-halved" style="color:#d97706; font-size:1.3rem; flex-shrink:0;"></i>
+                        <span style="font-size:0.92rem; color:#92400e; line-height:1.45;">
+                            <strong>Temporary Archive Protection:</strong> Packages here are completely hidden from clients and search. Click <strong>Restore</strong> to put any package back into active service, or click <strong>Delete Permanently</strong> to erase it for good.
+                        </span>
+                    </div>
+
+                    <div id="provider-archived-cards-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 420px)); gap:24px;">
+                        <div style="grid-column:1/-1; text-align:center; padding:52px 24px; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;">
+                            <i class="fa-solid fa-box-archive" style="font-size:2.8rem; color:#cbd5e1; margin-bottom:14px; display:block;"></i>
+                            <h3 style="margin:0 0 6px 0; color:#0a192f; font-size:1.15rem; font-weight:800;">Archive is Empty</h3>
+                            <p style="margin:0; font-size:0.9rem; color:#64748b;">When you delete a service package, it will safely appear here first before permanent deletion.</p>
                         </div>
                     </div>
                 </div>
