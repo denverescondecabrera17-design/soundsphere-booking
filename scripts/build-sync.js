@@ -268,6 +268,21 @@ if (fs.existsSync(srcProfileJs)) {
     });
 }
 
+// 13b. Sync api.js
+const srcApiJs = path.join(__dirname, '../client/js/api.js');
+const apiJsTargets = [
+    path.join(__dirname, '../client/pages/js/api.js'),
+    path.join(__dirname, '../public/js/api.js'),
+    path.join(__dirname, '../public/pages/js/api.js')
+];
+if (fs.existsSync(srcApiJs)) {
+    const apiJsContent = fs.readFileSync(srcApiJs, 'utf8');
+    apiJsTargets.forEach(target => {
+        safeWriteFileSync(target, apiJsContent);
+        console.log(`Synced api.js -> ${target}`);
+    });
+}
+
 // 14. Sync client/dashboard.html
 const srcClientDashHtml = path.join(__dirname, '../client/client/dashboard.html');
 const clientDashHtmlTargets = [

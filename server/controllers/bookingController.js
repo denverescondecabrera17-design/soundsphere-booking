@@ -979,6 +979,21 @@ const getMyBookings = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Unauthorized. User ID not provided.' });
         }
 
+        // Verify user actually exists in the database
+        const pool = getPool();
+        if (pool && pool.connected) {
+            const userCheck = await pool.request()
+                .input('uid', sql.Int, clientUserId)
+                .query('SELECT UserID FROM dbo.Users WHERE UserID = @uid');
+            if (!userCheck.recordset || userCheck.recordset.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    isDeleted: true,
+                    message: 'Your account has been deleted or no longer exists. Please register again.'
+                });
+            }
+        }
+
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
         // Proactively auto-accept any completions older than 24 hours

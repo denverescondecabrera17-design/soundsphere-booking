@@ -4,8 +4,9 @@
  */
 
 const jwt = require('jsonwebtoken');
+const { getPool, sql } = require('../config/db');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     try {
         let authHeader = req.headers.authorization || req.headers.Authorization;
         if (!authHeader && req.query && req.query.token) {
@@ -21,6 +22,30 @@ const verifyToken = (req, res, next) => {
 
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'SoundSphere_Secret_Key');
+
+        const pool = getPool();
+        if (pool && pool.connected && decoded && (decoded.userId || decoded.id || decoded.UserID)) {
+            const uid = decoded.userId || decoded.id || decoded.UserID;
+            const userCheck = await pool.request()
+                .input('uid', sql.Int, uid)
+                .query('SELECT UserID, IsActive, AccountStatus FROM dbo.Users WHERE UserID = @uid');
+            
+            if (!userCheck.recordset || userCheck.recordset.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    isDeleted: true,
+                    message: 'Your account has been deleted or no longer exists. Please register or log in again.'
+                });
+            }
+
+            if (userCheck.recordset[0].AccountStatus === 'Suspended' || userCheck.recordset[0].IsActive === false) {
+                return res.status(403).json({
+                    success: false,
+                    isSuspended: true,
+                    message: 'Your account has been suspended. Please contact administrator support.'
+                });
+            }
+        }
 
         req.user = decoded;
         next();

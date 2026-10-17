@@ -184,6 +184,10 @@ const SoundSphereAPI = (() => {
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 401 && (data.isDeleted || (data.message && data.message.includes('deleted')))) {
+                    clearAuthSession();
+                    window.location.href = '/register.html';
+                }
                 const error = new Error(data.message || 'An API error occurred.');
                 error.status = response.status;
                 error.data = data;

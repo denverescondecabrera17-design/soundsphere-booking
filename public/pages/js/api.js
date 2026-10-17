@@ -3,6 +3,29 @@
  * Handles all backend HTTP REST communications, JWT Token storage, and session management
  */
 
+// Silence harmless third-party extension noise and Chromium compositor notices
+(function() {
+    if (typeof window !== 'undefined' && window.console) {
+        const _origWarn = console.warn;
+        const _origError = console.error;
+        const isNoisy = (args) => {
+            const msg = args.map(a => (typeof a === 'string' ? a : (a && a.message) || '')).join(' ');
+            return msg.includes('powerPreference option is currently ignored') ||
+                   msg.includes('crbug.com/369219127') ||
+                   msg.includes('AccountsDomainCookiesCheckConnectionHttp') ||
+                   msg.includes('_0x183515') ||
+                   msg.includes('accounts.youtube.com') ||
+                   msg.includes('cspreport');
+        };
+        console.warn = function(...args) {
+            if (!isNoisy(args)) _origWarn.apply(console, args);
+        };
+        console.error = function(...args) {
+            if (!isNoisy(args)) _origError.apply(console, args);
+        };
+    }
+})();
+
 const SoundSphereAPI = (() => {
     // API Configuration
     const BASE_URL = '/api';
@@ -76,6 +99,8 @@ const SoundSphereAPI = (() => {
             storage.setItem(USER_KEY, userJson);
             storage.setItem('soundsphere_user_info', userJson);
             storage.setItem('soundsphere_user', userJson);
+            storage.setItem('user', userJson);
+            storage.setItem('userData', userJson);
 
             const displayName = user.personalName || user.clientName || user.name || `${user.ClientFirstName || user.firstName || ''} ${user.ClientLastName || user.lastName || ''}`.trim() || user.email || user.Email || 'Account';
             storage.setItem('soundsphere_user_name', displayName);
@@ -159,6 +184,10 @@ const SoundSphereAPI = (() => {
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 401 && (data.isDeleted || (data.message && data.message.includes('deleted')))) {
+                    clearAuthSession();
+                    window.location.href = '/register.html';
+                }
                 const error = new Error(data.message || 'An API error occurred.');
                 error.status = response.status;
                 error.data = data;

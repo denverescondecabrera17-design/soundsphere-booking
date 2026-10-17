@@ -236,6 +236,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const queryParam = user.userId ? `?userId=${user.userId}` : '';
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const res = await fetch(`/api/users/profile${queryParam}`, { headers });
+                if (res.status === 404 || res.status === 401) {
+                    console.warn('Account does not exist in database, clearing local session...');
+                    if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.clearAuthSession) {
+                        SoundSphereAPI.clearAuthSession();
+                    } else {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                    }
+                    window.location.href = '/register.html';
+                    return;
+                }
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success && data.user) {

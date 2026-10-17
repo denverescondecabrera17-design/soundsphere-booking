@@ -99,6 +99,8 @@ const SoundSphereAPI = (() => {
             storage.setItem(USER_KEY, userJson);
             storage.setItem('soundsphere_user_info', userJson);
             storage.setItem('soundsphere_user', userJson);
+            storage.setItem('user', userJson);
+            storage.setItem('userData', userJson);
 
             const displayName = user.personalName || user.clientName || user.name || `${user.ClientFirstName || user.firstName || ''} ${user.ClientLastName || user.lastName || ''}`.trim() || user.email || user.Email || 'Account';
             storage.setItem('soundsphere_user_name', displayName);
@@ -182,6 +184,10 @@ const SoundSphereAPI = (() => {
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 401 && (data.isDeleted || (data.message && data.message.includes('deleted')))) {
+                    clearAuthSession();
+                    window.location.href = '/register.html';
+                }
                 const error = new Error(data.message || 'An API error occurred.');
                 error.status = response.status;
                 error.data = data;

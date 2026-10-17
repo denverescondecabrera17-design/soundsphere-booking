@@ -775,6 +775,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers,
                 cache: 'no-store'
             });
+            if (res.status === 401) {
+                const errData = await res.json().catch(() => ({}));
+                if (errData && errData.isDeleted) {
+                    if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.clearAuthSession) {
+                        SoundSphereAPI.clearAuthSession();
+                    } else {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                    }
+                    window.location.href = '/register.html';
+                    return;
+                }
+            }
             if (!res.ok) return;
 
             const data = await res.json();
