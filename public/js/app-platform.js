@@ -5228,74 +5228,122 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let reportProofBase64 = null;
+
     window.openReportModal = (options = {}, triggerBtn = null) => {
         currentReportingTriggerBtn = triggerBtn;
         let modal = document.getElementById('modal-report-provider');
         if (!modal) {
             const modalMarkup = `
-                <div class="modal-overlay hidden" id="modal-report-provider" role="dialog" aria-modal="true" style="position:fixed; inset:0; background:rgba(10,25,47,0.7); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:999999; padding:16px;">
-                    <div class="modal-card" style="background:#ffffff; border-radius:20px; width:100%; max-width:540px; box-shadow:0 25px 60px rgba(10,25,47,0.3); overflow:hidden; animation:reportModalFadeIn 0.2s ease-out;">
-                        <div style="padding:20px 24px; background:linear-gradient(135deg, #881337 0%, #4c0519 100%); color:#ffffff; display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div style="width:42px; height:42px; border-radius:12px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fda4af; display:flex; align-items:center; justify-content:center; font-size:1.25rem;">
-                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                <div class="modal-overlay hidden" id="modal-report-provider" role="dialog" aria-modal="true" style="position:fixed; inset:0; width:100vw; height:100vh; background:rgba(10,25,47,0.88); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; z-index:9999999; padding:0; box-sizing:border-box;">
+                    <div class="modal-card" style="background:#ffffff; width:100vw; height:100vh; max-width:100vw; max-height:100vh; display:flex; flex-direction:column; box-shadow:none; overflow:hidden; border-radius:0; border:none;">
+                        <!-- Header -->
+                        <div style="padding:22px 36px; background:linear-gradient(135deg, #0a192f 0%, #1e3e62 100%); border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <div style="width:48px; height:48px; border-radius:14px; background:rgba(37,99,235,0.25); color:#60a5fa; border:1px solid rgba(96,165,250,0.3); display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0;">
+                                    <i class="fa-solid fa-shield-cat"></i>
                                 </div>
                                 <div>
-                                    <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Report Service Provider</h3>
-                                    <p style="margin:3px 0 0 0; font-size:0.82rem; color:#fecdd3;" id="report-modal-subtitle">Incident report for Booking</p>
+                                    <h3 style="margin:0; font-size:1.45rem; color:#ffffff; font-weight:900;">Report Service Provider</h3>
+                                    <p style="margin:4px 0 0 0; font-size:0.95rem; color:#94a3b8; font-weight:600;">Confidential investigation report submitted directly to SoundSphere Administration</p>
                                 </div>
                             </div>
-                            <button type="button" class="btn-close-report-modal" style="background:none; border:none; font-size:1.5rem; color:#fecdd3; cursor:pointer; line-height:1;" title="Close">&times;</button>
+                            <button type="button" class="btn-close-report-modal" style="width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.15); border:none; font-size:1.25rem; color:#ffffff; cursor:pointer; display:flex; align-items:center; justify-content:center; outline:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="Close">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
                         </div>
-                        <form id="form-report-provider" style="padding:22px 24px; display:flex; flex-direction:column; gap:16px; margin:0;">
+
+                        <!-- Form -->
+                        <form id="form-report-provider" style="margin:0; display:flex; flex-direction:column; flex:1; overflow:hidden;">
                             <input type="hidden" id="report-modal-booking-id" value="">
-                            <input type="hidden" id="report-modal-booking-ref" value="">
                             <input type="hidden" id="report-modal-provider-id" value="">
-                            
-                            <div style="padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase;">Service Provider</span>
-                                    <div style="font-size:0.95rem; font-weight:800; color:#0a192f; margin-top:2px;" id="report-modal-provider-name">Service Provider</div>
+
+                            <div style="padding:32px 36px; max-width:980px; width:100%; margin:0 auto; box-sizing:border-box; display:flex; flex-direction:column; gap:22px; overflow-y:auto; flex:1;">
+                                <!-- Flagged Provider Card -->
+                                <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:14px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+                                    <div>
+                                        <span style="font-size:0.8rem; text-transform:uppercase; font-weight:800; color:#64748b; letter-spacing:0.05em;">Flagged Provider</span>
+                                        <div style="font-size:1.2rem; font-weight:900; color:#0f172a; margin-top:2px;" id="report-modal-provider-name">Service Provider</div>
+                                    </div>
+                                    <span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight:800; flex-shrink:0;">
+                                        <i class="fa-solid fa-shield-halved"></i> Provider Investigation
+                                    </span>
                                 </div>
-                                <span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-weight:800; font-size:0.75rem; padding:4px 10px; border-radius:20px;">
-                                    Incident Report
-                                </span>
+
+                                <!-- Reason for Report -->
+                                <div>
+                                    <label style="display:block; font-size:1.05rem; font-weight:800; color:#1e293b; margin-bottom:8px;">
+                                        Reason for Report <span style="color:#2563eb;">*</span>
+                                    </label>
+                                    <select id="report-modal-reason" required style="width:100%; padding:14px 18px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:1.05rem; color:#0f172a; background:#ffffff; cursor:pointer; font-weight:600; box-sizing:border-box; outline:none;">
+                                        <option value="" disabled selected>— Select a violation category —</option>
+                                        <option value="Unprofessional Behavior / Harassment">Unprofessional Behavior / Harassment</option>
+                                        <option value="Failure to Attend / No-Show">Failure to Attend / No-Show on Event Day</option>
+                                        <option value="Overcharging / Payment Discrepancy">Overcharging / Off-Platform Payment Demand</option>
+                                        <option value="Poor Quality / Faulty Equipment">Poor Sound Quality / Damaged Equipment</option>
+                                        <option value="Misleading Information / Fake Rig Listing">Misleading Information / Fake Rig Photos</option>
+                                        <option value="Breach of Booking Agreement">Breach of Agreed Service / Time Schedule</option>
+                                        <option value="Fraud / Scam / Fake Profile">Fraud / Scam / Fake Profile</option>
+                                        <option value="Other Policy Violation">Other Service Policy Violation</option>
+                                    </select>
+                                </div>
+
+                                <!-- Incident Description -->
+                                <div>
+                                    <label style="display:block; font-size:1.05rem; font-weight:800; color:#1e293b; margin-bottom:8px;">
+                                        State the Reason &amp; Incident Details <span style="color:#2563eb;">*</span>
+                                    </label>
+                                    <textarea id="report-modal-desc" required rows="5" style="width:100%; padding:14px 18px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:1.05rem; font-family:inherit; color:#0f172a; box-sizing:border-box; resize:vertical; min-height:120px; line-height:1.5; outline:none;" placeholder="Please state clearly what happened, promises broken, or issues experienced (minimum 10 characters)..."></textarea>
+                                </div>
+
+                                <!-- Attach Photo / Picture Proof -->
+                                <div>
+                                    <label style="display:block; font-size:1.05rem; font-weight:800; color:#1e293b; margin-bottom:8px;">
+                                        Attach Photo / Picture Proof <span style="font-size:0.85rem; color:#64748b; font-weight:normal;">(Optional)</span>
+                                    </label>
+                                    <input type="file" id="report-input-proof" accept="image/*" style="display:none;">
+                                    <label for="report-input-proof" id="report-proof-upload-btn" style="display:flex; align-items:center; justify-content:center; gap:12px; width:100%; padding:16px; border:2.5px dashed #cbd5e1; border-radius:14px; background:#f8fafc; color:#475569; font-size:1.05rem; font-weight:800; cursor:pointer; transition:all 0.2s; box-sizing:border-box;" onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';">
+                                        <i class="fa-solid fa-camera" style="color:#2563eb; font-size:1.3rem;"></i>
+                                        <span id="report-proof-btn-label">Click to upload picture proof (PNG, JPG, WEBP)</span>
+                                    </label>
+
+                                    <!-- Photo Preview Container -->
+                                    <div id="report-proof-preview-container" style="display:none; margin-top:12px; padding:14px 18px; background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:14px; align-items:center; justify-content:space-between; gap:16px;">
+                                        <div style="display:flex; align-items:center; gap:14px; overflow:hidden;">
+                                            <img id="report-proof-img-preview" src="" alt="Proof Preview" style="width:64px; height:64px; object-fit:cover; border-radius:12px; border:1.5px solid #93c5fd; flex-shrink:0;">
+                                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                <div id="report-proof-filename" style="font-size:1rem; font-weight:900; color:#0369a1; text-overflow:ellipsis; overflow:hidden;">proof_image.png</div>
+                                                <div id="report-proof-filesize" style="font-size:0.85rem; color:#0284c7; font-weight:700; margin-top:2px;">Photo evidence ready</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="btn-remove-report-proof" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; border-radius:8px; padding:8px 16px; font-size:0.9rem; font-weight:800; cursor:pointer; flex-shrink:0; display:flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-trash-can"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Associated Booking Reference -->
+                                <div>
+                                    <label style="display:block; font-size:1.05rem; font-weight:800; color:#1e293b; margin-bottom:8px;">
+                                        Associated Booking Reference <span style="font-size:0.85rem; color:#64748b; font-weight:normal;">(Optional)</span>
+                                    </label>
+                                    <input type="text" id="report-modal-booking-ref" placeholder="e.g. SS-2026-00018 or #BK-5" style="width:100%; padding:14px 18px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:1.05rem; color:#0f172a; box-sizing:border-box; outline:none;">
+                                </div>
+
+                                <!-- Info Banner -->
+                                <div style="background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:14px; padding:14px 18px; display:flex; gap:12px; align-items:flex-start;">
+                                    <i class="fa-solid fa-shield-halved" style="color:#0284c7; margin-top:3px; font-size:1.15rem; flex-shrink:0;"></i>
+                                    <p style="margin:0; font-size:0.88rem; color:#0369a1; line-height:1.5; font-weight:600;">
+                                        False or malicious reports violate SoundSphere Terms of Service. Reports are reviewed by platform administrators and recorded in the official audit trail.
+                                    </p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label for="report-modal-reason" style="display:block; font-size:0.88rem; font-weight:800; color:#0a192f; margin-bottom:6px;">
-                                    Reason for Report <span style="color:#ef4444;">*</span>
-                                </label>
-                                <select id="report-modal-reason" required style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; color:#0a192f; background:#fff; cursor:pointer; outline:none;">
-                                    <option value="" disabled selected>— Select an issue category —</option>
-                                    <option value="Failure to Attend / No-Show">Failure to Attend / No-Show on Event Day</option>
-                                    <option value="Unprofessional Behavior / Harassment">Unprofessional Behavior / Harassment</option>
-                                    <option value="Overcharging / Payment Discrepancy">Overcharging / Off-Platform Payment Demand</option>
-                                    <option value="Poor Quality / Faulty Equipment">Poor Sound Quality / Damaged Equipment</option>
-                                    <option value="Misleading Information / Fake Rig Listing">Misleading Information / Fake Rig Photos</option>
-                                    <option value="Breach of Booking Agreement">Breach of Agreed Schedule or Package Inclusions</option>
-                                    <option value="Other Policy Violation">Other Service Policy Violation</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="report-modal-desc" style="display:block; font-size:0.88rem; font-weight:800; color:#0a192f; margin-bottom:6px;">
-                                    Complaint Description <span style="color:#ef4444;">*</span>
-                                </label>
-                                <textarea id="report-modal-desc" required rows="4" style="width:100%; padding:12px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-family:inherit; color:#0a192f; box-sizing:border-box; resize:vertical; outline:none;" placeholder="Please describe what occurred during your event reservation (minimum 10 characters)..."></textarea>
-                            </div>
-
-                            <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:10px 14px; display:flex; gap:10px; align-items:flex-start;">
-                                <i class="fa-solid fa-shield-halved" style="color:#e11d48; margin-top:2px; font-size:0.95rem;"></i>
-                                <p style="margin:0; font-size:0.76rem; color:#9f1239; line-height:1.4;">
-                                    Your report will be sent directly to SoundSphere Administration for dispute investigation and logged in the platform audit trail.
-                                </p>
-                            </div>
-
-                            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px; border-top:1px solid #e2e8f0; padding-top:14px;">
-                                <button type="button" class="btn-close-report-modal" style="padding:10px 18px; border:1.5px solid #cbd5e1; border-radius:10px; background:#ffffff; color:#475569; font-weight:700; font-size:0.9rem; cursor:pointer;">Cancel</button>
-                                <button type="submit" id="btn-submit-provider-report" style="padding:10px 22px; border:none; border-radius:10px; background:linear-gradient(135deg, #e11d48, #be123c); color:#ffffff; font-weight:800; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(225,29,72,0.3);">
-                                    <i class="fa-solid fa-paper-plane"></i> Submit Report to Admin
+                            <!-- Footer -->
+                            <div style="padding:20px 36px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:14px; flex-shrink:0;">
+                                <button type="button" class="btn-close-report-modal" style="padding:14px 28px; border:1.5px solid #cbd5e1; border-radius:12px; background:#ffffff; color:#475569; font-weight:800; font-size:1.05rem; cursor:pointer; outline:none;">Cancel</button>
+                                <button type="submit" id="btn-submit-provider-report" style="padding:14px 34px; border:none; border-radius:12px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; font-weight:900; font-size:1.05rem; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 6px 20px rgba(37,99,235,0.35);">
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Official Report
                                 </button>
                             </div>
                         </form>
@@ -5311,20 +5359,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookingRefInput = document.getElementById('report-modal-booking-ref');
         const providerIdInput = document.getElementById('report-modal-provider-id');
         const providerNameEl = document.getElementById('report-modal-provider-name');
-        const subtitleEl = document.getElementById('report-modal-subtitle');
         const reasonSelect = document.getElementById('report-modal-reason');
         const descTextarea = document.getElementById('report-modal-desc');
 
         const rawProvName = options.providerName ? window.safeDecodeString(options.providerName) : 'Service Provider';
-        const rawRef = options.bookingRef || (options.bookingId ? `Booking #${options.bookingId}` : 'Booking');
+        const rawRef = options.bookingRef || (options.bookingId ? `SS-2026-${String(options.bookingId).padStart(5, '0')}` : '');
 
         if (bookingIdInput) bookingIdInput.value = options.bookingId || '';
-        if (bookingRefInput) bookingRefInput.value = options.bookingRef || '';
+        if (bookingRefInput) bookingRefInput.value = rawRef;
         if (providerIdInput) providerIdInput.value = options.providerId || '';
         if (providerNameEl) providerNameEl.textContent = rawProvName;
-        if (subtitleEl) subtitleEl.textContent = `Incident report for ${rawRef}`;
         if (reasonSelect) reasonSelect.value = '';
         if (descTextarea) descTextarea.value = '';
+
+        window.resetReportProof();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
@@ -5338,6 +5386,17 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.classList.add('hidden');
             modal.style.display = 'none';
         }
+        window.resetReportProof();
+    };
+
+    window.resetReportProof = () => {
+        reportProofBase64 = null;
+        const proofInput = document.getElementById('report-input-proof');
+        const proofPreviewContainer = document.getElementById('report-proof-preview-container');
+        const proofImgPreview = document.getElementById('report-proof-img-preview');
+        if (proofInput) proofInput.value = '';
+        if (proofPreviewContainer) proofPreviewContainer.style.display = 'none';
+        if (proofImgPreview) proofImgPreview.src = '';
     };
 
     function initReportModal() {
@@ -5348,9 +5407,50 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', window.closeReportModal);
         });
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) window.closeReportModal();
-        });
+        // Photo proof upload handling
+        const proofInput = document.getElementById('report-input-proof');
+        const proofPreviewContainer = document.getElementById('report-proof-preview-container');
+        const proofImgPreview = document.getElementById('report-proof-img-preview');
+        const proofFilename = document.getElementById('report-proof-filename');
+        const btnRemoveProof = document.getElementById('btn-remove-report-proof');
+
+        if (btnRemoveProof) {
+            btnRemoveProof.onclick = window.resetReportProof;
+        }
+
+        if (proofInput) {
+            proofInput.onchange = function(e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                const toastFn = (msg, type = 'info') => {
+                    if (typeof showToast === 'function') showToast(msg, type);
+                    else if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.showToast) SoundSphereAPI.showToast(msg, type);
+                    else alert(msg);
+                };
+
+                if (!file.type.startsWith('image/')) {
+                    toastFn('Please select a valid image file (PNG, JPG, WEBP).', 'warning');
+                    window.resetReportProof();
+                    return;
+                }
+
+                if (file.size > 10 * 1024 * 1024) {
+                    toastFn('Image file size exceeds 10MB limit.', 'warning');
+                    window.resetReportProof();
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    reportProofBase64 = evt.target.result;
+                    if (proofImgPreview) proofImgPreview.src = reportProofBase64;
+                    if (proofFilename) proofFilename.textContent = file.name;
+                    if (proofPreviewContainer) proofPreviewContainer.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            };
+        }
 
         const form = document.getElementById('form-report-provider');
         if (form && !form.dataset.initialized) {
@@ -5376,7 +5476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (!description || description.trim().length < 10) {
-                    toastFn('⚠️ Please provide at least 10 characters describing the issue.', 'warning');
+                    toastFn('⚠️ Please state clearly what happened (at least 10 characters).', 'warning');
                     return;
                 }
 
@@ -5400,7 +5500,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             providerId: providerId ? parseInt(providerId, 10) : null,
                             bookingId: bookingId ? parseInt(bookingId, 10) : null,
                             reason: reason,
-                            description: `[Booking Ref: ${bookingRef || bookingId || 'N/A'}] ${description.trim()}`
+                            description: `[Booking Ref: ${bookingRef || bookingId || 'N/A'}] ${description.trim()}`,
+                            proofImage: reportProofBase64 || null
                         })
                     });
 
@@ -5433,7 +5534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } finally {
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report to Admin';
+                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Official Report';
                     }
                 }
             });
