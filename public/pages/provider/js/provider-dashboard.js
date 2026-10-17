@@ -2921,7 +2921,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             <div style="margin-bottom:18px;">
                                                 <strong style="font-size:0.9rem; color:#475569; text-transform:uppercase; display:block; margin-bottom:8px; font-weight:700;">Includes:</strong>
                                                 <ul style="list-style:none; padding:0; margin:0; font-size:0.95rem; color:#334155; display:flex; flex-direction:column; gap:6px;">
-                                                    ${inclusionsArr.map(inc => `<li><i class="fa-solid fa-check" style="color:#10b981; margin-right:8px;"></i> ${inc}</li>`).join('')}
+                                                    ${inclusionsArr.slice(0, 3).map(inc => `<li><i class="fa-solid fa-check" style="color:#10b981; margin-right:8px;"></i> ${inc}</li>`).join('')}
+                                                    ${inclusionsArr.length > 3 ? `<li style="font-weight:700; color:#2563eb; display:flex; align-items:center; gap:6px; margin-top:2px; font-size:0.88rem;"><i class="fa-solid fa-plus" style="font-size:0.75rem;"></i> +${inclusionsArr.length - 3} more included</li>` : ''}
                                                 </ul>
                                             </div>
 

@@ -218,7 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const pTitle = card.getAttribute('data-title') || "Package";
             const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
-            const inclusions = Array.from(card.querySelectorAll('.inclusions-list li')).map(li => li.textContent.trim());
+            const rawIncData = card.getAttribute('data-inclusions');
+            let inclusions = [];
+            if (rawIncData) {
+                try { inclusions = JSON.parse(decodeURIComponent(rawIncData)); } catch(e){}
+            }
+            if (!inclusions || inclusions.length === 0) {
+                inclusions = Array.from(card.querySelectorAll('.inclusions-list li'))
+                    .filter(li => !li.classList.contains('more-inclusions-item'))
+                    .map(li => li.textContent.trim());
+            }
 
             selectedPackageTitle = pTitle;
             selectedPackagePrice = pPrice;
@@ -796,15 +805,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         const description = pkg.description || pkg.Description || '';
                         
                         let inclusions = [];
-                        if (Array.isArray(pkg.inclusions) && pkg.inclusions.length > 0) {
-                            inclusions = pkg.inclusions;
-                        } else if (typeof pkg.Inclusions === 'string' && pkg.Inclusions.trim()) {
-                            inclusions = pkg.Inclusions.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-                        } else if (typeof pkg.inclusions === 'string' && pkg.inclusions.trim()) {
-                            inclusions = pkg.inclusions.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+                        const rawInc = pkg.inclusions || pkg.Inclusions;
+                        if (Array.isArray(rawInc) && rawInc.length > 0) {
+                            inclusions = rawInc.map(s => String(s).trim()).filter(Boolean);
+                        } else if (typeof rawInc === 'string' && rawInc.trim()) {
+                            inclusions = rawInc.includes('\n')
+                                ? rawInc.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+                                : rawInc.split(',').map(s => s.trim()).filter(Boolean);
                         } else {
                             inclusions = [pkg.category || 'Sound System Setup', 'Professional Equipment', 'On-Site Technician'];
                         }
+                        pkg.parsedInclusions = inclusions;
 
                         if (isDefault) {
                             selectedPackageTitle = title;
@@ -877,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         return `
-                            <div class="package-card ${isDefault ? 'selected-active' : ''}" data-price="${pkg.price || 15000}" data-title="${title}" data-id="${offerId}" data-pkg-idx="${idx}" style="cursor: pointer;" title="Click to view full package details">
+                            <div class="package-card ${isDefault ? 'selected-active' : ''}" data-price="${pkg.price || 15000}" data-title="${title}" data-id="${offerId}" data-pkg-idx="${idx}" data-inclusions="${encodeURIComponent(JSON.stringify(inclusions))}" style="cursor: pointer;" title="Click to view full package details">
                                 <div>
                                     <div class="pkg-card-title">${title}</div>
                                     <div class="pkg-card-price-row">
@@ -888,7 +899,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${description ? `<p class="pkg-description-text">${description}</p>` : ''}
 
                                     <ul class="inclusions-list">
-                                        ${inclusions.map(inc => `<li><i class="fa-solid fa-check"></i> ${inc}</li>`).join('')}
+                                        ${inclusions.slice(0, 3).map(inc => `<li><i class="fa-solid fa-check"></i> ${inc}</li>`).join('')}
+                                        ${inclusions.length > 3 ? `
+                                            <li class="more-inclusions-item" style="color:#2563eb; font-weight:700; font-size:0.86rem; margin-top:5px; display:flex; align-items:center; gap:6px;">
+                                                <i class="fa-solid fa-plus" style="font-size:0.75rem;"></i> +${inclusions.length - 3} more included
+                                            </li>
+                                        ` : ''}
                                     </ul>
 
                                     ${photosGalleryHTML}
@@ -913,10 +929,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const bookBtn = card.querySelector('.btn-book-package-direct');
                         const pTitle = card.getAttribute('data-title') || "Package";
                         const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
-                        const pkgData = uniqueOffers[cIdx] || {
+                        const pkgData = {
+                            ...(uniqueOffers[cIdx] || {}),
                             id: card.getAttribute('data-id') || (cIdx + 1),
                             title: pTitle,
-                            price: pPrice
+                            price: pPrice,
+                            inclusions: inclusions
                         };
 
                         const handleDetailsClick = () => {
