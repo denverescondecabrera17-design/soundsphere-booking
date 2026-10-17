@@ -1475,6 +1475,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dueBookings = bookings.filter(b => {
                     const statusLower = (b.BookingStatus || '').toLowerCase();
                     if (statusLower === 'cancelled' || statusLower === 'rejected') return false;
+                    const paymentStatusLower = (b.PaymentStatus || '').toLowerCase();
+                    if (paymentStatusLower === 'paid') return false;
                     const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
                     const amountPaidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (b.PaymentType === 'downpayment' ? totalAmountVal * 0.5 : totalAmountVal));
                     const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));

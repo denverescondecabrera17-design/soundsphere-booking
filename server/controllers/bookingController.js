@@ -1161,10 +1161,20 @@ const createPayMongoCheckout = async (req, res) => {
                 const bk = lookupRes.recordset[0];
                 finalRef = bk.BookingReference || finalRef;
                 finalPkgName = bk.PackageName || finalPkgName;
-                finalPaymentType = bk.PaymentType || finalPaymentType;
-                const total = parseFloat(bk.TotalAmount || 0);
-                const isDown = (finalPaymentType === 'downpayment');
-                finalAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
+
+                const isPayingBalance = (paymentType === 'balance' || bk.PaymentStatus === 'Partial' || String(packageName || '').toLowerCase().includes('balance'));
+                if (isPayingBalance) {
+                    finalPaymentType = 'balance';
+                    const rem = parseFloat(bk.RemainingBalance);
+                    finalAmount = (!isNaN(rem) && rem > 0) ? rem : (parseFloat(amount) || 0);
+                    finalPkgName = packageName || `Remaining Balance: ${bk.PackageName} (${finalRef})`;
+                } else {
+                    finalPaymentType = bk.PaymentType || finalPaymentType;
+                    const total = parseFloat(bk.TotalAmount || 0);
+                    const isDown = (finalPaymentType === 'downpayment');
+                    finalAmount = isDown ? parseFloat((total * 0.5).toFixed(2)) : total;
+                }
+
                 if (!finalClientName && bk.ClientName) finalClientName = bk.ClientName;
                 if (!finalClientEmail && bk.ClientEmail) finalClientEmail = bk.ClientEmail;
                 if (!finalClientPhone && bk.ClientPhone) finalClientPhone = bk.ClientPhone;
@@ -1356,8 +1366,48 @@ const verifyPayMongoPayment = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Booking reservation not found.' });
         }
 
-        if (booking.BookingStatus === 'Confirmed' && booking.PaymentStatus !== 'Pending') {
-            return res.status(200).json({ success: true, message: 'Booking is already confirmed.', booking });
+        const remainingBal = parseFloat(booking.RemainingBalance || 0);
+
+        // If booking is already confirmed, check if remaining balance needs to be settled
+        if (booking.BookingStatus === 'Confirmed') {
+            if (remainingBal > 0) {
+                let isPaid = true;
+                if (sessionId && sessionId.startsWith('cs_')) {
+                    try {
+                        const pmStatus = await paymongoService.getCheckoutSessionStatus(sessionId);
+                        isPaid = pmStatus && (pmStatus.status === 'paid' || pmStatus.isPaid || pmStatus.success);
+                    } catch (pmErr) {
+                        console.warn('PayMongo verification check error:', pmErr.message);
+                        isPaid = true;
+                    }
+                }
+
+                if (!isPaid) {
+                    return res.status(400).json({ success: false, message: 'Payment verification failed or was cancelled.' });
+                }
+
+                await bookingModel.settleRemainingBalance({
+                    bookingId: booking.BookingID,
+                    bookingReference: booking.BookingReference,
+                    amount: req.body.amount ? parseFloat(req.body.amount) : remainingBal,
+                    paymentMethod: 'PayMongo',
+                    transactionReference: sessionId || `BAL-${booking.BookingReference}-${Date.now()}`
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Remaining balance settled and booking marked as fully paid.',
+                    booking: {
+                        ...booking,
+                        PaymentStatus: 'Paid',
+                        PaymentType: 'full',
+                        AmountPaid: booking.TotalAmount,
+                        RemainingBalance: 0
+                    }
+                });
+            }
+
+            return res.status(200).json({ success: true, message: 'Booking is already confirmed and fully paid.', booking });
         }
 
         // Verify with PayMongo if a real session ID is provided

@@ -409,8 +409,8 @@
                 if (confirmTotalPrice) confirmTotalPrice.textContent = formatMoney(totalPrice);
 
                 const remVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : 0);
-                const isDownpayment = (b.PaymentType === 'downpayment' || b.paymentType === 'downpayment');
-                const isFullyPaid = !isDownpayment && (remVal <= 0 || b.PaymentStatus === 'Paid' || b.PaymentType === 'full');
+                const isFullyPaid = (remVal <= 0 || b.PaymentStatus === 'Paid' || b.PaymentType === 'full');
+                const isDownpayment = !isFullyPaid && (b.PaymentType === 'downpayment' || b.paymentType === 'downpayment');
                 if (confirmPaymentType) confirmPaymentType.textContent = isFullyPaid ? '100% Full Payment (Settled)' : (isDownpayment ? '50% Down Payment' : '100% Full Payment');
 
                 const paidVal = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null ? b.AmountPaid : (isFullyPaid ? totalPrice : (isDownpayment ? totalPrice * 0.5 : totalPrice)));
