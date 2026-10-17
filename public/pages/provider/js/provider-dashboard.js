@@ -873,8 +873,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <td style="text-align:right; font-size:0.9rem; font-weight:600; color:#475569;">₱${gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                         <td style="text-align:right; font-size:0.95rem; font-weight:800; color:#059669;">₱${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                         <td style="text-align:center;">
-                                            <span style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:4px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
-                                                <i class="fa-solid fa-circle-check"></i> Confirmed Complete
+                                            <span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; padding:4px 12px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                                <i class="fa-solid fa-clock"></i> Pending
                                             </span>
                                         </td>
                                     </tr>
