@@ -1455,6 +1455,7 @@ const verifyPayMongoPayment = async (req, res) => {
         }
         const remBal = parseFloat(Math.max(0, total - paidAmount).toFixed(2));
         const commRate = parseFloat(booking.CommissionRate || 5) / 100;
+        const commAmount = parseFloat((paidAmount * commRate).toFixed(2));
         const providerEarn = parseFloat((paidAmount * (1 - commRate)).toFixed(2));
         const paymentStatus = remBal <= 0 ? 'Paid' : 'Partial';
 
@@ -1462,6 +1463,7 @@ const verifyPayMongoPayment = async (req, res) => {
             .input('BID', sql.Int, targetBookingId)
             .input('AmountPaid', sql.Decimal(18, 2), paidAmount)
             .input('RemainingBalance', sql.Decimal(18, 2), remBal)
+            .input('CommissionAmount', sql.Decimal(18, 2), commAmount)
             .input('ProviderEarnings', sql.Decimal(18, 2), providerEarn)
             .input('PaymentStatus', sql.NVarChar(30), paymentStatus)
             .query(`
@@ -1470,6 +1472,7 @@ const verifyPayMongoPayment = async (req, res) => {
                     PaymentStatus = @PaymentStatus,
                     AmountPaid = @AmountPaid,
                     RemainingBalance = @RemainingBalance,
+                    CommissionAmount = @CommissionAmount,
                     ProviderEarnings = @ProviderEarnings,
                     UpdatedAt = GETDATE()
                 WHERE BookingID = @BID;

@@ -2950,9 +2950,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${b.clientName}</td>
                         <td>${b.packageName}</td>
                         <td><span style="font-size:0.84rem; color:#64748b;">${b.eventDate ? new Date(b.eventDate).toLocaleDateString() : 'N/A'}</span></td>
-                        <td><strong style="color:#0a192f;">${formatPHP(b.grossAmount)}</strong></td>
+                        <td>
+                            <strong style="color:#0a192f; font-size:0.95rem;">${formatPHP(b.grossAmount)}</strong>
+                            ${b.isPartial ? `
+                                <div style="font-size:0.75rem; color:#b45309; font-weight:600; margin-top:2px;">
+                                    <i class="fa-solid fa-circle-half-stroke"></i> 50% Downpayment
+                                </div>
+                                <div style="font-size:0.72rem; color:#64748b;">(Package Total: ${formatPHP(b.totalAmount)})</div>
+                            ` : `
+                                <div style="font-size:0.72rem; color:#10b981; font-weight:600; margin-top:2px;">Full Payment</div>
+                            `}
+                        </td>
                         <td><strong style="color:#0a192f;">${formatPHP(b.adminFee)}</strong></td>
-                        <td><strong style="color:#0a192f;">${formatPHP(b.netPayout)}</strong></td>
+                        <td><strong style="color:#059669;">${formatPHP(b.netPayout)}</strong></td>
                         <td><span style="font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-mobile-screen" style="color:#64748b;"></i> ${b.paymentMethod}</span></td>
                         <td><span class="badge ${b.status === 'Completed' ? 'badge-approved' : 'badge-confirmed'}" style="${b.status === 'Confirmed' ? 'background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;' : 'font-weight:700;'}">${b.status}</span></td>
                     </tr>

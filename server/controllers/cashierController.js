@@ -1445,6 +1445,7 @@ const getCashierRevenueSummary = async (req, res) => {
                 b.ProviderEarnings,
                 b.BookingStatus,
                 b.PaymentStatus,
+                b.PaymentType,
                 ISNULL(b.EscrowStatus, 'Held') AS EscrowStatus,
                 b.CreatedAt,
                 ISNULL(
@@ -1472,9 +1473,13 @@ const getCashierRevenueSummary = async (req, res) => {
         const providerMap = {};
 
         bookings.forEach((b, idx) => {
-            const gross = parseFloat(b.TotalAmount || 0);
-            const comm = parseFloat(b.CommissionAmount || (gross * 0.05) || 0);
-            const net = parseFloat(b.ProviderEarnings || (gross * 0.95) || 0);
+            const totalAmt = parseFloat(b.TotalAmount || 0);
+            const amtPaid = parseFloat(b.AmountPaid !== undefined && b.AmountPaid !== null && parseFloat(b.AmountPaid) > 0 ? b.AmountPaid : totalAmt);
+            const isPartial = (b.PaymentStatus === 'Partial' || b.PaymentType === 'downpayment' || (amtPaid > 0 && amtPaid < totalAmt));
+            const gross = isPartial ? amtPaid : totalAmt;
+            const commRate = parseFloat(b.CommissionRate || 5) / 100;
+            const comm = parseFloat((gross * commRate).toFixed(2));
+            const net = parseFloat((gross - comm).toFixed(2));
             const isCompleted = b.BookingStatus === 'Completed' || b.BookingStatus === 'Fulfilled';
 
             totalGrossRevenue += gross;
@@ -1511,6 +1516,10 @@ const getCashierRevenueSummary = async (req, res) => {
                 packageName: b.PackageName || 'Event Service',
                 eventDate: b.EventDate,
                 grossAmount: gross,
+                totalAmount: totalAmt,
+                amountPaid: amtPaid,
+                isPartial: isPartial,
+                paymentType: b.PaymentType || (isPartial ? 'downpayment' : 'full'),
                 adminFee: comm,
                 netPayout: net,
                 paymentMethod: 'PayMongo GCash / Maya',
