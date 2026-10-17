@@ -299,6 +299,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentLng = 120.7308;
     let isScheduleAvailable = true;
     let transportationFeeTiers = [];
+    let isPinLocked = false;
+
+    const lockLocationPin = () => {
+        isPinLocked = true;
+        const pinLockBadge = document.getElementById('pin-lock-status-badge');
+        if (pinLockBadge) pinLockBadge.style.display = 'inline-flex';
+        if (window._soundsphereLeafletMap) {
+            try {
+                window._soundsphereLeafletMap.dragging.disable();
+                window._soundsphereLeafletMap.touchZoom.disable();
+                window._soundsphereLeafletMap.doubleClickZoom.disable();
+                window._soundsphereLeafletMap.scrollWheelZoom.disable();
+            } catch (e) {}
+        }
+        if (window._soundsphereLeafletMarker) {
+            try {
+                if (window._soundsphereLeafletMarker.dragging) {
+                    window._soundsphereLeafletMarker.dragging.disable();
+                }
+            } catch (e) {}
+        }
+    };
+    window.lockLocationPin = lockLocationPin;
 
     
     // Comprehensive Instant Offline Database for Batangas Places, Barangays & Venues
@@ -1079,44 +1102,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 8. Location Selector Integration (100% Free OpenStreetMap via Leaflet.js + Google Maps Fallback)
     const initGoogleMap = async () => {
-        let isPinLocked = false;
-        const btnTogglePinLock = document.getElementById('btn-toggle-pin-lock');
-        const pinLockIcon = document.getElementById('pin-lock-icon');
-        const pinLockLabel = document.getElementById('pin-lock-label');
         const pinLockBadge = document.getElementById('pin-lock-status-badge');
-
-        const updatePinLockUI = () => {
-            if (!btnTogglePinLock) return;
-            if (isPinLocked) {
-                btnTogglePinLock.classList.add('locked');
-                if (pinLockIcon) pinLockIcon.className = 'fa-solid fa-lock';
-                if (pinLockLabel) pinLockLabel.textContent = 'Pin Locked (Click to Unlock)';
-                if (pinLockBadge) pinLockBadge.style.display = 'inline-flex';
-            } else {
-                btnTogglePinLock.classList.remove('locked');
-                if (pinLockIcon) pinLockIcon.className = 'fa-solid fa-lock-open';
-                if (pinLockLabel) pinLockLabel.textContent = 'Lock Pinned Location';
-                if (pinLockBadge) pinLockBadge.style.display = 'none';
-            }
-        };
-
-        if (btnTogglePinLock) {
-            btnTogglePinLock.addEventListener('click', (e) => {
-                e.preventDefault();
-                isPinLocked = !isPinLocked;
-                updatePinLockUI();
-
-                if (isPinLocked) {
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('🔒 Location pin is now locked! Map touches and clicks will not change your venue.', 'success');
-                    }
-                } else {
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('🔓 Location pin unlocked. You can now click or drag to adjust your venue.', 'info');
-                    }
-                }
-            });
-        }
+        if (pinLockBadge && isPinLocked) pinLockBadge.style.display = 'inline-flex';
         const mapContainer = document.getElementById('booking-google-map');
         if (!mapContainer) return;
 
@@ -1370,6 +1357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     zoom: 13,
                     zoomControl: true
                 });
+                window._soundsphereLeafletMap = leafletMap;
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
@@ -1379,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const leafletMarker = L.marker([currentLat, currentLng], {
                     draggable: false
                 }).addTo(leafletMap);
+                window._soundsphereLeafletMarker = leafletMarker;
 
                 const selectPlaceOnMap = (lat, lng, displayName = null, force = false) => {
                     if (isPinLocked && !force) {
@@ -1632,6 +1621,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return;
             }
+
+            // Auto-lock location pin upon confirming booking
+            lockLocationPin();
 
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Directing to PayMongo...`;
