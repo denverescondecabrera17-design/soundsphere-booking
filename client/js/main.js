@@ -295,19 +295,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         const targetUrl = `/client-messages.html?providerId=${providerId}&providerName=${encodeURIComponent(providerName)}`;
 
                         if (!token || !user) {
-                            if (typeof window.openAuthModal === 'function') {
-                                window.openAuthModal('login', { returnUrl: targetUrl });
-                            } else {
-                                sessionStorage.setItem('soundsphere_pending_redirect', targetUrl);
-                                window.location.href = `/login.html?returnUrl=${encodeURIComponent(targetUrl)}`;
-                            }
+                            sessionStorage.setItem('soundsphere_pending_redirect', targetUrl);
+                            window.location.href = `/login.html?returnUrl=${encodeURIComponent(targetUrl)}`;
                         } else {
                             window.location.href = targetUrl;
                         }
                     });
                 });
 
-                // Attach Unauthenticated Booking Check to Dynamic "Book Now" Buttons
+                // Attach Direct Login Redirect to Dynamic "Book Now" Buttons for unauthenticated visitors
                 const actionBookBtns = packagesGrid.querySelectorAll('.btn-action-book');
                 actionBookBtns.forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -318,26 +314,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         const pkgPrice = parseInt(btn.getAttribute('data-pkg-price'), 10) || 15000;
                         const providerName = decodeURIComponent(btn.getAttribute('data-provider-name') || '');
 
+                        const bookingUrl = `/booking.html?package_id=${pkgId || ''}&provider_id=${providerId}`;
+
                         const pendingBooking = {
                             packageId: pkgId,
                             packageTitle: pkgTitle,
                             packagePrice: pkgPrice,
                             providerId: providerId,
                             providerName: providerName,
-                            returnUrl: `/provider-detail.html?id=${providerId}`
+                            returnUrl: bookingUrl
                         };
+
+                        sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(pendingBooking));
+                        sessionStorage.setItem('soundsphere_pending_booking', JSON.stringify(pendingBooking));
 
                         if (!token || !user) {
                             e.preventDefault();
-                            if (typeof window.openAuthModal === 'function') {
-                                window.openAuthModal('login', pendingBooking);
-                            } else {
-                                sessionStorage.setItem('soundsphere_pending_booking', JSON.stringify(pendingBooking));
-                                window.location.href = `/login.html?returnUrl=${encodeURIComponent(`/provider-detail.html?id=${providerId}`)}`;
-                            }
+                            window.location.href = `/login.html?returnUrl=${encodeURIComponent(bookingUrl)}`;
                         } else {
-                            sessionStorage.setItem('soundsphere_selected_package', JSON.stringify(pendingBooking));
-                            window.location.href = `/booking.html?package_id=${pkgId || ''}&provider_id=${providerId}`;
+                            window.location.href = bookingUrl;
                         }
                     });
                 });

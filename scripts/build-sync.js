@@ -88,6 +88,7 @@ const syncFilesList = [
     { src: '../client/provider-profile.html', targets: ['../public/provider-profile.html', '../client/pages/provider-profile.html', '../public/pages/provider-profile.html'] },
     { src: '../client/index.html', targets: ['../public/index.html', '../client/pages/index.html', '../public/pages/index.html'] },
     { src: '../client/js/main.js', targets: ['../public/js/main.js', '../client/pages/js/main.js', '../public/pages/js/main.js'] },
+    { src: '../client/js/auth-modal.js', targets: ['../public/js/auth-modal.js', '../client/pages/js/auth-modal.js', '../public/pages/js/auth-modal.js'] },
     { src: '../client/css/styles.css', targets: ['../public/css/styles.css', '../client/pages/css/styles.css', '../public/pages/css/styles.css', '../client/client/css/styles.css', '../public/client/css/styles.css'] }
 ];
 
