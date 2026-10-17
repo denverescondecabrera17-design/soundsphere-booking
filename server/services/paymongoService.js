@@ -36,18 +36,20 @@ const createCheckoutSession = async ({
     // Amount in cents (PayMongo requires centavos, e.g., 14750 PHP = 1475000 centavos)
     const amountInCents = Math.round(parseFloat(amount) * 100);
 
-    // Map payment methods to PayMongo API types
-    let allowedPaymentTypes = ['card', 'gcash', 'paymaya', 'qrph', 'grab_pay', 'dob'];
-    if (paymentMethod === 'card') {
+    // Map payment methods to PayMongo API types (GrabPay removed)
+    let allowedPaymentTypes = ['card', 'gcash', 'paymaya', 'qrph', 'dob'];
+    const pMethod = String(paymentMethod || '').toLowerCase();
+
+    if (pMethod.includes('card')) {
         allowedPaymentTypes = ['card'];
-    } else if (paymentMethod === 'gcash') {
+    } else if (pMethod.includes('gcash')) {
         allowedPaymentTypes = ['gcash'];
-    } else if (paymentMethod === 'maya' || paymentMethod === 'paymaya') {
+    } else if (pMethod.includes('maya')) {
         allowedPaymentTypes = ['paymaya'];
-    } else if (paymentMethod === 'qrph') {
+    } else if (pMethod.includes('qrph') || pMethod.includes('qr ph')) {
         allowedPaymentTypes = ['qrph'];
-    } else if (paymentMethod === 'epayment') {
-        allowedPaymentTypes = ['gcash', 'paymaya', 'qrph', 'grab_pay'];
+    } else if (pMethod.includes('epayment')) {
+        allowedPaymentTypes = ['gcash', 'paymaya', 'qrph'];
     }
 
     const billingObj = {};
