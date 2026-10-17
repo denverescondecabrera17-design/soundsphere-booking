@@ -983,6 +983,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const formattedStart = formatDisplayTime(b.StartTime);
                         const formattedEnd = formatDisplayTime(b.EndTime);
 
+                        const isReportPending = !!(b.ReportID && (b.ReportStatus === 'Pending' || !b.ReportStatus));
+                        const isDisputed = isReportPending || b.EscrowStatus === 'Disputed';
+
                         let filterStatus = statusLower;
                         if (['confirmed', 'approved', 'paid'].includes(statusLower) || statusLower === 'awaiting client confirmation') {
                             filterStatus = 'confirmed';
@@ -1011,7 +1014,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span style="font-size:0.88rem; color:#1e293b; font-weight:700; background:#f1f5f9; padding:3px 10px; border-radius:6px;">Booked by: <strong>${clientName}</strong></span>
                                         ${b.EventType ? `<span style="font-size:0.82rem; color:#2563eb; font-weight:800; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px;">${b.EventType}</span>` : ''}
                                     </div>
-                                    <span class="status-badge ${statusBadgeClass}" style="padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.95rem;">${statusStr}</span>
+                                    ${isDisputed ? `
+                                        <span class="status-badge" style="background:#fee2e2; color:#be123c; border:1.5px solid #fecdd3; font-weight:800; padding:6px 14px; border-radius:20px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-shield-halved" style="color:#e11d48;"></i> Under Admin Review
+                                        </span>
+                                    ` : `
+                                        <span class="status-badge ${statusBadgeClass}" style="padding:6px 16px; border-radius:20px; font-weight:800; font-size:0.95rem;">${statusStr}</span>
+                                    `}
                                 </div>
 
                                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
@@ -1074,7 +1083,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
 
-                                ${statusLower === 'awaiting client confirmation' ? `
+                                ${statusLower === 'awaiting client confirmation' ? (isDisputed ? `
+                                    <div style="background:#fff1f2; border:1.5px solid #fecdd3; border-radius:12px; padding:14px 18px; margin: 4px 0 10px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            <i class="fa-solid fa-shield-halved" style="color:#e11d48; font-size:1.4rem;"></i>
+                                            <div>
+                                                <div style="font-weight:800; color:#9f1239; font-size:0.95rem;">Dispute &amp; Incident Report Under Administrative Review</div>
+                                                <div style="font-size:0.84rem; color:#be123c;">You reported this provider for: <strong>${b.ReportReason || 'Incident Investigation'}</strong>. SoundSphere Administration is reviewing your report to decide on resolution and refund. Service confirmation and payouts are locked.</div>
+                                            </div>
+                                        </div>
+                                        <span style="background:#fecdd3; color:#9f1239; padding:6px 14px; border-radius:8px; font-weight:800; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-lock"></i> Confirmation Locked
+                                        </span>
+                                    </div>
+                                ` : `
                                     <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px; padding:14px 18px; margin: 4px 0 10px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                                         <div style="display:flex; align-items:center; gap:12px;">
                                             <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem;"></i>
@@ -1087,13 +1109,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                             Accept Completion
                                         </button>
                                     </div>
-                                ` : ''}
+                                `) : ''}
 
                                 <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #e2e8f0; padding-top:14px; flex-wrap:wrap; align-items:center;">
                                     ${statusLower === 'awaiting client confirmation' ? `
-                                        <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
-                                            Accept Completion
-                                        </button>
+                                        ${!isDisputed ? `
+                                            <button type="button" class="btn-card-primary" onclick="window.acceptBookingCompletion(${b.BookingID}, '${b.BookingReference || ''}')" style="background:#10b981; border-color:#10b981; padding:10px 22px; font-size:0.95rem; font-weight:800; color:#fff; cursor:pointer; border-radius:10px; box-shadow:0 3px 10px rgba(16,185,129,0.25);">
+                                                Accept Completion
+                                            </button>
+                                        ` : `
+                                            <span style="padding:10px 18px; font-size:0.88rem; font-weight:800; border-radius:10px; background:#fff1f2; color:#be123c; border:1.5px solid #fecdd3; display:inline-flex; align-items:center; gap:6px;">
+                                                <i class="fa-solid fa-clock-rotate-left"></i> Under Admin Review
+                                            </span>
+                                        `}
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                         </a>
@@ -1138,6 +1166,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </button>
                                         ${cancelBtnHtml}
                                     ` : `
+                                        ${isDisputed ? `
+                                            <span style="padding:10px 18px; font-size:0.88rem; font-weight:800; border-radius:10px; background:#fff1f2; color:#be123c; border:1.5px solid #fecdd3; display:inline-flex; align-items:center; gap:6px;">
+                                                <i class="fa-solid fa-clock-rotate-left"></i> Under Admin Review
+                                            </span>
+                                        ` : ''}
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                         </a>
@@ -1271,6 +1304,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Window Accept Completion Handler
                     window.acceptBookingCompletion = async (bookingId, bookingRef) => {
+                        try {
+                            const bookingsList = (window.currentUserBookings || []);
+                            const found = bookingsList.find(x => x.BookingID == bookingId || x.id == bookingId);
+                            if (found && (found.EscrowStatus === 'Disputed' || (found.ReportID && found.ReportStatus !== 'Dismissed'))) {
+                                showToast('⚠️ Cannot confirm completion: An incident report for this booking is currently under SoundSphere Administration review.', 'warning');
+                                return;
+                            }
+                        } catch (e) { }
+
                         if (!confirm(`Confirm that provider services for Booking #${bookingRef || bookingId} have been completed?\n\nThis will mark the booking as Completed and release provider payout to the Cashier. You can also leave a rating and review.`)) return;
                         try {
                             const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_token') || sessionStorage.getItem('soundsphere_token'));

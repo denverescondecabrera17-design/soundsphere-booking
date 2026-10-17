@@ -1370,7 +1370,7 @@ const refundReportBooking = async (req, res) => {
                 .input('BID', sql.Int, booking.BookingID)
                 .query(`
                     UPDATE dbo.Bookings 
-                    SET PaymentStatus = 'Refunded', BookingStatus = 'Cancelled', UpdatedAt = GETDATE()
+                    SET PaymentStatus = 'Refunded', BookingStatus = 'Cancelled', EscrowStatus = 'Refunded', RemainingBalance = 0, UpdatedAt = GETDATE()
                     WHERE BookingID = @BID;
                 `);
         }

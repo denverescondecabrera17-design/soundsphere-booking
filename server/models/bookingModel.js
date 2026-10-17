@@ -678,6 +678,12 @@ const getBookingById = async (bookingId) => {
                 sp.CoverageArea AS ProviderCoverage,
                 u.Email AS ProviderEmail,
                 u.Phone AS ProviderPhone,
+                r.ReviewID,
+                r.Rating,
+                r.ReviewText,
+                (SELECT TOP 1 pr.ReportID FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportID,
+                (SELECT TOP 1 pr.Status FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportStatus,
+                (SELECT TOP 1 pr.Reason FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportReason,
                 ISNULL(b.ClientEmail, cUser.Email) AS ClientEmail,
                 ISNULL(b.ClientPhone, cUser.Phone) AS ClientPhone,
                 ISNULL(b.ClientName, ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), cUser.Email)) AS ClientName
@@ -686,6 +692,7 @@ const getBookingById = async (bookingId) => {
             LEFT JOIN dbo.Users u ON sp.UserID = u.UserID
             LEFT JOIN dbo.Users cUser ON b.ClientUserID = cUser.UserID
             LEFT JOIN dbo.Clients c ON cUser.UserID = c.UserID
+            LEFT JOIN dbo.Reviews r ON b.BookingID = r.BookingID
             WHERE b.BookingID = @BookingID;
         `);
 
@@ -710,6 +717,12 @@ const getBookingByReference = async (bookingReference) => {
                 sp.CoverageArea AS ProviderCoverage,
                 u.Email AS ProviderEmail,
                 u.Phone AS ProviderPhone,
+                r.ReviewID,
+                r.Rating,
+                r.ReviewText,
+                (SELECT TOP 1 pr.ReportID FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportID,
+                (SELECT TOP 1 pr.Status FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportStatus,
+                (SELECT TOP 1 pr.Reason FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID ORDER BY pr.ReportID DESC) AS ReportReason,
                 ISNULL(b.ClientEmail, cUser.Email) AS ClientEmail,
                 ISNULL(b.ClientPhone, cUser.Phone) AS ClientPhone,
                 ISNULL(b.ClientName, ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), cUser.Email)) AS ClientName
@@ -718,6 +731,7 @@ const getBookingByReference = async (bookingReference) => {
             LEFT JOIN dbo.Users u ON sp.UserID = u.UserID
             LEFT JOIN dbo.Users cUser ON b.ClientUserID = cUser.UserID
             LEFT JOIN dbo.Clients c ON cUser.UserID = c.UserID
+            LEFT JOIN dbo.Reviews r ON b.BookingID = r.BookingID
             WHERE b.BookingReference = @BookingReference;
         `);
 
@@ -741,7 +755,9 @@ const getBookingsByUserId = async (clientUserId) => {
                 r.ReviewID,
                 r.Rating,
                 r.ReviewText,
-                (SELECT TOP 1 pr.ReportID FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID AND pr.ReporterUserID = b.ClientUserID) AS ReportID,
+                (SELECT TOP 1 pr.ReportID FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID AND pr.ReporterUserID = b.ClientUserID ORDER BY pr.ReportID DESC) AS ReportID,
+                (SELECT TOP 1 pr.Status FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID AND pr.ReporterUserID = b.ClientUserID ORDER BY pr.ReportID DESC) AS ReportStatus,
+                (SELECT TOP 1 pr.Reason FROM dbo.ProviderReports pr WHERE pr.BookingID = b.BookingID AND pr.ReporterUserID = b.ClientUserID ORDER BY pr.ReportID DESC) AS ReportReason,
                 ISNULL(b.ClientName, ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(c.FirstName, ' ', c.LastName))), ''), cUser.Email)) AS ClientName,
                 ISNULL(b.ClientEmail, cUser.Email) AS ClientEmail,
                 ISNULL(b.ClientPhone, cUser.Phone) AS ClientPhone

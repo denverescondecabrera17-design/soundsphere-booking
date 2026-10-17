@@ -1305,6 +1305,23 @@ const acceptBookingCompletion = async (req, res) => {
             return res.status(200).json({ success: true, message: 'Booking is already marked as completed.' });
         }
 
+        // Check if there is an active incident report or dispute on this booking
+        const disputeCheck = await pool.request()
+            .input('BID', id)
+            .query(`
+                SELECT TOP 1 ReportID, Reason, Status 
+                FROM dbo.ProviderReports 
+                WHERE BookingID = @BID AND Status = 'Pending';
+            `);
+
+        if (booking.EscrowStatus === 'Disputed' || disputeCheck.recordset.length > 0) {
+            const reportReason = disputeCheck.recordset[0]?.Reason || 'an active dispute';
+            return res.status(400).json({
+                success: false,
+                message: `Cannot accept completion: This booking has an active report under review by SoundSphere Administration ("${reportReason}"). Service completion and payouts remain locked until administration concludes their investigation and refund review.`
+            });
+        }
+
         // Update booking to 'Completed' and release escrow
         await pool.request()
             .input('BID', id)

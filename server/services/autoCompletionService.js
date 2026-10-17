@@ -40,7 +40,12 @@ const checkAndAutoAcceptCompletions = async () => {
             LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
             WHERE b.BookingStatus = 'Awaiting Client Confirmation'
               AND b.CompletionRequestedAt IS NOT NULL
-              AND DATEDIFF(MINUTE, b.CompletionRequestedAt, GETDATE()) >= 1440;
+              AND DATEDIFF(MINUTE, b.CompletionRequestedAt, GETDATE()) >= 1440
+              AND ISNULL(b.EscrowStatus, '') != 'Disputed'
+              AND NOT EXISTS (
+                  SELECT 1 FROM dbo.ProviderReports pr
+                  WHERE pr.BookingID = b.BookingID AND pr.Status = 'Pending'
+              );
         `);
 
         const overdueList = queryResult.recordset || [];

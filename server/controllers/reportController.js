@@ -35,7 +35,7 @@ const logActivity = async (pool, userId, action, description, entityType = null,
 const createProviderReport = async (req, res) => {
     try {
         const reporterUserId = req.user?.userId || req.user?.id || req.user?.UserID || req.body.userId;
-        const { providerId, bookingId, reason, description, proofImage } = req.body;
+        const { providerId, bookingId, bookingRef, reason, description, proofImage } = req.body;
 
         if (!reporterUserId) {
             return res.status(401).json({
@@ -44,10 +44,29 @@ const createProviderReport = async (req, res) => {
             });
         }
 
-        if (!providerId) {
+        const pool = await connectDB();
+
+        // Resolve Booking ID from bookingId or bookingRef if needed
+        let resolvedBookingId = bookingId ? parseInt(bookingId, 10) : null;
+        let resolvedProviderId = providerId ? parseInt(providerId, 10) : null;
+
+        if (!resolvedBookingId && bookingRef && bookingRef.trim()) {
+            const refTrimmed = bookingRef.trim();
+            const bRefRes = await pool.request()
+                .input('BRef', sql.NVarChar(50), refTrimmed)
+                .query("SELECT TOP 1 BookingID, ProviderID FROM dbo.Bookings WHERE BookingReference = @BRef OR CAST(BookingID AS NVARCHAR(50)) = @BRef;");
+            if (bRefRes.recordset.length > 0) {
+                resolvedBookingId = bRefRes.recordset[0].BookingID;
+                if (!resolvedProviderId && bRefRes.recordset[0].ProviderID) {
+                    resolvedProviderId = bRefRes.recordset[0].ProviderID;
+                }
+            }
+        }
+
+        if (!resolvedProviderId) {
             return res.status(400).json({
                 success: false,
-                message: 'Service Provider ID is required.'
+                message: 'Service Provider ID could not be identified.'
             });
         }
 
@@ -65,8 +84,6 @@ const createProviderReport = async (req, res) => {
             });
         }
 
-        const pool = await connectDB();
-
         // 1. Verify reporter user exists
         const reporterRes = await pool.request()
             .input('ReporterID', sql.Int, parseInt(reporterUserId, 10))
@@ -79,14 +96,14 @@ const createProviderReport = async (req, res) => {
 
         // 2. Find target Service Provider (by ProviderID or UserID)
         const provRes = await pool.request()
-            .input('PID', sql.Int, parseInt(providerId, 10))
+            .input('PID', sql.Int, resolvedProviderId)
             .query(`
                 SELECT sp.ProviderID, sp.UserID, sp.BusinessName, sp.OwnerName
                 FROM dbo.ServiceProviders sp
                 WHERE sp.ProviderID = @PID OR sp.UserID = @PID;
             `);
 
-        let targetProviderId = parseInt(providerId, 10);
+        let targetProviderId = resolvedProviderId;
         let targetProviderUserId = null;
         let targetBusinessName = 'Service Provider';
 
@@ -105,11 +122,27 @@ const createProviderReport = async (req, res) => {
             }
         }
 
+        // Lock booking escrow into 'Disputed' if associated with a booking
+        if (resolvedBookingId) {
+            try {
+                await pool.request()
+                    .input('BID', sql.Int, resolvedBookingId)
+                    .query(`
+                        UPDATE dbo.Bookings
+                        SET EscrowStatus = 'Disputed',
+                            UpdatedAt = GETDATE()
+                        WHERE BookingID = @BID;
+                    `);
+            } catch (be) {
+                console.warn('Booking escrow dispute status update notice:', be.message);
+            }
+        }
+
         // 4. Insert into dbo.ProviderReports
         const insertRes = await pool.request()
             .input('ReporterUserID', sql.Int, parseInt(reporterUserId, 10))
             .input('ProviderID', sql.Int, targetProviderId)
-            .input('BookingID', sql.Int, bookingId ? parseInt(bookingId, 10) : null)
+            .input('BookingID', sql.Int, resolvedBookingId)
             .input('Reason', sql.NVarChar(150), reason.trim())
             .input('Description', sql.NVarChar(sql.MAX), description.trim())
             .input('ProofImage', sql.NVarChar(sql.MAX), proofImage ? proofImage.trim() : null)
