@@ -1838,47 +1838,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (destNameEl) destNameEl.textContent = item.AccountName || item.ClientName || '-';
         if (destNumEl) destNumEl.textContent = item.AccountNumber || '-';
 
-        // Action buttons inside the fullscreen view
-        const headerActionsContainer = document.getElementById('cbd-header-actions');
-        const setActionsContent = (html) => {
-            if (actionsContainer) actionsContainer.innerHTML = html;
-            if (headerActionsContainer) headerActionsContainer.innerHTML = html;
-        };
+        // Action buttons inside the fullscreen view (Destination Account card only)
+        if (actionsContainer) {
+            if (item.Status === 'Pending') {
+                actionsContainer.innerHTML = `
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btn-fullscreen-reject" style="color:#dc2626; border-color:#fca5a5; padding:8px 16px; font-weight:700;">
+                        <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" id="btn-fullscreen-disburse" style="padding:8px 20px; font-weight:800;">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
+                    </button>
+                `;
 
-        if (item.Status === 'Pending') {
-            const btnHtml = `
-                <button type="button" class="btn btn-outline-danger btn-sm btn-action-reject" style="color:#dc2626; border-color:#fca5a5; padding:8px 16px; font-weight:700;">
-                    <i class="fa-solid fa-xmark"></i> Reject
-                </button>
-                <button type="button" class="btn btn-success btn-sm btn-action-disburse" style="padding:8px 20px; font-weight:800;">
-                    <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
-                </button>
-            `;
-            setActionsContent(btnHtml);
-
-            document.querySelectorAll('.btn-action-disburse').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                document.getElementById('btn-fullscreen-disburse')?.addEventListener('click', (e) => {
                     executeMarkRefundAsRefunded(item.RefundRequestID, e.currentTarget);
                 });
-            });
-            document.querySelectorAll('.btn-action-reject').forEach(btn => {
-                btn.addEventListener('click', () => {
+                document.getElementById('btn-fullscreen-reject')?.addEventListener('click', () => {
                     closeClientBookingDetailsFullScreen();
                     openCashierRejectModal(item.RefundRequestID);
                 });
-            });
-        } else if (item.Status === 'Approved') {
-            setActionsContent(`
-                <span style="color:#059669; font-weight:800; font-size:0.92rem;">
-                    <i class="fa-solid fa-circle-check"></i> Ref: ${item.ReferenceNumber || 'Manual'}
-                </span>
-            `);
-        } else {
-            setActionsContent(`
-                <span style="color:#dc2626; font-weight:700; font-size:0.88rem;">
-                    <i class="fa-solid fa-circle-xmark"></i> ${item.AdminNotes || 'Rejected'}
-                </span>
-            `);
+            } else if (item.Status === 'Approved') {
+                actionsContainer.innerHTML = `
+                    <span style="color:#059669; font-weight:800; font-size:0.92rem;">
+                        <i class="fa-solid fa-circle-check"></i> Ref: ${item.ReferenceNumber || 'Manual'}
+                    </span>
+                `;
+            } else {
+                actionsContainer.innerHTML = `
+                    <span style="color:#dc2626; font-weight:700; font-size:0.88rem;">
+                        <i class="fa-solid fa-circle-xmark"></i> ${item.AdminNotes || 'Rejected'}
+                    </span>
+                `;
+            }
         }
 
         view.classList.remove('hidden');
