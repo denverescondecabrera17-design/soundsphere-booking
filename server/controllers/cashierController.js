@@ -1458,6 +1458,7 @@ const getCashierRevenueSummary = async (req, res) => {
             LEFT JOIN dbo.Users uProv1 ON sp1.UserID = uProv1.UserID
             LEFT JOIN dbo.ServiceProviders sp2 ON b.ProviderID = sp2.UserID
             LEFT JOIN dbo.Users uProv2 ON sp2.UserID = uProv2.UserID
+            WHERE b.BookingStatus IN ('Confirmed', 'Completed')
             ORDER BY b.CreatedAt DESC;
         `);
 

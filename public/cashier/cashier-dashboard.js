@@ -2940,9 +2940,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tbody = document.getElementById('table-cashier-detail-prov-transactions');
         if (tbody) {
-            const bookings = group.bookings || [];
+            const bookings = (group.bookings || []).filter(b => b.status === 'Confirmed' || b.status === 'Completed');
             if (bookings.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No transactions recorded for this provider.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No verified confirmed or completed transactions recorded for this provider.</td></tr>`;
             } else {
                 tbody.innerHTML = bookings.map(b => `
                     <tr>
@@ -2954,7 +2954,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td><strong style="color:#8b5cf6;">${formatPHP(b.adminFee)}</strong></td>
                         <td><strong style="color:#10b981;">${formatPHP(b.netPayout)}</strong></td>
                         <td><span style="font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-mobile-screen" style="color:#2563eb;"></i> ${b.paymentMethod}</span></td>
-                        <td><span class="badge badge-approved">${b.status}</span></td>
+                        <td><span class="badge ${b.status === 'Completed' ? 'badge-approved' : 'badge-confirmed'}" style="${b.status === 'Confirmed' ? 'background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;' : 'font-weight:700;'}">${b.status}</span></td>
                     </tr>
                 `).join('');
             }
