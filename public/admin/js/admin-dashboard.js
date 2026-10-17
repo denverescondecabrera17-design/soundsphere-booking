@@ -2883,6 +2883,13 @@ window.adminRefundReportBooking = async function(reportId) {
         }
     }
 
+    const refundBtn = document.querySelector('button[onclick*="adminRefundReportBooking"]');
+    if (refundBtn) {
+        refundBtn.disabled = true;
+        refundBtn.style.opacity = '0.6';
+        refundBtn.innerText = 'Processing Refund...';
+    }
+
     try {
         const res = await fetch(`/api/admin/reports/${reportId}/refund`, {
             method: 'POST',
@@ -2909,6 +2916,12 @@ window.adminRefundReportBooking = async function(reportId) {
             showToast(err.message || 'Error processing refund', 'error');
         } else {
             alert(`❌ ${err.message || 'Error processing refund'}`);
+        }
+    } finally {
+        if (refundBtn) {
+            refundBtn.disabled = false;
+            refundBtn.style.opacity = '1';
+            refundBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Full Refund';
         }
     }
 };

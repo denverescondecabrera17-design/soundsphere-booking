@@ -1320,6 +1320,12 @@ const refundReportBooking = async (req, res) => {
         }
 
         const currentReport = rRes.recordset[0];
+        if (currentReport.Status === 'Resolved') {
+            return res.status(400).json({
+                success: false,
+                message: `This report (#${reportId}) has already been resolved. Multiple refunds cannot be processed.`
+            });
+        }
 
         // Locate booking if any
         let booking = null;
@@ -1340,6 +1346,13 @@ const refundReportBooking = async (req, res) => {
                     ORDER BY BookingID DESC;
                 `);
             if (bkFallback.recordset.length) booking = bkFallback.recordset[0];
+        }
+
+        if (booking && (booking.PaymentStatus === 'Refunded' || booking.EscrowStatus === 'Refunded')) {
+            return res.status(400).json({
+                success: false,
+                message: `Refund cannot be processed: Booking #${booking.BookingReference || booking.BookingID} has already been refunded.`
+            });
         }
 
         // Verify client did not accept completion (accepted completions are non-refundable)
