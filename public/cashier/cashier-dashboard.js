@@ -1123,8 +1123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isRejected) badgeClass = 'badge-rejected';
 
             return `
-                <tr class="withdrawal-row-item" data-wid="${item.WithdrawalID}" title="Click anywhere to view full withdrawal and payment details">
-                    <td><strong class="wdr-code" style="color:#0a192f; cursor:pointer;">#WDR-${item.WithdrawalID}</strong></td>
+                <tr class="withdrawal-row-item" data-wid="${item.WithdrawalID}" style="cursor:pointer; transition:background-color 0.15s ease;" title="Click to view withdrawal details and disburse/reject payout">
+                    <td><strong class="wdr-code" style="color:#2563eb; font-weight:800; font-family:monospace; text-decoration:underline;">#WDR-${item.WithdrawalID}</strong></td>
                     <td>
                         <div style="font-weight:700; color:#0a192f;">${item.ProviderName || 'Provider'}</div>
                         <div style="font-size:0.75rem; color:#64748b;">${item.ProviderEmail || ''}</div>
@@ -1141,57 +1141,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td><div style="font-size:0.8rem; color:#475569;">${formatDateTime(item.RequestedAt)}</div></td>
                     <td><span class="badge ${badgeClass}">${item.Status}</span></td>
-                    <td style="text-align:right; white-space:nowrap;">
-                        ${isPending ? `
-                            <button type="button" class="btn btn-success btn-sm btn-disburse-action" data-wid="${item.WithdrawalID}" style="margin-right:4px;">
-                                <i class="fa-solid fa-money-bill-wave"></i> Disburse
-                            </button>
-                            <button type="button" class="btn btn-outline btn-sm btn-reject-action" data-wid="${item.WithdrawalID}" style="color:#ef4444; border-color:#fca5a5;" title="Reject Request">
-                                <i class="fa-solid fa-ban"></i> Reject
-                            </button>
-                        ` : `
-                            <span class="badge ${badgeClass}" style="font-size:0.78rem;">
-                                ${isApproved ? '<i class="fa-solid fa-circle-check"></i> Disbursed' : '<i class="fa-solid fa-circle-xmark"></i> Rejected'}
-                            </span>
-                        `}
-                    </td>
                 </tr>
             `;
         }).join('');
 
         // Row click opens the full withdrawal details
         tbody.querySelectorAll('.withdrawal-row-item').forEach(row => {
-            row.addEventListener('click', (e) => {
-                if (e.target.closest('.btn-disburse-action') || e.target.closest('.btn-reject-action')) {
-                    return;
-                }
+            row.addEventListener('click', () => {
                 const wid = row.getAttribute('data-wid');
-                if (wid) openPayMongoVerifyModal(wid);
-            });
-        });
-
-        // Attach action handlers with event.stopPropagation
-        tbody.querySelectorAll('.btn-disburse-action').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const wid = btn.getAttribute('data-wid');
-                executeDisbursePayout(wid, btn);
-            });
-        });
-
-        tbody.querySelectorAll('.btn-reject-action').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const wid = btn.getAttribute('data-wid');
-                openRejectModal(wid);
-            });
-        });
-
-        tbody.querySelectorAll('.btn-open-pm-proof').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const wid = btn.getAttribute('data-wid');
-                openPayMongoVerifyModal(wid);
+                if (wid) openWithdrawalDetailsFullScreen(wid);
             });
         });
     }
@@ -1250,10 +1208,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const reqDateEl = document.getElementById('cwd-requested-date');
         if (reqDateEl) reqDateEl.textContent = formatDateTime(w.RequestedAt);
 
-        const statusBadgeEl = document.getElementById('cwd-wdr-status-badge');
-        if (statusBadgeEl) {
-            statusBadgeEl.className = `badge ${isApproved ? 'badge-approved' : (isRejected ? 'badge-rejected' : 'badge-pending')}`;
-            statusBadgeEl.innerHTML = isApproved ? '<i class="fa-solid fa-circle-check"></i> Disbursed' : (isRejected ? '<i class="fa-solid fa-circle-xmark"></i> Rejected' : '<i class="fa-solid fa-clock"></i> Pending Approval');
+        const headerBadgeContainer = document.getElementById('cwd-header-badge-container');
+        if (headerBadgeContainer) {
+            if (isPending) {
+                headerBadgeContainer.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="cwd-wdr-status-badge" class="badge badge-pending" style="font-size:0.85rem; padding:6px 14px;"><i class="fa-solid fa-clock"></i> Pending</span>
+                        <button type="button" class="btn btn-outline btn-sm" id="btn-cwd-header-reject" style="color:#ef4444; border-color:#fca5a5; font-weight:700;">
+                            <i class="fa-solid fa-ban"></i> Reject
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="btn-cwd-header-disburse" style="font-weight:800;">
+                            <i class="fa-solid fa-money-bill-wave"></i> Disburse Payout
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-cwd-header-reject')?.addEventListener('click', () => {
+                    openRejectModal(w.WithdrawalID);
+                });
+                document.getElementById('btn-cwd-header-disburse')?.addEventListener('click', (e) => {
+                    executeDisbursePayout(w.WithdrawalID, e.currentTarget);
+                });
+            } else {
+                headerBadgeContainer.innerHTML = `
+                    <span id="cwd-wdr-status-badge" class="badge ${isApproved ? 'badge-approved' : 'badge-rejected'}" style="font-size:0.85rem; padding:6px 14px;">
+                        ${isApproved ? '<i class="fa-solid fa-circle-check"></i> Disbursed' : '<i class="fa-solid fa-circle-xmark"></i> Rejected'}
+                    </span>
+                `;
+            }
         }
 
         // Provider & Booking Banner
