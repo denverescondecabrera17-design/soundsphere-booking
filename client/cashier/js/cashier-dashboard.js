@@ -1208,34 +1208,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const reqDateEl = document.getElementById('cwd-requested-date');
         if (reqDateEl) reqDateEl.textContent = formatDateTime(w.RequestedAt);
 
-        const headerBadgeContainer = document.getElementById('cwd-header-badge-container');
-        if (headerBadgeContainer) {
-            if (isPending) {
-                headerBadgeContainer.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span id="cwd-wdr-status-badge" class="badge badge-pending" style="font-size:0.85rem; padding:6px 14px;"><i class="fa-solid fa-clock"></i> Pending</span>
-                        <button type="button" class="btn btn-outline btn-sm" id="btn-cwd-header-reject" style="color:#ef4444; border-color:#fca5a5; font-weight:700;">
-                            <i class="fa-solid fa-ban"></i> Reject
-                        </button>
-                        <button type="button" class="btn btn-success btn-sm" id="btn-cwd-header-disburse" style="font-weight:800;">
-                            <i class="fa-solid fa-money-bill-wave"></i> Disburse Payout
-                        </button>
-                    </div>
-                `;
-                document.getElementById('btn-cwd-header-reject')?.addEventListener('click', () => {
-                    openRejectModal(w.WithdrawalID);
-                });
-                document.getElementById('btn-cwd-header-disburse')?.addEventListener('click', (e) => {
-                    executeDisbursePayout(w.WithdrawalID, e.currentTarget);
-                });
-            } else {
-                headerBadgeContainer.innerHTML = `
-                    <span id="cwd-wdr-status-badge" class="badge ${isApproved ? 'badge-approved' : 'badge-rejected'}" style="font-size:0.85rem; padding:6px 14px;">
-                        ${isApproved ? '<i class="fa-solid fa-circle-check"></i> Disbursed' : '<i class="fa-solid fa-circle-xmark"></i> Rejected'}
-                    </span>
-                `;
-            }
-        }
 
         // Provider & Booking Banner
         const provNameEl = document.getElementById('cwd-provider-name');
