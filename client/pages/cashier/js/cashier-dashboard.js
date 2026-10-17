@@ -2894,9 +2894,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span style="font-size:0.75rem; color:#64748b;">${p.providerEmail || ''}</span>
                             </td>
                             <td><strong style="font-size:0.95rem; color:#0a192f;">${formatPHP(p.grossRevenue)}</strong></td>
-                            <td><strong style="font-size:0.95rem; color:#10b981;">${formatPHP(p.netEarnings)}</strong></td>
-                            <td><strong style="font-size:0.95rem; color:#8b5cf6;">${formatPHP(p.adminCommission)}</strong></td>
-                            <td><span style="font-size:0.85rem; font-weight:700; color:#2563eb;">${p.bookingsCount} Booking(s)</span></td>
+                            <td><strong style="font-size:0.95rem; color:#0a192f;">${formatPHP(p.netEarnings)}</strong></td>
+                            <td><strong style="font-size:0.95rem; color:#0a192f;">${formatPHP(p.adminCommission)}</strong></td>
+                            <td><span style="font-size:0.85rem; font-weight:700; color:#0a192f;">${p.bookingsCount} Booking(s)</span></td>
                         </tr>
                     `).join('');
 
@@ -2951,9 +2951,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${b.packageName}</td>
                         <td><span style="font-size:0.84rem; color:#64748b;">${b.eventDate ? new Date(b.eventDate).toLocaleDateString() : 'N/A'}</span></td>
                         <td><strong style="color:#0a192f;">${formatPHP(b.grossAmount)}</strong></td>
-                        <td><strong style="color:#8b5cf6;">${formatPHP(b.adminFee)}</strong></td>
-                        <td><strong style="color:#10b981;">${formatPHP(b.netPayout)}</strong></td>
-                        <td><span style="font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-mobile-screen" style="color:#2563eb;"></i> ${b.paymentMethod}</span></td>
+                        <td><strong style="color:#0a192f;">${formatPHP(b.adminFee)}</strong></td>
+                        <td><strong style="color:#0a192f;">${formatPHP(b.netPayout)}</strong></td>
+                        <td><span style="font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-mobile-screen" style="color:#64748b;"></i> ${b.paymentMethod}</span></td>
                         <td><span class="badge ${b.status === 'Completed' ? 'badge-approved' : 'badge-confirmed'}" style="${b.status === 'Confirmed' ? 'background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;' : 'font-weight:700;'}">${b.status}</span></td>
                     </tr>
                 `).join('');
