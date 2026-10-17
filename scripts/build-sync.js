@@ -253,6 +253,13 @@ const mktCssTargets = [
     path.join(__dirname, '../public/css/marketplace.css'),
     path.join(__dirname, '../public/pages/css/marketplace.css')
 ];
+if (fs.existsSync(srcMktCss)) {
+    const mktCssContent = fs.readFileSync(srcMktCss, 'utf8');
+    mktCssTargets.forEach(target => {
+        safeWriteFileSync(target, mktCssContent);
+        console.log(`Synced marketplace.css -> ${target}`);
+    });
+}
 // 13. Sync profile-modal.js
 const srcProfileJs = path.join(__dirname, '../client/js/profile-modal.js');
 const profileJsTargets = [

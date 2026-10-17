@@ -44,6 +44,18 @@
     --shadow-lg: 0 10px 25px rgba(10, 25, 47, 0.12);
 }
 
+@media (min-width: 1280px) {
+    :root {
+        --container-max-width: 1360px;
+    }
+}
+
+@media (min-width: 1536px) {
+    :root {
+        --container-max-width: 1440px;
+    }
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -811,4 +823,37 @@ body.marketplace-body {
 #lightbox-close-btn:hover {
     background: rgba(255, 255, 255, 0.35) !important;
     transform: scale(1.08);
+}
+
+/* ==================== 4 PACKAGES PER ROW ON DESKTOP ==================== */
+.providers-responsive-grid,
+#home-featured-providers-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+    align-items: stretch;
+}
+
+@media (max-width: 991px) {
+    .providers-responsive-grid,
+    #home-featured-providers-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 16px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .providers-responsive-grid,
+    #home-featured-providers-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .providers-responsive-grid,
+    #home-featured-providers-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
 }
