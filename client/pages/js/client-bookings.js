@@ -429,17 +429,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </div>
                 ` : `
-                    <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:10px; padding:12px 16px; margin: 12px 20px 0 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem;"></i>
-                            <div>
-                                <div style="font-weight:800; color:#92400e; font-size:0.92rem;">Service Marked Complete by Provider</div>
-                                <div style="font-size:0.82rem; color:#b45309; line-height:1.45; margin-top:2px;">Please verify that your lights &amp; sounds service was performed properly. <strong>Non-refundable once accepted.</strong> If there was a scam, no-show, or issue, click <strong>Report Issue</strong> before the 24-hour auto-complete window so Administration can review and refund your wallet.</div>
-                            </div>
+                    <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:10px; padding:12px 16px; margin: 12px 20px 0 20px; display:flex; align-items:center; gap:12px;">
+                        <i class="fa-solid fa-bell" style="color:#d97706; font-size:1.4rem; flex-shrink:0;"></i>
+                        <div>
+                            <div style="font-weight:800; color:#92400e; font-size:0.92rem;">Service Marked Complete by Provider</div>
+                            <div style="font-size:0.82rem; color:#b45309; line-height:1.45; margin-top:2px;">Please verify that your lights &amp; sounds service was performed properly. <strong>Non-refundable once accepted.</strong> If there was a scam, no-show, or issue, click <strong>Report Issue</strong> before the 24-hour auto-complete window so Administration can review and refund your wallet.</div>
                         </div>
-                        <button type="button" onclick="window.acceptBookingCompletion(${b.bookingId}, '${b.id}')" style="background:#10b981; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3); transition:all 0.15s ease;">
-                            Accept Completion
-                        </button>
                     </div>
                 `) : (b.status === 'Cancelled' && (b.paymentStatus === 'Refunded' || b.escrowStatus === 'Refunded')) ? `
                     <div style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:10px; padding:12px 16px; margin: 12px 20px 0 20px; display:flex; align-items:center; gap:10px;">
