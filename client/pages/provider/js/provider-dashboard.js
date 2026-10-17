@@ -2498,7 +2498,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalAmt = parseFloat(booking.TotalAmount || 0);
         const amtPaid = parseFloat(booking.AmountPaid || 0);
         const remBal = parseFloat(booking.RemainingBalance != null ? booking.RemainingBalance : (totalAmt - amtPaid));
-        const provEarn = parseFloat(booking.ProviderEarnings || (totalAmt * 0.95));
+        const payInfo = getBookingPaymentInfo(booking);
+
+        const commRate = parseFloat(booking.CommissionRate || 5) / 100;
+        const expectedTotalNet = Math.round((totalAmt * (1 - commRate)) * 100) / 100;
+        const expectedPaidNet = Math.round((amtPaid * (1 - commRate)) * 100) / 100;
+
+        // If booking is fully paid or remaining balance is 0, provider net earnings is full 95% net amount
+        let provEarn = parseFloat(booking.ProviderEarnings || expectedTotalNet);
+        if (payInfo.isFull || amtPaid >= totalAmt || remBal <= 0) {
+            provEarn = expectedTotalNet;
+        } else if (provEarn <= 0 && amtPaid > 0) {
+            provEarn = expectedPaidNet;
+        }
 
         const pkgPriceEl = document.getElementById('pbd-package-price');
         if (pkgPriceEl) pkgPriceEl.textContent = `₱${pkgPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -2519,8 +2531,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const totalEl = document.getElementById('pbd-total-amount');
         if (totalEl) totalEl.textContent = `₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-
-        const payInfo = getBookingPaymentInfo(booking);
         const badgeEl = document.getElementById('pbd-payment-type-badge');
         if (badgeEl) {
             badgeEl.innerHTML = payInfo.isFull 

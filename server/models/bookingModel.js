@@ -1067,12 +1067,18 @@ const settleRemainingBalance = async ({ bookingId, bookingReference, amount, pay
         const newRemaining = Math.max(0, total - newAmountPaid);
         const newPaymentStatus = newRemaining <= 0 ? 'Paid' : 'Partial';
 
+        const commRate = parseFloat(booking.CommissionRate || 5) / 100;
+        const newCommAmt = Math.round((newAmountPaid * commRate) * 100) / 100;
+        const newProviderEarnings = Math.round((newAmountPaid - newCommAmt) * 100) / 100;
+
         const updateReq = transaction.request()
             .input('BID', sql.Int, booking.BookingID)
             .input('AmountPaid', sql.Decimal(18, 2), newAmountPaid)
             .input('RemainingBalance', sql.Decimal(18, 2), newRemaining)
             .input('PaymentStatus', sql.NVarChar(30), newPaymentStatus)
-            .input('PaymentType', sql.NVarChar(30), newRemaining <= 0 ? 'full' : 'downpayment');
+            .input('PaymentType', sql.NVarChar(30), newRemaining <= 0 ? 'full' : 'downpayment')
+            .input('CommissionAmount', sql.Decimal(18, 2), newCommAmt)
+            .input('ProviderEarnings', sql.Decimal(18, 2), newProviderEarnings);
 
         await updateReq.query(`
             UPDATE dbo.Bookings
@@ -1080,6 +1086,8 @@ const settleRemainingBalance = async ({ bookingId, bookingReference, amount, pay
                 RemainingBalance = @RemainingBalance,
                 PaymentStatus = @PaymentStatus,
                 PaymentType = @PaymentType,
+                CommissionAmount = @CommissionAmount,
+                ProviderEarnings = @ProviderEarnings,
                 UpdatedAt = GETDATE()
             WHERE BookingID = @BID;
         `);
