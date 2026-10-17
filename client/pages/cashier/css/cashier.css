@@ -1181,6 +1181,11 @@ body {
     background-color: #f1f5f9 !important;
 }
 
+.refund-row-item:hover td:first-child strong {
+    color: #2563eb !important;
+    text-decoration: underline;
+}
+
 .withdrawal-row-item {
     cursor: pointer !important;
     transition: all 0.15s ease;

@@ -1684,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#64748b;">No client refund requests found matching filter '${currentRefundFilter}'.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#64748b;">No client refund requests found matching filter '${currentRefundFilter}'.</td></tr>`;
             return;
         }
 
@@ -1693,36 +1693,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (r.Status === 'Approved') statusBadge = 'badge-approved';
             if (r.Status === 'Rejected') statusBadge = 'badge-rejected';
 
-            const isPending = (r.Status || 'Pending') === 'Pending';
-            const actionHtml = isPending ? `
-                <div style="display:flex; gap:6px; justify-content:flex-end;" class="refund-actions-cell">
-                    <button type="button" class="btn btn-success btn-sm btn-disburse-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.executeMarkRefundAsRefunded && window.executeMarkRefundAsRefunded('${r.RefundRequestID}', this);" title="Manually Send Refund & Mark as Refunded">
-                        <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-refund" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.openCashierRejectModal && window.openCashierRejectModal('${r.RefundRequestID}');" title="Reject & Return Funds to Client Wallet" style="color:#dc2626; border-color:#fca5a5;">
-                        <i class="fa-solid fa-xmark"></i> Reject
-                    </button>
-                </div>
-            ` : (r.Status === 'Approved' ? `
-                <div style="text-align:right;" onclick="event.stopPropagation();">
-                    <strong style="color:#059669; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Ref: ${r.ReferenceNumber || 'Manual'}</strong>
-                    ${r.AdminNotes ? `<div style="font-size:0.75rem; color:#64748b;">${(r.AdminNotes || '').replace(/\s*outside system by cashier\s*/gi, '').trim()}</div>` : ''}
-                </div>
-            ` : `
-                <div style="text-align:right;" onclick="event.stopPropagation();">
-                    <span style="color:#dc2626; font-size:0.82rem;"><i class="fa-solid fa-xmark"></i> ${r.AdminNotes || 'Rejected'}</span>
-                </div>
-            `);
-
             return `
-                <tr class="refund-row-item" data-id="${r.RefundRequestID}" title="Click this line to view client booking information">
-                    <td><strong>#REF-${r.RefundRequestID}</strong></td>
+                <tr class="refund-row-item" data-id="${r.RefundRequestID}" title="Click anywhere on this row to view client booking details & process refund">
+                    <td><strong style="color:#0a192f;">#REF-${r.RefundRequestID}</strong></td>
                     <td>
                         <div>
-                            <button type="button" class="btn-view-client-booking" data-id="${r.RefundRequestID}" onclick="event.stopPropagation(); window.openClientBookingDetailsFullScreen && window.openClientBookingDetailsFullScreen('${r.RefundRequestID}');" style="background:none; border:none; padding:0; text-align:left; cursor:pointer; font-weight:800; font-size:0.95rem; color:#2563eb; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s;" onmouseover="this.style.color='#1d4ed8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2563eb'; this.style.textDecoration='none';" title="Click to view client booking information">
+                            <span style="font-weight:800; font-size:0.95rem; color:#2563eb; display:inline-flex; align-items:center; gap:6px;">
                                 <span>${r.ClientName || 'Denver Cabrera'}</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem;"></i>
-                            </button>
+                            </span>
                         </div>
                         <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">${r.ClientEmail || r.UserEmail || 'No Email'}</div>
                     </td>
@@ -1734,34 +1713,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td><span style="font-size:0.85rem; color:#475569;">${formatDateTime(r.RequestedAt)}</span></td>
                     <td><span class="badge ${statusBadge}">${r.Status === 'Approved' ? 'Refunded' : (r.Status || 'Pending')}</span></td>
-                    <td style="text-align:right;">${actionHtml}</td>
                 </tr>
             `;
         }).join('');
 
-        // Direct event listeners for refund action buttons
-        tbody.querySelectorAll('.btn-disburse-refund').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const reqId = btn.getAttribute('data-id');
-                executeMarkRefundAsRefunded(reqId, btn);
-            });
-        });
-
-        tbody.querySelectorAll('.btn-reject-refund').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const reqId = btn.getAttribute('data-id');
-                openCashierRejectModal(reqId);
-            });
-        });
-
-        // Row click opens the full booking/refund details, but ignore if action buttons were clicked
+        // Row click opens the full booking/refund details
         tbody.querySelectorAll('.refund-row-item').forEach(row => {
-            row.addEventListener('click', (e) => {
-                if (e.target.closest('.btn-disburse-refund') || e.target.closest('.btn-reject-refund') || e.target.closest('.btn-view-client-booking') || e.target.closest('.refund-actions-cell')) {
-                    return;
-                }
+            row.addEventListener('click', () => {
                 const reqId = row.getAttribute('data-id');
                 if (reqId) openClientBookingDetailsFullScreen(reqId);
             });
@@ -1881,36 +1839,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (destNumEl) destNumEl.textContent = item.AccountNumber || '-';
 
         // Action buttons inside the fullscreen view
-        if (actionsContainer) {
-            if (item.Status === 'Pending') {
-                actionsContainer.innerHTML = `
-                    <button type="button" class="btn btn-outline-danger btn-sm" id="btn-fullscreen-reject" style="color:#dc2626; border-color:#fca5a5; padding:8px 16px; font-weight:700;">
-                        <i class="fa-solid fa-xmark"></i> Reject
-                    </button>
-                    <button type="button" class="btn btn-success btn-sm" id="btn-fullscreen-disburse" style="padding:8px 20px; font-weight:800;">
-                        <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
-                    </button>
-                `;
-                document.getElementById('btn-fullscreen-disburse')?.addEventListener('click', (e) => {
+        const headerActionsContainer = document.getElementById('cbd-header-actions');
+        const setActionsContent = (html) => {
+            if (actionsContainer) actionsContainer.innerHTML = html;
+            if (headerActionsContainer) headerActionsContainer.innerHTML = html;
+        };
+
+        if (item.Status === 'Pending') {
+            const btnHtml = `
+                <button type="button" class="btn btn-outline-danger btn-sm btn-action-reject" style="color:#dc2626; border-color:#fca5a5; padding:8px 16px; font-weight:700;">
+                    <i class="fa-solid fa-xmark"></i> Reject
+                </button>
+                <button type="button" class="btn btn-success btn-sm btn-action-disburse" style="padding:8px 20px; font-weight:800;">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Mark as Refunded
+                </button>
+            `;
+            setActionsContent(btnHtml);
+
+            document.querySelectorAll('.btn-action-disburse').forEach(btn => {
+                btn.addEventListener('click', (e) => {
                     executeMarkRefundAsRefunded(item.RefundRequestID, e.currentTarget);
                 });
-                document.getElementById('btn-fullscreen-reject')?.addEventListener('click', () => {
+            });
+            document.querySelectorAll('.btn-action-reject').forEach(btn => {
+                btn.addEventListener('click', () => {
                     closeClientBookingDetailsFullScreen();
                     openCashierRejectModal(item.RefundRequestID);
                 });
-            } else if (item.Status === 'Approved') {
-                actionsContainer.innerHTML = `
-                    <span style="color:#059669; font-weight:800; font-size:0.92rem;">
-                        <i class="fa-solid fa-circle-check"></i> Ref: ${item.ReferenceNumber || 'Manual'}
-                    </span>
-                `;
-            } else {
-                actionsContainer.innerHTML = `
-                    <span style="color:#dc2626; font-weight:700; font-size:0.88rem;">
-                        <i class="fa-solid fa-circle-xmark"></i> ${item.AdminNotes || 'Rejected'}
-                    </span>
-                `;
-            }
+            });
+        } else if (item.Status === 'Approved') {
+            setActionsContent(`
+                <span style="color:#059669; font-weight:800; font-size:0.92rem;">
+                    <i class="fa-solid fa-circle-check"></i> Ref: ${item.ReferenceNumber || 'Manual'}
+                </span>
+            `);
+        } else {
+            setActionsContent(`
+                <span style="color:#dc2626; font-weight:700; font-size:0.88rem;">
+                    <i class="fa-solid fa-circle-xmark"></i> ${item.AdminNotes || 'Rejected'}
+                </span>
+            `);
         }
 
         view.classList.remove('hidden');
