@@ -94,10 +94,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // Initialize Terms & Conditions Agreement Gate
+    const checkTermsGate = () => {
+        const hasAgreed = sessionStorage.getItem('soundsphere_terms_agreed') === 'true';
+        const agreeTermsCheckbox = document.getElementById('reg-agree-terms');
+        if (agreeTermsCheckbox) {
+            agreeTermsCheckbox.checked = hasAgreed;
+            agreeTermsCheckbox.addEventListener('click', (e) => {
+                if (sessionStorage.getItem('soundsphere_terms_agreed') !== 'true') {
+                    e.preventDefault();
+                    if (typeof openTermsModal === 'function') openTermsModal();
+                }
+            });
+        }
+        if (!hasAgreed) {
+            setTimeout(() => {
+                if (typeof openTermsModal === 'function') {
+                    openTermsModal();
+                }
+            }, 250);
+        }
+    };
+
     resetAndClearRegisterForm();
+    checkTermsGate();
 
     window.addEventListener('pageshow', () => {
         resetAndClearRegisterForm();
+        checkTermsGate();
     });
 
     // Password Toggle Helper (Synchronized Eye / Eye-off state mapping)
@@ -169,6 +193,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (password !== confirmPassword) { 
             setError('error-reg-confirm-password', 'Passwords do not match.'); 
             isValid = false; 
+        }
+
+        const agreeCheckbox = document.getElementById('reg-agree-terms');
+        const hasAgreed = sessionStorage.getItem('soundsphere_terms_agreed') === 'true';
+        if (!agreeCheckbox || !agreeCheckbox.checked || !hasAgreed) {
+            setError('error-reg-terms', 'You must read and agree to the Terms and Conditions before creating an account.'); 
+            isValid = false;
+            if (typeof openTermsModal === 'function') {
+                openTermsModal();
+            }
         }
 
         return isValid;

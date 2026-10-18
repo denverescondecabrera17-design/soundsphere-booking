@@ -158,6 +158,17 @@
                         </div>
                     </div>
 
+                    <!-- Terms and Conditions Agreement Checkbox -->
+                    <div class="form-group terms-agreement-group" style="margin-top: 10px; margin-bottom: 20px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <input type="checkbox" id="reg-agree-terms" name="reg_agree_terms" required style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;">
+                            <label for="reg-agree-terms" style="font-size: 0.88rem; color: #334155; line-height: 1.45; cursor: pointer; user-select: none;">
+                                I have read and agree to the <a href="javascript:void(0)" onclick="openTermsModal(true)" style="color: #2563eb; font-weight: 700; text-decoration: underline;">Terms and Conditions</a> <span class="required" style="color: #ef4444;">*</span>
+                            </label>
+                        </div>
+                        <span class="error-msg" id="error-reg-terms" style="display: block; margin-top: 6px;"></span>
+                    </div>
+
                     <button type="submit" class="btn-submit" id="btn-register-submit">
                         <span class="btn-text">Continue to Email Verification</span>
                         <i class="fa-solid fa-arrow-right btn-icon"></i>
@@ -188,8 +199,351 @@
         </div>
     </footer>
 
+    <!-- ==================== TERMS AND CONDITIONS MODAL ==================== -->
+    <div id="terms-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge" style="background: #f0fdf4; color: #16a34a;">
+                        <i class="fa-solid fa-file-contract"></i>
+                    </div>
+                    <div>
+                        <h2 id="terms-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            TERMS AND CONDITIONS
+                        </h2>
+                        <span id="terms-modal-subtitle" style="font-size: 0.85rem; color: #64748b;">Please read and agree to all terms before creating your account</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closeTermsModal()" aria-label="Close Terms modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Terms Sections -->
+            <div class="faq-modal-body" id="terms-scroll-body" onscroll="handleTermsScroll(this)">
+                <div class="faq-list">
+                    <!-- 1. Acceptance of Terms -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-check faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Acceptance of Terms</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>By accessing or using SoundSphere, users agree to follow these Terms and Conditions. Users who do not agree with these terms should not use the platform.</p>
+                        </div>
+                    </div>
+
+                    <!-- 2. Platform Purpose -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-bullseye faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Platform Purpose</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based platform that connects clients with lights and sounds service providers. It facilitates service discovery, package selection, booking, and online payment.</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. User Accounts -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-user-shield faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>User Accounts</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Users must provide accurate and complete information when creating an account. Users are responsible for maintaining the confidentiality of their login credentials and for activities conducted through their accounts.</p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Service Provider Applications -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-id-card faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Service Provider Applications</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Individuals or businesses applying as service providers must submit the required information and documents. The administrator reviews applications and may approve or reject them based on the platform's requirements. Only approved providers may activate a provider subscription and offer services through the provider interface.</p>
+                        </div>
+                    </div>
+
+                    <!-- 5. Booking Conditions -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-calendar-check faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Booking Conditions</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>A booking is created and confirmed only after successful payment and verification that the selected schedule is available. Clients must provide accurate event information, including the event date, location, schedule, and selected package.</p>
+                        </div>
+                    </div>
+
+                    <!-- 6. Online Payments -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-credit-card faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Online Payments</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Transactions processed through SoundSphere must use the platform's configured online payment methods. Clients must follow the payment schedule displayed for their booking. If a down payment is selected, the remaining balance must be paid on or before the scheduled event date, according to the applicable booking terms.</p>
+                        </div>
+                    </div>
+
+                    <!-- 7. Cancellations and Refunds -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-hand-holding-dollar faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Cancellations and Refunds</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Cancellations and refunds are subject to the applicable cancellation timeframe and refund policy disclosed before booking. Eligible refunds will be reviewed and processed according to the platform's procedures and payment provider requirements. If the service provider fails to show up for the scheduled event, the client must report the incident immediately to the administrator and must not click the confirmation button indicating that the service has been completed. The administrator will review the complaint and determine whether a refund should be approved. Refunds will be processed only after administrative approval. Cancellations outside the eligible timeframe may be non-refundable, except where required by applicable law.</p>
+                        </div>
+                    </div>
+
+                    <!-- 8. Service Provider Responsibilities -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-handshake faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Service Provider Responsibilities</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Service providers must provide accurate information about their packages, prices, service areas, and equipment. They must honor confirmed bookings and deliver the agreed services.</p>
+                        </div>
+                    </div>
+
+                    <!-- 9. Reviews and Feedback -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-star faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Reviews and Feedback</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Clients may submit honest feedback for completed bookings. Users must not submit fake reviews, abusive content, misleading information, or reviews intended to unfairly damage another user's reputation.</p>
+                        </div>
+                    </div>
+
+                    <!-- 10. Messaging -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-comments faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Messaging</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The platform's messaging feature is intended for text-based communication between clients and service providers. Users must not send threats, spam, fraudulent messages, or unlawful content.</p>
+                        </div>
+                    </div>
+
+                    <!-- 11. Platform Limitations -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-triangle-exclamation faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Platform Limitations</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based platform. Its features depend on internet connectivity, hosting availability, and the services of its configured payment gateway. Users should report technical problems through the official contact channel.</p>
+                        </div>
+                    </div>
+
+                    <!-- 12. Changes to These Terms -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-pen-to-square faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Changes to These Terms</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere may update these Terms and Conditions when necessary. Material changes should be communicated through appropriate platform notices.</p>
+                        </div>
+                    </div>
+
+                    <!-- 13. Contact Information -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-phone-volume faq-q-icon" style="color: #16a34a; background: #dcfce7;"></i>
+                            <h3>Contact Information</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>For questions or concerns regarding these Terms and Conditions, you may contact Denver E. Cabrera at 0951 602 8992.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sign-up Agreement Controls -->
+            <div id="terms-signup-controls" style="padding: 18px 26px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <div id="terms-scroll-notice" style="font-size: 0.84rem; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-arrow-down" style="color: #2563eb;"></i>
+                    <span>Please scroll to the bottom of the terms to enable agreement.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                    <input type="checkbox" id="terms-agree-checkbox" disabled style="width: 18px; height: 18px; cursor: not-allowed;" onchange="handleTermsCheckboxChange(this)">
+                    <label for="terms-agree-checkbox" id="terms-agree-label" style="font-size: 0.92rem; font-weight: 700; color: #94a3b8; cursor: not-allowed; user-select: none;">
+                        I have read and agree to the Terms and Conditions
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; align-items: center;">
+                    <button type="button" class="btn-faq-close" onclick="closeTermsModal()">
+                        Cancel
+                    </button>
+                    <button type="button" id="btn-proceed-signup" disabled onclick="proceedToCreateAccount()" style="background: #94a3b8; color: #ffffff; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 800; font-size: 0.92rem; cursor: not-allowed; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                        <span>I Agree & Continue</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="pages/js/api.js?v=7.0"></script>
     <script src="pages/js/register.js?v=7.0"></script>
+    <script>
+        var hasScrolledToBottom = false;
+
+        function openTermsModal() {
+            var modal = document.getElementById('terms-modal');
+            var scrollBody = document.getElementById('terms-scroll-body');
+            var checkbox = document.getElementById('terms-agree-checkbox');
+            var label = document.getElementById('terms-agree-label');
+            var btnProceed = document.getElementById('btn-proceed-signup');
+            var notice = document.getElementById('terms-scroll-notice');
+
+            if (!modal) return;
+
+            var alreadyAgreed = sessionStorage.getItem('soundsphere_terms_agreed') === 'true';
+
+            if (alreadyAgreed) {
+                hasScrolledToBottom = true;
+                if (checkbox) {
+                    checkbox.checked = true;
+                    checkbox.disabled = false;
+                    checkbox.style.cursor = 'pointer';
+                }
+                if (label) {
+                    label.style.color = '#0a192f';
+                    label.style.cursor = 'pointer';
+                }
+                if (btnProceed) {
+                    btnProceed.disabled = false;
+                    btnProceed.style.background = '#10b981';
+                    btnProceed.style.cursor = 'pointer';
+                    btnProceed.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.3)';
+                }
+                if (notice) {
+                    notice.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #16a34a;"></i> <span style="color: #16a34a; font-weight: 700;">You have reviewed and accepted the Terms and Conditions.</span>';
+                }
+            } else {
+                hasScrolledToBottom = false;
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
+                    checkbox.style.cursor = 'not-allowed';
+                }
+                if (label) {
+                    label.style.color = '#94a3b8';
+                    label.style.cursor = 'not-allowed';
+                }
+                if (btnProceed) {
+                    btnProceed.disabled = true;
+                    btnProceed.style.background = '#94a3b8';
+                    btnProceed.style.cursor = 'not-allowed';
+                    btnProceed.style.boxShadow = 'none';
+                }
+                if (notice) {
+                    notice.innerHTML = '<i class="fa-solid fa-arrow-down" style="color: #2563eb;"></i> <span>Please scroll to the bottom of the terms to enable agreement.</span>';
+                }
+            }
+
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            if (scrollBody) {
+                scrollBody.scrollTop = 0;
+                setTimeout(function() {
+                    if (scrollBody && Math.ceil(scrollBody.scrollHeight - scrollBody.scrollTop) <= scrollBody.clientHeight + 35) {
+                        handleTermsScroll(scrollBody);
+                    }
+                }, 100);
+            }
+        }
+
+        function handleTermsScroll(el) {
+            if (hasScrolledToBottom) return;
+            if (Math.ceil(el.scrollHeight - el.scrollTop) <= el.clientHeight + 35) {
+                hasScrolledToBottom = true;
+                var checkbox = document.getElementById('terms-agree-checkbox');
+                var label = document.getElementById('terms-agree-label');
+                var notice = document.getElementById('terms-scroll-notice');
+
+                if (checkbox) {
+                    checkbox.disabled = false;
+                    checkbox.style.cursor = 'pointer';
+                }
+                if (label) {
+                    label.style.color = '#0a192f';
+                    label.style.cursor = 'pointer';
+                }
+                if (notice) {
+                    notice.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #16a34a;"></i> <span style="color: #16a34a; font-weight: 700;">You have reviewed the complete terms. Please check the box below to agree.</span>';
+                }
+            }
+        }
+
+        function handleTermsCheckboxChange(checkbox) {
+            var btnProceed = document.getElementById('btn-proceed-signup');
+            if (!btnProceed) return;
+
+            if (checkbox.checked) {
+                btnProceed.disabled = false;
+                btnProceed.style.background = '#10b981';
+                btnProceed.style.cursor = 'pointer';
+                btnProceed.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.3)';
+            } else {
+                btnProceed.disabled = true;
+                btnProceed.style.background = '#94a3b8';
+                btnProceed.style.cursor = 'not-allowed';
+                btnProceed.style.boxShadow = 'none';
+            }
+        }
+
+        function proceedToCreateAccount() {
+            sessionStorage.setItem('soundsphere_terms_agreed', 'true');
+            var termsCheckbox = document.getElementById('reg-agree-terms');
+            if (termsCheckbox) {
+                termsCheckbox.checked = true;
+            }
+            var err = document.getElementById('error-reg-terms');
+            if (err) err.textContent = '';
+            closeTermsModal();
+        }
+
+        function closeTermsModal() {
+            var modal = document.getElementById('terms-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+
+            // If user closed without agreeing and form is not agreed, redirect back to index
+            if (sessionStorage.getItem('soundsphere_terms_agreed') !== 'true') {
+                window.location.href = '/index.html';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            var termsModal = document.getElementById('terms-modal');
+            if (termsModal && e.target === termsModal) closeTermsModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTermsModal();
+            }
+        });
+    </script>
 </body>
 </html>

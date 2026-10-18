@@ -67,7 +67,7 @@
                 <!-- User Auth Actions -->
                 <div class="header-actions">
                     <a href="/login.html" class="btn-auth-outline">Login</a>
-                    <a href="/register.html" class="btn-auth-solid">Sign Up</a>
+                    <a href="javascript:void(0)" onclick="openTermsModal(true)" class="btn-auth-solid" id="btn-signup-header">Sign Up</a>
                 </div>
             </div>
         </div>
@@ -268,7 +268,7 @@
                         <h2 id="terms-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
                             TERMS AND CONDITIONS
                         </h2>
-                        <span style="font-size: 0.85rem; color: #64748b;">SoundSphere Platform Terms of Use</span>
+                        <span id="terms-modal-subtitle" style="font-size: 0.85rem; color: #64748b;">SoundSphere Platform Terms of Use</span>
                     </div>
                 </div>
                 <button type="button" class="faq-modal-close" onclick="closeTermsModal()" aria-label="Close Terms modal">
@@ -277,7 +277,7 @@
             </div>
 
             <!-- Modal Body: Terms Sections -->
-            <div class="faq-modal-body">
+            <div class="faq-modal-body" id="terms-scroll-body" onscroll="handleTermsScroll(this)">
                 <div class="faq-list">
                     <!-- 1. Acceptance of Terms -->
                     <div class="faq-item">
@@ -424,8 +424,31 @@
                 </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="faq-modal-footer">
+            <!-- Sign-up Agreement Controls (shown when clicked Sign Up) -->
+            <div id="terms-signup-controls" style="display: none; padding: 18px 26px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <div id="terms-scroll-notice" style="font-size: 0.84rem; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-arrow-down" style="color: #2563eb;"></i>
+                    <span>Please scroll to the bottom of the terms to enable agreement.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                    <input type="checkbox" id="terms-agree-checkbox" disabled style="width: 18px; height: 18px; cursor: not-allowed;" onchange="handleTermsCheckboxChange(this)">
+                    <label for="terms-agree-checkbox" id="terms-agree-label" style="font-size: 0.92rem; font-weight: 700; color: #94a3b8; cursor: not-allowed; user-select: none;">
+                        I have read and agree to the Terms and Conditions
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; align-items: center;">
+                    <button type="button" class="btn-faq-close" onclick="closeTermsModal()">
+                        Cancel
+                    </button>
+                    <button type="button" id="btn-proceed-signup" disabled onclick="proceedToCreateAccount()" style="background: #94a3b8; color: #ffffff; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 800; font-size: 0.92rem; cursor: not-allowed; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                        <span>Continue to Create Account</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Standard Read-Only Modal Footer (shown when clicked in footer) -->
+            <div id="terms-standard-controls" class="faq-modal-footer">
                 <button type="button" class="btn-faq-close" onclick="closeTermsModal()">
                     Close
                 </button>
@@ -457,14 +480,117 @@
             document.body.style.overflow = '';
         }
 
-        function openTermsModal() {
+        var hasScrolledToBottom = false;
+        var isTermsInSignupMode = false;
+
+        function openTermsModal(isSignup) {
+            isTermsInSignupMode = !!isSignup;
             var modal = document.getElementById('terms-modal');
+            var signupControls = document.getElementById('terms-signup-controls');
+            var standardControls = document.getElementById('terms-standard-controls');
+            var scrollBody = document.getElementById('terms-scroll-body');
+            var checkbox = document.getElementById('terms-agree-checkbox');
+            var label = document.getElementById('terms-agree-label');
+            var btnProceed = document.getElementById('btn-proceed-signup');
+            var notice = document.getElementById('terms-scroll-notice');
+            var subtitle = document.getElementById('terms-modal-subtitle');
+
             if (!modal) return;
+
+            hasScrolledToBottom = false;
+
+            if (isTermsInSignupMode) {
+                if (signupControls) signupControls.style.display = 'block';
+                if (standardControls) standardControls.style.display = 'none';
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
+                    checkbox.style.cursor = 'not-allowed';
+                }
+                if (label) {
+                    label.style.color = '#94a3b8';
+                    label.style.cursor = 'not-allowed';
+                }
+                if (btnProceed) {
+                    btnProceed.disabled = true;
+                    btnProceed.style.background = '#94a3b8';
+                    btnProceed.style.cursor = 'not-allowed';
+                    btnProceed.style.boxShadow = 'none';
+                }
+                if (notice) {
+                    notice.innerHTML = '<i class="fa-solid fa-arrow-down" style="color: #2563eb;"></i> <span>Please scroll to the bottom of the terms to enable agreement.</span>';
+                }
+                if (subtitle) {
+                    subtitle.textContent = 'Please read and agree to all terms before creating your account';
+                }
+            } else {
+                if (signupControls) signupControls.style.display = 'none';
+                if (standardControls) standardControls.style.display = 'flex';
+                if (subtitle) {
+                    subtitle.textContent = 'SoundSphere Platform Terms of Use';
+                }
+            }
+
             modal.style.display = 'flex';
             void modal.offsetWidth;
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+
+            if (scrollBody) {
+                scrollBody.scrollTop = 0;
+                setTimeout(function() {
+                    if (scrollBody && Math.ceil(scrollBody.scrollHeight - scrollBody.scrollTop) <= scrollBody.clientHeight + 35) {
+                        handleTermsScroll(scrollBody);
+                    }
+                }, 100);
+            }
         }
+
+        function handleTermsScroll(el) {
+            if (!isTermsInSignupMode || hasScrolledToBottom) return;
+            // Check if user has scrolled near bottom (with cross-browser subpixel tolerance)
+            if (Math.ceil(el.scrollHeight - el.scrollTop) <= el.clientHeight + 35) {
+                hasScrolledToBottom = true;
+                var checkbox = document.getElementById('terms-agree-checkbox');
+                var label = document.getElementById('terms-agree-label');
+                var notice = document.getElementById('terms-scroll-notice');
+
+                if (checkbox) {
+                    checkbox.disabled = false;
+                    checkbox.style.cursor = 'pointer';
+                }
+                if (label) {
+                    label.style.color = '#0a192f';
+                    label.style.cursor = 'pointer';
+                }
+                if (notice) {
+                    notice.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #16a34a;"></i> <span style="color: #16a34a; font-weight: 700;">You have reviewed the complete terms. Please check the box below to agree.</span>';
+                }
+            }
+        }
+
+        function handleTermsCheckboxChange(checkbox) {
+            var btnProceed = document.getElementById('btn-proceed-signup');
+            if (!btnProceed) return;
+
+            if (checkbox.checked) {
+                btnProceed.disabled = false;
+                btnProceed.style.background = '#10b981';
+                btnProceed.style.cursor = 'pointer';
+                btnProceed.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.3)';
+            } else {
+                btnProceed.disabled = true;
+                btnProceed.style.background = '#94a3b8';
+                btnProceed.style.cursor = 'not-allowed';
+                btnProceed.style.boxShadow = 'none';
+            }
+        }
+
+        function proceedToCreateAccount() {
+            sessionStorage.setItem('soundsphere_terms_agreed', 'true');
+            window.location.href = '/register.html';
+        }
+
         function closeTermsModal() {
             var modal = document.getElementById('terms-modal');
             if (!modal) return;
