@@ -66,9 +66,7 @@
 
                 <!-- User Auth Actions -->
                 <div class="header-actions">
-                    <button type="button" class="btn-auth-outline" onclick="openFaqModal()" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; background:none;">
-                        <i class="fa-solid fa-circle-question"></i> FAQ
-                    </button>
+                    <a href="javascript:void(0)" onclick="openFaqModal()" class="footer-faq-link" style="margin-right:12px;">FAQ</a>
                     <a href="/login.html" class="btn-auth-outline">Login</a>
                     <a href="/register.html" class="btn-auth-solid">Sign Up</a>
                 </div>
@@ -133,12 +131,9 @@
     <!-- ==================== 5. FOOTER ==================== -->
     <footer class="shopee-footer">
         <div class="container">
-            <!-- FAQ Action Button -->
+            <!-- FAQ Clickable Text Link -->
             <div class="footer-faq-wrapper">
-                <button type="button" class="btn-faq-trigger" id="btn-footer-faq" onclick="openFaqModal()" aria-label="Open Frequently Asked Questions">
-                    <i class="fa-solid fa-circle-question" style="color: #60a5fa;"></i>
-                    <span>FAQ</span>
-                </button>
+                <a href="javascript:void(0)" id="btn-footer-faq" class="footer-faq-link" onclick="openFaqModal()">FAQ</a>
             </div>
 
             <div class="footer-bottom">

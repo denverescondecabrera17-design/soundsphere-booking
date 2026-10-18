@@ -958,36 +958,32 @@ a {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 10px 0 28px 0;
+    padding: 8px 0 24px 0;
 }
 
+.footer-faq-link,
 .btn-faq-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: #0a192f;
-    color: #ffffff;
-    border: 2px solid #1e293b;
-    border-radius: 30px;
-    padding: 12px 36px;
-    font-size: 1.05rem;
-    font-weight: 800;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4px 8px !important;
+    margin: 0 !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #475569;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 14px rgba(10, 25, 47, 0.15);
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+    display: inline-block;
 }
 
+.footer-faq-link:hover,
 .btn-faq-trigger:hover {
-    background: #1e3a8a;
-    border-color: #2563eb;
-    color: #ffffff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
-}
-
-.btn-faq-trigger:active {
-    transform: translateY(0);
+    color: #0a192f;
+    text-decoration: underline;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
 /* FAQ Modal Overlay */
