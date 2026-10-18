@@ -66,6 +66,9 @@
 
                 <!-- User Auth Actions -->
                 <div class="header-actions">
+                    <button type="button" class="btn-auth-outline" onclick="openFaqModal()" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; background:none;">
+                        <i class="fa-solid fa-circle-question"></i> FAQ
+                    </button>
                     <a href="/login.html" class="btn-auth-outline">Login</a>
                     <a href="/register.html" class="btn-auth-solid">Sign Up</a>
                 </div>
@@ -127,58 +130,170 @@
         </div>
     </section>
 
-    <!-- ==================== 5. SHOPEE-STYLE FOOTER ==================== -->
+    <!-- ==================== 5. FOOTER ==================== -->
     <footer class="shopee-footer">
         <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h4>Customer Care</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Help Centre</a></li>
-                        <li><a href="#">How to Book a Service</a></li>
-                        <li><a href="#">Payment Methods</a></li>
-                        <li><a href="#">SoundSphere Guarantee</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>About SoundSphere</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Service Provider Registration</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Payment Partners</h4>
-                    <div class="payment-badges">
-                        <span class="payment-badge">GCash</span>
-                        <span class="payment-badge">Maya</span>
-                        <span class="payment-badge">Bank Transfer</span>
-                        <span class="payment-badge">Visa / MC</span>
-                    </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Coverage Areas</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Metro Manila</a></li>
-                        <li><a href="#">Rizal & Cavite</a></li>
-                        <li><a href="#">Laguna & Batangas</a></li>
-                        <li><a href="#">Bulacan & Pampanga</a></li>
-                    </ul>
-                </div>
+            <!-- FAQ Action Button -->
+            <div class="footer-faq-wrapper">
+                <button type="button" class="btn-faq-trigger" id="btn-footer-faq" onclick="openFaqModal()" aria-label="Open Frequently Asked Questions">
+                    <i class="fa-solid fa-circle-question" style="color: #60a5fa;"></i>
+                    <span>FAQ</span>
+                </button>
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.
-                </p>
+                <p>&copy; 2026 SoundSphere. All Rights Reserved. Book Professional Lights & Sounds Services with Ease.</p>
             </div>
         </div>
     </footer>
 
+    <!-- ==================== FAQ MODAL ==================== -->
+    <div id="faq-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="faq-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <div>
+                        <h2 id="faq-modal-title" style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            FAQ
+                        </h2>
+                        <span style="font-size: 0.85rem; color: #64748b;">Frequently Asked Questions & Answers</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closeFaqModal()" aria-label="Close FAQ modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Q&A List -->
+            <div class="faq-modal-body">
+                <div class="faq-list">
+                    <!-- Q1 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>What is SoundSphere?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based capstone project that connects clients with lights and sounds service providers. It allows clients to browse service packages, check availability, and make online payments.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I book a service?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Create an account, select services from your chosen service provider, choose an available date, and complete the online payment. Your booking will be confirmed after successful payment and verification of schedule availability.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>What payment methods are available?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere supports online payments through its configured payment gateway. Depending on the available booking options, clients may pay a down payment or the full amount online.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>When should I pay the remaining balance?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>If you choose a down payment, the remaining balance must be paid online on or before the scheduled event date, according to the booking terms.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>Can I receive a refund after cancelling?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Refund eligibility depends on the applicable cancellation timeframe and the platform's refund policy. Cancellations made outside the eligible timeframe may not qualify for a refund.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q6 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I become a service provider?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Create a client account and submit an application for service provider approval. Provide the required personal and business information, valid identification, business permit, and other required details. You may subscribe to a provider plan after your application is approved.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q7 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I contact a service provider?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>You can use SoundSphere's messaging feature to communicate with a service provider through text messages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="faq-modal-footer">
+                <button type="button" class="btn-faq-close" onclick="closeFaqModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/api.js?v=7.0"></script>
     <script src="js/main.js?v=7.0"></script>
+    <script>
+        function openFaqModal() {
+            var modal = document.getElementById('faq-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeFaqModal() {
+            var modal = document.getElementById('faq-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('click', function(e) {
+            var modal = document.getElementById('faq-modal');
+            if (modal && e.target === modal) {
+                closeFaqModal();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFaqModal();
+            }
+        });
+    </script>
 </body>
 
 </html>
