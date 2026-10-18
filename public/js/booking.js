@@ -1589,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!termsCheckbox.checked) {
                 if (typeof window.showToast === 'function') {
-                    window.showToast('⚠️ Please agree to the Terms of Service & Cancellation Policy to proceed.', 'warning');
+                    window.showToast('⚠️ Please agree to the Terms and Conditions to proceed.', 'warning');
                 }
                 return;
             }
