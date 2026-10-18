@@ -342,7 +342,7 @@
 
                 <!-- 4. ACCOUNT SETTINGS (USER INFO + SECURITY + SERVICE PROVIDER APPLICATION) -->
                 <div id="profile-sec-settings" class="hidden">
-                    <div class="account-settings-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; align-items:stretch; width:100%; margin-bottom:20px;">
+                    <div class="account-settings-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; align-items:stretch; width:100%; margin-bottom:20px;">
                         
                         <!-- Personal Information Card -->
                         <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 2px 8px rgba(10,25,47,0.04);">
@@ -416,6 +416,29 @@
                                     </button>
                                     <button type="button" class="btn-card-secondary" id="btn-open-sec-privacy" style="text-align:left; justify-content:flex-start; height:38px; padding:0 14px; width:100%; font-weight:700; font-size:0.85rem; border-radius:8px;" onclick="document.getElementById('modal-sec-privacy')?.classList.remove('hidden');">
                                         <i class="fa-solid fa-lock" style="color:#10b981; width:20px; font-size:0.9rem;"></i> Privacy Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Support & Legal Card -->
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 2px 8px rgba(10,25,47,0.04);">
+                            <div>
+                                <h3 style="margin:0 0 16px 0; color:#0a192f; font-size:1.1rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                                    <i class="fa-solid fa-scale-balanced" style="color:#2563eb; font-size:1.15rem;"></i> Support & Legal
+                                </h3>
+                                <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <button type="button" class="btn-card-secondary" id="btn-settings-faq" style="text-align:left; justify-content:flex-start; height:38px; padding:0 14px; width:100%; font-weight:700; font-size:0.85rem; border-radius:8px;" onclick="openFaqModal();">
+                                        <i class="fa-solid fa-circle-question" style="color:#2563eb; width:20px; font-size:0.9rem;"></i> FAQ
+                                    </button>
+                                    <button type="button" class="btn-card-secondary" id="btn-settings-terms" style="text-align:left; justify-content:flex-start; height:38px; padding:0 14px; width:100%; font-weight:700; font-size:0.85rem; border-radius:8px;" onclick="openTermsModal();">
+                                        <i class="fa-solid fa-file-contract" style="color:#2563eb; width:20px; font-size:0.9rem;"></i> Terms and Conditions
+                                    </button>
+                                    <button type="button" class="btn-card-secondary" id="btn-settings-privacy" style="text-align:left; justify-content:flex-start; height:38px; padding:0 14px; width:100%; font-weight:700; font-size:0.85rem; border-radius:8px;" onclick="openPrivacyModal();">
+                                        <i class="fa-solid fa-shield-halved" style="color:#2563eb; width:20px; font-size:0.9rem;"></i> Privacy Policy
+                                    </button>
+                                    <button type="button" class="btn-card-secondary" id="btn-settings-agreement" style="text-align:left; justify-content:flex-start; height:38px; padding:0 14px; width:100%; font-weight:700; font-size:0.85rem; border-radius:8px;" onclick="openAgreementModal();">
+                                        <i class="fa-solid fa-handshake-angle" style="color:#2563eb; width:20px; font-size:0.9rem;"></i> Terms of Agreement
                                     </button>
                                 </div>
                             </div>
@@ -1591,6 +1614,665 @@
             </form>
         </div>
     </div>
+
+    <!-- ==================== FAQ MODAL ==================== -->
+    <div id="faq-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="faq-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <div>
+                        <h2 id="faq-modal-title" style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            FAQ
+                        </h2>
+                        <span style="font-size: 0.85rem; color: #64748b;">Frequently Asked Questions & Answers</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closeFaqModal()" aria-label="Close FAQ modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Q&A List -->
+            <div class="faq-modal-body">
+                <div class="faq-list">
+                    <!-- Q1 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>What is SoundSphere?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based capstone project that connects clients with lights and sounds service providers. It allows clients to browse service packages, check availability, and make online payments.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I book a service?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Create an account, select services from your chosen service provider, choose an available date, and complete the online payment. Your booking will be confirmed after successful payment and verification of schedule availability.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>What payment methods are available?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere supports online payments through its configured payment gateway. Depending on the available booking options, clients may pay a down payment or the full amount online.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>When should I pay the remaining balance?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>If you choose a down payment, the remaining balance must be paid online on or before the scheduled event date, according to the booking terms.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>Can I receive a refund after cancelling?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Refund eligibility depends on the applicable cancellation timeframe and the platform's refund policy. Cancellations made outside the eligible timeframe may not qualify for a refund.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q6 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I become a service provider?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Create a client account and submit an application for service provider approval. Provide the required personal and business information, valid identification, business permit, and other required details. You may subscribe to a provider plan after your application is approved.</p>
+                        </div>
+                    </div>
+
+                    <!-- Q7 -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question faq-q-icon"></i>
+                            <h3>How can I contact a service provider?</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>You can use SoundSphere's messaging feature to communicate with a service provider through text messages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="faq-modal-footer">
+                <button type="button" class="btn-faq-close" onclick="closeFaqModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TERMS AND CONDITIONS MODAL ==================== -->
+    <div id="terms-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge" style="background: #eff6ff; color: #2563eb;">
+                        <i class="fa-solid fa-file-contract"></i>
+                    </div>
+                    <div>
+                        <h2 id="terms-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            TERMS AND CONDITIONS
+                        </h2>
+                        <span id="terms-modal-subtitle" style="font-size: 0.85rem; color: #64748b;">SoundSphere Platform Terms of Use</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closeTermsModal()" aria-label="Close Terms modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Terms Sections -->
+            <div class="faq-modal-body" id="terms-scroll-body">
+                <div class="faq-list">
+                    <!-- 1. Acceptance of Terms -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-check faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Acceptance of Terms</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>By accessing or using SoundSphere, users agree to follow these Terms and Conditions. Users who do not agree with these terms should not use the platform.</p>
+                        </div>
+                    </div>
+
+                    <!-- 2. Platform Purpose -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-bullseye faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Platform Purpose</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based platform that connects clients with lights and sounds service providers. It facilitates service discovery, package selection, booking, and online payment.</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. User Accounts -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-user-shield faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>User Accounts</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Users must provide accurate and complete information when creating an account. Users are responsible for maintaining the confidentiality of their login credentials and for activities conducted through their accounts.</p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Service Provider Applications -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-id-card faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Service Provider Applications</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Individuals or businesses applying as service providers must submit the required information and documents. The administrator reviews applications and may approve or reject them based on the platform's requirements. Only approved providers may activate a provider subscription and offer services through the provider interface.</p>
+                        </div>
+                    </div>
+
+                    <!-- 5. Booking Conditions -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-calendar-check faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Booking Conditions</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>A booking is created and confirmed only after successful payment and verification that the selected schedule is available. Clients must provide accurate event information, including the event date, location, schedule, and selected package.</p>
+                        </div>
+                    </div>
+
+                    <!-- 6. Online Payments -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-credit-card faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Online Payments</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Transactions processed through SoundSphere must use the platform's configured online payment methods. Clients must follow the payment schedule displayed for their booking. If a down payment is selected, the remaining balance must be paid on or before the scheduled event date, according to the applicable booking terms.</p>
+                        </div>
+                    </div>
+
+                    <!-- 7. Cancellations and Refunds -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-hand-holding-dollar faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Cancellations and Refunds</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Cancellations and refunds are subject to the applicable cancellation timeframe and refund policy disclosed before booking. Eligible refunds will be reviewed and processed according to the platform's procedures and payment provider requirements. If the service provider fails to show up for the scheduled event, the client must report the incident immediately to the administrator and must not click the confirmation button indicating that the service has been completed. The administrator will review the complaint and determine whether a refund should be approved. Refunds will be processed only after administrative approval. Cancellations outside the eligible timeframe may be non-refundable, except where required by applicable law.</p>
+                        </div>
+                    </div>
+
+                    <!-- 8. Service Provider Responsibilities -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-handshake faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Service Provider Responsibilities</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Service providers must provide accurate information about their packages, prices, service areas, and equipment. They must honor confirmed bookings and deliver the agreed services.</p>
+                        </div>
+                    </div>
+
+                    <!-- 9. Reviews and Feedback -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-star faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Reviews and Feedback</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Clients may submit honest feedback for completed bookings. Users must not submit fake reviews, abusive content, misleading information, or reviews intended to unfairly damage another user's reputation.</p>
+                        </div>
+                    </div>
+
+                    <!-- 10. Messaging -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-comments faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Messaging</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The platform's messaging feature is intended for text-based communication between clients and service providers. Users must not send threats, spam, fraudulent messages, or unlawful content.</p>
+                        </div>
+                    </div>
+
+                    <!-- 11. Platform Limitations -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-triangle-exclamation faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Platform Limitations</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere is a web-based platform. Its features depend on internet connectivity, hosting availability, and the services of its configured payment gateway. Users should report technical problems through the official contact channel.</p>
+                        </div>
+                    </div>
+
+                    <!-- 12. Changes to These Terms -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-pen-to-square faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Changes to These Terms</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>SoundSphere may update these Terms and Conditions when necessary. Material changes should be communicated through appropriate platform notices.</p>
+                        </div>
+                    </div>
+
+                    <!-- 13. Contact Information -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-phone-volume faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>Contact Information</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p>For questions or concerns regarding these Terms and Conditions, you may contact Denver E. Cabrera at 0951 602 8992.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Standard Read-Only Modal Footer -->
+            <div id="terms-standard-controls" class="faq-modal-footer">
+                <button type="button" class="btn-faq-close" onclick="closeTermsModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PRIVACY POLICY MODAL ==================== -->
+    <div id="privacy-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge" style="background: #eff6ff; color: #2563eb;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h2 id="privacy-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            PRIVACY POLICY
+                        </h2>
+                        <span style="font-size: 0.85rem; color: #64748b;">SoundSphere Platform Privacy Policy & Data Protection</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closePrivacyModal()" aria-label="Close Privacy modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Privacy Policy Sections -->
+            <div class="faq-modal-body">
+                <div style="background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.88rem; color: #1e3a8a; line-height: 1.55;">
+                    <div style="font-weight: 800; font-size: 0.98rem; margin-bottom: 4px; color: #1e40af;">SoundSphere Privacy Policy</div>
+                    <div style="color: #2563eb; font-size: 0.82rem; margin-bottom: 8px; font-weight: 600;">
+                        <span>Effective Date: October 2026</span> &nbsp;•&nbsp; 
+                        <span>Platform Controller: SoundSphere (Denver E. Cabrera: 0951 602 8992 | soundsphere@gmail.com)</span>
+                    </div>
+                    <p style="margin: 0; color: #334155;">SoundSphere is a web-based booking platform connecting clients with professional lights and sounds service providers. This privacy policy explains how your personal data is collected, handled, and protected in accordance with the Philippine Data Privacy Act of 2012 (RA 10173).</p>
+                </div>
+
+                <div class="faq-list">
+                    <!-- 1. Information We Collect -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-database faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>1. Information We Collect</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Account & Profile:</strong> Full name, email address, contact number, and profile photo.</li>
+                                <li><strong>Provider Application & Verification:</strong> Valid government-issued ID, business permit, equipment details, service packages, and relevant business documents submitted for provider approval.</li>
+                                <li><strong>Booking & Event Details:</strong> Selected equipment/service packages, event dates, event venues/locations, schedule requirements, and in-app text messages between clients and providers.</li>
+                                <li><strong>Payments & Billing:</strong> Transaction reference numbers, down payments, remaining balances, subscription plan records, and payout recipient details (debit/credit card credentials are processed directly by our secure third-party payment gateway and are not stored by SoundSphere).</li>
+                                <li><strong>Reviews & Platform Records:</strong> Ratings, event feedback, dispute or non-appearance incident reports, and operational access logs.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 2. Purposes and Legal Basis -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-scale-balanced faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>2. Purposes and Legal Basis</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Fulfilling Bookings:</strong> To verify schedule availability, confirm reservations, coordinate down payments/balances, and facilitate event delivery.</li>
+                                <li><strong>Provider Verification:</strong> To authenticate provider identity, assess business permits, prevent marketplace fraud, and approve provider subscription plans.</li>
+                                <li><strong>Communication & Support:</strong> To enable text messaging between clients and providers, handle inquiries, and review non-appearance or refund claims.</li>
+                                <li><strong>Compliance & Security:</strong> To protect system integrity and comply with statutory obligations under Section 13 of the Data Privacy Act.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 3. Public vs. Private Information -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-eye-slash faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>3. Public vs. Private Information</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Public Content:</strong> Approved provider business names, profile photos, equipment lists, service packages, pricing, coverage areas, and client reviews are publicly visible to platform visitors.</li>
+                                <li><strong>Between Booking Parties:</strong> The client and the booked provider receive necessary contact details, event venue locations, and schedule information strictly to fulfill the service.</li>
+                                <li><strong>Confidential:</strong> Uploaded government IDs, business permits, provider payout details, transaction disputes, and private incident reports are never made public.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 4. Third-Party Service Providers -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-server faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>4. Third-Party Service Providers</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0 0 6px 0; color: #475569; font-size: 0.9rem;">We share data only with trusted infrastructure and service partners strictly necessary to operate the platform:</p>
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Payment Gateway:</strong> Secure processing of online down payments, full payments, balances, and refunds.</li>
+                                <li><strong>Vercel & MonsterASP.NET:</strong> Web application deployment, server hosting, and database storage for platform records and operations.</li>
+                                <li><strong>Communication Delivery:</strong> Transactional notifications and verification alerts.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 5. Automated Rules & Booking Status -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-clock-rotate-left faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>5. Automated Rules & Booking Status</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Unconfirmed Bookings:</strong> Unpaid bookings or down payments expire automatically after the configured reservation window.</li>
+                                <li><strong>Completion & Settlement:</strong> If down payments were made, balances must be settled on or before the event date. Service completion and earnings releases are subject to administrative hold if a client files an immediate non-appearance or dispute report.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 6. Security & Your Rights -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-user-shield faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>6. Security & Your Rights</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <ul style="margin: 6px 0 0 18px; padding: 0; color: #475569; line-height: 1.6; font-size: 0.9rem;">
+                                <li><strong>Security:</strong> We apply role-based access controls, password hashing, and secure protocols to protect your personal and business records.</li>
+                                <li><strong>Your Rights:</strong> Under the Philippine Data Privacy Act, you have the right to access, rectify, object to processing, or request deletion of your personal data, and lodge a complaint with the National Privacy Commission (NPC).</li>
+                            </ul>
+                            <div style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.88rem; color: #334155;">
+                                To exercise your privacy rights or ask questions regarding your data, contact us at <a href="mailto:soundsphere@gmail.com" style="color: #2563eb; font-weight: 700; text-decoration: underline;">soundsphere@gmail.com</a> or call <strong style="color: #0a192f;">0951 602 8992</strong>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="faq-modal-footer">
+                <button type="button" class="btn-faq-close" onclick="closePrivacyModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TERMS OF AGREEMENT MODAL ==================== -->
+    <div id="agreement-modal" class="faq-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="agreement-modal-title">
+        <div class="faq-modal-container">
+            <!-- Modal Header -->
+            <div class="faq-modal-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="faq-icon-badge" style="background: #eff6ff; color: #2563eb;">
+                        <i class="fa-solid fa-handshake-angle"></i>
+                    </div>
+                    <div>
+                        <h2 id="agreement-modal-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0a192f; letter-spacing: -0.5px;">
+                            TERMS OF AGREEMENT
+                        </h2>
+                        <span style="font-size: 0.85rem; color: #64748b;">SoundSphere Platform Terms of Agreement</span>
+                    </div>
+                </div>
+                <button type="button" class="faq-modal-close" onclick="closeAgreementModal()" aria-label="Close Agreement modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Agreement Sections -->
+            <div class="faq-modal-body">
+                <div style="background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.88rem; color: #1e3a8a; line-height: 1.55;">
+                    <div style="font-weight: 800; font-size: 0.98rem; margin-bottom: 4px; color: #1e40af;">SoundSphere Terms of Agreement</div>
+                    <div style="color: #2563eb; font-size: 0.82rem; margin-bottom: 8px; font-weight: 600;">
+                        <span>Effective Date: October 2026</span> &nbsp;•&nbsp; 
+                        <span>Platform Operator: SoundSphere (Denver E. Cabrera: 0951 602 8992 | soundsphere@gmail.com)</span>
+                    </div>
+                    <p style="margin: 0; color: #334155;">This agreement is between you and Denver E. Cabrera, Charles Bascuguin, Odnarf Pearl Frando, and Jay Anne Althea Desagun, the operators of SoundSphere, located at Brgy. 8, Balayan, Batangas. It applies when you create a client or lights and sounds service provider account or expressly accept it through SoundSphere.</p>
+                </div>
+
+                <div class="faq-list">
+                    <!-- 1. The Marketplace -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-store faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>1. The Marketplace</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">SoundSphere is a web-based intermediary platform connecting event organizers and clients with independent lights and sounds service providers across the Philippines. Providers remain solely responsible for the condition of their equipment, crew management, on-site installation, and live sound and stage lighting execution. SoundSphere provides service discovery, payment coordination, in-app messaging, and administrative dispute support.</p>
+                        </div>
+                    </div>
+
+                    <!-- 2. User Commitments -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-user-check faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>2. User Commitments</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">You verify that you possess the legal capacity to enter into binding agreements, that all submitted registration details and documents are authentic, that your login credentials will remain secure, and that all platform communications will remain professional and respectful. Clients agree to inspect package details, equipment specifications, venue constraints, and dates before checkout, as well as pay required down payments and final balances on time. Service providers agree to provide truthful descriptions of their gear, wattage, pricing, and coverage areas, maintain necessary business and municipal permits, honor confirmed bookings, and deliver accepted services punctually.</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. Payments, Holds & Balances -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-credit-card faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>3. Payments, Holds & Balances</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">All transactions must be completed through SoundSphere's configured online payment gateway, and any associated gateway checkout fees are non-refundable unless required by law. For bookings secured with a partial down payment, the remaining balance must be settled in full online on or before the scheduled event date according to the booking terms. Unpaid bookings or down payments that remain uncompleted are automatically cancelled after the designated checkout window, which defaults to four hours from reservation creation.</p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Cancellations, Disputes & Non-Appearance -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-triangle-exclamation faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>4. Cancellations, Disputes & Non-Appearance</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">Refund amounts and cancellation terms follow the specific timeframe disclosed at the time of booking, and requests submitted outside the eligible window do not qualify for a refund. In the event of a provider non-appearance, the client must immediately file an incident report with the platform administrator and must not mark the service as completed. Filing a dispute places an automatic administrative hold on earnings, and any applicable refund will be processed only after administrative review and approval.</p>
+                        </div>
+                    </div>
+
+                    <!-- 5. Account Termination & Changes -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-user-xmark faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>5. Account Termination & Changes</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">You may terminate your use of SoundSphere or request account deletion at any time by contacting support, provided that closure does not discharge outstanding payment balances, upcoming event obligations, or pending disputes. SoundSphere reserves the right to suspend or ban accounts that breach marketplace rules, provide fraudulent permits, or fail to deliver confirmed services. Updated versions of these terms will be communicated through platform notices, and continued use of the service constitutes acceptance of any revisions.</p>
+                        </div>
+                    </div>
+
+                    <!-- 6. Acceptance & Contact Information -->
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-signature faq-q-icon" style="color: #2563eb; background: #dbeafe;"></i>
+                            <h3>6. Acceptance & Contact Information</h3>
+                        </div>
+                        <div class="faq-answer">
+                            <p style="margin: 0 0 10px 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">Your electronic acceptance confirms agreement to this document and all accompanying platform guidelines.</p>
+                            <div style="padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.88rem; color: #334155; line-height: 1.6;">
+                                <div><strong>Platform Operators:</strong> Denver E. Cabrera, Charles Bascuguin, Odnarf Pearl Frando, and Jay Anne Althea Desagun</div>
+                                <div><strong>Address:</strong> Brgy. 8, Balayan, Batangas</div>
+                                <div><strong>Support Email:</strong> <a href="mailto:soundsphere@gmail.com" style="color: #2563eb; font-weight: 700; text-decoration: underline;">soundsphere@gmail.com</a></div>
+                                <div><strong>Contact Number:</strong> <strong style="color: #0a192f;">0951 602 8992</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="faq-modal-footer">
+                <button type="button" class="btn-faq-close" onclick="closeAgreementModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support & Legal Modal Scripts -->
+    <script>
+        function openFaqModal() {
+            var modal = document.getElementById('faq-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            var scrollBody = modal.querySelector('.faq-modal-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+        }
+        function closeFaqModal() {
+            var modal = document.getElementById('faq-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+        }
+
+        function openTermsModal() {
+            var modal = document.getElementById('terms-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            var scrollBody = modal.querySelector('.faq-modal-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+            var signupControls = document.getElementById('terms-signup-controls');
+            var standardControls = document.getElementById('terms-standard-controls');
+            if (signupControls) signupControls.style.display = 'none';
+            if (standardControls) standardControls.style.display = 'flex';
+        }
+        function closeTermsModal() {
+            var modal = document.getElementById('terms-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+        }
+
+        function openPrivacyModal() {
+            var modal = document.getElementById('privacy-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            var scrollBody = modal.querySelector('.faq-modal-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+        }
+        function closePrivacyModal() {
+            var modal = document.getElementById('privacy-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+        }
+
+        function openAgreementModal() {
+            var modal = document.getElementById('agreement-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            void modal.offsetWidth;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            var scrollBody = modal.querySelector('.faq-modal-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+        }
+        function closeAgreementModal() {
+            var modal = document.getElementById('agreement-modal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            setTimeout(function() {
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'none';
+                }
+            }, 250);
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function(e) {
+            var faqModal = document.getElementById('faq-modal');
+            var termsModal = document.getElementById('terms-modal');
+            var privacyModal = document.getElementById('privacy-modal');
+            var agreementModal = document.getElementById('agreement-modal');
+            if (faqModal && e.target === faqModal) closeFaqModal();
+            if (termsModal && e.target === termsModal) closeTermsModal();
+            if (privacyModal && e.target === privacyModal) closePrivacyModal();
+            if (agreementModal && e.target === agreementModal) closeAgreementModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFaqModal();
+                closeTermsModal();
+                closePrivacyModal();
+                closeAgreementModal();
+            }
+        });
+    </script>
 
     <!-- Footer -->
     <footer class="shopee-footer">

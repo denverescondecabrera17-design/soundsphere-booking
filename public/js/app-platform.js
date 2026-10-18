@@ -2099,6 +2099,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Support & Legal Modals in Account Settings
+        const faqSettingsBtn = e.target.closest('#btn-settings-faq');
+        if (faqSettingsBtn) {
+            e.preventDefault();
+            if (typeof openFaqModal === 'function') openFaqModal();
+            return;
+        }
+
+        const termsSettingsBtn = e.target.closest('#btn-settings-terms');
+        if (termsSettingsBtn) {
+            e.preventDefault();
+            if (typeof openTermsModal === 'function') openTermsModal();
+            return;
+        }
+
+        const privacySettingsBtn = e.target.closest('#btn-settings-privacy');
+        if (privacySettingsBtn) {
+            e.preventDefault();
+            if (typeof openPrivacyModal === 'function') openPrivacyModal();
+            return;
+        }
+
+        const agreementSettingsBtn = e.target.closest('#btn-settings-agreement');
+        if (agreementSettingsBtn) {
+            e.preventDefault();
+            if (typeof openAgreementModal === 'function') openAgreementModal();
+            return;
+        }
+
         // F. Open Service Provider Application Modal Button
         const openProviderAppBtn = e.target.closest('#btn-open-provider-app-modal');
         if (openProviderAppBtn) {
