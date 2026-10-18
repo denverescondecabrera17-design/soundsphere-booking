@@ -63,6 +63,12 @@ router.put('/notifications/:id/read', adminController.markAdminNotificationRead)
 // Admin Detailed Booking Overview Endpoint
 router.get('/bookings/:id', adminController.getAdminBookingDetails);
 
+// Admin System Backup & Restore Endpoints
+const backupController = require('../controllers/backupController');
+router.get('/backup/status', backupController.getBackupStatus);
+router.get('/backup/export', backupController.exportBackup);
+router.post('/backup/restore', backupController.restoreBackup);
+
 module.exports = router;
 
 
