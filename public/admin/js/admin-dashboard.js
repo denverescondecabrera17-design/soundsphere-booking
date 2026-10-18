@@ -214,6 +214,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetViewId = 'view-client-reports';
         } else if (cleanHash === 'audit-section' || cleanHash === 'audit-trail' || cleanHash === 'view-audit-trail') {
             targetViewId = 'view-audit-trail';
+        } else if (cleanHash === 'backup-section' || cleanHash === 'backup-restore' || cleanHash === 'view-backup-restore') {
+            targetViewId = 'view-backup-restore';
         }
 
         // Update Sidebar Active Link State
@@ -228,7 +230,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (targetViewId === 'view-admin-subscriptions' && (href === '#subscriptions-section' || href === '#provider-subscriptions')) ||
                 (targetViewId === 'view-withdrawal' && (href === '#withdrawal-section' || href === '#withdrawals')) ||
                 (targetViewId === 'view-client-reports' && (href === '#reports-section' || href === '#client-reports')) ||
-                (targetViewId === 'view-audit-trail' && (href === '#audit-section' || href === '#audit-trail'))
+                (targetViewId === 'view-audit-trail' && (href === '#audit-section' || href === '#audit-trail')) ||
+                (targetViewId === 'view-backup-restore' && (href === '#backup-section' || href === '#backup-restore'))
             ) {
                 link.classList.add('active');
             } else {
@@ -258,6 +261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => loadClientReportsPage(), 50);
         } else if (targetViewId === 'view-audit-trail' && typeof loadAuditTrailPage === 'function') {
             setTimeout(() => loadAuditTrailPage(), 50);
+        } else if (targetViewId === 'view-backup-restore' && typeof loadBackupRestorePage === 'function') {
+            setTimeout(() => loadBackupRestorePage(), 50);
         }
     };
 
@@ -4029,4 +4034,294 @@ async function submitAdminEditPermitExpiry(event) {
         }
     }
 }
+
+// ============================================================================
+// SYSTEM BACKUP & RESTORE MODULE
+// ============================================================================
+let parsedBackupPayload = null;
+
+async function loadBackupRestorePage() {
+    const tableInventory = document.getElementById('table-backup-inventory');
+    const totalRecordsEl = document.getElementById('backup-total-records');
+    const dbEngineEl = document.getElementById('backup-db-engine');
+
+    if (tableInventory) {
+        tableInventory.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Querying table inventory...</td></tr>';
+    }
+
+    try {
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token'));
+        const res = await fetch('/api/admin/backup/status', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to load backup status');
+
+        if (totalRecordsEl) {
+            totalRecordsEl.textContent = Number(data.totalRecords || 0).toLocaleString() + ' Records';
+        }
+        if (dbEngineEl && data.database) {
+            dbEngineEl.textContent = `${data.database} (MSSQL)`;
+        }
+
+        if (tableInventory && data.tableCounts) {
+            const rows = Object.entries(data.tableCounts).map(([tableName, count]) => {
+                return `
+                    <tr>
+                        <td style="font-weight:700; color:#0a192f;">
+                            <i class="fa-solid fa-table" style="color:#2563eb; margin-right:8px;"></i>${tableName}
+                        </td>
+                        <td><span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:6px;">dbo</span></td>
+                        <td style="font-weight:800; color:#0a192f;">${Number(count).toLocaleString()}</td>
+                        <td><span style="background:#ecfdf5; color:#059669; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:6px;"><i class="fa-solid fa-check"></i> Included</span></td>
+                        <td><span style="color:#10b981; font-weight:700; font-size:0.78rem;">Active</span></td>
+                    </tr>
+                `;
+            }).join('');
+
+            tableInventory.innerHTML = rows || '<tr><td colspan="5" style="text-align:center; padding:20px; color:#64748b;">No table metrics available</td></tr>';
+        }
+
+    } catch (err) {
+        console.error('loadBackupRestorePage error:', err);
+        if (tableInventory) {
+            tableInventory.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#ef4444;"><i class="fa-solid fa-circle-exclamation"></i> ${err.message}</td></tr>`;
+        }
+    }
+}
+
+async function downloadSystemBackup() {
+    const btn = document.getElementById('btn-download-backup');
+    const statusEl = document.getElementById('backup-download-status');
+    const originalText = btn ? btn.innerHTML : 'Download System Backup (.json)';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Snapshot...';
+    }
+    if (statusEl) {
+        statusEl.innerHTML = '<span style="color:#2563eb;">Exporting database tables, please wait a moment...</span>';
+    }
+
+    try {
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token'));
+        const res = await fetch('/api/admin/backup/export', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || 'Backup generation failed');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestampStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.href = url;
+        a.download = `soundsphere_backup_${timestampStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        if (statusEl) {
+            statusEl.innerHTML = '<span style="color:#10b981; font-weight:700;">✓ Backup successfully downloaded to your computer!</span>';
+        }
+        if (typeof showToast === 'function') {
+            showToast('✓ Backup downloaded successfully!', 'success');
+        }
+
+    } catch (err) {
+        console.error('downloadSystemBackup error:', err);
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#ef4444; font-weight:700;">✕ ${err.message}</span>`;
+        }
+        if (typeof showToast === 'function') {
+            showToast(err.message, 'error');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
+function handleBackupFileSelected(event) {
+    const file = event.target.files?.[0];
+    const nameLabel = document.getElementById('restore-file-name-label');
+    const detailsLabel = document.getElementById('restore-file-details');
+    const confirmationBox = document.getElementById('restore-confirmation-box');
+    const confirmInput = document.getElementById('input-confirm-restore-text');
+    const btnExecute = document.getElementById('btn-execute-restore');
+
+    if (!file) return;
+
+    nameLabel.textContent = file.name;
+    detailsLabel.textContent = `Reading file (${(file.size / 1024).toFixed(1)} KB)...`;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            if (!json || json.system !== 'SoundSphere' || !json.data) {
+                throw new Error('Invalid format: File is not a recognized SoundSphere JSON backup.');
+            }
+
+            parsedBackupPayload = json;
+            const recordCount = json.summary?.totalRecords || Object.values(json.data).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
+            const exportedAt = json.exportedAt ? new Date(json.exportedAt).toLocaleString() : 'Unknown date';
+
+            nameLabel.innerHTML = `✓ ${file.name} <span style="color:#10b981; font-size:0.8rem;">(Verified)</span>`;
+            detailsLabel.innerHTML = `Snapshot Date: <strong>${exportedAt}</strong> | Records: <strong>${recordCount.toLocaleString()}</strong>`;
+
+            if (confirmationBox) confirmationBox.style.display = 'block';
+            if (confirmInput) {
+                confirmInput.value = '';
+                confirmInput.focus();
+            }
+
+            updateConfirmRestoreButtonState();
+
+        } catch (parseErr) {
+            parsedBackupPayload = null;
+            nameLabel.innerHTML = `<span style="color:#ef4444;">✕ Invalid Backup File</span>`;
+            detailsLabel.textContent = parseErr.message;
+            if (confirmationBox) confirmationBox.style.display = 'none';
+            if (btnExecute) {
+                btnExecute.disabled = true;
+                btnExecute.style.background = '#94a3b8';
+                btnExecute.style.cursor = 'not-allowed';
+            }
+        }
+    };
+    reader.readAsText(file);
+}
+
+function updateConfirmRestoreButtonState() {
+    const confirmInput = document.getElementById('input-confirm-restore-text');
+    const btnExecute = document.getElementById('btn-execute-restore');
+    if (!confirmInput || !btnExecute) return;
+
+    const isConfirmed = confirmInput.value.trim().toUpperCase() === 'RESTORE';
+    if (parsedBackupPayload && isConfirmed) {
+        btnExecute.disabled = false;
+        btnExecute.style.background = 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)';
+        btnExecute.style.cursor = 'pointer';
+        btnExecute.style.boxShadow = '0 4px 14px rgba(225,29,72,0.35)';
+    } else {
+        btnExecute.disabled = true;
+        btnExecute.style.background = '#94a3b8';
+        btnExecute.style.cursor = 'not-allowed';
+        btnExecute.style.boxShadow = 'none';
+    }
+}
+
+async function executeSystemRestore() {
+    if (!parsedBackupPayload) {
+        alert('Please select a valid backup file first.');
+        return;
+    }
+
+    const confirmInput = document.getElementById('input-confirm-restore-text');
+    if (!confirmInput || confirmInput.value.trim().toUpperCase() !== 'RESTORE') {
+        alert('Please type RESTORE in capital letters to confirm this action.');
+        return;
+    }
+
+    const sure = confirm('⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to restore the database from this backup snapshot?\n\nExisting database tables will be synced to this backup point with complete atomic transaction safety.');
+    if (!sure) return;
+
+    const btn = document.getElementById('btn-execute-restore');
+    const statusEl = document.getElementById('restore-action-status');
+    const originalText = btn ? btn.innerHTML : 'Execute System Restore';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Restoring Database (Atomic)...';
+    }
+    if (statusEl) {
+        statusEl.innerHTML = '<span style="color:#e11d48; font-weight:700;">Restoring tables safely inside SQL Transaction...</span>';
+    }
+
+    try {
+        const token = (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.getAuthToken) ? SoundSphereAPI.getAuthToken() : (localStorage.getItem('soundsphere_jwt_token') || localStorage.getItem('token'));
+        const res = await fetch('/api/admin/backup/restore', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(parsedBackupPayload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'System restore failed');
+
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#10b981; font-weight:800;">✓ ${data.message}</span>`;
+        }
+        alert(`✓ RESTORE COMPLETE!\n\n${data.message}`);
+
+        // Reset file selection & reload table counts
+        parsedBackupPayload = null;
+        const fileInput = document.getElementById('input-backup-file');
+        if (fileInput) fileInput.value = '';
+        const confirmationBox = document.getElementById('restore-confirmation-box');
+        if (confirmationBox) confirmationBox.style.display = 'none';
+        const nameLabel = document.getElementById('restore-file-name-label');
+        if (nameLabel) nameLabel.textContent = 'Click to select backup file (.json)';
+        const detailsLabel = document.getElementById('restore-file-details');
+        if (detailsLabel) detailsLabel.textContent = 'Supported format: SoundSphere JSON backup';
+
+        updateConfirmRestoreButtonState();
+        loadBackupRestorePage();
+
+    } catch (err) {
+        console.error('executeSystemRestore error:', err);
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#ef4444; font-weight:700;">✕ ${err.message}</span>`;
+        }
+        alert(`✕ Restore Failed:\n\n${err.message}\n\nNote: All database modifications were safely rolled back.`);
+    } finally {
+        if (btn) {
+            btn.innerHTML = originalText;
+            updateConfirmRestoreButtonState();
+        }
+    }
+}
+
+// Event Listeners initialization for Backup & Restore
+document.addEventListener('DOMContentLoaded', () => {
+    const btnDownload = document.getElementById('btn-download-backup');
+    if (btnDownload) {
+        btnDownload.addEventListener('click', downloadSystemBackup);
+    }
+
+    const btnRefresh = document.getElementById('btn-refresh-backup-status');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', loadBackupRestorePage);
+    }
+
+    const fileInput = document.getElementById('input-backup-file');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleBackupFileSelected);
+    }
+
+    const confirmInput = document.getElementById('input-confirm-restore-text');
+    if (confirmInput) {
+        confirmInput.addEventListener('input', updateConfirmRestoreButtonState);
+    }
+
+    const btnExecute = document.getElementById('btn-execute-restore');
+    if (btnExecute) {
+        btnExecute.addEventListener('click', executeSystemRestore);
+    }
+});
 
