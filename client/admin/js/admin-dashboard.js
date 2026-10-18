@@ -2250,8 +2250,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // Background Real-Time Polling Interval (Every 15 Seconds)
-    setInterval(loadAdminNotifications, 15000);
+    // Background Real-Time Polling Interval (Every 30 Seconds, paused when tab hidden)
+    setInterval(() => {
+        if (!document.hidden && typeof loadAdminNotifications === 'function') loadAdminNotifications();
+    }, 30000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && typeof loadAdminNotifications === 'function') loadAdminNotifications();
+    });
     await loadAdminNotifications();
 
     // Initial Dashboard Data Fetch & View Router Trigger

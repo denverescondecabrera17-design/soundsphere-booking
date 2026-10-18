@@ -774,7 +774,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {}
     };
     updateProviderUnreadMessagesBadge();
-    setInterval(updateProviderUnreadMessagesBadge, 25000);
+    setInterval(() => {
+        if (!document.hidden && typeof updateProviderUnreadMessagesBadge === 'function') {
+            updateProviderUnreadMessagesBadge();
+        }
+    }, 30000);
 
     // Modal Backdrop Overlay & Escape Key Click Dismissal
     document.querySelectorAll('.admin-modal-overlay').forEach(overlay => {

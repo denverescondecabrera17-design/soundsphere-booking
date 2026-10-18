@@ -4214,9 +4214,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initial Load & Polling for Platform Messages
+    // Initial Load & Smart Polling for Platform Messages (Paused when tab hidden)
     fetchPlatformConversations();
-    setInterval(fetchPlatformConversations, 3000);
+    setInterval(() => {
+        if (!document.hidden) fetchPlatformConversations();
+    }, 15000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) fetchPlatformConversations();
+    });
 
     // Expose helper globally so switchView and cardMsgBtn can call it
     window.fetchPlatformConversations = fetchPlatformConversations;
@@ -5622,17 +5627,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initReportModal();
 
-    // Initial Notifications Fetch & Polling every 10 seconds
+    // Initial Notifications Fetch & Smart Polling (Paused when tab hidden)
     fetchNotifications();
-    setInterval(fetchNotifications, 10000);
+    setInterval(() => {
+        if (!document.hidden && typeof fetchNotifications === 'function') fetchNotifications();
+    }, 25000);
 
     // Initial Search Filter Load
     filterSearchResults();
 
-    // Initial User Bookings Fetch from SQL Server DB
+    // Initial User Bookings Fetch from SQL Server DB (Paused when tab hidden)
     if (typeof window.fetchUserBookings === 'function') {
         window.fetchUserBookings();
-        setInterval(window.fetchUserBookings, 15000);
+        setInterval(() => {
+            if (!document.hidden && typeof window.fetchUserBookings === 'function') {
+                window.fetchUserBookings();
+            }
+        }, 30000);
     }
 
     // Auto-refresh when tab becomes active / gains focus

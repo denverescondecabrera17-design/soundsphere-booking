@@ -596,13 +596,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderEmptyHeaderState();
     }
 
-    // 10. Background Real-Time Polling (every 3 seconds)
+    // 10. Background Real-Time Polling (every 10s when active, paused when hidden)
     pollInterval = setInterval(async () => {
+        if (document.hidden) return;
         await fetchConversations();
         if (activeConversationId) {
             await fetchMessagesThread(activeConversationId);
         }
-    }, 3000);
+    }, 10000);
+
+    // Refresh immediately when user switches back to this tab
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden) {
+            await fetchConversations();
+            if (activeConversationId) {
+                await fetchMessagesThread(activeConversationId);
+            }
+        }
+    });
 });
 
 // Photo Lightbox Viewer Controller
