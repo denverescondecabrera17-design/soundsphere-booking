@@ -1213,16 +1213,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const provNameEl = document.getElementById('cwd-provider-name');
         if (provNameEl) provNameEl.textContent = w.ProviderName || w.BusinessName || 'Service Provider';
 
-        const bRefEl = document.getElementById('cwd-booking-ref');
-        if (bRefEl) {
-            if (w.BookingReference) {
-                bRefEl.textContent = `#${w.BookingReference}${w.PackageName ? ' (' + w.PackageName + ')' : ''}`;
-            } else if (w.BookingID) {
-                bRefEl.textContent = `#BK-${w.BookingID}${w.PackageName ? ' (' + w.PackageName + ')' : ''}`;
-            } else {
-                bRefEl.textContent = 'Wallet Inflow Balance';
-            }
-        }
 
         // Financial Breakdown (Gross, 5% Commission, Net)
         const grossEl = document.getElementById('cwd-gross-amount');
