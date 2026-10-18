@@ -471,7 +471,11 @@
                                 Payments are held safely in escrow and automatically transferred to your available wallet balance when the client confirms service completion.
                             </p>
                         </div>
-
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <button type="button" class="btn btn-success" id="btn-wallet-request-withdrawal" onclick="window.openWalletWithdrawalModal()" style="background:#10b981; color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(16,185,129,0.25);">
+                                <i class="fa-solid fa-money-bill-transfer"></i> Request Withdrawal
+                            </button>
+                        </div>
                     </div>
 
 
@@ -1750,6 +1754,6 @@
     <!-- Core SoundSphere API Helper -->
     <script src="../js/api.js?v=5.0"></script>
     <!-- Service Provider Controller JS -->
-    <script src="./js/provider-dashboard.js?v=8.0"></script>
+    <script src="./js/provider-dashboard.js?v=9.0"></script>
 </body>
 </html>
