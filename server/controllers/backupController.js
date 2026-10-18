@@ -31,15 +31,15 @@ const BACKUP_TABLES = [
 ];
 
 /**
- * Helper: Check if a table exists in dbo schema
+ * Helper: Check if a table exists in SQL Server
  */
 async function tableExists(pool, tableName) {
     const res = await pool.request()
         .input('tableName', sql.NVarChar(128), tableName)
         .query(`
             SELECT 1 AS existsFlag 
-            FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @tableName
+            FROM sys.tables 
+            WHERE name = @tableName
         `);
     return res.recordset.length > 0;
 }
@@ -60,7 +60,7 @@ async function hasIdentityColumn(pool, tableName) {
 
 /**
  * GET /api/admin/backup/status
- * Returns current table row counts and database health
+ * Returns current table row counts and database health directly from sys.tables
  */
 exports.getBackupStatus = async (req, res) => {
     try {
@@ -68,17 +68,31 @@ exports.getBackupStatus = async (req, res) => {
         const counts = {};
         let totalRecords = 0;
 
+        // Query partition metadata in single roundtrip for instant, exact row counts
+        const metaRes = await pool.request().query(`
+            SELECT 
+                t.name AS TableName,
+                SUM(p.rows) AS [RowCount]
+            FROM 
+                sys.tables t
+            INNER JOIN 
+                sys.partitions p ON t.object_id = p.object_id
+            WHERE 
+                p.index_id IN (0, 1)
+            GROUP BY 
+                t.name;
+        `);
+
+        const dbMap = {};
+        for (const row of (metaRes.recordset || [])) {
+            dbMap[row.TableName] = Number(row.RowCount || 0);
+        }
+
         for (const tableName of BACKUP_TABLES) {
-            try {
-                if (await tableExists(pool, tableName)) {
-                    const countRes = await pool.request().query(`SELECT COUNT(*) AS rowCount FROM dbo.[${tableName}]`);
-                    const count = countRes.recordset[0]?.rowCount || 0;
-                    counts[tableName] = count;
-                    totalRecords += count;
-                } else {
-                    counts[tableName] = 0;
-                }
-            } catch (err) {
+            if (dbMap[tableName] !== undefined) {
+                counts[tableName] = dbMap[tableName];
+                totalRecords += dbMap[tableName];
+            } else {
                 counts[tableName] = 0;
             }
         }
