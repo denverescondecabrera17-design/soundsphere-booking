@@ -1242,8 +1242,6 @@ document.addEventListener('DOMContentLoaded', () => {
             provContactEl.textContent = parts.length ? parts.join(' • ') : 'N/A';
         }
 
-        const clientNameEl = document.getElementById('cwd-client-name');
-        if (clientNameEl) clientNameEl.textContent = w.ClientName || 'SoundSphere Client';
 
         const clientEmailEl = document.getElementById('cwd-client-email');
         const targetClientEmail = w.ClientEmail || (w.ClientName && w.ClientName.includes('@') ? w.ClientName : 'client@gmail.com');
