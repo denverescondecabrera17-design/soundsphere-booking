@@ -305,14 +305,7 @@ body.client-messages-body {
 }
 
 .online-status-badge {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    background: var(--messenger-online);
-    border: 2px solid #ffffff;
-    border-radius: 50%;
+    display: none !important;
 }
 
 .thread-info {
@@ -447,11 +440,7 @@ body.client-messages-body {
 }
 
 .green-dot-indicator {
-    width: 8px;
-    height: 8px;
-    background: var(--messenger-online);
-    border-radius: 50%;
-    display: inline-block;
+    display: none !important;
 }
 
 /* Message History Stream */

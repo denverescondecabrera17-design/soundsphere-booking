@@ -3890,7 +3890,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="thread-item ${isActive ? 'active' : ''} ${unread > 0 ? 'unread' : ''}" data-id="${c.conversationId}">
                     <div class="thread-avatar-wrap" ${isProvider && partnerUserId ? `onclick="event.stopPropagation(); window.location.href='/provider-detail.html?id=${partnerUserId}';" title="Click to view Storefront Profile of ${partnerName}" style="cursor:pointer;"` : ''}>
                         <img src="${avatar}" alt="${partnerName}" class="thread-avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=0084ff&color=fff';">
-                        <span class="online-status-badge"></span>
                         ${unread > 0 ? `<span class="badge-unread-dot" style="position:absolute; top:-2px; right:-2px; background:#0084ff; color:#fff; font-size:0.65rem; font-weight:800; border-radius:10px; padding:2px 6px; border:2px solid #fff; z-index:2;">${unread}</span>` : ''}
                     </div>
                     <div class="thread-info">
@@ -3964,7 +3963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (bookingTagEl) bookingTagEl.textContent = conv.bookingId ? `Associated Booking #BK-${conv.bookingId}` : `Role: ${conv.partner?.role || 'Provider'}`;
                     
                     if (activeSubtitleEl) {
-                        activeSubtitleEl.innerHTML = `<span class="green-dot-indicator"></span> ${conv.bookingId ? `Associated Booking #BK-${conv.bookingId}` : (conv.partner?.role === 'Client' ? 'Client Partner' : 'Service Provider')}`;
+                        activeSubtitleEl.innerHTML = `${conv.bookingId ? `Associated Booking #BK-${conv.bookingId}` : (conv.partner?.role === 'Client' ? 'Client Partner' : 'Service Provider')}`;
                     }
 
                     if (activeAvatarEl) {
