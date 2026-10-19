@@ -54,31 +54,44 @@ app.use('/api', async (req, res, next) => {
     next();
 });
 
-// Serve Client Static Frontend Assets with aggressive no-cache headers for HTML/JS
-const staticOptions = {
-    etag: false,
-    maxAge: 0,
+// Smart, bandwidth-saving caching options for static assets & Edge CDN
+const getStaticOptions = (isUpload = false) => ({
+    etag: true,
+    lastModified: true,
+    maxAge: isUpload ? '7d' : '1d',
     setHeaders: (res, filePath) => {
         res.setHeader('Content-Security-Policy', CSP_HEADER_VALUE);
-        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
+
+        // 1. Images, Media, Fonts (heaviest bandwidth consumer: cache in browser for 1d, Edge CDN for 7d)
+        if (/\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp4|webm)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
+        }
+        // 2. CSS & JS (cache in browser for 5 min, Edge CDN for 1 hour, revalidates seamlessly)
+        else if (/\.(css|js)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=600');
+        }
+        // 3. HTML pages (always revalidate freshness, but ETag allows 304 Not Modified with 0 bytes body)
+        else if (/\.html$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
         }
     }
-};
+});
+
+const staticOptions = getStaticOptions(false);
+const uploadOptions = getStaticOptions(true);
+
 app.use(express.static(path.join(__dirname, 'client'), staticOptions));
 app.use(express.static(path.join(__dirname, 'client', 'pages'), staticOptions));
 app.use('/client', express.static(path.join(__dirname, 'client'), staticOptions));
 app.use(express.static(path.join(__dirname, 'public'), staticOptions));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { etag: false, maxAge: 0 }));
-app.use('/uploads', express.static(path.join(__dirname, 'client', 'uploads'), { etag: false, maxAge: 0 }));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), uploadOptions));
+app.use('/uploads', express.static(path.join(__dirname, 'client', 'uploads'), uploadOptions));
 
 // Universal Default Avatar Fallback Route (prevents any 404 for default-avatar.png on local and Vercel)
 app.get(['/images/default-avatar.png', '/default-avatar.png', '*/default-avatar.png', '*/images/default-avatar.png'], (req, res) => {
     const avatarPath = path.join(__dirname, 'public', 'images', 'default-avatar.png');
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
     return res.sendFile(avatarPath);
 });
 
