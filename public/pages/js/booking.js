@@ -84,8 +84,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const calcDaysDisplay = document.getElementById('calc-days-display');
 
     const placeSelect = document.getElementById('booking-place-select');
-    const otherPlaceGroup = document.getElementById('booking-other-place-group');
-    const otherPlaceInput = document.getElementById('booking-other-place');
     const venueNameInput = document.getElementById('booking-venue-name');
     const completeAddressInput = document.getElementById('booking-complete-address');
     const locationNotesInput = document.getElementById('booking-location-notes');
@@ -486,13 +484,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchLocation = async (query) => {
         if (!query) return [];
         const place = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
-        const otherInput = document.getElementById('booking-other-place');
-        const customPlace = (otherInput && otherInput.value.trim()) || '';
-        const effectivePlace = (place === 'Other' && customPlace) ? customPlace : (place === 'Other' ? '' : place);
-        const cleanQ = normalizePhAddress(query, effectivePlace);
+        const isOthers = (place === 'Others' || place === 'Other');
+        const cleanQ = normalizePhAddress(query, isOthers ? '' : place);
 
         // 1. Instant 0ms local match (only when place is within service area, or query specifically matches Batangas dataset)
-        if (typeof matchLocalBatangasPlaces === 'function' && place !== 'Other') {
+        if (typeof matchLocalBatangasPlaces === 'function' && !isOthers) {
             const localMatches = matchLocalBatangasPlaces(cleanQ, place);
             if (localMatches && localMatches.length > 0) {
                 return localMatches.map(m => ({
@@ -517,12 +513,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (hasPh) {
             queriesToTry.push(cleanQ);
         } else {
-            if (effectivePlace) {
+            if (!isOthers) {
                 if (hasBatangas) {
-                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Philippines`);
+                    queriesToTry.push(`${cleanQ}, ${place}, Philippines`);
                 } else {
-                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Batangas, Philippines`);
-                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Philippines`);
+                    queriesToTry.push(`${cleanQ}, ${place}, Batangas, Philippines`);
+                    queriesToTry.push(`${cleanQ}, ${place}, Philippines`);
                 }
             }
             queriesToTry.push(`${cleanQ}, Batangas, Philippines`);
@@ -530,20 +526,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (brgyName) {
-            if (effectivePlace) queriesToTry.push(`${brgyName}, ${effectivePlace}, Philippines`);
+            if (!isOthers) queriesToTry.push(`${brgyName}, ${place}, Philippines`);
             queriesToTry.push(`${brgyName}, Batangas, Philippines`);
             queriesToTry.push(`${brgyName}, Philippines`);
         }
 
         if (strippedQ && strippedQ !== cleanQ) {
-            if (effectivePlace) queriesToTry.push(`${strippedQ}, ${effectivePlace}, Philippines`);
+            if (!isOthers) queriesToTry.push(`${strippedQ}, ${place}, Philippines`);
             queriesToTry.push(`${strippedQ}, Philippines`);
         }
 
-        if (effectivePlace) {
-            queriesToTry.push(`${effectivePlace}, Batangas, Philippines`);
-            queriesToTry.push(`${effectivePlace}, Philippines`);
-        } else if (place !== 'Other') {
+        if (!isOthers) {
             queriesToTry.push(`${place}, Batangas, Philippines`);
         }
 
@@ -565,7 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {}
         }
 
-        if (place !== 'Other') {
+        if (!isOthers) {
             const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
             return [{
                 lat: String(mCoords.lat),
@@ -1077,40 +1070,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Place Select Sync with Address Input & Other Field Handling
-    const toggleOtherPlaceField = () => {
-        const isOther = placeSelect && placeSelect.value === 'Other';
-        const otherGroup = document.getElementById('booking-other-place-group');
-        const otherInput = document.getElementById('booking-other-place');
-        if (otherGroup) {
-            if (isOther) {
-                otherGroup.classList.remove('hidden');
-                if (otherInput) otherInput.required = true;
-            } else {
-                otherGroup.classList.add('hidden');
-                if (otherInput) {
-                    otherInput.required = false;
-                    otherInput.value = '';
-                }
-            }
-        }
-    };
-
+    // Place Select Sync with Address Input
     if (placeSelect) {
         placeSelect.addEventListener('change', () => {
             const selectedPlace = placeSelect.value;
-            toggleOtherPlaceField();
+            const isOthers = (selectedPlace === 'Others' || selectedPlace === 'Other');
 
-            if (selectedPlace === 'Other') {
+            if (isOthers) {
                 if (completeAddressInput) {
                     const currentAddr = completeAddressInput.value.trim();
                     if (!currentAddr || currentAddr.includes('Brgy. Central') || currentAddr.includes('Lian') || currentAddr.includes('Balayan') || currentAddr.includes('Nasugbu')) {
                         completeAddressInput.value = '';
                         completeAddressInput.placeholder = 'e.g. Brgy. 2, Calatagan, Batangas';
                     }
+                    completeAddressInput.focus();
                 }
-                const otherInput = document.getElementById('booking-other-place');
-                if (otherInput) otherInput.focus();
             } else if (completeAddressInput) {
                 const currentAddr = completeAddressInput.value.trim();
                 if (!currentAddr || currentAddr.includes('Brgy. Central') || currentAddr.includes('Lian') || currentAddr.includes('Balayan') || currentAddr.includes('Nasugbu')) {
@@ -1119,8 +1093,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             updatePriceBreakdown();
         });
-        // Initial check on load
-        toggleOtherPlaceField();
     }
 
     // 7. Real-Time Backend Schedule Availability Checking (Prevents Double Booking)
@@ -1538,11 +1510,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     placeSelect.addEventListener('change', () => {
                         if (isPinLocked) return;
                         const selectedPlace = placeSelect.value;
-                        if (selectedPlace === 'Other') {
-                            const otherInput = document.getElementById('booking-other-place');
-                            const custom = otherInput ? otherInput.value.trim() : '';
-                            if (custom) {
-                                searchLocation(custom).then(res => {
+                        if (selectedPlace === 'Others' || selectedPlace === 'Other') {
+                            const addr = completeAddressInput ? completeAddressInput.value.trim() : '';
+                            if (addr) {
+                                searchLocation(addr).then(res => {
                                     if (res && res.length > 0) selectPlaceOnMap(parseFloat(res[0].lat), parseFloat(res[0].lon || res[0].lng));
                                 });
                             }
@@ -1562,27 +1533,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
 
-                // Auto-pin when custom municipality / city is typed in 'Other'
-                const otherPlaceInputEl = document.getElementById('booking-other-place');
-                if (otherPlaceInputEl) {
-                    let otherTimer = null;
-                    const pinOtherTown = async () => {
-                        if (isPinLocked) return;
-                        const q = otherPlaceInputEl.value.trim();
-                        if (q.length >= 3) {
-                            const results = await searchLocation(q);
-                            if (results && results.length > 0) {
-                                selectPlaceOnMap(parseFloat(results[0].lat), parseFloat(results[0].lon || results[0].lng));
-                            }
-                        }
-                    };
-                    otherPlaceInputEl.addEventListener('blur', pinOtherTown);
-                    otherPlaceInputEl.addEventListener('input', () => {
-                        clearTimeout(otherTimer);
-                        otherTimer = setTimeout(pinOtherTown, 600);
-                    });
-                }
-
                 // Automatic address & venue pin lookup when user types address or venue name
                 let autoPinTimer = null;
                 const autoPinFromInputs = async () => {
@@ -1590,28 +1540,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const venue = venueNameInput ? venueNameInput.value.trim() : '';
                     const addr = completeAddressInput ? completeAddressInput.value.trim() : '';
                     const place = placeSelect ? placeSelect.value : 'Nasugbu';
-                    const otherInput = document.getElementById('booking-other-place');
-                    const customPlace = (otherInput && otherInput.value.trim()) || '';
-                    const effectivePlace = (place === 'Other' && customPlace) ? customPlace : (place === 'Other' ? '' : place);
+                    const isOthers = (place === 'Others' || place === 'Other');
 
                     if (!venue && !addr) {
-                        if (effectivePlace) {
-                            const results = await searchLocation(effectivePlace);
-                            if (results && results.length > 0) {
-                                selectPlaceOnMap(parseFloat(results[0].lat), parseFloat(results[0].lon || results[0].lng));
-                                return;
-                            }
+                        if (!isOthers) {
+                            const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
+                            selectPlaceOnMap(mCoords.lat, mCoords.lng);
                         }
-                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
-                        selectPlaceOnMap(mCoords.lat, mCoords.lng);
                         return;
                     }
 
-                    const cleanAddr = typeof normalizePhAddress === 'function' ? normalizePhAddress(addr, effectivePlace) : addr;
-                    const cleanVenue = typeof normalizePhAddress === 'function' ? normalizePhAddress(venue, effectivePlace) : venue;
+                    const cleanAddr = typeof normalizePhAddress === 'function' ? normalizePhAddress(addr, isOthers ? '' : place) : addr;
+                    const cleanVenue = typeof normalizePhAddress === 'function' ? normalizePhAddress(venue, isOthers ? '' : place) : venue;
 
-                    // 1. Instant 0ms local match with Batangas places dataset (if not Other)
-                    if (typeof matchLocalBatangasPlaces === 'function' && place !== 'Other') {
+                    // 1. Instant 0ms local match with Batangas places dataset (if not Others)
+                    if (typeof matchLocalBatangasPlaces === 'function' && !isOthers) {
                         const localMatches = matchLocalBatangasPlaces(`${cleanVenue} ${cleanAddr}`, place);
                         if (localMatches && localMatches.length > 0) {
                             const top = localMatches[0];
@@ -1622,8 +1565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // 2. Direct search for complete address and venue
                     const searchQueries = [
-                        cleanAddr ? (effectivePlace && !cleanAddr.toLowerCase().includes(effectivePlace.toLowerCase()) ? `${cleanAddr}, ${effectivePlace}` : cleanAddr) : null,
-                        cleanVenue ? (effectivePlace && !cleanVenue.toLowerCase().includes(effectivePlace.toLowerCase()) ? `${cleanVenue}, ${effectivePlace}` : cleanVenue) : null,
+                        cleanAddr ? (!isOthers && !cleanAddr.toLowerCase().includes(place.toLowerCase()) ? `${cleanAddr}, ${place}` : cleanAddr) : null,
+                        cleanVenue ? (!isOthers && !cleanVenue.toLowerCase().includes(place.toLowerCase()) ? `${cleanVenue}, ${place}` : cleanVenue) : null,
                         cleanAddr,
                         cleanVenue
                     ].filter(Boolean);
@@ -1639,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     // Fallback to municipality coords if known
-                    if (place !== 'Other') {
+                    if (!isOthers) {
                         const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
                         selectPlaceOnMap(mCoords.lat, mCoords.lng);
                     }
@@ -1713,24 +1656,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const serviceHireDays = calculatedDays || 1;
             const startTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : '08:00';
             const endTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '13:00';
-            const otherPlaceInput = document.getElementById('booking-other-place');
-            let eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
-            if (eventPlace === 'Other') {
-                const custom = otherPlaceInput ? otherPlaceInput.value.trim() : '';
-                if (!custom) {
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('⚠️ Please specify your municipality or city in the field provided.', 'warning');
-                    } else {
-                        alert('Please specify your municipality or city.');
-                    }
-                    if (otherPlaceInput) {
-                        otherPlaceInput.focus();
-                        otherPlaceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                    return;
-                }
-                eventPlace = custom;
-            }
+            const eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
             const venueName = (venueNameInput && venueNameInput.value.trim()) ? venueNameInput.value.trim() : '';
             const eventAddress = (completeAddressInput && completeAddressInput.value.trim()) ? completeAddressInput.value.trim() : '';
             const locationNotes = locationNotesInput ? locationNotesInput.value.trim() : '';
