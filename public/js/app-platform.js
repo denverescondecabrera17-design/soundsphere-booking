@@ -797,13 +797,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Helper for 12-hour AM/PM formatting
             const formatDisplayTime = (timeStr) => {
-                if (!timeStr) return '06:00 PM';
+                if (!timeStr) return '';
                 if (/AM|PM/i.test(timeStr)) return timeStr;
                 const parts = String(timeStr).split(':');
                 if (parts.length < 2) return timeStr;
                 let hours = parseInt(parts[0], 10);
                 const minutes = parts[1].padStart(2, '0');
                 if (isNaN(hours)) return timeStr;
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                return `${hours}:${minutes} ${ampm}`;
+            };
+
+            const calculateDisplayEndTime = (startTimeStr, durationHours = 5) => {
+                if (!startTimeStr) return '01:00 PM';
+                const parts = String(startTimeStr).split(':');
+                let hours = parseInt(parts[0], 10);
+                if (isNaN(hours)) return '01:00 PM';
+                const minutes = parts[1] ? parts[1].substring(0, 2).padStart(2, '0') : '00';
+                hours = (hours + durationHours) % 24;
                 const ampm = hours >= 12 ? 'PM' : 'AM';
                 hours = hours % 12;
                 hours = hours ? hours : 12;
@@ -980,8 +993,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const remainingBalVal = parseFloat(b.RemainingBalance !== undefined && b.RemainingBalance !== null ? b.RemainingBalance : (totalAmountVal - amountPaidVal));
                         const isDownpayment = (b.PaymentType === 'downpayment' || remainingBalVal > 0);
 
-                        const formattedStart = formatDisplayTime(b.StartTime);
-                        const formattedEnd = formatDisplayTime(b.EndTime);
+                        const formattedStart = formatDisplayTime(b.StartTime) || '08:00 AM';
+                        const durationHrs = parseInt(b.NumberOfHours || 5, 10) || 5;
+                        const formattedEnd = b.EndTime ? formatDisplayTime(b.EndTime) : calculateDisplayEndTime(b.StartTime, durationHrs);
 
                         const isReportPending = !!(b.ReportID && (b.ReportStatus === 'Pending' || !b.ReportStatus));
                         const isDisputed = isReportPending || b.EscrowStatus === 'Disputed';
@@ -1034,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
                                                 <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
                                                 <span>Start Time: <strong style="color:#0f172a;">${formattedStart}</strong></span>
+                                                <span>End Time: <strong style="color:#0f172a;">${formattedEnd}</strong></span>
                                             </div>
                                             
                                             <div style="display:flex; flex-wrap:wrap; gap:16px;">
@@ -1463,7 +1478,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <div style="font-size:0.95rem; color:#475569; font-weight:600; display:flex; flex-wrap:wrap; gap:18px;">
                                             <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
                                             <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
-                                            <span>Start Time: <strong style="color:#0f172a;">${b.StartTime || '08:00 AM'}</strong></span>
+                                            <span>Start Time: <strong style="color:#0f172a;">${formattedStart}</strong></span>
+                                            <span>End Time: <strong style="color:#0f172a;">${formattedEnd}</strong></span>
                                             <span>Venue: <strong style="color:#0f172a;">${b.VenueName || 'Private Event Venue'}</strong></span>
                                             <span>Location: <strong style="color:#0f172a;">${b.EventAddress || (b.EventPlace ? b.EventPlace + ', Batangas' : 'Batangas')}</strong></span>
                                         </div>
@@ -1604,7 +1620,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const sDate = b.ServiceStartDate || b.EventDate || 'N/A';
                         const eDate = b.ServiceEndDate || b.EventDate || sDate;
                         const dateText = (sDate === eDate) ? sDate : `${sDate} to ${eDate}`;
-                        const formattedStart = formatDisplayTime(b.StartTime);
+                        const formattedStart = formatDisplayTime(b.StartTime) || '08:00 AM';
+                        const durHrs = parseInt(b.NumberOfHours || 5, 10) || 5;
+                        const formattedEnd = b.EndTime ? formatDisplayTime(b.EndTime) : calculateDisplayEndTime(b.StartTime, durHrs);
                         let clientName = b.ClientName;
                         if (Array.isArray(clientName)) clientName = clientName[0];
                         if (!clientName || clientName === 'null') {
@@ -1752,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <span>Client: <strong style="color:#0f172a;">${clientName}</strong></span>
                                                 <span>Date: <strong style="color:#0f172a;">${dateText}</strong></span>
                                                 <span>Start Time: <strong style="color:#0f172a;">${formattedStart}</strong></span>
+                                                <span>End Time: <strong style="color:#0f172a;">${formattedEnd}</strong></span>
                                             </div>
                                             <div style="display:flex; flex-wrap:wrap; gap:16px;">
                                                 <span>Venue: <strong style="color:#0f172a;">${b.VenueName || 'Private Event Venue'}</strong></span>

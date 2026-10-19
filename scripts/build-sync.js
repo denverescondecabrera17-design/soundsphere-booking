@@ -91,6 +91,7 @@ const syncFilesList = [
     { src: '../client/pages/js/register.js', targets: ['../public/pages/js/register.js'] },
     { src: '../client/js/main.js', targets: ['../public/js/main.js', '../client/pages/js/main.js', '../public/pages/js/main.js'] },
     { src: '../client/js/auth-modal.js', targets: ['../public/js/auth-modal.js', '../client/pages/js/auth-modal.js', '../public/pages/js/auth-modal.js'] },
+    { src: '../client/js/app-platform.js', targets: ['../public/js/app-platform.js', '../client/pages/js/app-platform.js', '../public/pages/js/app-platform.js'] },
     { src: '../client/css/styles.css', targets: ['../public/css/styles.css', '../client/pages/css/styles.css', '../public/pages/css/styles.css', '../client/client/css/styles.css', '../public/client/css/styles.css'] }
 ];
 

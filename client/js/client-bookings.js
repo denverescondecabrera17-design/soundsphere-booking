@@ -245,7 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             serviceEndDate: eDate,
                             serviceHireDays: hireDays,
                             eventDate: dateText,
-                            eventTime: `${formatTime12h(b.StartTime) || '08:00 AM'} - ${b.EndTime ? formatTime12h(b.EndTime) : calculateEndTimeStr(b.StartTime, 5)}`,
+                            startTime: formatTime12h(b.StartTime) || '08:00 AM',
+                            endTime: b.EndTime ? formatTime12h(b.EndTime) : calculateEndTimeStr(b.StartTime, parseInt(b.NumberOfHours || 5, 10) || 5),
+                            eventTime: `${formatTime12h(b.StartTime) || '08:00 AM'} - ${b.EndTime ? formatTime12h(b.EndTime) : calculateEndTimeStr(b.StartTime, parseInt(b.NumberOfHours || 5, 10) || 5)}`,
                             eventVenue: b.VenueName || 'Private Event Venue',
                             eventAddress: b.EventAddress || (b.EventPlace ? `${b.EventPlace}, Batangas` : (b.Location || 'Batangas')),
                             locationNotes: b.LocationNotes,
@@ -397,7 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span>Date: <strong>${b.eventDate}</strong></span>
                             </div>
                             <div class="event-detail-item">
-                                <span>Start Time: <strong>${b.eventTime}</strong></span>
+                                <span>Start Time: <strong>${b.startTime}</strong></span>
+                            </div>
+                            <div class="event-detail-item">
+                                <span>End Time: <strong>${b.endTime}</strong></span>
                             </div>
                             <div class="event-detail-item">
                                 <span>Venue: <strong>${b.eventVenue}</strong></span>

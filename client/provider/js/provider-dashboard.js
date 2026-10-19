@@ -3785,6 +3785,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
     };
 
+    const calculateEndTime12Hour = (timeStr, durationHours = 5) => {
+        if (!timeStr) return '01:00 PM';
+        const str = String(timeStr).trim();
+        const parts = str.split(':');
+        let hours = parseInt(parts[0], 10);
+        if (isNaN(hours)) return '01:00 PM';
+        const minutes = parts[1] ? parts[1].substring(0, 2).padStart(2, '0') : '00';
+        hours = (hours + durationHours) % 24;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    };
+
     // Load Provider Calendar Schedule from backend
     const loadProviderCalendarSchedule = async () => {
         try {
@@ -4250,6 +4264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div style="font-size:0.78rem; color:#475569; display:flex; flex-direction:column; gap:3px; margin-top:6px;">
                             <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Start Time:</strong> <span style="font-weight:700; color:#0a192f;">${formatTime12Hour(b.StartTime)}</span></div>
+                            <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">End Time:</strong> <span style="font-weight:700; color:#0a192f;">${b.EndTime ? formatTime12Hour(b.EndTime) : calculateEndTime12Hour(b.StartTime, parseInt(b.NumberOfHours || 5, 10) || 5)}</span></div>
                             <div><strong style="color:#64748b; font-size:0.72rem; text-transform:uppercase;">Venue:</strong> ${b.VenueName || b.EventAddress || b.Location || 'Venue Location'}</div>
                         </div>
                         <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
