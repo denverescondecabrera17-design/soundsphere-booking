@@ -84,6 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const calcDaysDisplay = document.getElementById('calc-days-display');
 
     const placeSelect = document.getElementById('booking-place-select');
+    const otherPlaceGroup = document.getElementById('booking-other-place-group');
+    const otherPlaceInput = document.getElementById('booking-other-place');
     const venueNameInput = document.getElementById('booking-venue-name');
     const completeAddressInput = document.getElementById('booking-complete-address');
     const locationNotesInput = document.getElementById('booking-location-notes');
@@ -483,11 +485,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const searchLocation = async (query) => {
         if (!query) return [];
-        const place = (placeSelect && placeSelect.value) ? placeSelect.value : 'Balayan';
-        const cleanQ = normalizePhAddress(query, place);
+        const place = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
+        const otherInput = document.getElementById('booking-other-place');
+        const customPlace = (otherInput && otherInput.value.trim()) || '';
+        const effectivePlace = (place === 'Other' && customPlace) ? customPlace : (place === 'Other' ? '' : place);
+        const cleanQ = normalizePhAddress(query, effectivePlace);
 
-        // 1. Instant 0ms local match
-        if (typeof matchLocalBatangasPlaces === 'function') {
+        // 1. Instant 0ms local match (only when place is within service area, or query specifically matches Batangas dataset)
+        if (typeof matchLocalBatangasPlaces === 'function' && place !== 'Other') {
             const localMatches = matchLocalBatangasPlaces(cleanQ, place);
             if (localMatches && localMatches.length > 0) {
                 return localMatches.map(m => ({
@@ -505,14 +510,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Strip generic venue words to get cleaner location
         const strippedQ = cleanQ.replace(/\b(?:covered court|court|gym|gymnasium|multipurpose hall|hall|plaza|resort|hotel|near|beside|in front of|tapat ng|tabi ng|compound|subdivision|phase \d+|blk \d+|lot \d+)\b/gi, '').trim();
 
-        const queriesToTry = [
-            `${cleanQ}, ${place}, Batangas, Philippines`,
-            `${cleanQ}, Batangas, Philippines`,
-            brgyName ? `${brgyName}, ${place}, Batangas, Philippines` : null,
-            brgyName ? `${brgyName}, Batangas, Philippines` : null,
-            strippedQ && strippedQ !== cleanQ ? `${strippedQ}, ${place}, Batangas, Philippines` : null,
-            `${place}, Batangas, Philippines`
-        ].filter(Boolean);
+        const hasPh = /philippines/i.test(cleanQ);
+        const hasBatangas = /batangas/i.test(cleanQ);
+
+        const queriesToTry = [];
+        if (hasPh) {
+            queriesToTry.push(cleanQ);
+        } else {
+            if (effectivePlace) {
+                if (hasBatangas) {
+                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Philippines`);
+                } else {
+                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Batangas, Philippines`);
+                    queriesToTry.push(`${cleanQ}, ${effectivePlace}, Philippines`);
+                }
+            }
+            queriesToTry.push(`${cleanQ}, Batangas, Philippines`);
+            queriesToTry.push(`${cleanQ}, Philippines`);
+        }
+
+        if (brgyName) {
+            if (effectivePlace) queriesToTry.push(`${brgyName}, ${effectivePlace}, Philippines`);
+            queriesToTry.push(`${brgyName}, Batangas, Philippines`);
+            queriesToTry.push(`${brgyName}, Philippines`);
+        }
+
+        if (strippedQ && strippedQ !== cleanQ) {
+            if (effectivePlace) queriesToTry.push(`${strippedQ}, ${effectivePlace}, Philippines`);
+            queriesToTry.push(`${strippedQ}, Philippines`);
+        }
+
+        if (effectivePlace) {
+            queriesToTry.push(`${effectivePlace}, Batangas, Philippines`);
+            queriesToTry.push(`${effectivePlace}, Philippines`);
+        } else if (place !== 'Other') {
+            queriesToTry.push(`${place}, Batangas, Philippines`);
+        }
 
         for (const q of queriesToTry) {
             try {
@@ -532,12 +565,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {}
         }
 
-        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
-        return [{
-            lat: String(mCoords.lat),
-            lon: String(mCoords.lng),
-            display_name: `${cleanQ ? cleanQ + ', ' : ''}${place}, Batangas, Philippines`
-        }];
+        if (place !== 'Other') {
+            const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
+            return [{
+                lat: String(mCoords.lat),
+                lon: String(mCoords.lng),
+                display_name: `${cleanQ ? cleanQ + ', ' : ''}${place}, Batangas, Philippines`
+            }];
+        }
+        return [];
     };
     window.searchLocation = searchLocation;
 
@@ -1041,16 +1077,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Place Select Sync with Address Input
-    if (placeSelect && completeAddressInput) {
+    // Place Select Sync with Address Input & Other Field Handling
+    const toggleOtherPlaceField = () => {
+        const isOther = placeSelect && placeSelect.value === 'Other';
+        const otherGroup = document.getElementById('booking-other-place-group');
+        const otherInput = document.getElementById('booking-other-place');
+        if (otherGroup) {
+            if (isOther) {
+                otherGroup.classList.remove('hidden');
+                if (otherInput) otherInput.required = true;
+            } else {
+                otherGroup.classList.add('hidden');
+                if (otherInput) {
+                    otherInput.required = false;
+                    otherInput.value = '';
+                }
+            }
+        }
+    };
+
+    if (placeSelect) {
         placeSelect.addEventListener('change', () => {
             const selectedPlace = placeSelect.value;
-            const currentAddr = completeAddressInput.value.trim();
-            if (!currentAddr || currentAddr.includes('Lian') || currentAddr.includes('Balayan') || currentAddr.includes('Nasugbu')) {
-                completeAddressInput.value = `Brgy. Central, ${selectedPlace}, Batangas`;
+            toggleOtherPlaceField();
+
+            if (selectedPlace === 'Other') {
+                if (completeAddressInput) {
+                    const currentAddr = completeAddressInput.value.trim();
+                    if (!currentAddr || currentAddr.includes('Brgy. Central') || currentAddr.includes('Lian') || currentAddr.includes('Balayan') || currentAddr.includes('Nasugbu')) {
+                        completeAddressInput.value = '';
+                        completeAddressInput.placeholder = 'e.g. Brgy. 2, Calatagan, Batangas';
+                    }
+                }
+                const otherInput = document.getElementById('booking-other-place');
+                if (otherInput) otherInput.focus();
+            } else if (completeAddressInput) {
+                const currentAddr = completeAddressInput.value.trim();
+                if (!currentAddr || currentAddr.includes('Brgy. Central') || currentAddr.includes('Lian') || currentAddr.includes('Balayan') || currentAddr.includes('Nasugbu')) {
+                    completeAddressInput.value = `Brgy. Central, ${selectedPlace}, Batangas`;
+                }
             }
             updatePriceBreakdown();
         });
+        // Initial check on load
+        toggleOtherPlaceField();
     }
 
     // 7. Real-Time Backend Schedule Availability Checking (Prevents Double Booking)
@@ -1151,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
 
                     li.addEventListener('click', () => {
-                        const fullAddr = `${title}, ${item.place || (placeSelect ? placeSelect.value : 'Batangas')}, Batangas`;
+                        const fullAddr = item.display_name || `${title}, ${item.place || (placeSelect ? placeSelect.value : 'Batangas')}, Batangas`;
                         inputEl.value = fullAddr;
                         hide();
                         if (typeof onSelectPlace === 'function') {
@@ -1365,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }).addTo(leafletMap);
 
                 const leafletMarker = L.marker([currentLat, currentLng], {
-                    draggable: false
+                    draggable: true
                 }).addTo(leafletMap);
                 window._soundsphereLeafletMarker = leafletMarker;
 
@@ -1384,8 +1454,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 };
 
+                window._soundsphereSelectPlaceOnMap = selectPlaceOnMap;
                 bindAddressAutocomplete(mapSearchInput, mapSearchSuggestions, selectPlaceOnMap);
                 bindAddressAutocomplete(completeAddressInput, addressSuggestionsList, selectPlaceOnMap);
+                const venueSuggestionsList = document.getElementById('venue-suggestions-list');
+                if (venueNameInput && venueSuggestionsList) {
+                    bindAddressAutocomplete(venueNameInput, venueSuggestionsList, selectPlaceOnMap);
+                }
 
                 // Reverse Geocoding with Nominatim API (Free)
                 const reverseGeocode = async (lat, lng) => {
@@ -1436,7 +1511,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         btnSearchMap.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Searching...`;
 
                         try {
-                            const searchUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q + ', Batangas, Philippines')}`;
+                            const hasPh = /philippines/i.test(q);
+                            const qSearch = hasPh ? q : `${q}, Philippines`;
+                            const searchUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(qSearch)}`;
                             const res = await fetch(searchUrl);
                             if (res.ok) {
                                 const results = await res.json();
@@ -1461,7 +1538,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     placeSelect.addEventListener('change', () => {
                         if (isPinLocked) return;
                         const selectedPlace = placeSelect.value;
-                        const mCoords = MUNICIPALITY_COORDS[selectedPlace] || MUNICIPALITY_COORDS['Balayan'];
+                        if (selectedPlace === 'Other') {
+                            const otherInput = document.getElementById('booking-other-place');
+                            const custom = otherInput ? otherInput.value.trim() : '';
+                            if (custom) {
+                                searchLocation(custom).then(res => {
+                                    if (res && res.length > 0) selectPlaceOnMap(parseFloat(res[0].lat), parseFloat(res[0].lon || res[0].lng));
+                                });
+                            }
+                            return;
+                        }
+                        const mCoords = MUNICIPALITY_COORDS[selectedPlace] || MUNICIPALITY_COORDS['Nasugbu'];
                         selectPlaceOnMap(mCoords.lat, mCoords.lng);
 
                         fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(selectedPlace + ', Batangas, Philippines')}&countrycodes=ph&limit=1`)
@@ -1475,25 +1562,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
 
+                // Auto-pin when custom municipality / city is typed in 'Other'
+                const otherPlaceInputEl = document.getElementById('booking-other-place');
+                if (otherPlaceInputEl) {
+                    let otherTimer = null;
+                    const pinOtherTown = async () => {
+                        if (isPinLocked) return;
+                        const q = otherPlaceInputEl.value.trim();
+                        if (q.length >= 3) {
+                            const results = await searchLocation(q);
+                            if (results && results.length > 0) {
+                                selectPlaceOnMap(parseFloat(results[0].lat), parseFloat(results[0].lon || results[0].lng));
+                            }
+                        }
+                    };
+                    otherPlaceInputEl.addEventListener('blur', pinOtherTown);
+                    otherPlaceInputEl.addEventListener('input', () => {
+                        clearTimeout(otherTimer);
+                        otherTimer = setTimeout(pinOtherTown, 600);
+                    });
+                }
+
                 // Automatic address & venue pin lookup when user types address or venue name
                 let autoPinTimer = null;
                 const autoPinFromInputs = async () => {
                     if (isPinLocked) return;
                     const venue = venueNameInput ? venueNameInput.value.trim() : '';
                     const addr = completeAddressInput ? completeAddressInput.value.trim() : '';
-                    const place = placeSelect ? placeSelect.value : 'Balayan';
+                    const place = placeSelect ? placeSelect.value : 'Nasugbu';
+                    const otherInput = document.getElementById('booking-other-place');
+                    const customPlace = (otherInput && otherInput.value.trim()) || '';
+                    const effectivePlace = (place === 'Other' && customPlace) ? customPlace : (place === 'Other' ? '' : place);
 
                     if (!venue && !addr) {
-                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
+                        if (effectivePlace) {
+                            const results = await searchLocation(effectivePlace);
+                            if (results && results.length > 0) {
+                                selectPlaceOnMap(parseFloat(results[0].lat), parseFloat(results[0].lon || results[0].lng));
+                                return;
+                            }
+                        }
+                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
                         selectPlaceOnMap(mCoords.lat, mCoords.lng);
                         return;
                     }
 
-                    const cleanAddr = typeof normalizePhAddress === 'function' ? normalizePhAddress(addr, place) : addr;
-                    const cleanVenue = typeof normalizePhAddress === 'function' ? normalizePhAddress(venue, place) : venue;
+                    const cleanAddr = typeof normalizePhAddress === 'function' ? normalizePhAddress(addr, effectivePlace) : addr;
+                    const cleanVenue = typeof normalizePhAddress === 'function' ? normalizePhAddress(venue, effectivePlace) : venue;
 
-                    // 1. Instant 0ms local match with Batangas places dataset
-                    if (typeof matchLocalBatangasPlaces === 'function') {
+                    // 1. Instant 0ms local match with Batangas places dataset (if not Other)
+                    if (typeof matchLocalBatangasPlaces === 'function' && place !== 'Other') {
                         const localMatches = matchLocalBatangasPlaces(`${cleanVenue} ${cleanAddr}`, place);
                         if (localMatches && localMatches.length > 0) {
                             const top = localMatches[0];
@@ -1502,46 +1620,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
-                    // 2. Extract barangay if present
-                    const combined = `${cleanAddr} ${cleanVenue}`;
-                    const brgyMatch = combined.match(/\bBarangay\s+([A-Za-z0-9\s]+?)(?:,|$|\s+(?:Balayan|Nasugbu|Lian|Batangas))/i);
-                    const brgyName = brgyMatch ? `Barangay ${brgyMatch[1].trim()}` : '';
-
-                    const candidates = [
-                        cleanAddr ? `${cleanAddr}, ${place}, Batangas, Philippines` : null,
-                        cleanAddr ? `${cleanAddr}, Batangas, Philippines` : null,
-                        brgyName ? `${brgyName}, ${place}, Batangas, Philippines` : null,
-                        cleanVenue ? `${cleanVenue}, ${place}, Batangas, Philippines` : null,
-                        `${place}, Batangas, Philippines`
+                    // 2. Direct search for complete address and venue
+                    const searchQueries = [
+                        cleanAddr ? (effectivePlace && !cleanAddr.toLowerCase().includes(effectivePlace.toLowerCase()) ? `${cleanAddr}, ${effectivePlace}` : cleanAddr) : null,
+                        cleanVenue ? (effectivePlace && !cleanVenue.toLowerCase().includes(effectivePlace.toLowerCase()) ? `${cleanVenue}, ${effectivePlace}` : cleanVenue) : null,
+                        cleanAddr,
+                        cleanVenue
                     ].filter(Boolean);
 
-                    for (const cand of candidates) {
+                    for (const q of searchQueries) {
                         try {
-                            const res = await fetch(`/api/config/geocode?q=${encodeURIComponent(cand)}`);
-                            if (res.ok) {
-                                const data = await res.json();
-                                if (data && data.length > 0) {
-                                    selectPlaceOnMap(parseFloat(data[0].lat), parseFloat(data[0].lon || data[0].lng));
-                                    return;
-                                }
+                            const results = await searchLocation(q);
+                            if (results && results.length > 0) {
+                                selectPlaceOnMap(parseFloat(results[0].lat), parseFloat(results[0].lon || results[0].lng));
+                                return;
                             }
-                        } catch (e) {}
-
-                        try {
-                            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(cand)}&countrycodes=ph&limit=1`);
-                            if (res.ok) {
-                                const data = await res.json();
-                                if (data && data.length > 0) {
-                                    selectPlaceOnMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
-                                    return;
-                                }
-                            }
-                        } catch (e) {}
+                        } catch (err) {}
                     }
 
-                    // Fallback to municipality coords so pin ALWAYS jumps to the town
-                    const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Balayan'] || { lat: 13.9388, lng: 120.7308 };
-                    selectPlaceOnMap(mCoords.lat, mCoords.lng);
+                    // Fallback to municipality coords if known
+                    if (place !== 'Other') {
+                        const mCoords = MUNICIPALITY_COORDS[place] || MUNICIPALITY_COORDS['Nasugbu'] || { lat: 14.0714, lng: 120.6347 };
+                        selectPlaceOnMap(mCoords.lat, mCoords.lng);
+                    }
                 };
 
                 const debouncedAutoPin = () => {
@@ -1551,16 +1652,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (venueNameInput) {
                     venueNameInput.addEventListener('blur', autoPinFromInputs);
+                    venueNameInput.addEventListener('change', autoPinFromInputs);
                     venueNameInput.addEventListener('input', debouncedAutoPin);
                 }
                 if (completeAddressInput) {
                     completeAddressInput.addEventListener('blur', autoPinFromInputs);
+                    completeAddressInput.addEventListener('change', autoPinFromInputs);
                     completeAddressInput.addEventListener('input', debouncedAutoPin);
                 }
 
                 // Initial pin setup on land
-                const initPlace = placeSelect ? placeSelect.value : 'Balayan';
-                const initCoords = MUNICIPALITY_COORDS[initPlace] || MUNICIPALITY_COORDS['Balayan'];
+                const initPlace = placeSelect ? placeSelect.value : 'Nasugbu';
+                const initCoords = MUNICIPALITY_COORDS[initPlace] || MUNICIPALITY_COORDS['Nasugbu'];
                 selectPlaceOnMap(initCoords.lat, initCoords.lng);
             }
 
@@ -1610,7 +1713,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             const serviceHireDays = calculatedDays || 1;
             const startTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : '08:00';
             const endTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '13:00';
-            const eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
+            const otherPlaceInput = document.getElementById('booking-other-place');
+            let eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
+            if (eventPlace === 'Other') {
+                const custom = otherPlaceInput ? otherPlaceInput.value.trim() : '';
+                if (!custom) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('⚠️ Please specify your municipality or city in the field provided.', 'warning');
+                    } else {
+                        alert('Please specify your municipality or city.');
+                    }
+                    if (otherPlaceInput) {
+                        otherPlaceInput.focus();
+                        otherPlaceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+                eventPlace = custom;
+            }
             const venueName = (venueNameInput && venueNameInput.value.trim()) ? venueNameInput.value.trim() : '';
             const eventAddress = (completeAddressInput && completeAddressInput.value.trim()) ? completeAddressInput.value.trim() : '';
             const locationNotes = locationNotesInput ? locationNotesInput.value.trim() : '';
