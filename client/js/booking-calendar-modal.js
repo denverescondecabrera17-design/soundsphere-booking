@@ -49,7 +49,14 @@
 
     // Initialize & Inject Modal HTML if not present
     function ensureModalHTML() {
-        if (document.getElementById('modal-booking-calendar')) return;
+        const existing = document.getElementById('modal-booking-calendar');
+        if (existing) {
+            if (!document.getElementById('cal-mode-single-btn')) {
+                existing.remove();
+            } else {
+                return;
+            }
+        }
 
         const modalHTML = `
         <div class="cal-modal-overlay hidden" id="modal-booking-calendar" role="dialog" aria-modal="true">
@@ -627,17 +634,27 @@
             return;
         }
 
-        // Clicked a later date: validate continuous consecutive booking with NO gaps
+        // Clicked a later date: check if continuous consecutive booking with NO gaps is possible
         const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
-        if (!check.available) {
-            showCalendarAlert(check.message);
-            return;
+        if (check.available) {
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+        } else {
+            // Intermediate dates are booked or unavailable (e.g. 21 is selected, 22 is booked, user clicked 23).
+            // Do NOT trap the user on 21 with a blocking error!
+            // Start the selection on the newly clicked date so the user can freely choose 23:
+            calSelectedStartDate = clickedIso;
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
+            if (subtitleDisplay) {
+                subtitleDisplay.textContent = `Start date: ${formatShortPrettyDate(clickedIso)}. Now select a consecutive end date.`;
+            }
         }
-
-        calSelectedEndDate = clickedIso;
-        clearCalendarAlert();
-        renderCalendarGrid();
-        updateSelectedSummaryDisplay();
     }
 
     // Render Calendar Grid
@@ -1052,6 +1069,7 @@
             }
         }
 
+        setBookingMode(calBookingMode);
         clearCalendarAlert();
         renderCalendarGrid();
         updateSelectedSummaryDisplay();
