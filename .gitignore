@@ -3,13 +3,14 @@ node_modules/
 npm-debug.log*
 
 # Environment Variables
-.env
+.env*
 
 # System & IDE files
 .DS_Store
 .vscode/
 .idea/
 *.log
+*.zip
 
 # Scratchpad & temporary scripts
 scratch/

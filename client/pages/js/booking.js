@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const curStartDate = (startDateInput && startDateInput.value) ? startDateInput.value : (prefilledDate || tomorrowStr);
         const curEndDate = (endDateInput && endDateInput.value) ? endDateInput.value : curStartDate;
         const curStartTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : (prefilledStartTime || '08:00');
-        const curEndTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : (prefilledEndTime || '22:00');
+        const curEndTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : (prefilledEndTime || '13:00');
 
         const formatPretty = (dStr) => {
             if (!dStr) return 'Not selected';
@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const serviceEndDate = (endDateInput && endDateInput.value) ? endDateInput.value : serviceStartDate;
             const serviceHireDays = calculatedDays || 1;
             const startTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : '08:00';
-            const endTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '22:00';
+            const endTime = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '13:00';
             const eventPlace = (placeSelect && placeSelect.value) ? placeSelect.value : 'Nasugbu';
             const venueName = (venueNameInput && venueNameInput.value.trim()) ? venueNameInput.value.trim() : '';
             const eventAddress = (completeAddressInput && completeAddressInput.value.trim()) ? completeAddressInput.value.trim() : '';

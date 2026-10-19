@@ -14,7 +14,17 @@
     let calSelectedEndDate = null; // YYYY-MM-DD
     let calSelectedSlot = 'Full day';
     let calSelectedStartTime = '08:00';
-    let calSelectedEndTime = '22:00';
+    let calSelectedEndTime = '13:00'; // Fixed 5-hour duration (08:00 AM - 01:00 PM)
+
+    // Calculate fixed end time (5 hours after start time)
+    function calculateFixedEndTime(startTime24, durationHours = 5) {
+        if (!startTime24) return '13:00';
+        const parts = startTime24.split(':');
+        let h = parseInt(parts[0], 10);
+        const m = parts[1] || '00';
+        h = (h + durationHours) % 24;
+        return `${String(h).padStart(2, '0')}:${m}`;
+    }
     let calProviderId = null;
     let calPackageId = null;
     let calPackageTitle = 'Event Package';
@@ -150,12 +160,16 @@
                                 </div>
 
                                 
-                                <!-- Custom Time Picker Controls (Select Time - Start Time Only) -->
-                                <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time</div>
-                                <div class="cal-time-pickers-container">
+                                <!-- Custom Time Picker Controls (Select Time - Fixed 5 Hours) -->
+                                <div class="cal-time-category-title"><i class="fa-regular fa-clock"></i> Select Time (5-Hour Duration)</div>
+                                <div class="cal-time-pickers-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                     <div class="cal-time-field">
                                         <label for="cal-start-time-input"><i class="fa-regular fa-clock"></i> Start Time</label>
                                         <input type="time" id="cal-start-time-input" class="cal-time-input" value="08:00">
+                                    </div>
+                                    <div class="cal-time-field">
+                                        <label for="cal-end-time-display"><i class="fa-solid fa-hourglass-end"></i> End Time (5h)</label>
+                                        <input type="text" id="cal-end-time-display" class="cal-time-input" value="01:00 PM" readonly style="background-color: #f8fafc; color: #1e293b; font-weight: 700; cursor: default; border-color: #cbd5e1;">
                                     </div>
                                 </div>
                             </div>
@@ -289,13 +303,22 @@
         };
 
 
-        // Start time picker input listener
+        // Start time picker input listener (automatically locks End Time to +5 hours)
         const startTimeInput = document.getElementById('cal-start-time-input');
+        const endTimeDisplay = document.getElementById('cal-end-time-display');
+
+        const syncTimes = () => {
+            calSelectedStartTime = (startTimeInput && startTimeInput.value) ? startTimeInput.value : '08:00';
+            calSelectedEndTime = calculateFixedEndTime(calSelectedStartTime, 5);
+            if (endTimeDisplay) {
+                endTimeDisplay.value = formatTime12h(calSelectedEndTime);
+            }
+            updateSelectedSummaryDisplay();
+        };
+
         if (startTimeInput) {
-            startTimeInput.addEventListener('input', () => {
-                calSelectedStartTime = startTimeInput.value || '08:00';
-                updateSelectedSummaryDisplay();
-            });
+            startTimeInput.addEventListener('input', syncTimes);
+            startTimeInput.addEventListener('change', syncTimes);
         }
 
         // Confirm button click
@@ -757,8 +780,10 @@
         }
 
         const start12 = formatTime12h(calSelectedStartTime || '08:00');
+        const end12 = formatTime12h(calSelectedEndTime || calculateFixedEndTime(calSelectedStartTime, 5));
         if (summaryTimeText) {
-            summaryTimeText.textContent = isMultiDay ? `${start12 || '08:00 AM'} (Daily Start Time)` : (start12 || '08:00 AM');
+            const timeRangeStr = `${start12} – ${end12} (5 Hours)`;
+            summaryTimeText.textContent = isMultiDay ? `${timeRangeStr} (Daily)` : timeRangeStr;
         }
 
         if (summaryPackageNote) {
@@ -837,7 +862,8 @@
             serviceHireDays: totalDays,
             numberOfDays: totalDays,
             startTime: calSelectedStartTime || '08:00',
-            endTime: calSelectedEndTime || '22:00',
+            endTime: calSelectedEndTime || calculateFixedEndTime(calSelectedStartTime, 5),
+            numberOfHours: 5,
             slotName: calSelectedSlot
         };
 
@@ -871,10 +897,13 @@
         calProviderAvatar = options.providerAvatar || options.avatar || options.profilePicture || '/uploads/avatars/provider-avatar-1788072268945-324628540.jpg';
         calCoverageArea = options.coverageArea || options.CoverageArea || 'Lian, Balayan, Nasugbu';
         calSelectedStartTime = options.startTime || '08:00';
+        calSelectedEndTime = calculateFixedEndTime(calSelectedStartTime, 5);
 
-        // Update time input field in DOM
+        // Update time input fields in DOM
         const startTimeInput = document.getElementById('cal-start-time-input');
         if (startTimeInput) startTimeInput.value = calSelectedStartTime;
+        const endTimeDisplay = document.getElementById('cal-end-time-display');
+        if (endTimeDisplay) endTimeDisplay.value = formatTime12h(calSelectedEndTime);
 
         // Initial dates from options
         const initialStartDate = options.defaultStartDate || options.defaultDate || options.startDate || options.eventDate || null;
