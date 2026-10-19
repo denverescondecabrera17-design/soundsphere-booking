@@ -360,10 +360,22 @@
             const formatTime12h = (timeStr) => {
                 if (!timeStr) return '';
                 if (timeStr.includes('AM') || timeStr.includes('PM') || timeStr.includes('am') || timeStr.includes('pm')) return timeStr;
-                const parts = timeStr.split(':');
+                const parts = String(timeStr).split(':');
                 if (parts.length < 2) return timeStr;
                 let h = parseInt(parts[0], 10);
-                const m = parts[1];
+                const m = parts[1].substring(0, 2);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${h}:${m} ${ampm}`;
+            };
+
+            const calculateEndTimeStr = (timeStr, durationHours = 5) => {
+                if (!timeStr) return '1:00 PM';
+                const parts = String(timeStr).split(':');
+                let h = parseInt(parts[0], 10);
+                if (isNaN(h)) return '1:00 PM';
+                const m = parts[1] ? parts[1].substring(0, 2) : '00';
+                h = (h + durationHours) % 24;
                 const ampm = h >= 12 ? 'PM' : 'AM';
                 h = h % 12 || 12;
                 return `${h}:${m} ${ampm}`;
@@ -382,8 +394,18 @@
 
                 if (confirmEventDate) confirmEventDate.textContent = dateDisplay;
 
-                const formattedStart = formatTime12h(b.StartTime) || '08:00 AM';
-                if (confirmEventTime) confirmEventTime.textContent = formattedStart;
+                const rawStart = b.StartTime || b.startTime || '08:00';
+                const rawEnd = b.EndTime || b.endTime || '';
+
+                const formattedStart = formatTime12h(rawStart) || '8:00 AM';
+                const durationHrs = parseInt(b.NumberOfHours || 5, 10) || 5;
+                const formattedEnd = rawEnd ? formatTime12h(rawEnd) : calculateEndTimeStr(rawStart, durationHrs);
+
+                const timeDisplay = (formattedStart && formattedEnd)
+                    ? `${formattedStart} - ${formattedEnd}`
+                    : (formattedStart || '8:00 AM - 1:00 PM');
+
+                if (confirmEventTime) confirmEventTime.textContent = timeDisplay;
 
                 if (confirmEventPlace) confirmEventPlace.textContent = b.EventPlace || b.Location || 'Batangas';
                 if (confirmEventVenue) confirmEventVenue.textContent = `${b.VenueName || 'Event Venue'}${b.EventAddress ? ` (${b.EventAddress})` : ''}`;

@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         const formatTime12h = (timeStr) => {
-                            if (!timeStr) return '06:00 PM';
+                            if (!timeStr) return '08:00 AM';
                             if (/AM|PM/i.test(timeStr)) return timeStr;
                             const parts = String(timeStr).split(':');
                             if (parts.length < 2) return timeStr;
@@ -192,6 +192,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             hours = hours % 12;
                             hours = hours ? hours : 12;
                             return `${hours}:${minutes} ${ampm}`;
+                        };
+
+                        const calculateEndTimeStr = (timeStr, durationHours = 5) => {
+                            if (!timeStr) return '01:00 PM';
+                            const parts = String(timeStr).split(':');
+                            let h = parseInt(parts[0], 10);
+                            if (isNaN(h)) return '01:00 PM';
+                            const m = parts[1] ? parts[1].substring(0, 2).padStart(2, '0') : '00';
+                            h = (h + durationHours) % 24;
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            h = h % 12 || 12;
+                            return `${h}:${m} ${ampm}`;
                         };
 
                         const totalAmountVal = parseFloat(b.TotalAmount || b.PackagePrice || 0);
@@ -233,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             serviceEndDate: eDate,
                             serviceHireDays: hireDays,
                             eventDate: dateText,
-                            eventTime: formatTime12h(b.StartTime) || '08:00 AM',
+                            eventTime: `${formatTime12h(b.StartTime) || '08:00 AM'} - ${b.EndTime ? formatTime12h(b.EndTime) : calculateEndTimeStr(b.StartTime, 5)}`,
                             eventVenue: b.VenueName || 'Private Event Venue',
                             eventAddress: b.EventAddress || (b.EventPlace ? `${b.EventPlace}, Batangas` : (b.Location || 'Batangas')),
                             locationNotes: b.LocationNotes,

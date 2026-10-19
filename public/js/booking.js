@@ -1165,12 +1165,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const formattedDateText = (curStartDate === curEndDate || !curEndDate) ? formatPretty(curStartDate) : `${formatPretty(curStartDate)} – ${formatPretty(curEndDate)}`;
         const formattedStartTimeOnly = curStartTime ? format12h(curStartTime) : '08:00 AM';
+        const curEndTimeVal = (endTimeInput && endTimeInput.value) ? endTimeInput.value : '';
+        let formattedEndTimeOnly = '01:00 PM';
+        if (curEndTimeVal) {
+            formattedEndTimeOnly = format12h(curEndTimeVal);
+        } else if (curStartTime) {
+            const parts = curStartTime.split(':');
+            let h = parseInt(parts[0], 10);
+            if (!isNaN(h)) {
+                const m = parts[1] || '00';
+                h = (h + 5) % 24;
+                const period = h >= 12 ? 'PM' : 'AM';
+                const h12 = h % 12 || 12;
+                formattedEndTimeOnly = `${h12}:${m} ${period}`;
+            }
+        }
+        const formattedTimeRange = `${formattedStartTimeOnly} - ${formattedEndTimeOnly}`;
         const durationDaySuffix = (calculatedDays && calculatedDays > 1) ? ` (${calculatedDays} Days)` : ` (1 Day)`;
 
         if (summaryScheduleDate) summaryScheduleDate.textContent = formattedDateText;
-        if (summaryScheduleTime) summaryScheduleTime.innerHTML = `<i class="fa-regular fa-clock" style="font-size:0.75rem;"></i> Starts at ${formattedStartTimeOnly}${durationDaySuffix}`;
+        if (summaryScheduleTime) summaryScheduleTime.innerHTML = `<i class="fa-regular fa-clock" style="font-size:0.75rem;"></i> ${formattedTimeRange}${durationDaySuffix}`;
         if (summaryTableDate) summaryTableDate.textContent = formattedDateText;
-        if (summaryTableTime) summaryTableTime.textContent = formattedStartTimeOnly;
+        if (summaryTableTime) summaryTableTime.textContent = formattedTimeRange;
     };
     updatePriceBreakdown();
 
