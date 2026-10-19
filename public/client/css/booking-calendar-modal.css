@@ -181,6 +181,47 @@
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
 }
 
+/* Mode Selector Toggle (Single Day vs Multiple Days) */
+.cal-mode-toggle-wrap {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 14px;
+    gap: 4px;
+}
+
+.cal-mode-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.cal-mode-btn:hover:not(.active) {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.cal-mode-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+}
+
 .cal-month-nav-row {
     display: flex;
     align-items: center;

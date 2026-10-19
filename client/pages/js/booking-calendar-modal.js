@@ -9,6 +9,7 @@
     // State
     let calCurrentMonth = new Date().getMonth();
     let calCurrentYear = new Date().getFullYear();
+    let calBookingMode = 'single'; // 'single' | 'multi'
     let calActiveSelectionMode = 'start'; // 'start' | 'end'
     let calSelectedStartDate = null; // YYYY-MM-DD
     let calSelectedEndDate = null; // YYYY-MM-DD
@@ -96,6 +97,16 @@
                                     <strong style="color:#78350f; display:block;">Calendar Locked — Active Subscription Required</strong>
                                     <span>This service provider does not currently have an active subscription. All calendar dates are locked and cannot accept new bookings until subscribed.</span>
                                 </div>
+                            </div>
+
+                            <!-- Booking Mode Selector: Single Day vs Multiple Days -->
+                            <div class="cal-mode-toggle-wrap">
+                                <button type="button" class="cal-mode-btn active" id="cal-mode-single-btn">
+                                    <i class="fa-regular fa-calendar-check"></i> Single Day
+                                </button>
+                                <button type="button" class="cal-mode-btn" id="cal-mode-multi-btn">
+                                    <i class="fa-solid fa-calendar-week"></i> Multiple Days (Consecutive)
+                                </button>
                             </div>
 
                             <div class="cal-month-nav-row">
@@ -301,6 +312,15 @@
         document.getElementById('cal-btn-next').onclick = () => {
             changeMonth(1);
         };
+
+        const singleModeBtn = document.getElementById('cal-mode-single-btn');
+        if (singleModeBtn) {
+            singleModeBtn.onclick = () => setBookingMode('single');
+        }
+        const multiModeBtn = document.getElementById('cal-mode-multi-btn');
+        if (multiModeBtn) {
+            multiModeBtn.onclick = () => setBookingMode('multi');
+        }
 
 
         // Start time picker input listener (automatically locks End Time to +5 hours)
@@ -510,41 +530,97 @@
         renderCalendarGrid();
     }
 
-    // Handle Date Cell Click (Choose Any Start Date + Consecutive Days with No Gaps)
+    // Switch between Single Day Mode and Multi-Day Mode
+    function setBookingMode(mode) {
+        calBookingMode = mode;
+        const singleBtn = document.getElementById('cal-mode-single-btn');
+        const multiBtn = document.getElementById('cal-mode-multi-btn');
+        const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
+
+        if (singleBtn && multiBtn) {
+            if (mode === 'single') {
+                singleBtn.classList.add('active');
+                multiBtn.classList.remove('active');
+                if (calSelectedStartDate && calSelectedEndDate && calSelectedStartDate !== calSelectedEndDate) {
+                    calSelectedEndDate = calSelectedStartDate;
+                }
+                clearCalendarAlert();
+                if (subtitleDisplay) {
+                    subtitleDisplay.textContent = 'Select an available date on the calendar';
+                }
+            } else {
+                multiBtn.classList.add('active');
+                singleBtn.classList.remove('active');
+                clearCalendarAlert();
+                if (subtitleDisplay) {
+                    if (calSelectedStartDate && calSelectedEndDate && calSelectedStartDate !== calSelectedEndDate) {
+                        const count = getDatesInRange(calSelectedStartDate, calSelectedEndDate).length;
+                        subtitleDisplay.textContent = `${count} consecutive days selected • Strictly continuous (no gaps)`;
+                    } else if (calSelectedStartDate) {
+                        subtitleDisplay.textContent = `Start date: ${formatShortPrettyDate(calSelectedStartDate)}. Now select an end date (no gaps).`;
+                    } else {
+                        subtitleDisplay.textContent = 'Select start date, then select end date (no gaps allowed)';
+                    }
+                }
+            }
+        }
+        renderCalendarGrid();
+        updateSelectedSummaryDisplay();
+    }
+
+    // Handle Date Cell Click (Choose Any Date in Single Day Mode, or Consecutive Range with No Gaps in Multi-Day Mode)
     function handleDateCellClick(clickedIso) {
         if (isDateBooked(clickedIso)) return;
 
-        // If no start date is selected yet, or if a multi-day range was already established, start fresh on clicked date
+        if (calBookingMode === 'single') {
+            // SINGLE DAY: Freely choose ANY available date on the calendar!
+            calSelectedStartDate = clickedIso;
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        // MULTI-DAY: Select start date and end date with strictly no gaps
+        // If no start date set yet, or if a multi-day range was already set, clicking starts a new range
         if (!calSelectedStartDate || (calSelectedStartDate && calSelectedEndDate && calSelectedStartDate !== calSelectedEndDate)) {
             calSelectedStartDate = clickedIso;
             calSelectedEndDate = clickedIso;
             clearCalendarAlert();
             renderCalendarGrid();
             updateSelectedSummaryDisplay();
+            const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
+            if (subtitleDisplay) {
+                subtitleDisplay.textContent = `Start date: ${formatShortPrettyDate(clickedIso)}. Now select an end date (no gaps).`;
+            }
             return;
         }
 
-        // A single start date is currently selected:
+        // Clicked the same date: keep as 1-day start date
+        if (clickedIso === calSelectedStartDate) {
+            calSelectedEndDate = clickedIso;
+            clearCalendarAlert();
+            renderCalendarGrid();
+            updateSelectedSummaryDisplay();
+            return;
+        }
+
+        // Clicked an earlier date: move start date to this earlier date
         if (clickedIso < calSelectedStartDate) {
-            // User clicked an earlier date: set as the new start date
             calSelectedStartDate = clickedIso;
             calSelectedEndDate = clickedIso;
             clearCalendarAlert();
             renderCalendarGrid();
             updateSelectedSummaryDisplay();
+            const subtitleDisplay = document.getElementById('cal-month-subtitle-display');
+            if (subtitleDisplay) {
+                subtitleDisplay.textContent = `Start date: ${formatShortPrettyDate(clickedIso)}. Now select an end date (no gaps).`;
+            }
             return;
         }
 
-        if (clickedIso === calSelectedStartDate) {
-            // Same date clicked: maintain single day
-            calSelectedEndDate = clickedIso;
-            clearCalendarAlert();
-            renderCalendarGrid();
-            updateSelectedSummaryDisplay();
-            return;
-        }
-
-        // Clicked a later date: validate continuous consecutive booking with no gaps
+        // Clicked a later date: validate continuous consecutive booking with NO gaps
         const check = checkRangeAvailability(calSelectedStartDate, clickedIso);
         if (!check.available) {
             showCalendarAlert(check.message);
@@ -737,9 +813,20 @@
             // Single Day
             const pretty = formatPrettyDate(calSelectedStartDate);
             if (headerDate) headerDate.textContent = pretty;
-            if (badgeContainer) badgeContainer.style.display = 'none';
+            if (badgeContainer) {
+                badgeContainer.style.display = 'flex';
+                badgeContainer.innerHTML = `
+                    <button type="button" class="cal-link-switch-multi" id="cal-link-switch-multi-action" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.8rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; transition:all 0.15s ease;">
+                        <i class="fa-solid fa-calendar-plus" style="color:#2563eb;"></i> Need multiple days? Click here
+                    </button>
+                `;
+                const switchBtn = document.getElementById('cal-link-switch-multi-action');
+                if (switchBtn) {
+                    switchBtn.onclick = () => setBookingMode('multi');
+                }
+            }
             if (summaryDateText) summaryDateText.textContent = `${pretty} (1 Day)`;
-            if (subtitleDisplay) {
+            if (subtitleDisplay && calBookingMode === 'single') {
                 subtitleDisplay.textContent = 'Select an available date on the calendar';
             }
         } else {
@@ -765,10 +852,7 @@
                 const resetBtn = document.getElementById('cal-btn-reset-range-action');
                 if (resetBtn) {
                     resetBtn.onclick = () => {
-                        calSelectedEndDate = calSelectedStartDate;
-                        clearCalendarAlert();
-                        renderCalendarGrid();
-                        updateSelectedSummaryDisplay();
+                        setBookingMode('single');
                     };
                 }
             }
@@ -776,6 +860,18 @@
             if (summaryDateText) summaryDateText.textContent = `${startPrettyShort} – ${endPretty} (${dayCount} Consecutive Days)`;
             if (subtitleDisplay) {
                 subtitleDisplay.textContent = `${dayCount} consecutive days selected • Strictly continuous (no gaps)`;
+            }
+        }
+
+        const singleBtn = document.getElementById('cal-mode-single-btn');
+        const multiBtn = document.getElementById('cal-mode-multi-btn');
+        if (singleBtn && multiBtn) {
+            if (isMultiDay || calBookingMode === 'multi') {
+                multiBtn.classList.add('active');
+                singleBtn.classList.remove('active');
+            } else {
+                singleBtn.classList.add('active');
+                multiBtn.classList.remove('active');
             }
         }
 
@@ -917,6 +1013,12 @@
         tomorrow.setDate(tomorrow.getDate() + 1);
         calSelectedStartDate = initialStartDate || formatDateIso(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
         calSelectedEndDate = initialEndDate || calSelectedStartDate;
+
+        if (initialStartDate && initialEndDate && initialStartDate !== initialEndDate) {
+            calBookingMode = 'multi';
+        } else {
+            calBookingMode = 'single';
+        }
 
         // Fetch provider's active bookings
         calBookedSlots = await fetchProviderBookings(calProviderId);
