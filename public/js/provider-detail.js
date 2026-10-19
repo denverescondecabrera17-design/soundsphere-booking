@@ -929,12 +929,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         const bookBtn = card.querySelector('.btn-book-package-direct');
                         const pTitle = card.getAttribute('data-title') || "Package";
                         const pPrice = parseInt(card.getAttribute('data-price'), 10) || 15000;
+                        const targetOffer = uniqueOffers[cIdx] || {};
+                        let cardInclusions = targetOffer.parsedInclusions;
+                        if (!cardInclusions || cardInclusions.length === 0) {
+                            try {
+                                const rawIncAttr = card.getAttribute('data-inclusions');
+                                cardInclusions = rawIncAttr ? JSON.parse(decodeURIComponent(rawIncAttr)) : [];
+                            } catch (e) {
+                                cardInclusions = [];
+                            }
+                        }
+                        if (!cardInclusions || cardInclusions.length === 0) {
+                            cardInclusions = Array.from(card.querySelectorAll('.inclusions-list li'))
+                                .filter(li => !li.classList.contains('more-inclusions-item'))
+                                .map(li => li.textContent.trim());
+                        }
+
                         const pkgData = {
-                            ...(uniqueOffers[cIdx] || {}),
+                            ...targetOffer,
                             id: card.getAttribute('data-id') || (cIdx + 1),
                             title: pTitle,
                             price: pPrice,
-                            inclusions: inclusions
+                            inclusions: cardInclusions
                         };
 
                         const handleDetailsClick = () => {
