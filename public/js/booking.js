@@ -1418,10 +1418,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 bindAddressAutocomplete(mapSearchInput, mapSearchSuggestions, selectPlaceOnMap);
                 bindAddressAutocomplete(completeAddressInput, addressSuggestionsList, selectPlaceOnMap);
-                const venueSuggestionsList = document.getElementById('venue-suggestions-list');
-                if (venueNameInput && venueSuggestionsList) {
-                    bindAddressAutocomplete(venueNameInput, venueSuggestionsList, selectPlaceOnMap);
-                }
 
                 marker.addListener('dragend', (e) => {
                     const lat = e.latLng.lat();
@@ -1508,10 +1504,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window._soundsphereSelectPlaceOnMap = selectPlaceOnMap;
                 bindAddressAutocomplete(mapSearchInput, mapSearchSuggestions, selectPlaceOnMap);
                 bindAddressAutocomplete(completeAddressInput, addressSuggestionsList, selectPlaceOnMap);
-                const venueSuggestionsList = document.getElementById('venue-suggestions-list');
-                if (venueNameInput && venueSuggestionsList) {
-                    bindAddressAutocomplete(venueNameInput, venueSuggestionsList, selectPlaceOnMap);
-                }
 
                 // Reverse Geocoding with Nominatim API (Free)
                 const reverseGeocode = async (lat, lng) => {
