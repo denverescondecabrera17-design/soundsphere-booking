@@ -267,9 +267,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (clientMIInput && !clientMIInput.value) clientMIInput.value = mInit;
         if (clientLastNameInput && !clientLastNameInput.value) clientLastNameInput.value = lName;
         if (clientEmailInput && !clientEmailInput.value) clientEmailInput.value = email;
-        if (clientPhoneInput && !clientPhoneInput.value) clientPhoneInput.value = phone;
+        if (clientPhoneInput && !clientPhoneInput.value) clientPhoneInput.value = String(phone || '').replace(/[^0-9]/g, '').slice(0, 11);
     };
     autoPopulateClientInfo();
+
+    // Strict 11-Digit Numbers-Only Enforcement for Client Contact Number
+    if (clientPhoneInput) {
+        clientPhoneInput.setAttribute('maxlength', '11');
+        clientPhoneInput.setAttribute('inputmode', 'numeric');
+        clientPhoneInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+        clientPhoneInput.addEventListener('keypress', (e) => {
+            if (!/[0-9]/.test(e.key) || clientPhoneInput.value.length >= 11) {
+                e.preventDefault();
+            }
+        });
+        clientPhoneInput.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
+            clientPhoneInput.value = paste.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+    }
 
     // 3. State Management
     const urlParams = new URLSearchParams(window.location.search);
@@ -1725,6 +1744,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (typeof window.showToast === 'function') {
                     window.showToast('⚠️ Please complete all required client information, municipality, venue name, and event address fields.', 'warning');
                 }
+                return;
+            }
+
+            if (!/^[0-9]{11}$/.test(clientPhone)) {
+                if (typeof window.showToast === 'function') {
+                    window.showToast('⚠️ Contact number must be numbers only and exactly 11 digits (e.g. 09171234567).', 'warning');
+                } else {
+                    alert('Contact number must be numbers only and exactly 11 digits (e.g. 09171234567).');
+                }
+                if (clientPhoneInput) clientPhoneInput.focus();
                 return;
             }
 
