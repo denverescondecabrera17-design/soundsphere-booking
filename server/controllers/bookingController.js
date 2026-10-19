@@ -662,12 +662,13 @@ const createBooking = async (req, res) => {
         const calculatedHireDays = parseInt(serviceHireDays || numberOfDays, 10) || (Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
 
         const finalEventType = eventType === 'Other' ? (customEventType || 'Other Event') : (eventType || 'Party');
-        const finalPlace = eventPlace || 'Lian';
+        const finalPlace = (eventPlace && eventPlace.trim()) ? eventPlace.trim() : 'Lian';
 
-        // Allowed Municipalities Check
-        const allowedPlaces = ['Lian', 'Balayan', 'Nasugbu'];
-        if (!allowedPlaces.includes(finalPlace)) {
-            return res.status(400).json({ success: false, message: `Invalid place '${finalPlace}'. Allowed locations: Lian, Balayan, Nasugbu.` });
+        // Allowed Municipalities Check (Lian, Balayan, Nasugbu, or Others / Outside Service Area)
+        const allowedPlaces = ['Lian', 'Balayan', 'Nasugbu', 'Others', 'Other'];
+        const isAllowedPlace = allowedPlaces.includes(finalPlace) || (finalPlace && finalPlace.length > 0);
+        if (!isAllowedPlace) {
+            return res.status(400).json({ success: false, message: `Please provide a valid event municipality or select Others.` });
         }
 
         // SERVER-SIDE PACKAGE PRICE LOOKUP (Do NOT trust frontend price!)
@@ -818,11 +819,11 @@ const createBooking = async (req, res) => {
             numberOfDays: calculatedHireDays,
             eventPlace: finalPlace,
             venueName: venueName || 'Private Event Venue',
-            eventAddress: eventAddress || `${venueName || 'Venue'}, ${finalPlace}, Batangas`,
+            eventAddress: eventAddress || `${venueName || 'Venue'}, ${finalPlace === 'Others' ? 'Batangas' : `${finalPlace}, Batangas`}`,
             eventLatitude: eventLatitude ? parseFloat(eventLatitude) : null,
             eventLongitude: eventLongitude ? parseFloat(eventLongitude) : null,
             locationNotes: locationNotes || null,
-            location: `${venueName || 'Venue'}, ${finalPlace}`,
+            location: (finalPlace === 'Others' && eventAddress) ? eventAddress : `${venueName || 'Venue'}, ${finalPlace}`,
             packagePrice: actualPackagePrice,
             additionalDayCharges: additionalDayCharges,
             transportationFee: transportationFee,
