@@ -655,6 +655,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     window.searchLocation = searchLocation;
 
+    // Universal Currency Formatter
+    const formatMoney = (val) => {
+        const num = parseFloat(val) || 0;
+        return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
     // Haversine Spherical Distance Calculation (in kilometers)
     const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
         if (!lat1 || !lon1 || !lat2 || !lon2) return 10.0;
@@ -667,6 +673,141 @@ document.addEventListener('DOMContentLoaded', async () => {
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return Math.round((R * c) * 10) / 10;
+    };
+
+    // Accurately resolve Service Provider's home coordinate from DB or address
+    const resolveProviderCoordinates = (pkg) => {
+        if (!pkg) return { lat: 13.9388, lng: 120.7308 };
+        const pLat = parseFloat(pkg.ProviderLatitude || pkg.Latitude || pkg.providerLatitude || pkg.latitude);
+        const pLng = parseFloat(pkg.ProviderLongitude || pkg.Longitude || pkg.providerLongitude || pkg.longitude);
+        if (!isNaN(pLat) && !isNaN(pLng) && pLat > 0 && pLng > 0) {
+            return { lat: pLat, lng: pLng };
+        }
+
+        const rawAddr = String(pkg.ProviderBusinessAddress || pkg.BusinessAddress || pkg.businessAddress || pkg.CoverageArea || '').trim();
+        const addrLower = rawAddr.toLowerCase();
+
+        // 1. Check BATANGAS_PLACES_DB (e.g. Brgy 8 Balayan, specific barangays)
+        if (typeof BATANGAS_PLACES_DB !== 'undefined' && Array.isArray(BATANGAS_PLACES_DB)) {
+            const matchedPlace = BATANGAS_PLACES_DB.find(item => {
+                const nameMatch = item.name && addrLower.includes(item.name.toLowerCase());
+                const aliasMatch = Array.isArray(item.aliases) && item.aliases.some(a => addrLower.includes(a.toLowerCase()));
+                return nameMatch || aliasMatch;
+            });
+            if (matchedPlace && matchedPlace.lat && matchedPlace.lng) {
+                return { lat: matchedPlace.lat, lng: matchedPlace.lng };
+            }
+        }
+
+        // 2. Check MUNICIPALITY_COORDS
+        if (typeof MUNICIPALITY_COORDS !== 'undefined') {
+            for (const [mName, mCoord] of Object.entries(MUNICIPALITY_COORDS)) {
+                if (addrLower.includes(mName.toLowerCase())) {
+                    return { lat: mCoord.lat, lng: mCoord.lng };
+                }
+            }
+        }
+
+        // 3. Municipality defaults
+        if (addrLower.includes('nasugbu')) return { lat: 14.0714, lng: 120.6347 };
+        if (addrLower.includes('lian')) return { lat: 14.0322, lng: 120.6514 };
+        if (addrLower.includes('calatagan')) return { lat: 13.8322, lng: 120.6322 };
+        if (addrLower.includes('tuy')) return { lat: 14.0225, lng: 120.7308 };
+        if (addrLower.includes('calaca')) return { lat: 13.9317, lng: 120.8128 };
+        if (addrLower.includes('lemery')) return { lat: 13.9189, lng: 120.8911 };
+        if (addrLower.includes('taal')) return { lat: 13.8833, lng: 120.9333 };
+
+        // Default Balayan
+        return { lat: 13.9388, lng: 120.7308 };
+    };
+
+    // Calculate exact road driving distance along Philippine roads/highways
+    let roadDistanceDebounceTimer = null;
+    let activeRoadDistanceKey = '';
+
+    const fetchAccurateRoadDistance = (pLat, pLng, eLat, eLng) => {
+        if (!pLat || !pLng || !eLat || !eLng) return;
+        const coordKey = `${Number(pLat).toFixed(4)},${Number(pLng).toFixed(4)}->${Number(eLat).toFixed(4)},${Number(eLng).toFixed(4)}`;
+        if (activeRoadDistanceKey === coordKey) return;
+
+        clearTimeout(roadDistanceDebounceTimer);
+        roadDistanceDebounceTimer = setTimeout(async () => {
+            try {
+                let exactKm = null;
+
+                // 1. Direct OSRM driving engine (Free, accurate Philippine road network)
+                try {
+                    const controller = new AbortController();
+                    const abortTimeout = setTimeout(() => controller.abort(), 3500);
+                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${eLng},${eLat}?overview=false`;
+                    const res = await fetch(osrmUrl, { signal: controller.signal });
+                    clearTimeout(abortTimeout);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.code === 'Ok' && Array.isArray(data.routes) && data.routes.length > 0) {
+                            exactKm = Math.round((data.routes[0].distance / 1000) * 10) / 10;
+                        }
+                    }
+                } catch (netErr) {
+                    console.warn('Direct OSRM route fetch notice, using fallback proxy:', netErr.message);
+                }
+
+                // 2. Server-side proxy fallback
+                if (!exactKm) {
+                    try {
+                        const proxyRes = await fetch(`/api/config/route-distance?fromLat=${pLat}&fromLng=${pLng}&toLat=${eLat}&toLng=${eLng}`);
+                        if (proxyRes.ok) {
+                            const pData = await proxyRes.json();
+                            if (pData.success && typeof pData.distanceKm === 'number' && pData.distanceKm > 0) {
+                                exactKm = pData.distanceKm;
+                            }
+                        }
+                    } catch (proxyErr) {
+                        console.warn('Backend route distance notice:', proxyErr.message);
+                    }
+                }
+
+                // 3. Fallback: Haversine * 1.25 road curvature factor
+                if (!exactKm) {
+                    const straight = calculateHaversineDistance(pLat, pLng, eLat, eLng);
+                    exactKm = Math.round((straight * 1.25) * 10) / 10;
+                }
+
+                if (exactKm && exactKm > 0) {
+                    activeRoadDistanceKey = coordKey;
+                    calculatedDistanceKm = exactKm;
+                    transportFee = getTransportFeeForDistance(calculatedDistanceKm);
+                    totalCost = basePackagePrice + additionalDayCharges + transportFee;
+
+                    const summaryLblDistance = document.getElementById('summary-lbl-distance');
+                    const summaryValTransport = document.getElementById('summary-val-transport');
+                    const summaryValTotal = document.getElementById('summary-val-total');
+                    const summaryValDueNow = document.getElementById('summary-val-duenow');
+                    const summaryValRemaining = document.getElementById('summary-val-remaining');
+                    const planDownpaymentVal = document.getElementById('plan-downpayment-val');
+                    const planFullVal = document.getElementById('plan-full-val');
+
+                    const downpaymentVal = Math.round(totalCost * 0.5);
+                    const fullVal = totalCost;
+
+                    if (summaryLblDistance) summaryLblDistance.textContent = `${calculatedDistanceKm} km`;
+                    if (summaryValTransport) summaryValTransport.textContent = formatMoney(transportFee);
+                    if (summaryValTotal) summaryValTotal.textContent = formatMoney(totalCost);
+                    if (planDownpaymentVal) planDownpaymentVal.textContent = formatMoney(downpaymentVal);
+                    if (planFullVal) planFullVal.textContent = formatMoney(fullVal);
+
+                    if (selectedPaymentPlan === 'downpayment') {
+                        if (summaryValDueNow) summaryValDueNow.textContent = formatMoney(downpaymentVal);
+                        if (summaryValRemaining) summaryValRemaining.textContent = formatMoney(totalCost - downpaymentVal);
+                    } else {
+                        if (summaryValDueNow) summaryValDueNow.textContent = formatMoney(fullVal);
+                        if (summaryValRemaining) summaryValRemaining.textContent = '₱0.00 (Fully Paid)';
+                    }
+                }
+            } catch (err) {
+                console.warn('Road distance calculation error:', err);
+            }
+        }, 220);
     };
 
     // Fetch Distance-Based Transportation Fee Configuration from Database
@@ -919,29 +1060,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Day 1 is basePackagePrice; each additional day is also charged at full daily basePackagePrice
         additionalDayCharges = calculatedDays > 1 ? Math.round(basePackagePrice * (calculatedDays - 1)) : 0;
 
-        // 3. Distance & Transportation Fee Calculation (One-time fee, not multiplied by days)
-        let pLat = (packageData && packageData.ProviderLatitude) ? parseFloat(packageData.ProviderLatitude) : null;
-        let pLng = (packageData && packageData.ProviderLongitude) ? parseFloat(packageData.ProviderLongitude) : null;
-
-        if (!pLat || !pLng) {
-            const provAddr = (packageData && packageData.ProviderBusinessAddress) ? packageData.ProviderBusinessAddress : (packageData && packageData.CoverageArea ? packageData.CoverageArea : '');
-            if (provAddr.includes('Balayan')) { pLat = 13.9388; pLng = 120.7308; }
-            else if (provAddr.includes('Nasugbu')) { pLat = 14.0722; pLng = 120.6318; }
-            else { pLat = 13.8402; pLng = 120.6558; } // Lian default
-        }
+        // 3. Distance & Transportation Fee Calculation (Exact road driving distance)
+        const pCoords = resolveProviderCoordinates(packageData);
+        const pLat = pCoords.lat;
+        const pLng = pCoords.lng;
 
         let eLat = currentLat;
         let eLng = currentLng;
 
         if (!eLat || !eLng) {
             const selectedPlace = placeSelect ? placeSelect.value : 'Lian';
-            const mCoords = MUNICIPALITY_COORDS[selectedPlace] || MUNICIPALITY_COORDS['Lian'];
+            const mCoords = MUNICIPALITY_COORDS[selectedPlace] || MUNICIPALITY_COORDS['Lian'] || { lat: 14.0322, lng: 120.6514 };
             eLat = mCoords.lat;
             eLng = mCoords.lng;
         }
 
-        calculatedDistanceKm = calculateHaversineDistance(pLat, pLng, eLat, eLng);
+        // Fast baseline calculation if exact road distance is not yet computed
+        if (!calculatedDistanceKm || calculatedDistanceKm === 10.0) {
+            const straightKm = calculateHaversineDistance(pLat, pLng, eLat, eLng);
+            calculatedDistanceKm = Math.round((straightKm * 1.25) * 10) / 10;
+        }
         transportFee = getTransportFeeForDistance(calculatedDistanceKm);
+
+        // Calculate and apply accurate road distance via OSRM & backend route service
+        fetchAccurateRoadDistance(pLat, pLng, eLat, eLng);
 
         // 4. Total Booking Price: (Base Package Price * Days) + One-Time Transportation Fee
         totalCost = basePackagePrice + additionalDayCharges + transportFee;
