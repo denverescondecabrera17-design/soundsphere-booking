@@ -17,10 +17,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertIcon = document.getElementById('alert-icon');
     const alertMessage = document.getElementById('alert-message');
 
-    // Retrieve pending verification email
+    // Retrieve pending verification email (from URL query param or sessionStorage)
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailFromUrl = urlParams.get('email');
+    if (emailFromUrl) {
+        sessionStorage.setItem('soundsphere_pending_email', decodeURIComponent(emailFromUrl).trim().toLowerCase());
+    }
+    const isGoogleFlow = urlParams.get('google') === 'true';
     const pendingEmail = sessionStorage.getItem('soundsphere_pending_email');
 
-    // If no pending email found in session, redirect to login page
+    // If no pending email found in session or URL, redirect to login page
     if (!pendingEmail) {
         window.location.href = 'login.html';
         return;
@@ -54,6 +60,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideAlert = () => {
         alertBanner.classList.add('hidden');
     };
+
+    if (isGoogleFlow) {
+        const titleEl = document.querySelector('.otp-card h2');
+        if (titleEl) titleEl.textContent = 'Google Account Verification';
+        const subEl = document.querySelector('.otp-card .otp-sub');
+        if (subEl) {
+            subEl.innerHTML = `Please enter the 6-digit verification code sent to <span id="masked-email" class="masked-email">${maskEmail(pendingEmail)}</span> to activate your Google account.`;
+        }
+        showAlert('Google Sign-In: A 6-digit verification code has been dispatched to your Gmail. Please check your inbox.', 'success');
+    }
 
     // Robust Auto-Focus & Input Behaviors for 6 Digit Boxes
     otpInputs.forEach((input, index) => {
@@ -215,12 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Store Auth Session (JWT + User info)
             SoundSphereAPI.setAuthSession(response.token, response.user, true);
 
-            showAlert('Email verified successfully! Redirecting to your Client Dashboard...', 'success');
+            showAlert('Email verified successfully! Redirecting...', 'success');
 
             setTimeout(() => {
                 sessionStorage.removeItem('soundsphere_otp_expiry_timestamp');
                 sessionStorage.removeItem('soundsphere_resend_cooldown_timestamp');
-                window.location.href = response.redirectUrl || '/client/dashboard.html';
+                sessionStorage.removeItem('soundsphere_pending_email');
+                window.location.href = response.redirectUrl || '/marketplace.html';
             }, 1000);
 
         } catch (error) {

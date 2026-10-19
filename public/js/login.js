@@ -152,6 +152,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
             const data = await response.json();
+            if (data.requiresVerification) {
+                if (data.email) {
+                    sessionStorage.setItem('soundsphere_pending_email', data.email);
+                }
+                showAlert(data.message || 'Verification code sent to your Google email! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirectUrl || `/verify-otp.html?email=${encodeURIComponent(data.email || userEmail)}&google=true`;
+                }, 600);
+                return;
+            }
             if (data.success && data.token) {
                 if (typeof SoundSphereAPI !== 'undefined' && SoundSphereAPI.setAuthSession) {
                     SoundSphereAPI.setAuthSession(data.token, data.user, true);

@@ -289,7 +289,7 @@ const updateUserProfile = async (userId, { email, firstName, middleName, lastNam
 /**
  * Create a new Client user account
  */
-const createClientUser = async ({ email, passwordHash, phone, firstName, middleName, lastName, address }) => {
+const createClientUser = async ({ email, passwordHash, phone, firstName, middleName, lastName, address, emailVerified, accountStatus }) => {
     const pool = getPool();
     if (!pool) throw new Error('Database connection pool not initialized.');
 
@@ -309,15 +309,18 @@ const createClientUser = async ({ email, passwordHash, phone, firstName, middleN
 
         const clientRoleId = roleResult.recordset[0].RoleID;
 
+        const isVerified = (typeof emailVerified !== 'undefined') ? (emailVerified ? 1 : 0) : 1;
+        const statusVal = (typeof accountStatus !== 'undefined' && accountStatus) ? accountStatus : (isVerified ? 'Active' : 'PendingVerification');
+
         const userReq = new sql.Request(transaction);
         const userResult = await userReq
             .input('RoleID', sql.Int, clientRoleId)
             .input('Email', sql.NVarChar(255), email.trim().toLowerCase())
             .input('PasswordHash', sql.NVarChar(255), passwordHash)
             .input('Phone', sql.NVarChar(20), phone.trim())
-            .input('EmailVerified', sql.Bit, 1)
+            .input('EmailVerified', sql.Bit, isVerified)
             .input('IsActive', sql.Bit, 1)
-            .input('AccountStatus', sql.NVarChar(20), 'Active')
+            .input('AccountStatus', sql.NVarChar(20), statusVal)
             .query(`
                 INSERT INTO dbo.Users (RoleID, Email, PasswordHash, Phone, EmailVerified, IsActive, AccountStatus)
                 OUTPUT INSERTED.UserID, INSERTED.Email, INSERTED.RoleID, INSERTED.CreatedAt

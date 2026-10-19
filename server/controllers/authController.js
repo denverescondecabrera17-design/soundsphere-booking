@@ -179,11 +179,16 @@ const verifyOTP = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        const roleStr = (result.user.role || '').toLowerCase();
+        const redirectUrl = (roleStr === 'admin' || roleStr === 'administrator') ? '/admin/dashboard.html' :
+                            (roleStr === 'cashier') ? '/cashier/dashboard.html' :
+                            (roleStr === 'provider' || roleStr === 'serviceprovider') ? '/provider/dashboard.html' : '/marketplace.html';
+
         return res.status(200).json({
             success: true,
             message: result.message,
             token,
-            redirectUrl: '/client/dashboard.html',
+            redirectUrl,
             user: result.user
         });
     } catch (error) {
@@ -764,8 +769,10 @@ const socialAuth = async (req, res) => {
             cleanName = prefix.replace(/[._0-9]+/g, ' ').trim().split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ').trim() || 'Google User';
         }
 
-        // If account does NOT exist, create new Client account automatically via Social Auth
-        if (!user) {
+        const isNewUser = !user;
+
+        // If account does NOT exist, create new Client account automatically with EmailVerified = 0
+        if (isNewUser) {
             const randomPassword = 'SocialAuth_' + Math.random().toString(36).slice(-10) + '123';
             const passwordHash = await bcrypt.hash(randomPassword, 10);
             const nameParts = cleanName.split(' ');
@@ -779,7 +786,9 @@ const socialAuth = async (req, res) => {
                 firstName,
                 middleName: '',
                 lastName,
-                address: `${provider || 'Social'} Verified User`
+                address: `${provider || 'Social'} User`,
+                emailVerified: 0,
+                accountStatus: 'PendingVerification'
             });
 
             user = await userModel.findUserByEmail(normalizedEmail);
@@ -801,7 +810,38 @@ const socialAuth = async (req, res) => {
             }
         }
 
-        // Generate JWT Token
+        // If first-time or unverified, require 6-digit OTP activation verification
+        if (isNewUser || !user.EmailVerified) {
+            const plainOtp = generate6DigitOTP();
+            await otpModel.saveOTPRecord({
+                userId: user.UserID,
+                email: user.Email,
+                plainOtp
+            });
+
+            const currentFullName = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim();
+            const recipientName = currentFullName || cleanName || 'Valued User';
+
+            try {
+                await sendOTPEmail({
+                    toEmail: user.Email,
+                    clientName: recipientName,
+                    otpCode: plainOtp
+                });
+            } catch (emailErr) {
+                console.error('Failed to send Social Auth OTP email:', emailErr);
+            }
+
+            return res.status(200).json({
+                success: true,
+                requiresVerification: true,
+                message: 'Account activation required. A 6-digit verification code has been sent to your email.',
+                email: user.Email,
+                redirectUrl: `/verify-otp.html?email=${encodeURIComponent(user.Email)}&google=true`
+            });
+        }
+
+        // Generate JWT Token for returning verified user
         const token = jwt.sign(
             {
                 userId: user.UserID,
@@ -965,8 +1005,10 @@ const handleGoogleCallback = async (req, res) => {
             user = await userModel.findUserByEmail(normalizedEmail);
         }
 
-        // 3. If account does not exist, create new verified Client user with real Google Name
-        if (!user) {
+        const isNewUser = !user;
+
+        // 3. If account does not exist, create new Client user with EmailVerified = 0 (PendingVerification)
+        if (isNewUser) {
             const randomPassword = 'GoogleAuth_' + Math.random().toString(36).slice(-10) + '123!';
             const passwordHash = await bcrypt.hash(randomPassword, 10);
             await userModel.createClientUser({
@@ -976,7 +1018,9 @@ const handleGoogleCallback = async (req, res) => {
                 firstName: googleFirstName,
                 middleName: '',
                 lastName: googleLastName,
-                address: 'Google OAuth Verified'
+                address: 'Google Sign-In',
+                emailVerified: 0,
+                accountStatus: 'PendingVerification'
             });
             user = await userModel.findUserByEmail(normalizedEmail);
         } else {
@@ -1017,7 +1061,32 @@ const handleGoogleCallback = async (req, res) => {
             await userModel.linkSocialProvider(user.UserID, 'Google', googleSub);
         }
 
-        // 5. Issue JWT token preserving exact SoundSphere role (Client, Service Provider, Admin)
+        // 5. Verification Check: Only first-time / unverified Google sign-in requires OTP verification
+        if (isNewUser || !user.EmailVerified) {
+            const plainOtp = generate6DigitOTP();
+            await otpModel.saveOTPRecord({
+                userId: user.UserID,
+                email: user.Email,
+                plainOtp
+            });
+
+            const currentFullName = `${user.ClientFirstName || ''} ${user.ClientLastName || ''}`.trim();
+            const recipientName = currentFullName || googleFullName || 'Valued User';
+
+            try {
+                await sendOTPEmail({
+                    toEmail: user.Email,
+                    clientName: recipientName,
+                    otpCode: plainOtp
+                });
+            } catch (emailErr) {
+                console.error('Failed to send Google verification OTP email:', emailErr);
+            }
+
+            return res.redirect('/verify-otp.html?email=' + encodeURIComponent(user.Email) + '&google=true');
+        }
+
+        // 6. Existing Verified User: Issue JWT token directly
         const token = jwt.sign(
             { userId: user.UserID, email: user.Email, roleName: user.RoleName },
             process.env.JWT_SECRET || 'SoundSphere_Secret_Key',
