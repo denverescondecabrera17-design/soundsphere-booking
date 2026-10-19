@@ -414,39 +414,89 @@ document.addEventListener('DOMContentLoaded', async () => {
         { name: 'Barangay Prenza', place: 'Lian', lat: 14.0480, lng: 120.6450, aliases: ['prenza', 'brgy prenza'] },
         { name: 'Barangay Puting-Kahoy', place: 'Lian', lat: 14.0050, lng: 120.6750, aliases: ['puting kahoy', 'brgy puting-kahoy'] },
         { name: 'Barangay San Diego', place: 'Lian', lat: 13.9890, lng: 120.6450, aliases: ['san diego', 'brgy san diego'] },
-        { name: 'Lian Covered Court / Plaza', place: 'Lian', lat: 14.0325, lng: 120.6510, aliases: ['lian covered court', 'lian court', 'lian plaza'] }
+        { name: 'Lian Covered Court / Plaza', place: 'Lian', lat: 14.0325, lng: 120.6510, aliases: ['lian covered court', 'lian court', 'lian plaza'] },
+
+        // LEMERY & NEIGHBORING BATANGAS BARANGAYS
+        { name: 'Barangay Niugan', place: 'Lemery', lat: 14.0097, lng: 120.8732, aliases: ['niugan', 'brgy niugan', 'niugan lemery'] },
+        { name: 'Barangay Dayapan', place: 'Lemery', lat: 13.9250, lng: 120.8950, aliases: ['dayapan', 'brgy dayapan'] },
+        { name: 'Barangay Malinis', place: 'Lemery', lat: 13.9180, lng: 120.9050, aliases: ['malinis', 'brgy malinis'] },
+        { name: 'Barangay Mataas na Bayan', place: 'Lemery', lat: 13.9120, lng: 120.8980, aliases: ['mataas na bayan', 'brgy mataas na bayan'] },
+        { name: 'Barangay District 1-4 (Poblacion)', place: 'Lemery', lat: 13.8820, lng: 120.9150, aliases: ['lemery poblacion', 'pob lemery'] },
+
+        // CALATAGAN BARANGAYS
+        { name: 'Barangay Poblacion 1-4', place: 'Calatagan', lat: 13.8322, lng: 120.6322, aliases: ['calatagan poblacion', 'pob calatagan'] },
+        { name: 'Barangay Balibago', place: 'Calatagan', lat: 13.8050, lng: 120.6180, aliases: ['balibago calatagan', 'brgy balibago calatagan'] },
+        { name: 'Barangay Lucsuhin', place: 'Calatagan', lat: 13.8550, lng: 120.6450, aliases: ['lucsuhin', 'brgy lucsuhin'] },
+        { name: 'Barangay Quilitisan', place: 'Calatagan', lat: 13.8650, lng: 120.6150, aliases: ['quilitisan', 'brgy quilitisan'] },
+        { name: 'Barangay Santa Ana', place: 'Calatagan', lat: 13.8180, lng: 120.6050, aliases: ['santa ana', 'brgy santa ana'] },
+
+        // TUY BARANGAYS
+        { name: 'Barangay Poblacion 1-4', place: 'Tuy', lat: 14.0225, lng: 120.7308, aliases: ['tuy poblacion', 'pob tuy'] },
+        { name: 'Barangay Acle', place: 'Tuy', lat: 14.0450, lng: 120.7180, aliases: ['acle', 'brgy acle'] },
+        { name: 'Barangay Burgos', place: 'Tuy', lat: 14.0320, lng: 120.7420, aliases: ['burgos', 'brgy burgos'] },
+        { name: 'Barangay Putol', place: 'Tuy', lat: 14.0150, lng: 120.7250, aliases: ['putol tuy', 'brgy putol tuy'] }
     ];
 
-    // Instant local place search matching algorithm
+    // Instant local place search matching algorithm with strict distinctive-token matching
     const matchLocalBatangasPlaces = (query, selectedPlace = '') => {
         if (!query) return [];
         const normQ = String(query).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
         const tokens = normQ.split(/\s+/).filter(t => t.length > 0);
         if (tokens.length === 0) return [];
 
+        const GENERIC_PREFIXES = new Set([
+            'brgy', 'barangay', 'bry', 'bgy', 'bgry',
+            'pob', 'poblacion',
+            'sitio', 'purok', 'prk', 'zone',
+            'street', 'st', 'avenue', 'ave', 'road', 'rd',
+            'near', 'tapat', 'tabi', 'beside', 'front',
+            'philippines', 'batangas', 'calabarzon'
+        ]);
+
+        // Extract distinctive non-generic tokens (e.g., 'niugan', 'bucana', '1', '2')
+        const distinctiveTokens = tokens.filter(tok => !GENERIC_PREFIXES.has(tok));
+        
+        // If query only contains generic prefix words (e.g. only "brgy" or "barangay"),
+        // wait for user to type more; don't match arbitrary places!
+        if (distinctiveTokens.length === 0) return [];
+
+        const isOthers = (selectedPlace === 'Others' || selectedPlace === 'Other');
+
         return BATANGAS_PLACES_DB.map(p => {
             let score = 0;
             const pName = p.name.toLowerCase();
             const pPlace = p.place.toLowerCase();
-            const allSearchText = [pName, pPlace, ...(p.aliases || [])].join(' ').toLowerCase();
+            const aliases = (p.aliases || []).map(a => a.toLowerCase());
 
-            // Match priority if place matches current selected municipality
-            if (selectedPlace && pPlace === selectedPlace.toLowerCase()) {
-                score += 10;
-            }
+            // Check if distinctive tokens match this place
+            let matchedDistinctiveCount = 0;
+            distinctiveTokens.forEach(tok => {
+                const isExactAlias = aliases.some(a => a === tok);
+                const hasExactWordInName = new RegExp(`\\b${tok}\\b`, 'i').test(pName);
+                const isPrefixInName = new RegExp(`\\b${tok}`, 'i').test(pName);
+                const hasPartialAlias = aliases.some(a => a.includes(tok));
 
-            tokens.forEach(tok => {
-                // Ignore general filler words
-                if (['philippines', 'batangas', 'calabarzon', 'street', 'st'].includes(tok)) return;
-
-                if (p.aliases && p.aliases.some(a => a === tok || a.includes(tok))) {
-                    score += 25;
-                } else if (pName.includes(tok)) {
+                if (isExactAlias || hasExactWordInName) {
+                    score += 50;
+                    matchedDistinctiveCount++;
+                } else if (isPrefixInName) {
+                    score += 30;
+                    matchedDistinctiveCount++;
+                } else if (hasPartialAlias || pName.includes(tok)) {
                     score += 15;
-                } else if (allSearchText.includes(tok)) {
-                    score += 8;
+                    matchedDistinctiveCount++;
                 }
             });
+
+            // Every result MUST match at least one distinctive token!
+            if (matchedDistinctiveCount === 0) {
+                return { place: p, score: 0 };
+            }
+
+            // Prioritize places in the currently selected municipality if applicable
+            if (!isOthers && selectedPlace && pPlace === selectedPlace.toLowerCase()) {
+                score += 20;
+            }
 
             return { place: p, score };
         })
@@ -499,6 +549,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // Core query without "Barangay / Brgy" prefix for maximum Nominatim accuracy
+        const coreQuery = cleanQ.replace(/\b(?:barangay|brgy|bry|bgy|bgry)\s*/gi, '').trim();
+
         // 2. Extract barangay if present
         const brgyMatch = cleanQ.match(/\bBarangay\s+([A-Za-z0-9\s]+?)(?:,|$|\s+(?:Balayan|Nasugbu|Lian|Batangas))/i);
         const brgyName = brgyMatch ? `Barangay ${brgyMatch[1].trim()}` : '';
@@ -512,27 +565,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const queriesToTry = [];
         if (hasPh) {
             queriesToTry.push(cleanQ);
+            if (coreQuery && coreQuery !== cleanQ) queriesToTry.push(coreQuery);
         } else {
-            if (!isOthers) {
-                if (hasBatangas) {
-                    queriesToTry.push(`${cleanQ}, ${place}, Philippines`);
-                } else {
-                    queriesToTry.push(`${cleanQ}, ${place}, Batangas, Philippines`);
-                    queriesToTry.push(`${cleanQ}, ${place}, Philippines`);
+            if (!isOthers && place) {
+                if (coreQuery && coreQuery !== cleanQ) {
+                    queriesToTry.push(`${coreQuery}, ${place}, Batangas, Philippines`);
+                    queriesToTry.push(`${coreQuery}, ${place}, Philippines`);
                 }
+                queriesToTry.push(`${cleanQ}, ${place}, Batangas, Philippines`);
+            }
+            if (coreQuery && coreQuery !== cleanQ) {
+                queriesToTry.push(`${coreQuery}, Batangas, Philippines`);
+                queriesToTry.push(`${coreQuery}, Philippines`);
             }
             queriesToTry.push(`${cleanQ}, Batangas, Philippines`);
             queriesToTry.push(`${cleanQ}, Philippines`);
+            if (coreQuery && coreQuery !== cleanQ) {
+                queriesToTry.push(coreQuery);
+            }
         }
 
         if (brgyName) {
-            if (!isOthers) queriesToTry.push(`${brgyName}, ${place}, Philippines`);
+            const rawBrgyName = brgyMatch[1].trim();
+            queriesToTry.push(`${rawBrgyName}, Batangas, Philippines`);
+            queriesToTry.push(`${rawBrgyName}, Philippines`);
+            if (!isOthers && place) queriesToTry.push(`${brgyName}, ${place}, Philippines`);
             queriesToTry.push(`${brgyName}, Batangas, Philippines`);
             queriesToTry.push(`${brgyName}, Philippines`);
         }
 
         if (strippedQ && strippedQ !== cleanQ) {
-            if (!isOthers) queriesToTry.push(`${strippedQ}, ${place}, Philippines`);
+            queriesToTry.push(`${strippedQ}, Batangas, Philippines`);
             queriesToTry.push(`${strippedQ}, Philippines`);
         }
 
@@ -540,7 +603,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             queriesToTry.push(`${place}, Batangas, Philippines`);
         }
 
-        for (const q of queriesToTry) {
+        // Remove duplicate query strings
+        const uniqueQueries = [...new Set(queriesToTry.filter(Boolean))];
+
+        for (const q of uniqueQueries) {
             try {
                 const res = await fetch(`/api/config/geocode?q=${encodeURIComponent(q)}`);
                 if (res.ok) {
@@ -1207,7 +1273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 suggestionsEl.classList.remove('hidden');
             };
 
-            // INSTANT SUGGESTIONS & AUTO-PIN WHILE TYPING
+            // INSTANT SUGGESTIONS
             inputEl.addEventListener('input', (e) => {
                 const query = e.target.value.trim();
                 clearTimeout(timer);
@@ -1218,36 +1284,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const currPlace = placeSelect ? placeSelect.value : '';
+                const isOthers = (currPlace === 'Others' || currPlace === 'Other');
 
-                // 1. Instant 0ms Local Matching
-                const localMatches = matchLocalBatangasPlaces(query, currPlace);
-                if (localMatches.length > 0) {
-                    renderSuggestions(localMatches);
-
-                    // AUTOMATICALLY PIN IMMEDIATELY TO TOP MATCH WHILE TYPING!
-                    if (!isPinLocked && typeof onSelectPlace === 'function') {
-                        const top = localMatches[0];
-                        onSelectPlace(parseFloat(top.lat), parseFloat(top.lng), null, false);
+                // 1. Instant 0ms Local Matching (only for in-coverage municipalities)
+                if (!isOthers) {
+                    const localMatches = matchLocalBatangasPlaces(query, currPlace);
+                    if (localMatches.length > 0) {
+                        renderSuggestions(localMatches);
+                        return;
                     }
-                    return;
                 }
 
-                // 2. Debounced Remote Fallback for places outside local dataset
+                // 2. Debounced Remote Search for places outside local dataset or when local matches are empty
                 timer = setTimeout(async () => {
                     try {
                         const results = await searchLocation(query);
                         if (results && results.length > 0) {
                             renderSuggestions(results);
-                            if (!isPinLocked && typeof onSelectPlace === 'function') {
-                                onSelectPlace(parseFloat(results[0].lat), parseFloat(results[0].lon), null, false);
-                            }
                         } else {
                             hide();
                         }
                     } catch (err) {
                         hide();
                     }
-                }, 250);
+                }, 280);
             });
 
             inputEl.addEventListener('focus', () => {
