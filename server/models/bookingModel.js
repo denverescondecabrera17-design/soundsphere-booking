@@ -77,7 +77,7 @@ const checkProviderAvailability = async ({ providerId, serviceStartDate, service
             b.BookingStatus
         FROM dbo.Bookings b
         WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
-          AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+          AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected', 'Pending')
           AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
           AND (
               ISNULL(b.ServiceStartDate, b.EventDate) <= @EndDate 
@@ -165,7 +165,7 @@ const getProviderAvailabilitySlots = async (providerId) => {
                     b.BookingStatus
                 FROM dbo.Bookings b
                 WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
-                  AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+                  AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected', 'Pending')
                   AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
                 ORDER BY ISNULL(b.ServiceStartDate, b.EventDate) ASC;
             `),
@@ -271,7 +271,8 @@ const getProviderCalendarSchedule = async (providerUserIdOrProviderId) => {
                 LEFT JOIN dbo.Users u ON b.ClientUserID = u.UserID
                 LEFT JOIN dbo.Clients c ON u.UserID = c.UserID
                 WHERE (b.ProviderID = @ProviderID OR b.ProviderID IN (SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProviderID))
-                  AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+                  AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected', 'Pending')
+                  AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
                 ORDER BY ISNULL(b.ServiceStartDate, b.EventDate) ASC, b.StartTime ASC;
             `),
         pool.request()
@@ -334,7 +335,8 @@ const setProviderDateCapacity = async (providerUserIdOrProviderId, specificDate,
             SELECT COUNT(*) AS activeCount
             FROM dbo.Bookings b
             WHERE b.ProviderID = @ProviderID
-              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected', 'Pending')
+              AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
               AND (
                   ISNULL(b.ServiceStartDate, b.EventDate) <= @SpecificDate 
                   AND ISNULL(b.ServiceEndDate, b.EventDate) >= @SpecificDate
@@ -390,7 +392,8 @@ const deleteProviderDateCapacity = async (providerUserIdOrProviderId, specificDa
             SELECT COUNT(*) AS activeCount
             FROM dbo.Bookings b
             WHERE b.ProviderID = @ProviderID
-              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected')
+              AND ISNULL(b.BookingStatus, '') NOT IN ('Cancelled', 'Rejected', 'Pending')
+              AND (ISNULL(b.PaymentStatus, '') IN ('Paid', 'Partial') OR ISNULL(b.AmountPaid, 0) > 0)
               AND (
                   ISNULL(b.ServiceStartDate, b.EventDate) <= @SpecificDate 
                   AND ISNULL(b.ServiceEndDate, b.EventDate) >= @SpecificDate

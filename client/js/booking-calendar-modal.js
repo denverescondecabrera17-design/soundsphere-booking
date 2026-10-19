@@ -475,7 +475,14 @@
                     calIsPermitExpired = !!(data.isPermitExpired);
                     calPermitExpiryDate = data.permitExpiryDate || null;
                     if (Array.isArray(data.bookedSlots)) {
-                        return data.bookedSlots;
+                        return data.bookedSlots.filter(slot => {
+                            const bStatus = (slot.BookingStatus || '').trim().toLowerCase();
+                            const pStatus = (slot.PaymentStatus || '').trim().toLowerCase();
+                            const amtPaid = Number(slot.AmountPaid || 0);
+                            if (bStatus === 'pending' || bStatus === 'cancelled' || bStatus === 'rejected') return false;
+                            if ((pStatus === 'pending' || pStatus === 'unpaid') && amtPaid <= 0) return false;
+                            return true;
+                        });
                     }
                 }
             }

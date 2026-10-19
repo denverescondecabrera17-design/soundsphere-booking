@@ -3793,9 +3793,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
+                    const rawBookings = Array.isArray(data.bookings) ? data.bookings : [];
+                    const activeBookingsOnly = rawBookings.filter(b => {
+                        const bStatus = (b.BookingStatus || '').trim().toLowerCase();
+                        const pStatus = (b.PaymentStatus || '').trim().toLowerCase();
+                        const amtPaid = Number(b.AmountPaid || 0);
+                        if (bStatus === 'pending' || bStatus === 'cancelled' || bStatus === 'rejected') return false;
+                        if ((pStatus === 'pending' || pStatus === 'unpaid') && amtPaid <= 0) return false;
+                        return (pStatus === 'paid' || pStatus === 'partial' || amtPaid > 0);
+                    });
+
                     provCalData = {
                         defaultCapacity: data.defaultCapacity || 1,
-                        bookings: data.bookings || [],
+                        bookings: activeBookingsOnly,
                         capacities: data.capacities || [],
                         isPermitExpired: !!(data.isPermitExpired),
                         isSubscriptionActive: data.isSubscriptionActive !== false,
@@ -3913,8 +3923,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const maxAllowed = override ? override.MaxBookings : provCalData.defaultCapacity;
             const isBlocked = (maxAllowed === 0);
 
-            // Count bookings overlapping with this date
+            // Count bookings overlapping with this date (paid/confirmed only)
             const activeBookings = (provCalData.bookings || []).filter(b => {
+                const bStatus = (b.BookingStatus || '').trim().toLowerCase();
+                const pStatus = (b.PaymentStatus || '').trim().toLowerCase();
+                const amtPaid = Number(b.AmountPaid || 0);
+                if (bStatus === 'pending' || bStatus === 'cancelled' || bStatus === 'rejected') return false;
+                if ((pStatus === 'pending' || pStatus === 'unpaid') && amtPaid <= 0) return false;
+                if (pStatus !== 'paid' && pStatus !== 'partial' && amtPaid <= 0) return false;
+
                 const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
                 const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];
                 return (cellDateIso >= sDate && cellDateIso <= eDate);
@@ -4028,8 +4045,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isBlocked = (maxAllowed === 0);
         const isPast = (provCalSelectedDate < todayIso);
 
-        // Filter bookings for this date
+        // Filter bookings for this date (paid/confirmed only)
         const activeBookings = (provCalData.bookings || []).filter(b => {
+            const bStatus = (b.BookingStatus || '').trim().toLowerCase();
+            const pStatus = (b.PaymentStatus || '').trim().toLowerCase();
+            const amtPaid = Number(b.AmountPaid || 0);
+            if (bStatus === 'pending' || bStatus === 'cancelled' || bStatus === 'rejected') return false;
+            if ((pStatus === 'pending' || pStatus === 'unpaid') && amtPaid <= 0) return false;
+            if (pStatus !== 'paid' && pStatus !== 'partial' && amtPaid <= 0) return false;
+
             const sDate = String(b.ServiceStartDate || b.EventDate || '').trim().split('T')[0];
             const eDate = String(b.ServiceEndDate || sDate).trim().split('T')[0];
             return (provCalSelectedDate >= sDate && provCalSelectedDate <= eDate);
