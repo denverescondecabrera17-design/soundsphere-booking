@@ -2431,6 +2431,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             eventTimeEl.textContent = sTime;
         }
 
+        const eventEndTimeEl = document.getElementById('pbd-event-end-time');
+        if (eventEndTimeEl) {
+            let eTime = booking.EndTime;
+            if (eTime && !eTime.toLowerCase().includes('am') && !eTime.toLowerCase().includes('pm')) {
+                const parts = eTime.split(':');
+                if (parts.length >= 2) {
+                    let hour = parseInt(parts[0], 10);
+                    const minutes = parts[1].substring(0, 2).padStart(2, '0');
+                    const period = hour >= 12 ? 'PM' : 'AM';
+                    hour = hour % 12;
+                    if (hour === 0) hour = 12;
+                    eTime = `${hour}:${minutes} ${period}`;
+                }
+            }
+            if (!eTime) {
+                let startRaw = booking.StartTime || booking.EventTime || '08:00';
+                if (startRaw.includes('-')) startRaw = startRaw.split('-')[0].trim();
+                const parts = startRaw.split(':');
+                let hour = parseInt(parts[0], 10);
+                if (isNaN(hour)) hour = 8;
+                const minutes = parts[1] ? parts[1].substring(0, 2).padStart(2, '0') : '00';
+                const duration = parseInt(booking.NumberOfHours || 5, 10) || 5;
+                hour = (hour + duration) % 24;
+                const period = hour >= 12 ? 'PM' : 'AM';
+                hour = hour % 12;
+                if (hour === 0) hour = 12;
+                eTime = `${hour}:${minutes} ${period}`;
+            }
+            eventEndTimeEl.textContent = eTime;
+        }
+
         const venueEl = document.getElementById('pbd-event-venue');
         if (venueEl) venueEl.textContent = booking.VenueName || booking.EventPlace || 'Private Venue';
 
