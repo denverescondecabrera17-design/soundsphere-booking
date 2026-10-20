@@ -1144,14 +1144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 if (headerActionsEl) {
-                    headerActionsEl.innerHTML = `
-                        <button type="button" onclick="window.promptRejectApp(${app.ApplicationID})" style="padding:8px 18px; border:none; border-radius:8px; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-xmark"></i> Reject
-                        </button>
-                        <button type="button" onclick="window.approveApp(${app.ApplicationID})" style="padding:8px 22px; border:none; border-radius:8px; background:#10b981; color:#fff; cursor:pointer; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-check"></i> Approve Application
-                        </button>
-                    `;
+                    headerActionsEl.innerHTML = '';
                 }
 
                 const sanitizeImg = (url) => {
