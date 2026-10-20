@@ -1430,6 +1430,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const eDate = b.ServiceEndDate || b.EventDate || sDate;
                         const hireDays = b.ServiceHireDays || b.NumberOfDays || 1;
                         const dateText = (sDate === eDate) ? sDate : `${sDate} to ${eDate}`;
+                        const formattedStart = formatDisplayTime(b.StartTime) || '08:00 AM';
+                        const durationHrs = parseInt(b.NumberOfHours || 5, 10) || 5;
+                        const formattedEnd = b.EndTime ? formatDisplayTime(b.EndTime) : calculateDisplayEndTime(b.StartTime, durationHrs);
                         const providerName = b.ProviderName || b.BusinessName || 'CHICha Lights and Sounds';
                         const bookedOn = b.CreatedAt ? new Date(b.CreatedAt).toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}) : 'Recently';
                         const clientName = b.ClientName || (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
