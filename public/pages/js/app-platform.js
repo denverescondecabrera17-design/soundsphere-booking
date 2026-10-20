@@ -3241,7 +3241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnContainer) {
                 btnContainer.innerHTML = `
                     <button type="button" class="btn-card-primary" id="btn-open-provider-app-modal" style="padding:10px 24px;">
-                        <i class="fa-solid fa-rotate"></i> Review / Resubmit Application
+                        <i class="fa-solid fa-rotate"></i> Resubmit Application
                     </button>
                 `;
             }
