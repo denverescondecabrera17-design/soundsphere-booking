@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render Pending Applications Table
     const renderPendingApplicationsTable = (apps) => {
         const html = (!apps || apps.length === 0)
-            ? `<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">No pending applications.</td></tr>`
+            ? `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No pending applications.</td></tr>`
             : apps.map(app => `
                 <tr onclick="window.viewAppDetails(${app.ApplicationID})" style="cursor:pointer; transition:background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" title="Click to view application details in full screen">
                     <td>
@@ -458,16 +458,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td><span style="font-size:0.84rem; color:#0a192f;"><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> ${app.CoverageArea || 'Batangas'}</span></td>
                     <td><span style="font-size:0.82rem; color:#64748b;">${new Date(app.SubmittedAt || Date.now()).toLocaleDateString()}</span></td>
                     <td><span class="status-badge status-${(app.Status || 'Pending').toLowerCase()}">${app.Status || 'Pending Review'}</span></td>
-                    <td>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" onclick="event.stopPropagation(); window.approveApp(${app.ApplicationID})" style="padding:6px 14px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer;" title="Approve Application">
-                                <i class="fa-solid fa-check"></i> Approve
-                            </button>
-                            <button type="button" onclick="event.stopPropagation(); window.promptRejectApp(${app.ApplicationID})" style="padding:6px 14px; font-size:0.78rem; font-weight:700; border:none; border-radius:6px; background:#ef4444; color:#fff; cursor:pointer;" title="Reject Application">
-                                <i class="fa-solid fa-xmark"></i> Reject
-                            </button>
-                        </div>
-                    </td>
                 </tr>
             `).join('');
 
