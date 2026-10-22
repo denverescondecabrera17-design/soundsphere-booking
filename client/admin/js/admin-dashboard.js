@@ -500,16 +500,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderRegisteredClientsTable = (clients) => {
         const html = (!clients || clients.length === 0)
             ? `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No registered clients found.</td></tr>`
-            : clients.map(c => `
+            : clients.map(c => {
+                const count = Number(c.BookingCount) || 0;
+                const bookingLabel = (count === 0 || count === 1) ? `${count} Booking` : `${count} Bookings`;
+                return `
                 <tr>
                     <td><strong style="color:#0a192f; font-size:0.9rem;">${c.FullName}</strong></td>
                     <td><span style="font-size:0.84rem; color:#2563eb;">${c.Email}</span></td>
                     <td><span style="font-size:0.82rem; color:#64748b;">${c.Phone || 'N/A'}</span></td>
                     <td><span style="font-size:0.82rem; color:#64748b;">${new Date(c.RegistrationDate || Date.now()).toLocaleDateString()}</span></td>
-                    <td><span style="font-size:0.85rem; font-weight:700; color:#0a192f;">${c.BookingCount || 0} Bookings</span></td>
+                    <td><span style="font-size:0.85rem; font-weight:700; color:#0a192f;">${bookingLabel}</span></td>
                     <td><span class="status-badge status-confirmed">Active Client</span></td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
         if (tableBodyRegisteredClients) tableBodyRegisteredClients.innerHTML = html;
         if (tableBodyRegisteredClientsFull) tableBodyRegisteredClientsFull.innerHTML = html;
@@ -1759,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
                     <div style="font-size:0.78rem; font-weight:800; color:#64748b; text-transform:uppercase;">TOTAL BOOKINGS</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:#2563eb; margin-top:4px;">${provBookings.length} Bookings</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#2563eb; margin-top:4px;">${provBookings.length === 1 || provBookings.length === 0 ? `${provBookings.length} Booking` : `${provBookings.length} Bookings`}</div>
                     <span style="font-size:0.75rem; color:#64748b;">Scheduled platform bookings</span>
                 </div>
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
