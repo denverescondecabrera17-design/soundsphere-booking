@@ -2051,7 +2051,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const res = await fetch(`/api/providers/my-bookings/${bookingId}/complete`, {
                 method: 'PUT',
-                headers
+                headers,
+                body: JSON.stringify({ force: true })
             });
             const data = await res.json();
             if (res.ok && data.success) {

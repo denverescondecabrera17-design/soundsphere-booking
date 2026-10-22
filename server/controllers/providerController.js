@@ -951,19 +951,41 @@ const completeBooking = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Unauthorized to mark this booking as complete.' });
         }
 
-        // Enforce: Complete button is only available on or after the day of services!
+        // Enforce: Complete button is only available on or after the day of services (Asia/Manila timezone)
         const rawDate = booking.ServiceStartDate || booking.EventDate;
-        if (rawDate) {
-            const now = new Date();
-            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            const eventDate = new Date(rawDate);
-            const eventMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+        const allowOverride = req.body && (req.body.force === true || req.body.forceCompletion === true || req.body.confirmedEarly === true);
+        if (rawDate && !allowOverride) {
+            let bookingDateStr = null;
+            if (typeof rawDate === 'string') {
+                const clean = rawDate.trim().split('T')[0];
+                if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) bookingDateStr = clean;
+            }
+            if (!bookingDateStr) {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
+                    bookingDateStr = new Intl.DateTimeFormat('en-CA', { 
+                        timeZone: 'Asia/Manila', 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit' 
+                    }).format(d);
+                }
+            }
 
-            if (todayMidnight < eventMidnight) {
-                const dateFormatted = eventDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+            const nowManilaStr = new Intl.DateTimeFormat('en-CA', { 
+                timeZone: 'Asia/Manila', 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            }).format(new Date());
+
+            if (bookingDateStr && nowManilaStr < bookingDateStr) {
+                const parts = bookingDateStr.split('-');
+                const displayDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
+                    .toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
                 return res.status(400).json({
                     success: false,
-                    message: `The Complete button will only be available on the day of services (${dateFormatted}).`
+                    message: `The Complete button will only be available on the day of services (${displayDate}).`
                 });
             }
         }
