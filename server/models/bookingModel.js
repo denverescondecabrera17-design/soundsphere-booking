@@ -1043,7 +1043,7 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
 /**
  * Reschedule booking event date by Client with availability verification & policy checks
  */
-const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, newStartTime, reason }) => {
+const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, newEndDate, newStartTime, newEndTime, reason }) => {
     const pool = getPool();
     if (!pool) throw new Error('Database pool not available.');
 
@@ -1154,27 +1154,38 @@ const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, new
     }
 
     // Multi-day hire calculation
-    const hireDays = parseInt(booking.ServiceHireDays || booking.NumberOfDays || 1, 10) || 1;
-    let newEndDate = cleanNewDate;
-    if (hireDays > 1) {
+    let hireDays = parseInt(booking.ServiceHireDays || booking.NumberOfDays || 1, 10) || 1;
+    if (booking.ServiceStartDate && booking.ServiceEndDate) {
+        const sD = new Date(String(booking.ServiceStartDate).split('T')[0]);
+        const eD = new Date(String(booking.ServiceEndDate).split('T')[0]);
+        if (!isNaN(sD.getTime()) && !isNaN(eD.getTime()) && eD >= sD) {
+            const diffDays = Math.round((eD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            if (diffDays > hireDays) hireDays = diffDays;
+        }
+    }
+
+    let calculatedEndDate = cleanNewDate;
+    if (newEndDate && typeof newEndDate === 'string' && newEndDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        calculatedEndDate = newEndDate.trim();
+    } else if (hireDays > 1) {
         const endD = new Date(newDateObj);
         endD.setDate(endD.getDate() + (hireDays - 1));
         const ey = endD.getFullYear();
         const em = String(endD.getMonth() + 1).padStart(2, '0');
         const ed = String(endD.getDate()).padStart(2, '0');
-        newEndDate = `${ey}-${em}-${ed}`;
+        calculatedEndDate = `${ey}-${em}-${ed}`;
     }
 
     const finalStartTime = (newStartTime && typeof newStartTime === 'string') ? newStartTime.trim() : (booking.StartTime || '08:00');
-    const finalEndTime = booking.EndTime || '13:00';
+    const finalEndTime = (newEndTime && typeof newEndTime === 'string') ? newEndTime.trim() : (booking.EndTime || '13:00');
 
-    // Verify Provider Availability on the New Date (excluding this booking itself)
+    // Verify Provider Availability on the New Date Range (excluding this booking itself)
     const providerId = booking.ProviderID;
     if (providerId) {
         const availCheck = await checkProviderAvailability({
             providerId,
             serviceStartDate: cleanNewDate,
-            serviceEndDate: newEndDate,
+            serviceEndDate: calculatedEndDate,
             eventDate: cleanNewDate,
             startTime: finalStartTime,
             endTime: finalEndTime,
@@ -1185,21 +1196,25 @@ const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, new
             return {
                 success: false,
                 code: 'UNAVAILABLE',
-                message: availCheck.message || 'Provider is already booked or unavailable on the selected date. Please choose another open date.'
+                message: availCheck.message || 'Provider is already booked or unavailable on one or more of the selected dates. Please choose another open date range.'
             };
         }
     }
 
-    const prevDate = booking.EventDate || booking.ServiceStartDate || 'Original Date';
-    const rescheduleLog = `[Rescheduled from ${prevDate} to ${cleanNewDate} on ${nowTime.toISOString()}${reason ? ` | Reason: ${reason}` : ''}]`;
+    const prevDate = (booking.ServiceStartDate && booking.ServiceEndDate && booking.ServiceStartDate !== booking.ServiceEndDate)
+        ? `${booking.ServiceStartDate} to ${booking.ServiceEndDate}`
+        : (booking.EventDate || booking.ServiceStartDate || 'Original Date');
+    const newDateRangeStr = (cleanNewDate !== calculatedEndDate) ? `${cleanNewDate} to ${calculatedEndDate}` : cleanNewDate;
+    const rescheduleLog = `[Rescheduled from ${prevDate} to ${newDateRangeStr} (${finalStartTime} - ${finalEndTime}) on ${nowTime.toISOString()}${reason ? ` | Reason: ${reason}` : ''}]`;
     const updatedNotes = booking.LocationNotes ? `${booking.LocationNotes}\n${rescheduleLog}` : rescheduleLog;
 
     // Execute atomic update in database
     await pool.request()
         .input('BookingID', sql.Int, booking.BookingID)
         .input('NewDate', sql.NVarChar(50), cleanNewDate)
-        .input('NewEndDate', sql.NVarChar(50), newEndDate)
+        .input('NewEndDate', sql.NVarChar(50), calculatedEndDate)
         .input('StartTime', sql.NVarChar(50), finalStartTime)
+        .input('EndTime', sql.NVarChar(50), finalEndTime)
         .input('LocationNotes', sql.NVarChar(500), updatedNotes.substring(0, 500))
         .query(`
             UPDATE dbo.Bookings
@@ -1207,6 +1222,7 @@ const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, new
                 ServiceStartDate = @NewDate,
                 ServiceEndDate = @NewEndDate,
                 StartTime = @StartTime,
+                EndTime = @EndTime,
                 LocationNotes = @LocationNotes,
                 UpdatedAt = GETDATE()
             WHERE BookingID = @BookingID;

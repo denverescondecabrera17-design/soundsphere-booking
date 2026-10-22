@@ -1245,21 +1245,24 @@ const rescheduleBooking = async (req, res) => {
     try {
         const bookingId = parseInt(req.params.id, 10);
         const clientUserId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || req.body.clientUserId);
-        const { newDate, newStartTime, reason } = req.body;
+        const { newDate, newStartDate, newEndDate, newStartTime, newEndTime, reason } = req.body;
 
         if (!bookingId || isNaN(bookingId)) {
             return res.status(400).json({ success: false, message: 'Valid Booking ID is required.' });
         }
 
-        if (!newDate) {
+        const effectiveNewDate = newDate || newStartDate;
+        if (!effectiveNewDate) {
             return res.status(400).json({ success: false, message: 'New event date is required.' });
         }
 
         const result = await bookingModel.rescheduleBookingByClient({
             bookingId,
             clientUserId,
-            newDate,
+            newDate: effectiveNewDate,
+            newEndDate,
             newStartTime,
+            newEndTime,
             reason
         });
 

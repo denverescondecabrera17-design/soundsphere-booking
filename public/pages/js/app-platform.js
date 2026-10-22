@@ -1006,6 +1006,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
 
+                            const rawEndDate = b.ServiceEndDate || b.EventDate || eDate || sDate;
+                            let formattedEndDateForDataset = formattedDateForDataset;
+                            if (rawEndDate) {
+                                const parsedEndDate = new Date(rawEndDate);
+                                if (!isNaN(parsedEndDate.getTime())) {
+                                    formattedEndDateForDataset = parsedEndDate.toISOString().split('T')[0];
+                                } else {
+                                    formattedEndDateForDataset = String(rawEndDate).split('T')[0];
+                                }
+                            }
+
+                            let calculatedHireDays = parseInt(b.ServiceHireDays || b.NumberOfDays || 1, 10) || 1;
+                            if (formattedDateForDataset && formattedEndDateForDataset) {
+                                const sMs = new Date(formattedDateForDataset).getTime();
+                                const eMs = new Date(formattedEndDateForDataset).getTime();
+                                if (!isNaN(sMs) && !isNaN(eMs) && eMs >= sMs) {
+                                    const diff = Math.round((eMs - sMs) / (1000 * 60 * 60 * 24)) + 1;
+                                    if (diff > calculatedHireDays) calculatedHireDays = diff;
+                                }
+                            }
+
+                            const startTimeVal = b.StartTime || '08:00';
+                            const endTimeVal = b.EndTime || '13:00';
+
                             if (canReschedule) {
                                 rescheduleBtnHtml = `
                                     <button type="button" class="btn-reschedule-marketplace-booking"
@@ -1014,7 +1038,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                         data-provider-id="${b.ProviderID || ''}"
                                         data-provider-name="${encodeURIComponent(b.ProviderName || 'Sound Provider')}"
                                         data-current-date="${formattedDateForDataset}"
-                                        data-current-start="${b.StartTime || '08:00'}"
+                                        data-current-end-date="${formattedEndDateForDataset}"
+                                        data-hire-days="${calculatedHireDays}"
+                                        data-current-start="${startTimeVal}"
+                                        data-current-end="${endTimeVal}"
                                         style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #bfdbfe; background:#eff6ff; color:#2563eb; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;"
                                         title="${rescheduleTitle}">
                                         <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Request Reschedule
@@ -1370,8 +1397,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rescheduleRefSpan = document.getElementById('marketplace-reschedule-booking-ref');
                     const rescheduleProvSpan = document.getElementById('marketplace-reschedule-provider-name');
                     const rescheduleCurDateSpan = document.getElementById('marketplace-reschedule-current-date');
+                    const rescheduleDurationInfo = document.getElementById('marketplace-reschedule-duration-info');
+                    const rescheduleCalTitle = document.getElementById('marketplace-reschedule-cal-title');
                     const rescheduleNewDateInput = document.getElementById('marketplace-reschedule-new-date');
+                    const rescheduleNewEndDateInput = document.getElementById('marketplace-reschedule-new-end-date');
                     const rescheduleStartTimeInput = document.getElementById('marketplace-reschedule-start-time');
+                    const rescheduleEndTimeInput = document.getElementById('marketplace-reschedule-end-time');
+                    const rescheduleDurationBadge = document.getElementById('marketplace-reschedule-duration-badge');
                     const rescheduleReasonInput = document.getElementById('marketplace-reschedule-reason');
                     const rescheduleForm = document.getElementById('marketplace-reschedule-form');
                     const rescheduleDaysGrid = document.getElementById('marketplace-reschedule-days-grid');
@@ -1382,18 +1414,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rescheduleSelectedDisplay = document.getElementById('marketplace-reschedule-selected-display');
                     const submitRescheduleBtn = document.getElementById('btn-submit-marketplace-reschedule');
 
-                    // Interactive Reschedule Calendar State
+                    // Interactive Reschedule Calendar & Multi-Day State
                     let reschedCalMonth = new Date().getMonth();
                     let reschedCalYear = new Date().getFullYear();
                     let reschedBookedSlots = [];
                     let reschedCurrentBookingId = null;
-                    let reschedCurrentBookingDate = '';
-                    let reschedSelectedDate = '';
+                    let reschedCurrentBookingStartDate = '';
+                    let reschedCurrentBookingEndDate = '';
+                    let reschedHireDays = 1;
+                    let reschedDurationHours = 5;
+                    let reschedSelectedStartDate = '';
+                    let reschedSelectedEndDate = '';
 
                     const MONTH_NAMES = [
                         "January", "February", "March", "April", "May", "June",
                         "July", "August", "September", "October", "November", "December"
                     ];
+
+                    function getConsecutiveDates(startIso, numDays) {
+                        const dates = [];
+                        const [y, m, d] = startIso.split('-').map(Number);
+                        for (let i = 0; i < numDays; i++) {
+                            const dt = new Date(y, m - 1, d + i);
+                            const cy = dt.getFullYear();
+                            const cm = String(dt.getMonth() + 1).padStart(2, '0');
+                            const cd = String(dt.getDate()).padStart(2, '0');
+                            dates.push(`${cy}-${cm}-${cd}`);
+                        }
+                        return dates;
+                    }
+
+                    function getDurationInHours(sTime, eTime) {
+                        if (!sTime || !eTime) return 5;
+                        const [sh, sm] = sTime.split(':').map(Number);
+                        const [eh, em] = eTime.split(':').map(Number);
+                        let diff = (eh * 60 + (em || 0)) - (sh * 60 + (sm || 0));
+                        if (diff <= 0) diff += 24 * 60;
+                        const hrs = diff / 60;
+                        return Math.round(hrs * 10) / 10;
+                    }
+
+                    function addHoursToTime(timeStr, hours) {
+                        if (!timeStr) return '13:00';
+                        const [h, m] = timeStr.split(':').map(Number);
+                        const totalMins = (h * 60 + (m || 0)) + Math.round((hours || 5) * 60);
+                        const newH = Math.floor(totalMins / 60) % 24;
+                        const newM = totalMins % 60;
+                        return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+                    }
+
+                    function formatPrettyDate(dateIso) {
+                        if (!dateIso) return '';
+                        const [y, m, d] = dateIso.split('-').map(Number);
+                        const obj = new Date(y, m - 1, d);
+                        return obj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+
+                    function isDateInCurrentBooking(dateIso) {
+                        if (!reschedCurrentBookingStartDate) return false;
+                        const endD = reschedCurrentBookingEndDate || reschedCurrentBookingStartDate;
+                        return (dateIso >= reschedCurrentBookingStartDate && dateIso <= endD);
+                    }
 
                     function isRescheduleDateBooked(dateIso) {
                         if (!reschedBookedSlots || reschedBookedSlots.length === 0) return false;
@@ -1411,6 +1492,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
 
+                    function evaluateDateRangeAvailability(startIso, numDays) {
+                        const dates = getConsecutiveDates(startIso, numDays);
+                        const now = new Date();
+                        const minAllowed = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() + (24 * 60 * 60 * 1000);
+                        for (let i = 0; i < dates.length; i++) {
+                            const dIso = dates[i];
+                            const [y, m, d] = dIso.split('-').map(Number);
+                            const cellTime = new Date(y, m - 1, d).getTime();
+                            if (cellTime < minAllowed) {
+                                return { available: false, dates, conflictDate: dIso, reason: `Day ${i + 1} (${dIso}) is in the past.` };
+                            }
+                            if (isRescheduleDateBooked(dIso)) {
+                                return { available: false, dates, conflictDate: dIso, reason: `Day ${i + 1} (${formatPrettyDate(dIso)}) is already booked by another client.` };
+                            }
+                        }
+                        return { available: true, dates, startDate: dates[0], endDate: dates[dates.length - 1] };
+                    }
+
                     function renderRescheduleCalendarGrid() {
                         if (!rescheduleDaysGrid) return;
                         rescheduleDaysGrid.innerHTML = '';
@@ -1425,6 +1524,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const now = new Date();
                         const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
                         const minAllowedMidnight = todayMidnight + (24 * 60 * 60 * 1000); // Tomorrow onwards
+
+                        const selectedDatesList = (reschedSelectedStartDate && reschedHireDays)
+                            ? getConsecutiveDates(reschedSelectedStartDate, reschedHireDays)
+                            : [];
 
                         // Prev month padding cells
                         for (let i = 0; i < firstDayIndex; i++) {
@@ -1445,14 +1548,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             cell.style.flexDirection = 'column';
                             cell.style.alignItems = 'center';
                             cell.style.justifyContent = 'center';
-                            cell.style.padding = '6px 2px';
+                            cell.style.padding = '5px 2px';
                             cell.style.borderRadius = '10px';
                             cell.style.minHeight = '48px';
                             cell.style.position = 'relative';
                             cell.style.transition = 'all 0.15s ease';
 
-                            if (cellDate.getTime() < minAllowedMidnight) {
-                                // Past date
+                            const isPast = cellDate.getTime() < minAllowedMidnight;
+                            const isCurrent = isDateInCurrentBooking(cellIso);
+                            const isBooked = isRescheduleDateBooked(cellIso);
+                            const selectedIdx = selectedDatesList.indexOf(cellIso);
+                            const isSelected = selectedIdx !== -1;
+
+                            if (isPast) {
                                 cell.style.background = '#f1f5f9';
                                 cell.style.color = '#94a3b8';
                                 cell.style.border = '1px dashed #e2e8f0';
@@ -1463,19 +1571,33 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span style="font-size:0.86rem; font-weight:700;">${day}</span>
                                     <span style="font-size:0.6rem; color:#94a3b8;">Past</span>
                                 `;
-                            } else if (cellIso === reschedCurrentBookingDate) {
-                                // Currently booked date
+                            } else if (isSelected) {
+                                cell.style.background = '#2563eb';
+                                cell.style.color = '#ffffff';
+                                cell.style.border = '1.5px solid #1d4ed8';
+                                cell.style.cursor = 'pointer';
+                                cell.style.boxShadow = '0 3px 10px rgba(37,99,235,0.35)';
+                                cell.style.transform = 'scale(1.03)';
+
+                                let tagText = 'Selected';
+                                if (reschedHireDays > 1) {
+                                    tagText = (selectedIdx === 0) ? 'Day 1 (Start)' : ((selectedIdx === reschedHireDays - 1) ? `Day ${reschedHireDays} (End)` : `Day ${selectedIdx + 1}`);
+                                }
+                                cell.innerHTML = `
+                                    <span style="font-size:0.9rem; font-weight:900; color:#ffffff;">${day}</span>
+                                    <span style="font-size:0.56rem; font-weight:800; color:#dbeafe; line-height:1;">${tagText}</span>
+                                `;
+                            } else if (isCurrent) {
                                 cell.style.background = '#fffbeb';
                                 cell.style.color = '#b45309';
                                 cell.style.border = '1.5px solid #fde68a';
-                                cell.style.cursor = 'default';
+                                cell.style.cursor = 'pointer';
                                 cell.title = 'Your current reservation date';
                                 cell.innerHTML = `
                                     <span style="font-size:0.86rem; font-weight:800;">${day}</span>
                                     <span style="font-size:0.6rem; font-weight:700; color:#b45309;">Current</span>
                                 `;
-                            } else if (isRescheduleDateBooked(cellIso)) {
-                                // Booked / Conflict
+                            } else if (isBooked) {
                                 cell.style.background = '#fef2f2';
                                 cell.style.color = '#ef4444';
                                 cell.style.border = '1.5px solid #fecaca';
@@ -1485,20 +1607,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span style="font-size:0.86rem; font-weight:800;">${day}</span>
                                     <span style="font-size:0.6rem; font-weight:700; color:#dc2626;">Booked</span>
                                 `;
-                            } else if (cellIso === reschedSelectedDate) {
-                                // Selected New Date
-                                cell.style.background = '#2563eb';
-                                cell.style.color = '#ffffff';
-                                cell.style.border = '1.5px solid #1d4ed8';
-                                cell.style.cursor = 'pointer';
-                                cell.style.boxShadow = '0 4px 12px rgba(37,99,235,0.35)';
-                                cell.style.transform = 'scale(1.04)';
-                                cell.innerHTML = `
-                                    <span style="font-size:0.92rem; font-weight:900; color:#ffffff;">${day}</span>
-                                    <span style="font-size:0.6rem; font-weight:800; color:#dbeafe;"><i class="fa-solid fa-check"></i> Selected</span>
-                                `;
                             } else {
-                                // Available / Open Date
+                                // Available date
                                 cell.style.background = '#ffffff';
                                 cell.style.color = '#0f172a';
                                 cell.style.border = '1.5px solid #cbd5e1';
@@ -1507,33 +1617,63 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span style="font-size:0.86rem; font-weight:800;">${day}</span>
                                     <span style="font-size:0.6rem; font-weight:700; color:#10b981;">Available</span>
                                 `;
+
                                 cell.addEventListener('mouseenter', () => {
-                                    if (cellIso !== reschedSelectedDate) {
+                                    if (!selectedDatesList.includes(cellIso)) {
                                         cell.style.background = '#eff6ff';
                                         cell.style.borderColor = '#93c5fd';
                                         cell.style.transform = 'translateY(-1px)';
                                     }
                                 });
                                 cell.addEventListener('mouseleave', () => {
-                                    if (cellIso !== reschedSelectedDate) {
+                                    if (!selectedDatesList.includes(cellIso)) {
                                         cell.style.background = '#ffffff';
                                         cell.style.borderColor = '#cbd5e1';
                                         cell.style.transform = 'none';
                                     }
                                 });
+                            }
 
+                            if (!isPast && !isBooked) {
                                 cell.addEventListener('click', () => {
-                                    reschedSelectedDate = cellIso;
-                                    if (rescheduleNewDateInput) rescheduleNewDateInput.value = cellIso;
-                                    
-                                    const dParts = cellIso.split('-');
-                                    const dObj = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
-                                    const pretty = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                                    const evalResult = evaluateDateRangeAvailability(cellIso, reschedHireDays);
+                                    if (!evalResult.available) {
+                                        showToast(`⚠️ Cannot select range: ${evalResult.reason}`, 'warning');
+                                        if (rescheduleSelectedDisplay) {
+                                            rescheduleSelectedDisplay.innerHTML = `
+                                                <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:1.1rem;"></i>
+                                                <span style="color:#b91c1c;">Unavailable Range: <strong>${evalResult.reason}</strong></span>
+                                            `;
+                                            rescheduleSelectedDisplay.style.background = '#fef2f2';
+                                            rescheduleSelectedDisplay.style.borderColor = '#fecaca';
+                                            rescheduleSelectedDisplay.style.color = '#b91c1c';
+                                        }
+                                        if (submitRescheduleBtn) {
+                                            submitRescheduleBtn.disabled = true;
+                                            submitRescheduleBtn.style.opacity = '0.6';
+                                            submitRescheduleBtn.style.cursor = 'not-allowed';
+                                        }
+                                        return;
+                                    }
+
+                                    reschedSelectedStartDate = evalResult.startDate;
+                                    reschedSelectedEndDate = evalResult.endDate;
+                                    if (rescheduleNewDateInput) rescheduleNewDateInput.value = evalResult.startDate;
+                                    if (rescheduleNewEndDateInput) rescheduleNewEndDateInput.value = evalResult.endDate;
+
+                                    const prettyStart = formatPrettyDate(evalResult.startDate);
+                                    const prettyEnd = formatPrettyDate(evalResult.endDate);
+                                    const rangeLabel = (reschedHireDays > 1) ? `${prettyStart} to ${prettyEnd}` : prettyStart;
 
                                     if (rescheduleSelectedDisplay) {
                                         rescheduleSelectedDisplay.innerHTML = `
-                                            <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.15rem;"></i>
-                                            <span style="color:#065f46;">Selected New Date: <strong style="color:#0f172a;">${pretty}</strong> <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:6px; font-size:0.75rem; margin-left:6px; border:1px solid #bbf7d0;">✓ Available</span></span>
+                                            <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.2rem;"></i>
+                                            <div style="color:#065f46; font-size:0.86rem;">
+                                                <span>Selected: <strong style="color:#0f172a;">${rangeLabel}</strong></span>
+                                                <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:6px; font-size:0.75rem; margin-left:6px; border:1px solid #bbf7d0; font-weight:800;">
+                                                    ✓ ${reschedHireDays > 1 ? `All ${reschedHireDays} Days Available` : 'Available'}
+                                                </span>
+                                            </div>
                                         `;
                                         rescheduleSelectedDisplay.style.background = '#f0fdf4';
                                         rescheduleSelectedDisplay.style.borderColor = '#86efac';
@@ -1583,19 +1723,56 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
 
+                    // Real-Time Time Inputs & 5-Hour Duration Auto-Calculation
+                    if (rescheduleStartTimeInput && !rescheduleStartTimeInput.dataset.listenerAttached) {
+                        rescheduleStartTimeInput.dataset.listenerAttached = 'true';
+                        rescheduleStartTimeInput.addEventListener('change', () => {
+                            const sVal = rescheduleStartTimeInput.value;
+                            if (!sVal) return;
+                            const newEndVal = addHoursToTime(sVal, reschedDurationHours || 5);
+                            if (rescheduleEndTimeInput) rescheduleEndTimeInput.value = newEndVal;
+                        });
+                    }
+
+                    if (rescheduleEndTimeInput && !rescheduleEndTimeInput.dataset.listenerAttached) {
+                        rescheduleEndTimeInput.dataset.listenerAttached = 'true';
+                        rescheduleEndTimeInput.addEventListener('change', () => {
+                            const sVal = rescheduleStartTimeInput?.value;
+                            const eVal = rescheduleEndTimeInput.value;
+                            if (sVal && eVal) {
+                                const dur = getDurationInHours(sVal, eVal);
+                                reschedDurationHours = dur;
+                                if (rescheduleDurationBadge) rescheduleDurationBadge.textContent = `${dur} hrs`;
+                            }
+                        });
+                    }
+
+                    // Reschedule Button Click Handlers
                     document.querySelectorAll('.btn-reschedule-marketplace-booking').forEach(btn => {
                         btn.addEventListener('click', async () => {
                             const bRef = btn.getAttribute('data-id');
                             const bId = btn.getAttribute('data-booking-id');
                             const provId = btn.getAttribute('data-provider-id');
                             const provName = decodeURIComponent(btn.getAttribute('data-provider-name') || 'Sound Provider');
-                            const curDate = btn.getAttribute('data-current-date') || '';
+                            const curStartDate = btn.getAttribute('data-current-date') || '';
+                            const curEndDate = btn.getAttribute('data-current-end-date') || curStartDate;
+                            const hireDays = parseInt(btn.getAttribute('data-hire-days') || '1', 10) || 1;
                             const curStart = btn.getAttribute('data-current-start') || '08:00';
+                            const curEnd = btn.getAttribute('data-current-end') || '13:00';
 
                             reschedCurrentBookingId = bId;
-                            reschedCurrentBookingDate = curDate;
-                            reschedSelectedDate = '';
+                            reschedCurrentBookingStartDate = curStartDate;
+                            reschedCurrentBookingEndDate = curEndDate;
+                            reschedHireDays = hireDays;
+                            reschedSelectedStartDate = '';
+                            reschedSelectedEndDate = '';
+
+                            const durHrs = getDurationInHours(curStart, curEnd);
+                            reschedDurationHours = durHrs;
+                            if (rescheduleDurationBadge) rescheduleDurationBadge.textContent = `${durHrs} hrs`;
+
                             if (rescheduleNewDateInput) rescheduleNewDateInput.value = '';
+                            if (rescheduleNewEndDateInput) rescheduleNewEndDateInput.value = '';
 
                             if (rescheduleForm) {
                                 rescheduleForm.dataset.bookingId = bId;
@@ -1604,15 +1781,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             if (rescheduleRefSpan) rescheduleRefSpan.textContent = bRef;
                             if (rescheduleProvSpan) rescheduleProvSpan.textContent = provName;
-                            if (rescheduleCurDateSpan) rescheduleCurDateSpan.textContent = curDate || 'Not set';
+
+                            const curScheduleText = (curStartDate && curEndDate && curStartDate !== curEndDate)
+                                ? `${curStartDate} to ${curEndDate}`
+                                : (curStartDate || 'Not set');
+                            if (rescheduleCurDateSpan) rescheduleCurDateSpan.textContent = curScheduleText;
+
+                            if (rescheduleDurationInfo) {
+                                rescheduleDurationInfo.textContent = (hireDays > 1) ? `${hireDays} Consecutive Days` : '1 Day';
+                            }
+                            if (rescheduleCalTitle) {
+                                rescheduleCalTitle.innerHTML = (hireDays > 1) 
+                                    ? `Select Start Date for <strong>${hireDays}-Day</strong> Reservation on Calendar <span style="color:#ef4444;">*</span>`
+                                    : `Select New Event Date on Calendar <span style="color:#ef4444;">*</span>`;
+                            }
+
                             if (rescheduleStartTimeInput) rescheduleStartTimeInput.value = curStart.substring(0, 5);
+                            if (rescheduleEndTimeInput) rescheduleEndTimeInput.value = curEnd.substring(0, 5);
                             if (rescheduleReasonInput) rescheduleReasonInput.value = '';
 
                             // Reset Selected Display
                             if (rescheduleSelectedDisplay) {
                                 rescheduleSelectedDisplay.innerHTML = `
                                     <i class="fa-solid fa-hand-pointer" style="color:#2563eb;"></i>
-                                    <span>Please click an available date on the calendar above.</span>
+                                    <span>${hireDays > 1 ? `Please click an available start date to select ${hireDays} consecutive days.` : 'Please click an available date on the calendar above.'}</span>
                                 `;
                                 rescheduleSelectedDisplay.style.background = '#f1f5f9';
                                 rescheduleSelectedDisplay.style.borderColor = '#cbd5e1';
@@ -1626,8 +1818,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             // Set initial calendar view to current booking date or current month
-                            if (curDate) {
-                                const parsed = new Date(curDate);
+                            if (curStartDate) {
+                                const parsed = new Date(curStartDate);
                                 if (!isNaN(parsed.getTime())) {
                                     reschedCalMonth = parsed.getMonth();
                                     reschedCalYear = parsed.getFullYear();
@@ -1687,8 +1879,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             e.preventDefault();
                             const bookingId = rescheduleForm.dataset.bookingId;
                             const bookingRef = rescheduleForm.dataset.bookingRef;
-                            const newDate = rescheduleNewDateInput?.value || reschedSelectedDate;
+                            const newDate = rescheduleNewDateInput?.value || reschedSelectedStartDate;
+                            const newEndDate = rescheduleNewEndDateInput?.value || reschedSelectedEndDate;
                             const newStartTime = rescheduleStartTimeInput?.value;
+                            const newEndTime = rescheduleEndTimeInput?.value;
                             const reason = rescheduleReasonInput?.value?.trim();
                             const submitBtn = document.getElementById('btn-submit-marketplace-reschedule');
 
@@ -1716,7 +1910,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     headers,
                                     body: JSON.stringify({
                                         newDate,
+                                        newStartDate: newDate,
+                                        newEndDate: newEndDate || newDate,
                                         newStartTime,
+                                        newEndTime,
                                         reason
                                     })
                                 });
