@@ -1732,6 +1732,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (netInput) netInput.value = net.toFixed(2);
         if (amtInput) {
             amtInput.value = net > 0 ? formatCurrencyDisplay(net) : '0.00';
+            amtInput.readOnly = true;
             amtInput.removeAttribute('max');
         }
         if (refDisplay) refDisplay.textContent = bookingRef || `#BK-${bookingId}`;
@@ -1756,6 +1757,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const amtInput = document.getElementById('input-bw-amount');
         const walletDisp = document.getElementById('bw-available-wallet-display');
 
+        const submitBtn = modal.querySelector('button[type="submit"]');
+
         if (titleEl) titleEl.textContent = 'Request Cashier Payout (My Wallet)';
         if (breakdownCard) breakdownCard.style.display = 'none';
         if (walletCard) walletCard.style.display = 'block';
@@ -1764,8 +1767,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (netInput) netInput.value = avail.toFixed(2);
         if (amtInput) {
             amtInput.value = avail > 0 ? formatCurrencyDisplay(avail) : '0.00';
+            amtInput.readOnly = true;
         }
         if (walletDisp) walletDisp.textContent = `₱${formatCurrencyDisplay(avail)}`;
+
+        if (submitBtn) {
+            if (avail <= 0) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
+        }
 
         updatePayoutMethodFields();
         modal.classList.remove('hidden');
@@ -1776,9 +1792,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const freshAvail = parseFloat(window.currentWalletAvailableBalance || 0);
             if (amtInput) {
                 amtInput.value = freshAvail > 0 ? formatCurrencyDisplay(freshAvail) : '0.00';
+                amtInput.readOnly = true;
             }
             if (netInput) netInput.value = freshAvail.toFixed(2);
             if (walletDisp) walletDisp.textContent = `₱${formatCurrencyDisplay(freshAvail)}`;
+            if (submitBtn) {
+                if (freshAvail <= 0) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                    submitBtn.style.cursor = 'not-allowed';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                }
+            }
         }
     };
 
@@ -1805,22 +1833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const amtInputEl = document.getElementById('input-bw-amount');
     if (amtInputEl) {
-        amtInputEl.addEventListener('input', () => {
-            let val = amtInputEl.value.replace(/[^\d.,]/g, '');
-            const parts = val.split('.');
-            if (parts.length > 2) {
-                val = parts[0] + '.' + parts.slice(1).join('');
-            }
-            amtInputEl.value = val;
-        });
-
-        amtInputEl.addEventListener('blur', () => {
-            const clean = amtInputEl.value.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
-            const num = parseFloat(clean);
-            if (!isNaN(num) && num >= 0) {
-                amtInputEl.value = formatCurrencyDisplay(num);
-            }
-        });
+        amtInputEl.readOnly = true;
     }
 
     document.getElementById('btn-close-booking-withdrawal')?.addEventListener('click', () => {
