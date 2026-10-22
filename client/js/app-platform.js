@@ -1278,7 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </button>
                                     `}
                                 </div>
-                                <div id="inline-reschedule-slot-${b.BookingID}" class="inline-reschedule-slot" style="width:100%;"></div>
                             </div>
                         `;
                     }).join('');
@@ -1724,27 +1723,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
 
-                    // Real-Time Time Inputs & 5-Hour Duration Auto-Calculation
+                    // Real-Time Time Inputs & FIXED 5-Hour Duration Auto-Calculation
                     if (rescheduleStartTimeInput && !rescheduleStartTimeInput.dataset.listenerAttached) {
                         rescheduleStartTimeInput.dataset.listenerAttached = 'true';
                         rescheduleStartTimeInput.addEventListener('change', () => {
                             const sVal = rescheduleStartTimeInput.value;
                             if (!sVal) return;
-                            const newEndVal = addHoursToTime(sVal, reschedDurationHours || 5);
+                            const newEndVal = addHoursToTime(sVal, 5);
                             if (rescheduleEndTimeInput) rescheduleEndTimeInput.value = newEndVal;
-                        });
-                    }
-
-                    if (rescheduleEndTimeInput && !rescheduleEndTimeInput.dataset.listenerAttached) {
-                        rescheduleEndTimeInput.dataset.listenerAttached = 'true';
-                        rescheduleEndTimeInput.addEventListener('change', () => {
-                            const sVal = rescheduleStartTimeInput?.value;
-                            const eVal = rescheduleEndTimeInput.value;
-                            if (sVal && eVal) {
-                                const dur = getDurationInHours(sVal, eVal);
-                                reschedDurationHours = dur;
-                                if (rescheduleDurationBadge) rescheduleDurationBadge.textContent = `${dur} hrs`;
-                            }
                         });
                     }
 
@@ -1768,9 +1754,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             reschedSelectedStartDate = '';
                             reschedSelectedEndDate = '';
 
-                            const durHrs = getDurationInHours(curStart, curEnd);
-                            reschedDurationHours = durHrs;
-                            if (rescheduleDurationBadge) rescheduleDurationBadge.textContent = `${durHrs} hrs`;
+                            reschedDurationHours = 5;
+                            if (rescheduleDurationBadge) {
+                                rescheduleDurationBadge.innerHTML = `<i class="fa-solid fa-lock" style="font-size:0.7rem;"></i> Fixed 5 hrs`;
+                            }
 
                             if (rescheduleNewDateInput) rescheduleNewDateInput.value = '';
                             if (rescheduleNewEndDateInput) rescheduleNewEndDateInput.value = '';
@@ -1797,8 +1784,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     : `Select New Event Date on Calendar <span style="color:#ef4444;">*</span>`;
                             }
 
-                            if (rescheduleStartTimeInput) rescheduleStartTimeInput.value = curStart.substring(0, 5);
-                            if (rescheduleEndTimeInput) rescheduleEndTimeInput.value = curEnd.substring(0, 5);
+                            const validStart = (curStart || '08:00').substring(0, 5);
+                            if (rescheduleStartTimeInput) rescheduleStartTimeInput.value = validStart;
+                            if (rescheduleEndTimeInput) rescheduleEndTimeInput.value = addHoursToTime(validStart, 5);
                             if (rescheduleReasonInput) rescheduleReasonInput.value = '';
 
                             // Reset Selected Display
@@ -1833,22 +1821,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 reschedCalYear = new Date().getFullYear();
                             }
 
-                            // Inline Expandable Drawer Logic: Mount inside the booking card's slot
-                            const inlineSlot = document.getElementById(`inline-reschedule-slot-${bId}`);
-                            if (inlineSlot && rescheduleContainer) {
-                                // If already open in this card's slot, toggle closed
-                                if (rescheduleContainer.parentElement === inlineSlot && rescheduleContainer.style.display !== 'none') {
-                                    rescheduleContainer.style.display = 'none';
-                                    reschedCurrentBookingId = null;
-                                    return;
-                                }
-                                inlineSlot.appendChild(rescheduleContainer);
-                                rescheduleContainer.style.display = 'block';
-                                setTimeout(() => {
-                                    rescheduleContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                }, 60);
-                            } else if (rescheduleContainer) {
-                                rescheduleContainer.style.display = 'block';
+                            // Open Dedicated Modern Fullscreen Reschedule Interface
+                            if (rescheduleContainer) {
+                                rescheduleContainer.style.display = 'flex';
+                                rescheduleContainer.scrollTop = 0;
+                                document.body.style.overflow = 'hidden';
                             }
 
                             // Load real-time provider availability for calendar
@@ -1880,6 +1857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelectorAll('.btn-close-marketplace-reschedule').forEach(btn => {
                         btn.addEventListener('click', () => {
                             if (rescheduleContainer) rescheduleContainer.style.display = 'none';
+                            document.body.style.overflow = '';
                             reschedCurrentBookingId = null;
                         });
                     });
@@ -1934,6 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (res.ok && data.success) {
                                     showToast(data.message || `✓ Booking ${bookingRef || bookingId} successfully rescheduled!`, 'success');
                                     if (rescheduleContainer) rescheduleContainer.style.display = 'none';
+                                    document.body.style.overflow = '';
                                     reschedCurrentBookingId = null;
                                     rescheduleForm.reset();
                                     delete rescheduleForm.dataset.bookingId;
