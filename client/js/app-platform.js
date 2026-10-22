@@ -1278,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </button>
                                     `}
                                 </div>
+                                <div id="inline-reschedule-slot-${b.BookingID}" class="inline-reschedule-slot" style="width:100%;"></div>
                             </div>
                         `;
                     }).join('');
@@ -1393,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Attach Reschedule Booking click listeners & Interactive Calendar
-                    const rescheduleModal = document.getElementById('marketplace-reschedule-modal');
+                    const rescheduleContainer = document.getElementById('marketplace-reschedule-container') || document.getElementById('marketplace-reschedule-modal');
                     const rescheduleRefSpan = document.getElementById('marketplace-reschedule-booking-ref');
                     const rescheduleProvSpan = document.getElementById('marketplace-reschedule-provider-name');
                     const rescheduleCurDateSpan = document.getElementById('marketplace-reschedule-current-date');
@@ -1832,7 +1833,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                 reschedCalYear = new Date().getFullYear();
                             }
 
-                            if (rescheduleModal) rescheduleModal.classList.remove('hidden');
+                            // Inline Expandable Drawer Logic: Mount inside the booking card's slot
+                            const inlineSlot = document.getElementById(`inline-reschedule-slot-${bId}`);
+                            if (inlineSlot && rescheduleContainer) {
+                                // If already open in this card's slot, toggle closed
+                                if (rescheduleContainer.parentElement === inlineSlot && rescheduleContainer.style.display !== 'none') {
+                                    rescheduleContainer.style.display = 'none';
+                                    reschedCurrentBookingId = null;
+                                    return;
+                                }
+                                inlineSlot.appendChild(rescheduleContainer);
+                                rescheduleContainer.style.display = 'block';
+                                setTimeout(() => {
+                                    rescheduleContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                }, 60);
+                            } else if (rescheduleContainer) {
+                                rescheduleContainer.style.display = 'block';
+                            }
 
                             // Load real-time provider availability for calendar
                             if (rescheduleCalLoading) rescheduleCalLoading.style.display = 'inline-flex';
@@ -1859,18 +1876,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
 
-                    // Reschedule Modal Close Buttons & Backdrop click
+                    // Reschedule Container Close Buttons
                     document.querySelectorAll('.btn-close-marketplace-reschedule').forEach(btn => {
                         btn.addEventListener('click', () => {
-                            if (rescheduleModal) rescheduleModal.classList.add('hidden');
+                            if (rescheduleContainer) rescheduleContainer.style.display = 'none';
+                            reschedCurrentBookingId = null;
                         });
                     });
-                    if (rescheduleModal && !rescheduleModal.dataset.listenerAttached) {
-                        rescheduleModal.dataset.listenerAttached = 'true';
-                        rescheduleModal.addEventListener('click', (e) => {
-                            if (e.target === rescheduleModal) rescheduleModal.classList.add('hidden');
-                        });
-                    }
 
                     // Reschedule Form Submit Handler
                     if (rescheduleForm && !rescheduleForm.dataset.initialized) {
@@ -1921,7 +1933,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const data = await res.json();
                                 if (res.ok && data.success) {
                                     showToast(data.message || `✓ Booking ${bookingRef || bookingId} successfully rescheduled!`, 'success');
-                                    if (rescheduleModal) rescheduleModal.classList.add('hidden');
+                                    if (rescheduleContainer) rescheduleContainer.style.display = 'none';
+                                    reschedCurrentBookingId = null;
                                     rescheduleForm.reset();
                                     delete rescheduleForm.dataset.bookingId;
                                     delete rescheduleForm.dataset.bookingRef;
