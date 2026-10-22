@@ -180,6 +180,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
+                        // Rescheduling Policy: Can reschedule under the same time constraints as cancellation,
+                        // provided the booking is not completed, cancelled, or awaiting completion.
+                        const isNotReschedulableStatus = (b.BookingStatus === 'Completed') || (b.BookingStatus === 'Cancelled') || (b.BookingStatus === 'Awaiting Client Confirmation') || (b.EscrowStatus === 'Disputed');
+                        const canReschedule = canCancel && !isNotReschedulableStatus;
+                        const rescheduleBadgeText = canReschedule ? 'Reschedule Open' : (cancelBadgeText ? cancelBadgeText.replace(/Cancel/g, 'Reschedule') : 'Reschedule Closed');
+                        const rescheduleTitle = canReschedule 
+                            ? 'Click to reschedule your event date' 
+                            : (cancelTitle ? cancelTitle.replace(/cancelled/gi, 'rescheduled').replace(/cancellation/gi, 'rescheduling').replace(/cancel/gi, 'reschedule') : 'Rescheduling window closed.');
+
                         const formatTime12h = (timeStr) => {
                             if (!timeStr) return '08:00 AM';
                             if (/AM|PM/i.test(timeStr)) return timeStr;
@@ -229,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         return {
                             id: b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`,
                             bookingId: b.BookingID,
+                            providerId: b.ProviderID,
+                            rawBooking: b,
                             clientName: clientName,
                             createdDate: new Date(b.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
                             rawCreatedAt: b.CreatedAt,
@@ -236,6 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             cancelBadgeText,
                             cancelTitle,
                             timeRemainingText,
+                            canReschedule,
+                            rescheduleBadgeText,
+                            rescheduleTitle,
                             providerName: b.ProviderName || 'Sound & Lights Provider',
                             providerThumb: (b.ProviderAvatar && typeof b.ProviderAvatar === 'string' && b.ProviderAvatar.startsWith('/data:')) ? b.ProviderAvatar.substring(1) : (b.ProviderAvatar || 'images/concert_line_array.png'),
                             packageName: b.PackageName,
@@ -479,9 +493,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     `) : ''}
 
-                    <button type="button" class="btn-action-sm btn-reschedule" data-id="${b.id}" ${b.status === 'Completed' || b.status === 'Cancelled' ? 'disabled' : ''}>
-                        Request Reschedule
-                    </button>
+                    ${b.canReschedule ? `
+                        <button type="button" class="btn-action-sm btn-reschedule btn-reschedule-active" data-id="${b.id}" data-booking-id="${b.bookingId}" style="background:#eff6ff; color:#2563eb; border:1.5px solid #bfdbfe; font-weight:700; cursor:pointer;" title="${b.rescheduleTitle}">
+                            <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Request Reschedule
+                        </button>
+                    ` : `
+                        <button type="button" class="btn-action-sm btn-reschedule" disabled title="${b.rescheduleTitle || 'Rescheduling closed'}" style="opacity:0.55; cursor:not-allowed; background:#f8fafc; color:#94a3b8; border-color:#e2e8f0;">
+                            <i class="fa-solid fa-calendar-xmark" style="color:#94a3b8;"></i> ${b.rescheduleBadgeText || 'Reschedule Closed'}
+                        </button>
+                    `}
 
                     ${cancelBtnHtml}
 
@@ -504,12 +524,86 @@ document.addEventListener('DOMContentLoaded', () => {
         attachActionListeners();
     };
 
+    let currentReschedulingBooking = null;
+
     const attachActionListeners = () => {
-        document.querySelectorAll('.btn-reschedule:not([disabled])').forEach(btn => {
-            btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-reschedule-active').forEach(btn => {
+            btn.addEventListener('click', async () => {
                 const bId = btn.getAttribute('data-id');
-                document.getElementById('reschedule-booking-id').textContent = bId;
+                const numericBookingId = btn.getAttribute('data-booking-id');
+                currentReschedulingBooking = clientBookingsData.find(x => x.id === bId || String(x.bookingId) === String(numericBookingId)) || null;
+
+                if (!currentReschedulingBooking) {
+                    showToast('⚠️ Booking details not found.', 'warning');
+                    return;
+                }
+
+                const refSpan = document.getElementById('reschedule-booking-id');
+                if (refSpan) refSpan.textContent = currentReschedulingBooking.id;
+
+                const provSpan = document.getElementById('reschedule-provider-name');
+                if (provSpan) provSpan.textContent = currentReschedulingBooking.providerName || 'Sound Provider';
+
+                const curDateSpan = document.getElementById('reschedule-current-date');
+                if (curDateSpan) curDateSpan.textContent = currentReschedulingBooking.eventDate || 'Scheduled Date';
+
+                const newDateInput = document.getElementById('reschedule-new-date');
+                const startTimeInput = document.getElementById('reschedule-start-time');
+                const hintEl = document.getElementById('reschedule-date-availability-hint');
+                const reasonInput = document.getElementById('reschedule-reason');
+
+                if (reasonInput) reasonInput.value = '';
+
+                // Calculate minimum selectable date (tomorrow)
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const minDateStr = tomorrow.toISOString().split('T')[0];
+
+                if (newDateInput) {
+                    newDateInput.min = minDateStr;
+                    newDateInput.value = '';
+                }
+
+                if (startTimeInput) {
+                    let sTime = currentReschedulingBooking.startTime || '08:00';
+                    if (sTime.includes('AM') || sTime.includes('PM')) {
+                        const parts = sTime.split(' ');
+                        const timeParts = parts[0].split(':');
+                        let h = parseInt(timeParts[0], 10);
+                        if (parts[1].toUpperCase() === 'PM' && h < 12) h += 12;
+                        if (parts[1].toUpperCase() === 'AM' && h === 12) h = 0;
+                        sTime = `${String(h).padStart(2, '0')}:${timeParts[1]}`;
+                    }
+                    startTimeInput.value = sTime;
+                }
+
+                if (hintEl) {
+                    hintEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:#2563eb;"></i> <span>Loading provider calendar...</span>`;
+                }
+
                 if (rescheduleModal) rescheduleModal.classList.remove('hidden');
+
+                // Pre-fetch provider booked slots to guide client
+                try {
+                    const provId = currentReschedulingBooking.providerId || currentReschedulingBooking.rawBooking?.ProviderID;
+                    if (provId) {
+                        const res = await fetch(`/api/bookings/providers/${provId}/availability`);
+                        const data = await res.json();
+                        if (data.success && data.bookedSlots) {
+                            const count = data.bookedSlots.length;
+                            if (hintEl) {
+                                hintEl.innerHTML = count > 0 
+                                    ? `<i class="fa-solid fa-calendar-check" style="color:#2563eb;"></i> <span>Provider has ${count} existing booked date(s). Select an open date.</span>`
+                                    : `<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <span>Provider has open availability!</span>`;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    if (hintEl) {
+                        hintEl.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#10b981;"></i> <span>Select an open date when the provider is available</span>`;
+                    }
+                }
             });
         });
 
@@ -571,10 +665,102 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.getElementById('reschedule-form')?.addEventListener('submit', (e) => {
+    // Real-time Provider Availability Checker on Date Selection
+    document.getElementById('reschedule-new-date')?.addEventListener('change', async (e) => {
+        const pickedDate = e.target.value;
+        const hintEl = document.getElementById('reschedule-date-availability-hint');
+        if (!pickedDate || !currentReschedulingBooking) return;
+
+        if (hintEl) {
+            hintEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:#2563eb;"></i> <span>Verifying provider availability on ${pickedDate}...</span>`;
+        }
+
+        try {
+            const provId = currentReschedulingBooking.providerId || currentReschedulingBooking.rawBooking?.ProviderID;
+            const res = await fetch('/api/bookings/check-availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    providerId: provId,
+                    serviceStartDate: pickedDate,
+                    serviceEndDate: pickedDate,
+                    eventDate: pickedDate,
+                    startTime: '08:00',
+                    endTime: '13:00',
+                    excludeBookingId: currentReschedulingBooking.bookingId
+                })
+            });
+            const data = await res.json();
+            if (data.success && data.isAvailable) {
+                hintEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <span style="color:#15803d; font-weight:700;">Provider is Available on ${pickedDate}!</span>`;
+            } else {
+                hintEl.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <span style="color:#b91c1c; font-weight:700;">Provider is unavailable/booked on this date. Please pick another.</span>`;
+            }
+        } catch (err) {
+            if (hintEl) {
+                hintEl.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#10b981;"></i> <span>Date selected. Will verify on submission.</span>`;
+            }
+        }
+    });
+
+    // Real Reschedule Form Submit Handler
+    document.getElementById('reschedule-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        showToast('✓ Reschedule request sent to provider for confirmation!', 'success');
-        if (rescheduleModal) rescheduleModal.classList.add('hidden');
+
+        if (!currentReschedulingBooking) {
+            showToast('⚠️ No booking selected for rescheduling.', 'warning');
+            return;
+        }
+
+        const newDate = document.getElementById('reschedule-new-date')?.value;
+        const newStartTime = document.getElementById('reschedule-start-time')?.value;
+        const reason = document.getElementById('reschedule-reason')?.value?.trim();
+        const submitBtn = document.getElementById('btn-confirm-reschedule');
+
+        if (!newDate) {
+            showToast('⚠️ Please select a new event date.', 'warning');
+            return;
+        }
+
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Confirm Reschedule';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rescheduling...';
+        }
+
+        try {
+            const token = SoundSphereAPI.getAuthToken();
+            const res = await fetch(`/api/bookings/${currentReschedulingBooking.bookingId}/reschedule`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    newDate,
+                    newStartTime,
+                    reason
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast(data.message || '✓ Event successfully rescheduled!', 'success');
+                if (rescheduleModal) rescheduleModal.classList.add('hidden');
+                // Reload bookings list to reflect newly scheduled date
+                await loadMyBookings();
+            } else {
+                showToast(`✕ ${data.message || 'Failed to reschedule event date.'}`, 'error');
+            }
+        } catch (err) {
+            console.error('Reschedule submit error:', err);
+            showToast('✕ Network error while submitting reschedule request.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
     });
 
     // 3-Hour Cancellation Form Submit Handler

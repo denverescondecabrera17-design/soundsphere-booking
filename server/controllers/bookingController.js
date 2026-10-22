@@ -1238,6 +1238,43 @@ const cancelBooking = async (req, res) => {
 };
 
 /**
+ * POST /api/bookings/:id/reschedule
+ * Handles client booking rescheduling with availability guard & time limit check
+ */
+const rescheduleBooking = async (req, res) => {
+    try {
+        const bookingId = parseInt(req.params.id, 10);
+        const clientUserId = req.user ? (req.user.userId || req.user.id || req.user.UserID) : (req.body.userId || req.body.clientUserId);
+        const { newDate, newStartTime, reason } = req.body;
+
+        if (!bookingId || isNaN(bookingId)) {
+            return res.status(400).json({ success: false, message: 'Valid Booking ID is required.' });
+        }
+
+        if (!newDate) {
+            return res.status(400).json({ success: false, message: 'New event date is required.' });
+        }
+
+        const result = await bookingModel.rescheduleBookingByClient({
+            bookingId,
+            clientUserId,
+            newDate,
+            newStartTime,
+            reason
+        });
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Reschedule Booking Controller Error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process rescheduling.', error: error.message });
+    }
+};
+
+/**
  * POST /api/bookings/settle-balance
  * POST /api/bookings/:id/settle-balance
  * Settle outstanding remaining balance for a booking
@@ -1578,6 +1615,7 @@ module.exports = {
     submitReview,
     createPayMongoCheckout,
     cancelBooking,
+    rescheduleBooking,
     settleBookingBalance,
     acceptBookingCompletion,
     verifyPayMongoPayment,

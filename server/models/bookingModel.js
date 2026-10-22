@@ -1041,6 +1041,236 @@ const cancelBookingByClient = async ({ bookingId, clientUserId, reason }) => {
 };
 
 /**
+ * Reschedule booking event date by Client with availability verification & policy checks
+ */
+const rescheduleBookingByClient = async ({ bookingId, clientUserId, newDate, newStartTime, reason }) => {
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available.');
+
+    const bkRes = await pool.request()
+        .input('BookingID', sql.Int, bookingId)
+        .query(`SELECT * FROM dbo.Bookings WHERE BookingID = @BookingID;`);
+
+    const booking = bkRes.recordset[0];
+    if (!booking) {
+        return { success: false, code: 'NOT_FOUND', message: 'Booking not found.' };
+    }
+
+    // Verify ownership if clientUserId is provided
+    if (clientUserId && booking.ClientUserID && parseInt(booking.ClientUserID, 10) !== parseInt(clientUserId, 10)) {
+        return { success: false, code: 'FORBIDDEN', message: 'You are not authorized to reschedule this booking.' };
+    }
+
+    if (booking.BookingStatus === 'Cancelled') {
+        return { success: false, code: 'CANCELLED', message: 'Cancelled bookings cannot be rescheduled.' };
+    }
+
+    if (booking.BookingStatus === 'Completed') {
+        return { success: false, code: 'COMPLETED', message: 'Completed event bookings cannot be rescheduled.' };
+    }
+
+    if (booking.BookingStatus === 'Awaiting Client Confirmation' || booking.EscrowStatus === 'Disputed') {
+        return { success: false, code: 'LOCKED', message: 'Bookings pending service confirmation or under dispute review cannot be rescheduled.' };
+    }
+
+    // Rescheduling Policy Evaluation:
+    // 1. Bookings made 2 or more days before event: Can reschedule up to 1 day before the event date (start of event day midnight).
+    // 2. Same-day / short-notice bookings: Can reschedule within 1 hour of making the reservation.
+    const createdAtTime = new Date(booking.CreatedAt);
+    const nowTime = new Date();
+    const eventDateRaw = booking.EventDate || booking.ServiceStartDate;
+
+    let canReschedule = false;
+    let policyMessage = '';
+
+    if (eventDateRaw) {
+        let eventMidnight;
+        const match = String(eventDateRaw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            eventMidnight = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 0, 0, 0);
+        } else {
+            const parsed = new Date(eventDateRaw);
+            eventMidnight = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0);
+        }
+
+        const createdMidnight = new Date(createdAtTime.getFullYear(), createdAtTime.getMonth(), createdAtTime.getDate(), 0, 0, 0);
+        const daysBetweenBookingAndEvent = Math.round((eventMidnight.getTime() - createdMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysBetweenBookingAndEvent >= 2) {
+            // Cutoff is event day start (up to 23:59:59 of day before event)
+            const cutoffTime = eventMidnight.getTime();
+            if (nowTime.getTime() < cutoffTime) {
+                canReschedule = true;
+            } else {
+                const oneDayBefore = new Date(cutoffTime - (24 * 60 * 60 * 1000));
+                const deadlineFormatted = oneDayBefore.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                policyMessage = `Rescheduling closed. Bookings made in advance can only be rescheduled up to 1 day before the event (${deadlineFormatted}).`;
+            }
+        } else {
+            // Same-day bookings: within 1 hour
+            const elapsedMinutes = Math.max(0, (nowTime.getTime() - createdAtTime.getTime()) / (1000 * 60));
+            if (elapsedMinutes <= 60) {
+                canReschedule = true;
+            } else {
+                policyMessage = `Rescheduling window closed. Same-day bookings can only be rescheduled within 1 hour of reservation (${Math.round(elapsedMinutes)} minutes have passed).`;
+            }
+        }
+    } else {
+        const elapsedMinutes = Math.max(0, (nowTime.getTime() - createdAtTime.getTime()) / (1000 * 60));
+        if (elapsedMinutes <= 60) {
+            canReschedule = true;
+        } else {
+            policyMessage = 'Rescheduling window closed. Bookings can only be rescheduled within 1 hour of reservation.';
+        }
+    }
+
+    if (!canReschedule) {
+        return {
+            success: false,
+            code: 'TIME_LIMIT_EXCEEDED',
+            expired: true,
+            message: policyMessage || 'Rescheduling window has expired for this booking.'
+        };
+    }
+
+    // Validate newDate format and ensure future/today
+    if (!newDate || typeof newDate !== 'string') {
+        return { success: false, code: 'INVALID_DATE', message: 'A valid new event date is required.' };
+    }
+    const cleanNewDate = newDate.trim();
+    const dateMatch = cleanNewDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+        return { success: false, code: 'INVALID_FORMAT', message: 'Date format must be YYYY-MM-DD.' };
+    }
+
+    const todayMidnight = new Date(nowTime.getFullYear(), nowTime.getMonth(), nowTime.getDate(), 0, 0, 0);
+    const newDateObj = new Date(parseInt(dateMatch[1], 10), parseInt(dateMatch[2], 10) - 1, parseInt(dateMatch[3], 10), 0, 0, 0);
+    if (newDateObj.getTime() < todayMidnight.getTime()) {
+        return { success: false, code: 'PAST_DATE', message: 'Cannot reschedule to a past date.' };
+    }
+
+    if (cleanNewDate === String(booking.EventDate).trim()) {
+        return { success: false, code: 'SAME_DATE', message: 'The selected date is the same as your current booking date.' };
+    }
+
+    // Multi-day hire calculation
+    const hireDays = parseInt(booking.ServiceHireDays || booking.NumberOfDays || 1, 10) || 1;
+    let newEndDate = cleanNewDate;
+    if (hireDays > 1) {
+        const endD = new Date(newDateObj);
+        endD.setDate(endD.getDate() + (hireDays - 1));
+        const ey = endD.getFullYear();
+        const em = String(endD.getMonth() + 1).padStart(2, '0');
+        const ed = String(endD.getDate()).padStart(2, '0');
+        newEndDate = `${ey}-${em}-${ed}`;
+    }
+
+    const finalStartTime = (newStartTime && typeof newStartTime === 'string') ? newStartTime.trim() : (booking.StartTime || '08:00');
+    const finalEndTime = booking.EndTime || '13:00';
+
+    // Verify Provider Availability on the New Date (excluding this booking itself)
+    const providerId = booking.ProviderID;
+    if (providerId) {
+        const availCheck = await checkProviderAvailability({
+            providerId,
+            serviceStartDate: cleanNewDate,
+            serviceEndDate: newEndDate,
+            eventDate: cleanNewDate,
+            startTime: finalStartTime,
+            endTime: finalEndTime,
+            excludeBookingId: booking.BookingID
+        });
+
+        if (!availCheck.isAvailable) {
+            return {
+                success: false,
+                code: 'UNAVAILABLE',
+                message: availCheck.message || 'Provider is already booked or unavailable on the selected date. Please choose another open date.'
+            };
+        }
+    }
+
+    const prevDate = booking.EventDate || booking.ServiceStartDate || 'Original Date';
+    const rescheduleLog = `[Rescheduled from ${prevDate} to ${cleanNewDate} on ${nowTime.toISOString()}${reason ? ` | Reason: ${reason}` : ''}]`;
+    const updatedNotes = booking.LocationNotes ? `${booking.LocationNotes}\n${rescheduleLog}` : rescheduleLog;
+
+    // Execute atomic update in database
+    await pool.request()
+        .input('BookingID', sql.Int, booking.BookingID)
+        .input('NewDate', sql.NVarChar(50), cleanNewDate)
+        .input('NewEndDate', sql.NVarChar(50), newEndDate)
+        .input('StartTime', sql.NVarChar(50), finalStartTime)
+        .input('LocationNotes', sql.NVarChar(500), updatedNotes.substring(0, 500))
+        .query(`
+            UPDATE dbo.Bookings
+            SET EventDate = @NewDate,
+                ServiceStartDate = @NewDate,
+                ServiceEndDate = @NewEndDate,
+                StartTime = @StartTime,
+                LocationNotes = @LocationNotes,
+                UpdatedAt = GETDATE()
+            WHERE BookingID = @BookingID;
+        `);
+
+    // Format new date for friendly display
+    const formattedNewDate = newDateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const bookingRef = booking.BookingReference || `#${booking.BookingID}`;
+
+    // Send in-app notification to Provider
+    try {
+        let providerUserId = null;
+        if (booking.ProviderID) {
+            const pUserRes = await pool.request()
+                .input('ProvID', sql.Int, booking.ProviderID)
+                .query(`SELECT UserID FROM dbo.ServiceProviders WHERE ProviderID = @ProvID OR UserID = @ProvID;`);
+            if (pUserRes.recordset && pUserRes.recordset[0]) {
+                providerUserId = pUserRes.recordset[0].UserID;
+            }
+        }
+
+        if (providerUserId) {
+            await pool.request()
+                .input('UserID', sql.Int, providerUserId)
+                .input('Title', sql.NVarChar(150), '📅 Booking Event Rescheduled')
+                .input('Message', sql.NVarChar(sql.MAX), `Client ${booking.ClientName || 'Client'} rescheduled Booking ${bookingRef} to ${formattedNewDate}. Your calendar schedule has been updated automatically.`)
+                .input('NotificationType', sql.NVarChar(50), 'Booking_Rescheduled')
+                .input('RelatedID', sql.Int, booking.BookingID)
+                .input('RelatedType', sql.NVarChar(50), 'Booking')
+                .query(`
+                    INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                    VALUES (@UserID, @Title, @Message, @NotificationType, @RelatedID, @RelatedType, GETDATE());
+                `);
+        }
+
+        // Send in-app notification to Client
+        if (booking.ClientUserID) {
+            await pool.request()
+                .input('UserID', sql.Int, booking.ClientUserID)
+                .input('Title', sql.NVarChar(150), '✓ Booking Successfully Rescheduled')
+                .input('Message', sql.NVarChar(sql.MAX), `Your booking ${bookingRef} with ${booking.PackageName || 'Provider'} has been rescheduled to ${formattedNewDate}. Provider has been notified.`)
+                .input('NotificationType', sql.NVarChar(50), 'Booking_Rescheduled')
+                .input('RelatedID', sql.Int, booking.BookingID)
+                .input('RelatedType', sql.NVarChar(50), 'Booking')
+                .query(`
+                    INSERT INTO dbo.Notifications (UserID, Title, Message, NotificationType, RelatedID, RelatedType, CreatedAt)
+                    VALUES (@UserID, @Title, @Message, @NotificationType, @RelatedID, @RelatedType, GETDATE());
+                `);
+        }
+    } catch (notifErr) {
+        console.warn('Reschedule notification dispatch warning:', notifErr.message);
+    }
+
+    return {
+        success: true,
+        message: `✓ Booking ${bookingRef} has been successfully rescheduled to ${formattedNewDate}!`,
+        newDate: cleanNewDate,
+        newFormattedDate: formattedNewDate,
+        bookingId: booking.BookingID,
+        bookingReference: bookingRef
+    };
+};
+
+/**
  * Settle the remaining balance of a booking
  * Sets AmountPaid to TotalAmount, RemainingBalance to 0, PaymentStatus to 'Paid'
  */
@@ -1158,5 +1388,6 @@ module.exports = {
     getReviewsByUserId,
     resolveProviderId,
     cancelBookingByClient,
+    rescheduleBookingByClient,
     settleRemainingBalance
 };

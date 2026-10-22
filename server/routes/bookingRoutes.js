@@ -27,6 +27,7 @@ router.get('/provider-bookings', optionalVerifyToken, bookingController.getProvi
 router.post('/settle-balance', optionalVerifyToken, bookingController.settleBookingBalance);
 router.post('/:id/settle-balance', optionalVerifyToken, bookingController.settleBookingBalance);
 router.post('/:id/cancel', optionalVerifyToken, bookingController.cancelBooking);
+router.post('/:id/reschedule', optionalVerifyToken, bookingController.rescheduleBooking);
 router.post('/:id/accept-completion', optionalVerifyToken, bookingController.acceptBookingCompletion);
 router.put('/:id/accept-completion', optionalVerifyToken, bookingController.acceptBookingCompletion);
 router.get('/:id', (req, res, next) => {
