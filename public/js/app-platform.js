@@ -1365,25 +1365,237 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
 
-                    // Attach Reschedule Booking click listeners
+                    // Attach Reschedule Booking click listeners & Interactive Calendar
                     const rescheduleModal = document.getElementById('marketplace-reschedule-modal');
                     const rescheduleRefSpan = document.getElementById('marketplace-reschedule-booking-ref');
                     const rescheduleProvSpan = document.getElementById('marketplace-reschedule-provider-name');
                     const rescheduleCurDateSpan = document.getElementById('marketplace-reschedule-current-date');
                     const rescheduleNewDateInput = document.getElementById('marketplace-reschedule-new-date');
                     const rescheduleStartTimeInput = document.getElementById('marketplace-reschedule-start-time');
-                    const rescheduleHintEl = document.getElementById('marketplace-reschedule-date-availability-hint');
                     const rescheduleReasonInput = document.getElementById('marketplace-reschedule-reason');
                     const rescheduleForm = document.getElementById('marketplace-reschedule-form');
+                    const rescheduleDaysGrid = document.getElementById('marketplace-reschedule-days-grid');
+                    const rescheduleMonthLabel = document.getElementById('marketplace-reschedule-month-label');
+                    const reschedulePrevMonthBtn = document.getElementById('marketplace-reschedule-prev-month');
+                    const rescheduleNextMonthBtn = document.getElementById('marketplace-reschedule-next-month');
+                    const rescheduleCalLoading = document.getElementById('marketplace-reschedule-cal-loading');
+                    const rescheduleSelectedDisplay = document.getElementById('marketplace-reschedule-selected-display');
+                    const submitRescheduleBtn = document.getElementById('btn-submit-marketplace-reschedule');
+
+                    // Interactive Reschedule Calendar State
+                    let reschedCalMonth = new Date().getMonth();
+                    let reschedCalYear = new Date().getFullYear();
+                    let reschedBookedSlots = [];
+                    let reschedCurrentBookingId = null;
+                    let reschedCurrentBookingDate = '';
+                    let reschedSelectedDate = '';
+
+                    const MONTH_NAMES = [
+                        "January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"
+                    ];
+
+                    function isRescheduleDateBooked(dateIso) {
+                        if (!reschedBookedSlots || reschedBookedSlots.length === 0) return false;
+                        return reschedBookedSlots.some(slot => {
+                            if (slot.BookingID && String(slot.BookingID) === String(reschedCurrentBookingId)) return false;
+                            const bStatus = (slot.BookingStatus || '').trim().toLowerCase();
+                            if (['cancelled', 'rejected'].includes(bStatus)) return false;
+                            const pStatus = (slot.PaymentStatus || '').trim().toLowerCase();
+                            const amtPaid = Number(slot.AmountPaid || 0);
+                            if ((pStatus === 'pending' || pStatus === 'unpaid') && amtPaid <= 0 && bStatus === 'pending') return false;
+
+                            const s = String(slot.ServiceStartDate || slot.EventDate || '').trim().split('T')[0];
+                            const e = String(slot.ServiceEndDate || s).trim().split('T')[0];
+                            return (dateIso >= s && dateIso <= e);
+                        });
+                    }
+
+                    function renderRescheduleCalendarGrid() {
+                        if (!rescheduleDaysGrid) return;
+                        rescheduleDaysGrid.innerHTML = '';
+
+                        if (rescheduleMonthLabel) {
+                            rescheduleMonthLabel.textContent = `${MONTH_NAMES[reschedCalMonth]} ${reschedCalYear}`;
+                        }
+
+                        const firstDayIndex = new Date(reschedCalYear, reschedCalMonth, 1).getDay();
+                        const daysInMonth = new Date(reschedCalYear, reschedCalMonth + 1, 0).getDate();
+
+                        const now = new Date();
+                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                        const minAllowedMidnight = todayMidnight + (24 * 60 * 60 * 1000); // Tomorrow onwards
+
+                        // Prev month padding cells
+                        for (let i = 0; i < firstDayIndex; i++) {
+                            const emptyCell = document.createElement('div');
+                            emptyCell.style.minHeight = '48px';
+                            rescheduleDaysGrid.appendChild(emptyCell);
+                        }
+
+                        // Month day cells
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const cellDate = new Date(reschedCalYear, reschedCalMonth, day);
+                            const mm = String(reschedCalMonth + 1).padStart(2, '0');
+                            const dd = String(day).padStart(2, '0');
+                            const cellIso = `${reschedCalYear}-${mm}-${dd}`;
+
+                            const cell = document.createElement('div');
+                            cell.style.display = 'flex';
+                            cell.style.flexDirection = 'column';
+                            cell.style.alignItems = 'center';
+                            cell.style.justifyContent = 'center';
+                            cell.style.padding = '6px 2px';
+                            cell.style.borderRadius = '10px';
+                            cell.style.minHeight = '48px';
+                            cell.style.position = 'relative';
+                            cell.style.transition = 'all 0.15s ease';
+
+                            if (cellDate.getTime() < minAllowedMidnight) {
+                                // Past date
+                                cell.style.background = '#f1f5f9';
+                                cell.style.color = '#94a3b8';
+                                cell.style.border = '1px dashed #e2e8f0';
+                                cell.style.opacity = '0.55';
+                                cell.style.cursor = 'not-allowed';
+                                cell.title = 'Past dates cannot be booked';
+                                cell.innerHTML = `
+                                    <span style="font-size:0.86rem; font-weight:700;">${day}</span>
+                                    <span style="font-size:0.6rem; color:#94a3b8;">Past</span>
+                                `;
+                            } else if (cellIso === reschedCurrentBookingDate) {
+                                // Currently booked date
+                                cell.style.background = '#fffbeb';
+                                cell.style.color = '#b45309';
+                                cell.style.border = '1.5px solid #fde68a';
+                                cell.style.cursor = 'default';
+                                cell.title = 'Your current reservation date';
+                                cell.innerHTML = `
+                                    <span style="font-size:0.86rem; font-weight:800;">${day}</span>
+                                    <span style="font-size:0.6rem; font-weight:700; color:#b45309;">Current</span>
+                                `;
+                            } else if (isRescheduleDateBooked(cellIso)) {
+                                // Booked / Conflict
+                                cell.style.background = '#fef2f2';
+                                cell.style.color = '#ef4444';
+                                cell.style.border = '1.5px solid #fecaca';
+                                cell.style.cursor = 'not-allowed';
+                                cell.title = 'Provider is fully booked on this date';
+                                cell.innerHTML = `
+                                    <span style="font-size:0.86rem; font-weight:800;">${day}</span>
+                                    <span style="font-size:0.6rem; font-weight:700; color:#dc2626;">Booked</span>
+                                `;
+                            } else if (cellIso === reschedSelectedDate) {
+                                // Selected New Date
+                                cell.style.background = '#2563eb';
+                                cell.style.color = '#ffffff';
+                                cell.style.border = '1.5px solid #1d4ed8';
+                                cell.style.cursor = 'pointer';
+                                cell.style.boxShadow = '0 4px 12px rgba(37,99,235,0.35)';
+                                cell.style.transform = 'scale(1.04)';
+                                cell.innerHTML = `
+                                    <span style="font-size:0.92rem; font-weight:900; color:#ffffff;">${day}</span>
+                                    <span style="font-size:0.6rem; font-weight:800; color:#dbeafe;"><i class="fa-solid fa-check"></i> Selected</span>
+                                `;
+                            } else {
+                                // Available / Open Date
+                                cell.style.background = '#ffffff';
+                                cell.style.color = '#0f172a';
+                                cell.style.border = '1.5px solid #cbd5e1';
+                                cell.style.cursor = 'pointer';
+                                cell.innerHTML = `
+                                    <span style="font-size:0.86rem; font-weight:800;">${day}</span>
+                                    <span style="font-size:0.6rem; font-weight:700; color:#10b981;">Available</span>
+                                `;
+                                cell.addEventListener('mouseenter', () => {
+                                    if (cellIso !== reschedSelectedDate) {
+                                        cell.style.background = '#eff6ff';
+                                        cell.style.borderColor = '#93c5fd';
+                                        cell.style.transform = 'translateY(-1px)';
+                                    }
+                                });
+                                cell.addEventListener('mouseleave', () => {
+                                    if (cellIso !== reschedSelectedDate) {
+                                        cell.style.background = '#ffffff';
+                                        cell.style.borderColor = '#cbd5e1';
+                                        cell.style.transform = 'none';
+                                    }
+                                });
+
+                                cell.addEventListener('click', () => {
+                                    reschedSelectedDate = cellIso;
+                                    if (rescheduleNewDateInput) rescheduleNewDateInput.value = cellIso;
+                                    
+                                    const dParts = cellIso.split('-');
+                                    const dObj = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+                                    const pretty = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+                                    if (rescheduleSelectedDisplay) {
+                                        rescheduleSelectedDisplay.innerHTML = `
+                                            <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:1.15rem;"></i>
+                                            <span style="color:#065f46;">Selected New Date: <strong style="color:#0f172a;">${pretty}</strong> <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:6px; font-size:0.75rem; margin-left:6px; border:1px solid #bbf7d0;">✓ Available</span></span>
+                                        `;
+                                        rescheduleSelectedDisplay.style.background = '#f0fdf4';
+                                        rescheduleSelectedDisplay.style.borderColor = '#86efac';
+                                    }
+
+                                    if (submitRescheduleBtn) {
+                                        submitRescheduleBtn.disabled = false;
+                                        submitRescheduleBtn.style.opacity = '1';
+                                        submitRescheduleBtn.style.cursor = 'pointer';
+                                    }
+
+                                    renderRescheduleCalendarGrid();
+                                });
+                            }
+
+                            rescheduleDaysGrid.appendChild(cell);
+                        }
+                    }
+
+                    // Month Navigation listeners
+                    if (reschedulePrevMonthBtn && !reschedulePrevMonthBtn.dataset.listenerAttached) {
+                        reschedulePrevMonthBtn.dataset.listenerAttached = 'true';
+                        reschedulePrevMonthBtn.addEventListener('click', () => {
+                            const today = new Date();
+                            const currentAbsolute = today.getFullYear() * 12 + today.getMonth();
+                            const targetAbsolute = reschedCalYear * 12 + reschedCalMonth - 1;
+                            if (targetAbsolute < currentAbsolute) return; // Prevent past months
+
+                            reschedCalMonth--;
+                            if (reschedCalMonth < 0) {
+                                reschedCalMonth = 11;
+                                reschedCalYear--;
+                            }
+                            renderRescheduleCalendarGrid();
+                        });
+                    }
+
+                    if (rescheduleNextMonthBtn && !rescheduleNextMonthBtn.dataset.listenerAttached) {
+                        rescheduleNextMonthBtn.dataset.listenerAttached = 'true';
+                        rescheduleNextMonthBtn.addEventListener('click', () => {
+                            reschedCalMonth++;
+                            if (reschedCalMonth > 11) {
+                                reschedCalMonth = 0;
+                                reschedCalYear++;
+                            }
+                            renderRescheduleCalendarGrid();
+                        });
+                    }
 
                     document.querySelectorAll('.btn-reschedule-marketplace-booking').forEach(btn => {
-                        btn.addEventListener('click', () => {
+                        btn.addEventListener('click', async () => {
                             const bRef = btn.getAttribute('data-id');
                             const bId = btn.getAttribute('data-booking-id');
                             const provId = btn.getAttribute('data-provider-id');
                             const provName = decodeURIComponent(btn.getAttribute('data-provider-name') || 'Sound Provider');
                             const curDate = btn.getAttribute('data-current-date') || '';
                             const curStart = btn.getAttribute('data-current-start') || '08:00';
+
+                            reschedCurrentBookingId = bId;
+                            reschedCurrentBookingDate = curDate;
+                            reschedSelectedDate = '';
+                            if (rescheduleNewDateInput) rescheduleNewDateInput.value = '';
 
                             if (rescheduleForm) {
                                 rescheduleForm.dataset.bookingId = bId;
@@ -1396,19 +1608,62 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (rescheduleStartTimeInput) rescheduleStartTimeInput.value = curStart.substring(0, 5);
                             if (rescheduleReasonInput) rescheduleReasonInput.value = '';
 
-                            if (rescheduleNewDateInput) {
-                                const tomorrow = new Date();
-                                tomorrow.setDate(tomorrow.getDate() + 1);
-                                rescheduleNewDateInput.min = tomorrow.toISOString().split('T')[0];
-                                rescheduleNewDateInput.value = '';
+                            // Reset Selected Display
+                            if (rescheduleSelectedDisplay) {
+                                rescheduleSelectedDisplay.innerHTML = `
+                                    <i class="fa-solid fa-hand-pointer" style="color:#2563eb;"></i>
+                                    <span>Please click an available date on the calendar above.</span>
+                                `;
+                                rescheduleSelectedDisplay.style.background = '#f1f5f9';
+                                rescheduleSelectedDisplay.style.borderColor = '#cbd5e1';
+                                rescheduleSelectedDisplay.style.color = '#64748b';
                             }
 
-                            if (rescheduleHintEl) {
-                                rescheduleHintEl.innerHTML = '<i class="fa-solid fa-calendar-check" style="color:#10b981;"></i> <span>Select an open date when the provider is available</span>';
-                                rescheduleHintEl.style.color = '#64748b';
+                            if (submitRescheduleBtn) {
+                                submitRescheduleBtn.disabled = true;
+                                submitRescheduleBtn.style.opacity = '0.6';
+                                submitRescheduleBtn.style.cursor = 'not-allowed';
+                            }
+
+                            // Set initial calendar view to current booking date or current month
+                            if (curDate) {
+                                const parsed = new Date(curDate);
+                                if (!isNaN(parsed.getTime())) {
+                                    reschedCalMonth = parsed.getMonth();
+                                    reschedCalYear = parsed.getFullYear();
+                                } else {
+                                    reschedCalMonth = new Date().getMonth();
+                                    reschedCalYear = new Date().getFullYear();
+                                }
+                            } else {
+                                reschedCalMonth = new Date().getMonth();
+                                reschedCalYear = new Date().getFullYear();
                             }
 
                             if (rescheduleModal) rescheduleModal.classList.remove('hidden');
+
+                            // Load real-time provider availability for calendar
+                            if (rescheduleCalLoading) rescheduleCalLoading.style.display = 'inline-flex';
+                            try {
+                                const availRes = await fetch(`/api/providers/${provId}/availability`);
+                                if (availRes.ok) {
+                                    const availData = await availRes.json();
+                                    if (availData.success && Array.isArray(availData.bookedSlots)) {
+                                        reschedBookedSlots = availData.bookedSlots;
+                                    } else {
+                                        reschedBookedSlots = [];
+                                    }
+                                } else {
+                                    reschedBookedSlots = [];
+                                }
+                            } catch (err) {
+                                console.warn('Provider availability calendar fetch error:', err);
+                                reschedBookedSlots = [];
+                            } finally {
+                                if (rescheduleCalLoading) rescheduleCalLoading.style.display = 'none';
+                            }
+
+                            renderRescheduleCalendarGrid();
                         });
                     });
 
@@ -1425,46 +1680,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
 
-                    // Real-Time Date Availability Check
-                    if (rescheduleNewDateInput && !rescheduleNewDateInput.dataset.initialized) {
-                        rescheduleNewDateInput.dataset.initialized = 'true';
-                        rescheduleNewDateInput.addEventListener('change', async (e) => {
-                            const selectedDate = e.target.value;
-                            if (!selectedDate || !rescheduleForm) return;
-
-                            const provId = rescheduleForm.dataset.providerId;
-                            const bId = rescheduleForm.dataset.bookingId;
-                            if (!provId) return;
-
-                            if (rescheduleHintEl) {
-                                rescheduleHintEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color:#2563eb;"></i> <span>Checking provider availability for this date...</span>';
-                                rescheduleHintEl.style.color = '#2563eb';
-                            }
-
-                            try {
-                                const checkUrl = `/api/bookings/check-availability?providerId=${provId}&date=${selectedDate}&excludeBookingId=${bId || ''}`;
-                                const checkRes = await fetch(checkUrl);
-                                const checkData = await checkRes.json();
-
-                                if (checkRes.ok && checkData.success) {
-                                    if (checkData.available) {
-                                        if (rescheduleHintEl) {
-                                            rescheduleHintEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <strong style="color:#10b981;">Date Available!</strong> Provider is open for reservations on this date.';
-                                            rescheduleHintEl.style.color = '#10b981';
-                                        }
-                                    } else {
-                                        if (rescheduleHintEl) {
-                                            rescheduleHintEl.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <strong style="color:#ef4444;">Unavailable:</strong> ${checkData.message || 'Provider is fully booked on this date.'}`;
-                                            rescheduleHintEl.style.color = '#ef4444';
-                                        }
-                                    }
-                                }
-                            } catch (err) {
-                                console.warn('Could not check availability:', err);
-                            }
-                        });
-                    }
-
                     // Reschedule Form Submit Handler
                     if (rescheduleForm && !rescheduleForm.dataset.initialized) {
                         rescheduleForm.dataset.initialized = 'true';
@@ -1472,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             e.preventDefault();
                             const bookingId = rescheduleForm.dataset.bookingId;
                             const bookingRef = rescheduleForm.dataset.bookingRef;
-                            const newDate = rescheduleNewDateInput?.value;
+                            const newDate = rescheduleNewDateInput?.value || reschedSelectedDate;
                             const newStartTime = rescheduleStartTimeInput?.value;
                             const reason = rescheduleReasonInput?.value?.trim();
                             const submitBtn = document.getElementById('btn-submit-marketplace-reschedule');
@@ -1482,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                             if (!newDate) {
-                                showToast('⚠️ Please select a new event date.', 'warning');
+                                showToast('⚠️ Please select an available event date from the calendar.', 'warning');
                                 return;
                             }
 
@@ -1531,6 +1746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                     }
+
 
                     // Window Accept Completion Handler
                     window.acceptBookingCompletion = async (bookingId, bookingRef) => {
