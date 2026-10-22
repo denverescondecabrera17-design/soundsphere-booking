@@ -1044,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         data-current-end="${endTimeVal}"
                                         style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #bfdbfe; background:#eff6ff; color:#2563eb; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;"
                                         title="${rescheduleTitle}">
-                                        <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Request Reschedule
+                                        <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Reschedule
                                     </button>
                                 `;
                             } else {
