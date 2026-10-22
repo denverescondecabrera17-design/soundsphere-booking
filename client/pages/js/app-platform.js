@@ -869,6 +869,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             clientName = (currentUser && (currentUser.name || currentUser.fullname || (currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : null))) || 'Verified Client';
                         }
 
+                        const isReportPending = !!(b.ReportID && (b.ReportStatus === 'Pending' || !b.ReportStatus));
+                        const isDisputed = isReportPending || b.EscrowStatus === 'Disputed';
+
                         // Overdue check for booking balance
                         let isOverdue = false;
                         let daysOverdue = 0;
@@ -1040,9 +1043,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const formattedStart = formatDisplayTime(b.StartTime) || '08:00 AM';
                         const durationHrs = parseInt(b.NumberOfHours || 5, 10) || 5;
                         const formattedEnd = b.EndTime ? formatDisplayTime(b.EndTime) : calculateDisplayEndTime(b.StartTime, durationHrs);
-
-                        const isReportPending = !!(b.ReportID && (b.ReportStatus === 'Pending' || !b.ReportStatus));
-                        const isDisputed = isReportPending || b.EscrowStatus === 'Disputed';
 
                         let filterStatus = statusLower;
                         if (['confirmed', 'approved', 'paid'].includes(statusLower) || statusLower === 'awaiting client confirmation') {
