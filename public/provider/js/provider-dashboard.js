@@ -1958,7 +1958,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (statUpcomingBookings) statUpcomingBookings.textContent = s.upcomingBookingsCount != null ? s.upcomingBookingsCount : 0;
                     if (statTodaysEvents) statTodaysEvents.textContent = s.todaysEventsCount != null ? s.todaysEventsCount : 0;
 
-                    // Filter out any unpaid pending bookings
+                    // Filter out any unpaid pending or completed/cancelled bookings from upcoming lists
+                    const isUpcomingActiveBooking = (b) => {
+                        const st = (b.BookingStatus || '').toLowerCase();
+                        const pSt = (b.PaymentStatus || '').toLowerCase();
+                        const paid = parseFloat(b.AmountPaid || 0);
+                        return st !== 'pending' && pSt !== 'pending' && paid > 0 && st !== 'completed' && st !== 'cancelled' && st !== 'rejected';
+                    };
+
                     const isPaidBooking = (b) => {
                         const st = (b.BookingStatus || '').toLowerCase();
                         const pSt = (b.PaymentStatus || '').toLowerCase();
@@ -1966,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return st !== 'pending' && pSt !== 'pending' && paid > 0;
                     };
 
-                    // Render Upcoming Event Reservations Table (include Today's events + future upcoming)
+                    // Render Upcoming Event Reservations Table (include Today's events + future upcoming, strictly excluding completed)
                     const combinedReservations = [];
                     const seenBookingIds = new Set();
                     (s.todaysEvents || []).forEach(b => {
@@ -1988,7 +1995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return dateA - dateB;
                     });
 
-                    renderUpcomingReservations(combinedReservations.filter(isPaidBooking));
+                    renderUpcomingReservations(combinedReservations.filter(isUpcomingActiveBooking));
                     renderBookingsTable((s.allBookings || []).filter(isPaidBooking));
                     renderRecentReviews(s.reviewsList || []);
                 }
@@ -2246,7 +2253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const st = (b.BookingStatus || '').toLowerCase();
             const pSt = (b.PaymentStatus || '').toLowerCase();
             const paid = parseFloat(b.AmountPaid || 0);
-            return st !== 'pending' && pSt !== 'pending' && paid > 0;
+            return st !== 'pending' && pSt !== 'pending' && paid > 0 && st !== 'completed' && st !== 'cancelled' && st !== 'rejected';
         });
 
         if (!paidBookings || paidBookings.length === 0) {

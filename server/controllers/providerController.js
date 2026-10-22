@@ -644,17 +644,19 @@ const getDashboardStats = async (req, res) => {
             return st !== 'cancelled' && st !== 'rejected' && st !== 'pending' && pSt !== 'pending' && pSt !== 'refunded' && paid > 0;
         });
 
-        // 1. TODAY'S SCHEDULE: Non-cancelled, paid bookings on today's Manila date
+        // 1. TODAY'S SCHEDULE: Active non-completed, non-cancelled, paid bookings on today's Manila date
         const todaysEvents = activeBookings.filter(b => {
             const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
-            return bDate === nowManilaStr;
+            const st = (b.BookingStatus || '').toLowerCase();
+            return bDate === nowManilaStr && st !== 'completed';
         });
 
-        // 2. UPCOMING BOOKINGS: Future confirmed/paid bookings strictly AFTER today
+        // 2. UPCOMING BOOKINGS: Future confirmed/paid bookings strictly AFTER today (excluding completed)
         const upcomingBookings = activeBookings.filter(b => {
             const bDate = getBookingDateStr(b.ServiceStartDate || b.EventDate);
+            const st = (b.BookingStatus || '').toLowerCase();
             const isConfirmed = (b.BookingStatus === 'Confirmed' || b.BookingStatus === 'Awaiting Client Confirmation');
-            return bDate && bDate > nowManilaStr && isConfirmed;
+            return bDate && bDate > nowManilaStr && isConfirmed && st !== 'completed';
         });
 
         // 3. AVAILABLE WALLET BALANCE & EARNINGS:
