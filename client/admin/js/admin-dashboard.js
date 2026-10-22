@@ -1114,6 +1114,274 @@ document.addEventListener('DOMContentLoaded', async () => {
         `).join('');
     };
 
+    // ==========================================
+    // UNIVERSAL IN-PAGE DOCUMENT & IMAGE LIGHTBOX VIEWER
+    // ==========================================
+    let _lightboxScale = 1.0;
+    let _lightboxRotation = 0;
+    let _lightboxTranslateX = 0;
+    let _lightboxTranslateY = 0;
+    let _lightboxIsDragging = false;
+    let _lightboxDragStartX = 0;
+    let _lightboxDragStartY = 0;
+    let _lightboxKeyHandler = null;
+
+    window.openDocLightbox = function(src, title) {
+        if (!src) return;
+        _lightboxScale = 1.0;
+        _lightboxRotation = 0;
+        _lightboxTranslateX = 0;
+        _lightboxTranslateY = 0;
+        _lightboxIsDragging = false;
+
+        if (!document.getElementById('admin-doc-lightbox-styles')) {
+            const st = document.createElement('style');
+            st.id = 'admin-doc-lightbox-styles';
+            st.textContent = `
+                @keyframes docLightboxFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .doc-lb-btn {
+                    background: rgba(255,255,255,0.08);
+                    border: 1px solid rgba(255,255,255,0.15);
+                    border-radius: 8px;
+                    color: #e2e8f0;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.15s ease;
+                }
+                .doc-lb-btn:hover {
+                    background: rgba(255,255,255,0.18);
+                    color: #ffffff;
+                }
+            `;
+            document.head.appendChild(st);
+        }
+
+        let modal = document.getElementById('admin-document-lightbox');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'admin-document-lightbox';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(10, 15, 30, 0.92);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                z-index: 1000005;
+                display: flex;
+                flex-direction: column;
+                user-select: none;
+                overflow: hidden;
+                animation: docLightboxFadeIn 0.2s ease-out;
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const docTitle = title || 'Document Preview';
+        const isPdf = src.startsWith('data:application/pdf') || src.toLowerCase().endsWith('.pdf');
+
+        modal.innerHTML = `
+            <!-- Top Toolbar -->
+            <div style="height: 62px; padding: 0 24px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; color: #fff; z-index: 20;">
+                <div style="display:flex; align-items:center; gap:12px; min-width: 0;">
+                    <div style="width:38px; height:38px; border-radius:8px; background:rgba(37,99,235,0.25); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:#60a5fa; flex-shrink:0;">
+                        <i class="fa-solid fa-file-contract"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                        <h3 style="margin:0; font-size:1.02rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${docTitle}</h3>
+                        <span style="font-size:0.75rem; color:#94a3b8;">High-Resolution Verification Document</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div style="display:flex; align-items:center; gap:10px;">
+                    ${!isPdf ? `
+                        <div style="display:flex; align-items:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:3px;">
+                            <button type="button" id="lightbox-btn-zoom-out" class="doc-lb-btn" title="Zoom Out" style="width:32px; height:32px; border:none; background:none;">
+                                <i class="fa-solid fa-magnifying-glass-minus"></i>
+                            </button>
+                            <span id="lightbox-zoom-label" style="font-size:0.76rem; font-weight:700; color:#e2e8f0; min-width:46px; text-align:center;">100%</span>
+                            <button type="button" id="lightbox-btn-zoom-in" class="doc-lb-btn" title="Zoom In" style="width:32px; height:32px; border:none; background:none;">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </button>
+                            <button type="button" id="lightbox-btn-reset" class="doc-lb-btn" title="Reset View" style="font-size:0.75rem; font-weight:600; padding:0 8px; height:32px; border:none; background:none; gap:4px;">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset
+                            </button>
+                        </div>
+
+                        <div style="display:flex; align-items:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:3px;">
+                            <button type="button" id="lightbox-btn-rot-left" class="doc-lb-btn" title="Rotate Left 90°" style="width:32px; height:32px; border:none; background:none;">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button type="button" id="lightbox-btn-rot-right" class="doc-lb-btn" title="Rotate Right 90°" style="width:32px; height:32px; border:none; background:none;">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    <a href="${src}" target="_blank" rel="noopener noreferrer" class="doc-lb-btn" title="Open original raw file in new tab" style="padding:8px 12px; font-size:0.8rem; font-weight:600; text-decoration:none; gap:6px;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> <span style="font-size:0.78rem;">New Tab</span>
+                    </a>
+
+                    <button type="button" onclick="window.closeDocLightbox()" title="Close Viewer (Esc)" style="display:inline-flex; align-items:center; gap:6px; background:#ef4444; border:none; border-radius:8px; padding:8px 16px; color:#ffffff; font-size:0.84rem; font-weight:700; cursor:pointer; box-shadow:0 2px 10px rgba(239,68,68,0.4); transition:transform 0.15s, background 0.15s;" onmouseover="this.style.background='#dc2626'; this.style.transform='scale(1.03)';" onmouseout="this.style.background='#ef4444'; this.style.transform='scale(1)';">
+                        <i class="fa-solid fa-xmark"></i> <span>Close</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Center Viewport Area -->
+            <div id="lightbox-viewport" style="flex:1; width:100%; height:calc(100vh - 102px); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; cursor:default;">
+                ${isPdf ? `
+                    <iframe src="${src}" style="width:88vw; height:82vh; border:none; border-radius:10px; background:#fff; box-shadow:0 25px 60px rgba(0,0,0,0.6);"></iframe>
+                ` : `
+                    <div id="lightbox-img-wrapper" style="display:inline-block; transition:transform 0.08s ease-out; cursor:grab; transform-origin:center center;">
+                        <img id="lightbox-img" src="${src}" alt="${docTitle}" draggable="false" style="max-width:88vw; max-height:80vh; object-fit:contain; border-radius:8px; box-shadow:0 25px 60px rgba(0,0,0,0.6); display:block; background:#ffffff;">
+                    </div>
+                `}
+            </div>
+
+            <!-- Bottom Status Bar / Hint -->
+            <div style="height:40px; background:rgba(15,23,42,0.95); border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:0.76rem; color:#94a3b8; flex-shrink:0;">
+                <span>Tip: Click outside or press <kbd style="background:rgba(255,255,255,0.15); color:#fff; padding:2px 7px; border-radius:4px; font-weight:600;">ESC</kbd> to exit preview ${!isPdf ? '• Scroll mouse wheel to zoom • Click & drag to pan' : ''}</span>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        document.body.style.overflow = 'hidden';
+
+        if (!isPdf) {
+            const wrapper = document.getElementById('lightbox-img-wrapper');
+            const zoomLabel = document.getElementById('lightbox-zoom-label');
+            const viewport = document.getElementById('lightbox-viewport');
+
+            const updateTransform = () => {
+                if (!wrapper) return;
+                wrapper.style.transform = `translate(${_lightboxTranslateX}px, ${_lightboxTranslateY}px) rotate(${_lightboxRotation}deg) scale(${_lightboxScale})`;
+                if (zoomLabel) zoomLabel.textContent = `${Math.round(_lightboxScale * 100)}%`;
+                wrapper.style.cursor = _lightboxScale > 1 ? (_lightboxIsDragging ? 'grabbing' : 'grab') : 'grab';
+            };
+
+            const zoomIn = () => {
+                if (_lightboxScale < 4.0) {
+                    _lightboxScale = Math.min(4.0, Number((_lightboxScale + 0.25).toFixed(2)));
+                    updateTransform();
+                }
+            };
+
+            const zoomOut = () => {
+                if (_lightboxScale > 0.5) {
+                    _lightboxScale = Math.max(0.5, Number((_lightboxScale - 0.25).toFixed(2)));
+                    updateTransform();
+                }
+            };
+
+            const rotateR = () => {
+                _lightboxRotation = (_lightboxRotation + 90) % 360;
+                updateTransform();
+            };
+
+            const rotateL = () => {
+                _lightboxRotation = (_lightboxRotation - 90 + 360) % 360;
+                updateTransform();
+            };
+
+            const resetAll = () => {
+                _lightboxScale = 1.0;
+                _lightboxRotation = 0;
+                _lightboxTranslateX = 0;
+                _lightboxTranslateY = 0;
+                updateTransform();
+            };
+
+            document.getElementById('lightbox-btn-zoom-in')?.addEventListener('click', zoomIn);
+            document.getElementById('lightbox-btn-zoom-out')?.addEventListener('click', zoomOut);
+            document.getElementById('lightbox-btn-rot-right')?.addEventListener('click', rotateR);
+            document.getElementById('lightbox-btn-rot-left')?.addEventListener('click', rotateL);
+            document.getElementById('lightbox-btn-reset')?.addEventListener('click', resetAll);
+
+            viewport?.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else {
+                    zoomOut();
+                }
+            }, { passive: false });
+
+            wrapper?.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                _lightboxIsDragging = true;
+                _lightboxDragStartX = e.clientX - _lightboxTranslateX;
+                _lightboxDragStartY = e.clientY - _lightboxTranslateY;
+                wrapper.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            const onMouseMove = (e) => {
+                if (!_lightboxIsDragging) return;
+                _lightboxTranslateX = e.clientX - _lightboxDragStartX;
+                _lightboxTranslateY = e.clientY - _lightboxDragStartY;
+                updateTransform();
+            };
+
+            const onMouseUp = () => {
+                if (_lightboxIsDragging) {
+                    _lightboxIsDragging = false;
+                    if (wrapper) wrapper.style.cursor = _lightboxScale > 1 ? 'grab' : 'default';
+                }
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+
+            viewport?.addEventListener('click', (e) => {
+                if (e.target === viewport) {
+                    window.closeDocLightbox();
+                }
+            });
+        }
+
+        if (_lightboxKeyHandler) {
+            window.removeEventListener('keydown', _lightboxKeyHandler);
+        }
+        _lightboxKeyHandler = (e) => {
+            if (e.key === 'Escape') {
+                window.closeDocLightbox();
+            }
+        };
+        window.addEventListener('keydown', _lightboxKeyHandler);
+    };
+
+    window.closeDocLightbox = function() {
+        const modal = document.getElementById('admin-document-lightbox');
+        if (modal) {
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.innerHTML = '';
+                document.body.style.overflow = '';
+            }, 180);
+        } else {
+            document.body.style.overflow = '';
+        }
+        if (_lightboxKeyHandler) {
+            window.removeEventListener('keydown', _lightboxKeyHandler);
+            _lightboxKeyHandler = null;
+        }
+    };
+
     // View Application Details Fullscreen Handler
     window.viewAppDetails = async (applicationId) => {
         const modal = document.getElementById('modal-admin-view-app');
@@ -1243,10 +1511,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <i class="fa-solid fa-id-card" style="color:#2563eb;"></i> Government ID (Front)
                                 </div>
                                 ${govtFront ? `
-                                    <a href="${govtFront}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
-                                        <img src="${govtFront}" alt="Govt ID Front" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
-                                    </a>
-                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                    <div role="button" tabindex="0" onclick="window.openDocLightbox('${govtFront}', 'Government ID (Front)')" onkeydown="if(event.key==='Enter'||event.key===' ') window.openDocLightbox('${govtFront}', 'Government ID (Front)')" style="display:block; width:100%; cursor:pointer; position:relative; overflow:hidden; border-radius:8px;" title="Click to view full image">
+                                        <img src="${govtFront}" alt="Govt ID Front" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in; transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                                        <div style="position:absolute; bottom:8px; right:8px; background:rgba(15,23,42,0.78); backdrop-filter:blur(4px); color:#ffffff; font-size:0.72rem; padding:4px 9px; border-radius:6px; display:flex; align-items:center; gap:5px; pointer-events:none;">
+                                            <i class="fa-solid fa-expand"></i> Full View
+                                        </div>
+                                    </div>
+                                    <span style="font-size:0.75rem; color:#2563eb; margin-top:8px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="window.openDocLightbox('${govtFront}', 'Government ID (Front)')">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i> Click image to view in full image
+                                    </span>
                                 ` : `
                                     <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
                                 `}
@@ -1258,10 +1531,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> Government ID (Back)
                                 </div>
                                 ${govtBack ? `
-                                    <a href="${govtBack}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
-                                        <img src="${govtBack}" alt="Govt ID Back" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
-                                    </a>
-                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                    <div role="button" tabindex="0" onclick="window.openDocLightbox('${govtBack}', 'Government ID (Back)')" onkeydown="if(event.key==='Enter'||event.key===' ') window.openDocLightbox('${govtBack}', 'Government ID (Back)')" style="display:block; width:100%; cursor:pointer; position:relative; overflow:hidden; border-radius:8px;" title="Click to view full image">
+                                        <img src="${govtBack}" alt="Govt ID Back" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in; transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                                        <div style="position:absolute; bottom:8px; right:8px; background:rgba(15,23,42,0.78); backdrop-filter:blur(4px); color:#ffffff; font-size:0.72rem; padding:4px 9px; border-radius:6px; display:flex; align-items:center; gap:5px; pointer-events:none;">
+                                            <i class="fa-solid fa-expand"></i> Full View
+                                        </div>
+                                    </div>
+                                    <span style="font-size:0.75rem; color:#2563eb; margin-top:8px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="window.openDocLightbox('${govtBack}', 'Government ID (Back)')">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i> Click image to view in full image
+                                    </span>
                                 ` : `
                                     <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
                                 `}
@@ -1273,10 +1551,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <i class="fa-solid fa-file-contract" style="color:#059669;"></i> Mayor's / Business Permit
                                 </div>
                                 ${permit ? `
-                                    <a href="${permit}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%;" title="Click to view full image in high resolution">
-                                        <img src="${permit}" alt="Business Permit" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in;">
-                                    </a>
-                                    <span style="font-size:0.75rem; color:#64748b; margin-top:8px;">Click image to view in new tab</span>
+                                    <div role="button" tabindex="0" onclick="window.openDocLightbox('${permit}', 'Mayor&apos;s / Business Permit')" onkeydown="if(event.key==='Enter'||event.key===' ') window.openDocLightbox('${permit}', 'Mayor&apos;s / Business Permit')" style="display:block; width:100%; cursor:pointer; position:relative; overflow:hidden; border-radius:8px;" title="Click to view full image">
+                                        <img src="${permit}" alt="Business Permit" style="width:100%; height:200px; object-fit:contain; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; cursor:zoom-in; transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                                        <div style="position:absolute; bottom:8px; right:8px; background:rgba(15,23,42,0.78); backdrop-filter:blur(4px); color:#ffffff; font-size:0.72rem; padding:4px 9px; border-radius:6px; display:flex; align-items:center; gap:5px; pointer-events:none;">
+                                            <i class="fa-solid fa-expand"></i> Full View
+                                        </div>
+                                    </div>
+                                    <span style="font-size:0.75rem; color:#059669; margin-top:8px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="window.openDocLightbox('${permit}', 'Mayor&apos;s / Business Permit')">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i> Click image to view in full image
+                                    </span>
                                 ` : `
                                     <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.88rem;">No file uploaded</div>
                                 `}
@@ -2682,9 +2965,9 @@ window.viewAdminReportDetails = function(reportId) {
                 <img src="${cleanProofSrc}" 
                      alt="Client Incident Proof" 
                      style="max-width:100%; max-height:560px; object-fit:contain; border-radius:10px; cursor:zoom-in; box-shadow:0 12px 36px rgba(0,0,0,0.6);"
-                     onclick="window.open('${cleanProofSrc}', '_blank')"
-                     title="Click to open image in full resolution">
-                <span style="color:#94a3b8; font-size:0.78rem; margin-top:12px; font-weight:600;"><i class="fa-solid fa-magnifying-glass-plus"></i> Click image to open in full size tab</span>
+                     onclick="window.openDocLightbox('${cleanProofSrc}', 'Client Incident Supporting Evidence')"
+                     title="Click to view full size on screen">
+                <span style="color:#94a3b8; font-size:0.78rem; margin-top:12px; font-weight:600; cursor:pointer;" onclick="window.openDocLightbox('${cleanProofSrc}', 'Client Incident Supporting Evidence')"><i class="fa-solid fa-magnifying-glass-plus"></i> Click image to view in full image</span>
             </div>
         </div>
     ` : `
