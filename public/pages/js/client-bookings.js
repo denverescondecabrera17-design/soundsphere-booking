@@ -492,17 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <i class="fa-solid fa-clock-rotate-left"></i> Under Admin Review
                         </span>
                     `) : ''}
-
-                    ${b.canReschedule ? `
-                        <button type="button" class="btn-action-sm btn-reschedule btn-reschedule-active" data-id="${b.id}" data-booking-id="${b.bookingId}" style="background:#eff6ff; color:#2563eb; border:1.5px solid #bfdbfe; font-weight:700; cursor:pointer;" title="${b.rescheduleTitle}">
-                            <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Request Reschedule
-                        </button>
-                    ` : `
-                        <button type="button" class="btn-action-sm btn-reschedule" disabled title="${b.rescheduleTitle || 'Rescheduling closed'}" style="opacity:0.55; cursor:not-allowed; background:#f8fafc; color:#94a3b8; border-color:#e2e8f0;">
-                            <i class="fa-solid fa-calendar-xmark" style="color:#94a3b8;"></i> ${b.rescheduleBadgeText || 'Reschedule Closed'}
-                        </button>
-                    `}
-
                     ${cancelBtnHtml}
 
                     <button type="button" class="btn-action-sm btn-chat" data-id="${b.id}">

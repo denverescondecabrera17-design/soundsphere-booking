@@ -982,6 +982,50 @@ document.addEventListener('DOMContentLoaded', () => {
                             `;
                         }
 
+                        // Rescheduling Policy: Can reschedule under the same policy as cancellation, but only for active/confirmed/pending bookings
+                        const isNotReschedulableStatus = ['cancelled', 'rejected', 'completed', 'awaiting client confirmation'].includes(statusLower);
+                        const canReschedule = canCancel && !isNotReschedulableStatus && !isDisputed;
+                        const rescheduleBadgeText = canReschedule ? 'Reschedule Open' : (cancelBadgeText ? cancelBadgeText.replace(/Cancel/g, 'Reschedule') : 'Reschedule Closed');
+                        const rescheduleTitle = canReschedule 
+                            ? 'Click to reschedule your event date' 
+                            : (cancelTitle ? cancelTitle.replace(/cancelled/gi, 'rescheduled').replace(/cancellation/gi, 'rescheduling').replace(/cancel/gi, 'reschedule') : 'Rescheduling window closed.');
+
+                        let rescheduleBtnHtml = '';
+                        if (!isNotReschedulableStatus) {
+                            const rawEventDate = b.EventDate || b.ServiceStartDate || sDate;
+                            let formattedDateForDataset = '';
+                            if (rawEventDate) {
+                                const parsedDate = new Date(rawEventDate);
+                                if (!isNaN(parsedDate.getTime())) {
+                                    formattedDateForDataset = parsedDate.toISOString().split('T')[0];
+                                } else {
+                                    formattedDateForDataset = String(rawEventDate).split('T')[0];
+                                }
+                            }
+
+                            if (canReschedule) {
+                                rescheduleBtnHtml = `
+                                    <button type="button" class="btn-reschedule-marketplace-booking"
+                                        data-id="${b.BookingReference || `SS-2026-${String(b.BookingID).padStart(5, '0')}`}"
+                                        data-booking-id="${b.BookingID}"
+                                        data-provider-id="${b.ProviderID || ''}"
+                                        data-provider-name="${encodeURIComponent(b.ProviderName || 'Sound Provider')}"
+                                        data-current-date="${formattedDateForDataset}"
+                                        data-current-start="${b.StartTime || '08:00'}"
+                                        style="padding:10px 18px; font-size:0.95rem; font-weight:800; border-radius:10px; border:1.5px solid #bfdbfe; background:#eff6ff; color:#2563eb; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;"
+                                        title="${rescheduleTitle}">
+                                        <i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> Request Reschedule
+                                    </button>
+                                `;
+                            } else {
+                                rescheduleBtnHtml = `
+                                    <button type="button" disabled style="padding:10px 18px; font-size:0.95rem; font-weight:700; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#94a3b8; cursor:not-allowed; opacity:0.6; display:inline-flex; align-items:center; gap:8px;" title="${rescheduleTitle}">
+                                        <i class="fa-solid fa-lock" style="color:#94a3b8;"></i> ${rescheduleBadgeText}
+                                    </button>
+                                `;
+                            }
+                        }
+
                         let statusBadgeClass = 'status-confirmed';
                         if (statusLower === 'pending' || statusLower === 'pending payment') statusBadgeClass = 'status-pending';
                         else if (statusLower === 'awaiting client confirmation') statusBadgeClass = 'status-awaiting';
@@ -1192,6 +1236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <a href="booking-confirmation.html?ref=${encodeURIComponent(b.BookingReference || '')}&id=${b.BookingID}" class="btn-card-secondary" style="padding:10px 20px; font-size:0.95rem; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:10px;">
                                             <i class="fa-solid fa-file-invoice"></i> View Official Receipt
                                         </a>
+                                        ${rescheduleBtnHtml}
                                         ${cancelBtnHtml}
                                         <button type="button" class="btn-card-report-provider" onclick="window.handleReportButtonClick(this)"
                                             data-booking-id="${b.BookingID}"
@@ -1315,6 +1360,173 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (submitBtn) {
                                     submitBtn.disabled = false;
                                     submitBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Confirm Cancellation';
+                                }
+                            }
+                        });
+                    }
+
+                    // Attach Reschedule Booking click listeners
+                    const rescheduleModal = document.getElementById('marketplace-reschedule-modal');
+                    const rescheduleRefSpan = document.getElementById('marketplace-reschedule-booking-ref');
+                    const rescheduleProvSpan = document.getElementById('marketplace-reschedule-provider-name');
+                    const rescheduleCurDateSpan = document.getElementById('marketplace-reschedule-current-date');
+                    const rescheduleNewDateInput = document.getElementById('marketplace-reschedule-new-date');
+                    const rescheduleStartTimeInput = document.getElementById('marketplace-reschedule-start-time');
+                    const rescheduleHintEl = document.getElementById('marketplace-reschedule-date-availability-hint');
+                    const rescheduleReasonInput = document.getElementById('marketplace-reschedule-reason');
+                    const rescheduleForm = document.getElementById('marketplace-reschedule-form');
+
+                    document.querySelectorAll('.btn-reschedule-marketplace-booking').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const bRef = btn.getAttribute('data-id');
+                            const bId = btn.getAttribute('data-booking-id');
+                            const provId = btn.getAttribute('data-provider-id');
+                            const provName = decodeURIComponent(btn.getAttribute('data-provider-name') || 'Sound Provider');
+                            const curDate = btn.getAttribute('data-current-date') || '';
+                            const curStart = btn.getAttribute('data-current-start') || '08:00';
+
+                            if (rescheduleForm) {
+                                rescheduleForm.dataset.bookingId = bId;
+                                rescheduleForm.dataset.bookingRef = bRef;
+                                rescheduleForm.dataset.providerId = provId;
+                            }
+                            if (rescheduleRefSpan) rescheduleRefSpan.textContent = bRef;
+                            if (rescheduleProvSpan) rescheduleProvSpan.textContent = provName;
+                            if (rescheduleCurDateSpan) rescheduleCurDateSpan.textContent = curDate || 'Not set';
+                            if (rescheduleStartTimeInput) rescheduleStartTimeInput.value = curStart.substring(0, 5);
+                            if (rescheduleReasonInput) rescheduleReasonInput.value = '';
+
+                            if (rescheduleNewDateInput) {
+                                const tomorrow = new Date();
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                rescheduleNewDateInput.min = tomorrow.toISOString().split('T')[0];
+                                rescheduleNewDateInput.value = '';
+                            }
+
+                            if (rescheduleHintEl) {
+                                rescheduleHintEl.innerHTML = '<i class="fa-solid fa-calendar-check" style="color:#10b981;"></i> <span>Select an open date when the provider is available</span>';
+                                rescheduleHintEl.style.color = '#64748b';
+                            }
+
+                            if (rescheduleModal) rescheduleModal.classList.remove('hidden');
+                        });
+                    });
+
+                    // Reschedule Modal Close Buttons & Backdrop click
+                    document.querySelectorAll('.btn-close-marketplace-reschedule').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            if (rescheduleModal) rescheduleModal.classList.add('hidden');
+                        });
+                    });
+                    if (rescheduleModal && !rescheduleModal.dataset.listenerAttached) {
+                        rescheduleModal.dataset.listenerAttached = 'true';
+                        rescheduleModal.addEventListener('click', (e) => {
+                            if (e.target === rescheduleModal) rescheduleModal.classList.add('hidden');
+                        });
+                    }
+
+                    // Real-Time Date Availability Check
+                    if (rescheduleNewDateInput && !rescheduleNewDateInput.dataset.initialized) {
+                        rescheduleNewDateInput.dataset.initialized = 'true';
+                        rescheduleNewDateInput.addEventListener('change', async (e) => {
+                            const selectedDate = e.target.value;
+                            if (!selectedDate || !rescheduleForm) return;
+
+                            const provId = rescheduleForm.dataset.providerId;
+                            const bId = rescheduleForm.dataset.bookingId;
+                            if (!provId) return;
+
+                            if (rescheduleHintEl) {
+                                rescheduleHintEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color:#2563eb;"></i> <span>Checking provider availability for this date...</span>';
+                                rescheduleHintEl.style.color = '#2563eb';
+                            }
+
+                            try {
+                                const checkUrl = `/api/bookings/check-availability?providerId=${provId}&date=${selectedDate}&excludeBookingId=${bId || ''}`;
+                                const checkRes = await fetch(checkUrl);
+                                const checkData = await checkRes.json();
+
+                                if (checkRes.ok && checkData.success) {
+                                    if (checkData.available) {
+                                        if (rescheduleHintEl) {
+                                            rescheduleHintEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <strong style="color:#10b981;">Date Available!</strong> Provider is open for reservations on this date.';
+                                            rescheduleHintEl.style.color = '#10b981';
+                                        }
+                                    } else {
+                                        if (rescheduleHintEl) {
+                                            rescheduleHintEl.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <strong style="color:#ef4444;">Unavailable:</strong> ${checkData.message || 'Provider is fully booked on this date.'}`;
+                                            rescheduleHintEl.style.color = '#ef4444';
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                console.warn('Could not check availability:', err);
+                            }
+                        });
+                    }
+
+                    // Reschedule Form Submit Handler
+                    if (rescheduleForm && !rescheduleForm.dataset.initialized) {
+                        rescheduleForm.dataset.initialized = 'true';
+                        rescheduleForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            const bookingId = rescheduleForm.dataset.bookingId;
+                            const bookingRef = rescheduleForm.dataset.bookingRef;
+                            const newDate = rescheduleNewDateInput?.value;
+                            const newStartTime = rescheduleStartTimeInput?.value;
+                            const reason = rescheduleReasonInput?.value?.trim();
+                            const submitBtn = document.getElementById('btn-submit-marketplace-reschedule');
+
+                            if (!bookingId) {
+                                showToast('⚠️ No booking selected.', 'warning');
+                                return;
+                            }
+                            if (!newDate) {
+                                showToast('⚠️ Please select a new event date.', 'warning');
+                                return;
+                            }
+
+                            const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Confirm Reschedule';
+                            try {
+                                if (submitBtn) {
+                                    submitBtn.disabled = true;
+                                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rescheduling...';
+                                }
+
+                                const headers = { 'Content-Type': 'application/json' };
+                                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                                const res = await fetch(`/api/bookings/${bookingId}/reschedule`, {
+                                    method: 'POST',
+                                    headers,
+                                    body: JSON.stringify({
+                                        newDate,
+                                        newStartTime,
+                                        reason
+                                    })
+                                });
+
+                                const data = await res.json();
+                                if (res.ok && data.success) {
+                                    showToast(data.message || `✓ Booking ${bookingRef || bookingId} successfully rescheduled!`, 'success');
+                                    if (rescheduleModal) rescheduleModal.classList.add('hidden');
+                                    rescheduleForm.reset();
+                                    delete rescheduleForm.dataset.bookingId;
+                                    delete rescheduleForm.dataset.bookingRef;
+                                    delete rescheduleForm.dataset.providerId;
+                                    if (typeof window.fetchUserBookings === 'function') {
+                                        window.fetchUserBookings();
+                                    }
+                                } else {
+                                    showToast(`✕ ${data.message || 'Failed to reschedule event date.'}`, 'error');
+                                }
+                            } catch (err) {
+                                console.error('Reschedule submit error:', err);
+                                showToast('✕ Network error while submitting reschedule request.', 'error');
+                            } finally {
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalBtnHtml;
                                 }
                             }
                         });

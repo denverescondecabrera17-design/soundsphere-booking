@@ -2061,6 +2061,89 @@
         });
     </script>
 
+    <!-- ==================== MARKETPLACE RESCHEDULE EVENT RESERVATION MODAL ==================== -->
+    <div class="modal-overlay hidden" id="marketplace-reschedule-modal" role="dialog" aria-modal="true" style="position:fixed; inset:0; background:rgba(10,25,47,0.65); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:999999; padding:16px;">
+        <div class="modal-card" style="background:#ffffff; border-radius:16px; width:100%; max-width:540px; box-shadow:0 20px 50px rgba(10,25,47,0.25); overflow:hidden;">
+            <div style="padding:18px 24px; background:#eff6ff; border-bottom:1px solid #bfdbfe; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.15rem;">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.1rem; color:#1e3a8a; font-weight:800;">Reschedule Event Reservation</h3>
+                        <p style="margin:2px 0 0 0; font-size:0.78rem; color:#2563eb;">Booking Reference: <span id="marketplace-reschedule-booking-ref" style="font-weight:700;">#0</span></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-marketplace-reschedule" style="background:none; border:none; font-size:1.4rem; color:#1e3a8a; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+
+            <form id="marketplace-reschedule-form" style="margin:0;">
+                <div style="padding:22px 24px; display:flex; flex-direction:column; gap:16px;">
+                    
+                    <!-- Rescheduling Policy Banner -->
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start;">
+                        <i class="fa-solid fa-circle-info" style="color:#2563eb; font-size:1.2rem; margin-top:2px;"></i>
+                        <div>
+                            <div style="font-size:0.86rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">
+                                Rescheduling Policy
+                            </div>
+                            <div style="font-size:0.8rem; color:#3b82f6; line-height:1.4;">
+                                You can reschedule up to 1 day before the event (or within 1 hour for same-day bookings). The provider schedule will be updated automatically for the new date.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Booking Summary Box -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; font-size:0.84rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#64748b;">Provider:</span>
+                            <strong style="color:#0a192f;" id="marketplace-reschedule-provider-name">Sound Provider</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#64748b;">Current Schedule:</span>
+                            <strong style="color:#e11d48;" id="marketplace-reschedule-current-date">--</strong>
+                        </div>
+                    </div>
+
+                    <!-- New Date Input -->
+                    <div>
+                        <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:6px;">
+                            Select New Event Date <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="date" id="marketplace-reschedule-new-date" required style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.92rem; font-family:inherit; color:#0a192f; box-sizing:border-box;">
+                        <div id="marketplace-reschedule-date-availability-hint" style="font-size:0.78rem; margin-top:6px; color:#64748b; display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-calendar-check" style="color:#10b981;"></i> <span>Select an open date when the provider is available</span>
+                        </div>
+                    </div>
+
+                    <!-- Start Time Input -->
+                    <div>
+                        <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:6px;">
+                            Event Start Time
+                        </label>
+                        <input type="time" id="marketplace-reschedule-start-time" style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.92rem; font-family:inherit; color:#0a192f; box-sizing:border-box;">
+                    </div>
+
+                    <!-- Reason -->
+                    <div>
+                        <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:6px;">
+                            Reason for Rescheduling <span style="font-size:0.75rem; color:#94a3b8; font-weight:500;">(Optional)</span>
+                        </label>
+                        <textarea id="marketplace-reschedule-reason" rows="2" style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:0.88rem; font-family:inherit; color:#0a192f; box-sizing:border-box; resize:vertical;" placeholder="e.g., Venue change, conflict, weather forecast..."></textarea>
+                    </div>
+
+                </div>
+
+                <div style="padding:14px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn-close-marketplace-reschedule" style="padding:10px 18px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#475569; font-weight:700; font-size:0.86rem; cursor:pointer;">Cancel</button>
+                    <button type="submit" id="btn-submit-marketplace-reschedule" style="padding:10px 22px; border:none; border-radius:10px; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:#fff; font-weight:800; font-size:0.86rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
+                        <i class="fa-solid fa-check"></i> Confirm Reschedule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="shopee-footer">
         <div class="container" style="text-align: center;">
